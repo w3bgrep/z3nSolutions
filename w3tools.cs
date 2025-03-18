@@ -76,7 +76,6 @@ namespace w3tools //by @w3bgrep
         string HWPass(IZennoPosterProjectModel project, bool log);
     }
 
-    // Упрощённая реализация (заглушка)
     internal class SimpleSAFU : ISAFU
     {
         public string Encode(IZennoPosterProjectModel project, string toEncrypt, bool log)
@@ -99,7 +98,7 @@ namespace w3tools //by @w3bgrep
 			catch (Exception ex)
 			{
 				project.SendWarningToLog($"[SimpleSAFU.Decode] ERR: [{ex.Message}] key: ['{project.Variables["cfgPin"].Value}']");
-				throw; // Или return string.Empty, если не хочешь прерывать выполнение
+				throw; 
 			}
 
         }
@@ -116,33 +115,25 @@ namespace w3tools //by @w3bgrep
     {
         private static readonly SimpleSAFU _defaultSAFU = new SimpleSAFU();
 
-        // Инициализация
         public static void Initialize(IZennoPosterProjectModel project)
         {
-            project.SendInfoToLog("SAFU: Начало инициализации...");
-
-            // Проверяем наличие функций в FunctionStorage
             if (!FunctionStorage.Functions.ContainsKey("SAFU_Encode") ||
                 !FunctionStorage.Functions.ContainsKey("SAFU_Decode") ||
                 !FunctionStorage.Functions.ContainsKey("SAFU_HWPass"))
             {
-				project.SendInfoToLog("SAFU: Функции не найдены в FunctionStorage, регистрируем заглушки...");
+				project.SendInfoToLog("using SAFU simple...");
 				FunctionStorage.Functions.TryAdd("SAFU_Encode", (Func<IZennoPosterProjectModel, string, bool, string>)_defaultSAFU.Encode);
 				FunctionStorage.Functions.TryAdd("SAFU_Decode", (Func<IZennoPosterProjectModel, string, bool, string>)_defaultSAFU.Decode);
 				FunctionStorage.Functions.TryAdd("SAFU_HWPass", (Func<IZennoPosterProjectModel, bool, string>)_defaultSAFU.HWPass);           
 			}
-
-            project.SendInfoToLog("SAFU: Инициализация завершена");
         }
 
         public static string Encode(IZennoPosterProjectModel project, string toEncrypt, bool log = false)
         {
             var encodeFunc = (Func<IZennoPosterProjectModel, string, bool, string>)FunctionStorage.Functions["SAFU_Encode"];
-            if (log)
-                project.SendInfoToLog($"SAFU.Encode: Вызов с toEncrypt = '{toEncrypt}'");
+            if (log) project.SendInfoToLog($"SAFU.Encode: toEncrypt = '{toEncrypt}'");
             string result = encodeFunc(project, toEncrypt, log);
-            if (log)
-                project.SendInfoToLog($"SAFU.Encode: Результат = '{result}'");
+            if (log) project.SendInfoToLog($"SAFU.Encode: result = '{result}'");
             return result;
         }
 
@@ -160,11 +151,9 @@ namespace w3tools //by @w3bgrep
         public static string HWPass(IZennoPosterProjectModel project, bool log = false)
         {
             var hwPassFunc = (Func<IZennoPosterProjectModel, bool, string>)FunctionStorage.Functions["SAFU_HWPass"];
-            if (log)
-                project.SendInfoToLog("SAFU.HWPass: Вызов метода");
+            if (log) project.SendInfoToLog("SAFU.HWPass: call");
             string result = hwPassFunc(project, log);
-            if (log)
-                project.SendInfoToLog($"SAFU.HWPass: Результат = '{result}'");
+            if (log) project.SendInfoToLog($"SAFU.HWPass: result = '{result}'");
             return result;
         }
     }
@@ -826,7 +815,6 @@ namespace w3tools //by @w3bgrep
 					else 
 					{
 						if (response != "0") project.SendToLog($"[PstgSQL ▲ ]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]", LogType.Info, true, LogColor.Gray);
-						//else project.SendToLog($"[PstgSQL ▲ ]: [{Regex.Replace(query.Trim(), @"\s+", " ")}] RESULT: [{response}]", LogType.Info, true, LogColor.Default);
 					}
 				}  
 				return response;				
@@ -877,7 +865,7 @@ namespace w3tools //by @w3bgrep
             }
 
             if (log) 
-            using (var db = new PostgresDB(host, dbName, dbUser, dbPswd)) // Используем using для автоматического закрытия
+            using (var db = new PostgresDB(host, dbName, dbUser, dbPswd)) 
             {
                 try
                 {
@@ -885,7 +873,6 @@ namespace w3tools //by @w3bgrep
                     CheckAndCreateTable(db, schemaName, tableName, tableStructure, project, log:log);
                     ManageColumns(db, schemaName, tableName, tableStructure, strictMode, project, log:log);
                     
-                    //if (insertData && tableStructure.ContainsKey("acc0") && !string.IsNullOrEmpty(project.Variables["cfgRangeEnd"].Value))
                     if (tableStructure.ContainsKey("acc0") && !string.IsNullOrEmpty(project.Variables["cfgRangeEnd"].Value))
                     {
                         InsertInitialData(db, schemaName, tableName, project.Variables["cfgRangeEnd"].Value, project, log:log);
@@ -1002,7 +989,6 @@ namespace w3tools //by @w3bgrep
 				project.SendWarningToLog($"Failed to parse max acc0, defaulting to 1");
 			}
 
-			// Если максимальное значение меньше rangeEnd, вставляем недостающие записи
 			if (maxAcc0 < rangeEnd)
 			{
 				for (int currentAcc0 = maxAcc0 + 1; currentAcc0 <= rangeEnd; currentAcc0++)
@@ -1012,7 +998,7 @@ namespace w3tools //by @w3bgrep
 					{
 						project.SendToLog($"[PstgSQL ▲]: [{insertQuery}]", LogType.Info, true, LogColor.Gray);
 					}
-					SQL.W3Query(project, insertQuery); // Используем W3Query для выполнения
+					SQL.W3Query(project, insertQuery); 
 				}
 			}
 			else
@@ -1199,13 +1185,30 @@ namespace w3tools //by @w3bgrep
             else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$"SELECT proxy FROM accounts.profile WHERE acc0 = {project.Variables["acc0"].Value}");
             project.Variables["proxy"].Value = resp;   return resp;
         }   
+        // public static string NickName(IZennoPosterProjectModel project)
+        // {
+        //     var dbMode = project.Variables["DBmode"].Value; var resp = "";
+        //     if (dbMode == "SQLite")  resp = SQL.W3Query(project,$"SELECT nickname FROM accProfile WHERE acc0 = {project.Variables["acc0"].Value}");
+        //     else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$"SELECT nickname FROM accounts.profile WHERE acc0 = {project.Variables["acc0"].Value}");
+        //     project.Variables["accNICKNAME"].Value = resp;   return resp;
+        // }
         public static string NickName(IZennoPosterProjectModel project)
         {
             var dbMode = project.Variables["DBmode"].Value; var resp = "";
-            if (dbMode == "SQLite")  resp = SQL.W3Query(project,$"SELECT nickname FROM accProfile WHERE acc0 = {project.Variables["acc0"].Value}");
-            else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$"SELECT nickname FROM accounts.profile WHERE acc0 = {project.Variables["acc0"].Value}");
-            project.Variables["accNICKNAME"].Value = resp;   return resp;
+			var emailMode = project.Variables["cfgMail"].Value; 
+            if (dbMode == "SQLite")  resp = SQL.W3Query(project,$@"SELECT nickname, bio FROM accProfile WHERE acc0 = {project.Variables["acc0"].Value};");
+            else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$@"SELECT nickname, bio FROM accounts.profile WHERE acc0 = {project.Variables["acc0"].Value};");	
+
+            string[] respData = resp.Split('|');
+            project.Variables["accNICKNAME"].Value = respData[0].Trim();
+            project.Variables["accBIO"].Value = respData[1].Trim();
+			
+            return resp;
         }   
+
+
+
+
         public static string Settings(IZennoPosterProjectModel project)
         {
             var dbMode = project.Variables["DBmode"].Value; var resp = "";
@@ -4125,7 +4128,7 @@ namespace w3tools //by @w3bgrep
 		        Thread.Sleep(500);
 		    }
 		}
-		public static string WaitGetValue(this Instance instance, Func<ZennoLab.CommandCenter.HtmlElement> elementSearch, int maxWaitSeconds = 10, string attribute = "innertext", int delayBeforeGetSeconds = 1, string comment = "")
+		public static string WaitGetValue(this Instance instance, Func<ZennoLab.CommandCenter.HtmlElement> elementSearch, int maxWaitSeconds = 10, string atr = "innertext", int delayBeforeGetSeconds = 1, string comment = "")
 		{
 		    DateTime functionStart = DateTime.Now;
 		    
@@ -4139,7 +4142,7 @@ namespace w3tools //by @w3bgrep
 		        if (!element.IsVoid)
 		        {
 		            Thread.Sleep(delayBeforeGetSeconds * 1000);
-		            return element.GetAttribute(attribute);
+		            return element.GetAttribute(atr);
 		        }
 		        
 		        Thread.Sleep(500);
@@ -4199,11 +4202,12 @@ namespace w3tools //by @w3bgrep
 
 			return allElements;
 		}
+		private static readonly object SyncObject = new object();
+		public static void CtrlV(this Instance instance, string ToPaste)
+		{
+			lock(SyncObject) {System.Windows.Forms.Clipboard.SetText(ToPaste);instance.ActiveTab.KeyEvent("v","press","ctrl");}
+		}
 
-
-
-
-		
 		#endregion		
 	
 		#region Links //temp
