@@ -960,18 +960,6 @@ namespace w3tools //by @w3bgrep
             }
         }
 
-        // private static void InsertInitialData(PostgresDB db, string schemaName, string tableName, string cfgRangeEnd, IZennoPosterProjectModel project, bool log = false)
-        // {
-        //     if (!int.TryParse(cfgRangeEnd, out int rangeEnd) || rangeEnd <= 0)
-        //         throw new ArgumentException("cfgRangeEnd must be a positive integer");
-
-        //     for (int currentAcc0 = 1; currentAcc0 <= rangeEnd; currentAcc0++)
-        //     {
-        //         SQL.W3Query(project,$@"INSERT INTO {schemaName}.{tableName} (acc0) VALUES ({currentAcc0}) ON CONFLICT DO NOTHING;");
-        //         //db.Query($@"INSERT INTO {schemaName}.{tableName} (acc0) VALUES ({currentAcc0}) ON CONFLICT DO NOTHING;");
-        //     }
-        // }
-
 		private static void InsertInitialData(PostgresDB db, string schemaName, string tableName, string cfgRangeEnd, IZennoPosterProjectModel project, bool log = false)
 		{
 			if (!int.TryParse(cfgRangeEnd, out int rangeEnd) || rangeEnd <= 0)
@@ -1185,13 +1173,6 @@ namespace w3tools //by @w3bgrep
             else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$"SELECT proxy FROM accounts.profile WHERE acc0 = {project.Variables["acc0"].Value}");
             project.Variables["proxy"].Value = resp;   return resp;
         }   
-        // public static string NickName(IZennoPosterProjectModel project)
-        // {
-        //     var dbMode = project.Variables["DBmode"].Value; var resp = "";
-        //     if (dbMode == "SQLite")  resp = SQL.W3Query(project,$"SELECT nickname FROM accProfile WHERE acc0 = {project.Variables["acc0"].Value}");
-        //     else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$"SELECT nickname FROM accounts.profile WHERE acc0 = {project.Variables["acc0"].Value}");
-        //     project.Variables["accNICKNAME"].Value = resp;   return resp;
-        // }
         public static string NickName(IZennoPosterProjectModel project)
         {
             var dbMode = project.Variables["DBmode"].Value; var resp = "";
@@ -1205,9 +1186,6 @@ namespace w3tools //by @w3bgrep
 			
             return resp;
         }   
-
-
-
 
         public static string Settings(IZennoPosterProjectModel project)
         {
@@ -2101,10 +2079,10 @@ namespace w3tools //by @w3bgrep
 		}
 	}
 	#endregion
+	#region Socials
 	public static class Socials
 	{
 		
-		#region twitter
 		public static void TwitterTokenSet(this Instance instance, IZennoPosterProjectModel project, string authToken = "", bool log = false, [CallerMemberName] string caller = "")
 		{
 			if (project.Variables["debug"].Value == "True") log = true;
@@ -2391,10 +2369,7 @@ namespace w3tools //by @w3bgrep
 			}
 			return status;
 		}
-		
-		#endregion
-		#region google
-		
+
 		public static string GoogleLoginCheck(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
 		{
 			instance.ActiveTab.Navigate("https://myaccount.google.com/", "");
@@ -2617,14 +2592,13 @@ namespace w3tools //by @w3bgrep
 
 
 
-		#endregion
-
 	}
-
+    #endregion
+	#region Time
 	
 	public static class Time
 	{
-		#region time
+
 		public static string UnixNow()
 		{
 			return ((long)((DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalMilliseconds)).ToString();
@@ -2674,11 +2648,13 @@ namespace w3tools //by @w3bgrep
 			var elapsedMinutes = (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - long.Parse(project.Variables["varSessionId"].Value)) / 60.0;
             return TimeSpan.FromSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - long.Parse(project.Variables["varSessionId"].Value)).ToString();
 		}
-		#endregion
-	}	
+
+	}
+	#endregion
+
 	public static class Onchain
 	{
-		
+		#region GetOnchainInfo
 		public static string HexToString(string hexValue, string convert = "")
 		{
 		    try
@@ -2709,7 +2685,7 @@ namespace w3tools //by @w3bgrep
 		    }
 		}	 
 	
-		#region getOnchainInfo
+		
 		
 		public static T getNonce<T>(IZennoPosterProjectModel project, string chainRPC = "", string address = "", string proxy = "")
 		{
@@ -3057,7 +3033,6 @@ namespace w3tools //by @w3bgrep
 		//SndTx
 		
 		#endregion
-
 		#region SendTx
 		public static string SendTransaction(string chainRpc, string contractAddress, string encodedData, decimal value, string walletKey, int speedup = 1)
 		{
@@ -3161,7 +3136,6 @@ namespace w3tools //by @w3bgrep
 				throw new Exception($"Ошибка отправки транзакции: {ex.Message}");
 			}
 		}
-
 		public static string SendTx1559(string chainRpc, string contractAddress, string encodedData, decimal value, string walletKey, int speedup = 1)
 		{
 		    
@@ -3220,8 +3194,7 @@ namespace w3tools //by @w3bgrep
 		}
 		
 		#endregion
-
-		#region commonOperations
+		#region CommonTx
 		public static string GazZip(IZennoPosterProjectModel project, string chainTo, decimal value, string chainRPC = "") //refuel GazZip
 		
 		{
@@ -3870,7 +3843,7 @@ namespace w3tools //by @w3bgrep
 		#endregion
 	}	
 	
-		public static class Tools
+	public static class Tools
 	{
 		
 		#region OTP
