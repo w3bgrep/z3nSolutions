@@ -67,7 +67,7 @@ namespace w3tools //by @w3bgrep
     {
         public static ConcurrentDictionary<string, object> Functions = new ConcurrentDictionary<string, object>();
     }
-	#region safu
+	#region SAFU
 
     public interface ISAFU
     {
@@ -159,7 +159,7 @@ namespace w3tools //by @w3bgrep
     }
 
     #endregion
-	#region loggers
+	#region Loggers
 
 	public static class Loggers
 	{
@@ -227,7 +227,7 @@ namespace w3tools //by @w3bgrep
 		
 	}
 	#endregion
-	#region onstart
+	#region OnStart
     public static class OnStart
 	{
 		public static void InitVariables(IZennoPosterProjectModel project, string author = "")
@@ -1303,7 +1303,7 @@ namespace w3tools //by @w3bgrep
 	}    
 
     #endregion
-
+	#region POST/GET
 	public static class Http
 	{
 				//POST/GET
@@ -1319,8 +1319,6 @@ namespace w3tools //by @w3bgrep
 		}
 
 	}
-
-
 	public static class Leaf
 	{
 		public static string GET(IZennoPosterProjectModel project, string url, string proxy = "")
@@ -2102,7 +2100,7 @@ namespace w3tools //by @w3bgrep
 			}
 		}
 	}
-
+	#endregion
 	public static class Socials
 	{
 		
