@@ -987,11 +987,9 @@ namespace w3tools //by @w3bgrep
 
 		private static void InsertInitialData(PostgresDB db, string schemaName, string tableName, string cfgRangeEnd, IZennoPosterProjectModel project, bool log = false)
 		{
-			// Проверяем, что cfgRangeEnd — положительное число
 			if (!int.TryParse(cfgRangeEnd, out int rangeEnd) || rangeEnd <= 0)
 				throw new ArgumentException("cfgRangeEnd must be a positive integer");
 
-			// Запрашиваем максимальное значение acc0
 			string maxAcc0Query = $@"SELECT COALESCE(MAX(acc0), 0) FROM {schemaName}.{tableName};";
 			if (log)
 			{
@@ -1000,8 +998,8 @@ namespace w3tools //by @w3bgrep
 			string maxAcc0Str = db.getOne(maxAcc0Query)?.Trim() ?? "0";
 			if (!int.TryParse(maxAcc0Str, out int maxAcc0))
 			{
-				maxAcc0 = 0; // Если не удалось получить максимальное значение, начинаем с 0
-				project.SendWarningToLog($"Failed to parse max acc0, defaulting to 0");
+				maxAcc0 = 1; 
+				project.SendWarningToLog($"Failed to parse max acc0, defaulting to 1");
 			}
 
 			// Если максимальное значение меньше rangeEnd, вставляем недостающие записи
@@ -1214,6 +1212,23 @@ namespace w3tools //by @w3bgrep
                 if (dbMode == "SQLite")  resp = SQL.W3Query(project,$"SELECT var, value FROM accSettings");
                 else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$"SELECT var, value FROM accounts.settings"); return resp;
         }   
+        public static string Email(IZennoPosterProjectModel project)
+        {
+            var dbMode = project.Variables["DBmode"].Value; var resp = "";
+			var emailMode = project.Variables["cfgMail"].Value; 
+            if (dbMode == "SQLite")  resp = SQL.W3Query(project,$@"SELECT login, icloud FROM accGoogle WHERE acc0 = {project.Variables["acc0"].Value};");
+            else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$@"SELECT login, icloud FROM accounts.google WHERE acc0 = {project.Variables["acc0"].Value};");	
+
+            string[] emailData = resp.Split('|');
+            project.Variables["emailGOOGLE"].Value = emailData[0].Trim();
+            project.Variables["emailICLOUD"].Value = emailData[1].Trim();
+			
+			if (emailMode == "Google" ) resp = emailData[0].Trim();
+			if (emailMode == "Icloud" ) resp = emailData[1].Trim();
+            return resp;
+        }   
+
+
         public static string Twitter(IZennoPosterProjectModel project)
         {
             var dbMode = project.Variables["DBmode"].Value; var resp = "";
