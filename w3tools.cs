@@ -282,6 +282,16 @@ namespace w3tools //by @w3bgrep
 			var port = project.Variables["instancePort"].Value;
 			var lastAction = project.LastExecutedActionId;
 			var elapsed = Time.TotalTime(project);
+
+		// Проверяем стек вызовов
+			var stackFrame = new System.Diagnostics.StackFrame(1); // 1 = предыдущий кадр стека
+			var callingMethod = stackFrame.GetMethod();
+			if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno"))
+			{
+				callerName = "project"; // Если вызывается из ZennoPoster или проекта
+			}
+
+
 			string formated = $"⛑  [{acc0}] ⚙  [{port}] ⏱  [{elapsed}] ⛏ [{callerName}] at [{lastAction}]\n        {toLog}";
 			if (formated.Contains("!W"))   project.SendToLog(formated,LogType.Warning, true, LogColor.Orange);
 			else if (formated.Contains("!E"))   project.SendToLog(formated,LogType.Error, true, LogColor.Orange);
@@ -526,13 +536,13 @@ namespace w3tools //by @w3bgrep
 			    }
 			}
 			Loggers.W3Debug(project, $"after socialCheck [{string.Join("|", availableAccounts)}]");
-			if (!string.IsNullOrEmpty(project.Variables["busyAccounts"].Value))
-			{
-			    availableAccounts.ExceptWith(
-			        project.Variables["busyAccounts"].Value.Split(',').Select(x => x.Trim())
-			    );
-			}
-			Loggers.W3Debug(project, $"after globalVarsCheck [{string.Join("|", availableAccounts)}]");
+			// if (!string.IsNullOrEmpty(project.Variables["busyAccounts"].Value))
+			// {
+			//     availableAccounts.ExceptWith(
+			//         project.Variables["busyAccounts"].Value.Split(',').Select(x => x.Trim())
+			//     );
+			// }
+			// Loggers.W3Debug(project, $"after globalVarsCheck [{string.Join("|", availableAccounts)}]");
 			project.Lists["accs"].Clear();
 			project.Lists["accs"].AddRange(availableAccounts);
 			Loggers.W3Debug(project,$"final list [{string.Join("|", project.Lists["accs"])}]");
@@ -3561,11 +3571,12 @@ namespace w3tools //by @w3bgrep
 					}
 					if (project.Variables["cleanGlobal"].Value == "True")
 					{
-						if (log) Loggers.W3Log(project, $"GlobalVars cleaned: {string.Join(",", cleaned)}");
+						Loggers.W3Log(project, $"!W cleanGlobal is [on] Cleaned: {string.Join(",", cleaned)}");
 					}
 					else
 					{
 						project.Variables["busyAccounts"].Value = string.Join(",", busyAccounts);
+						Loggers.W3Log(project, $"!Buzy now: {string.Join(",", busyAccounts)}");
 					}
 					int currentThread = int.Parse(project.Variables["acc0"].Value);
 					string currentThreadKey = $"Thread{currentThread}";
