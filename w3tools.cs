@@ -3443,7 +3443,7 @@ namespace w3tools //by @w3bgrep
 		}
 	}	
 	#endregion	
-
+	#region Tools&Vars
 	public static class OTP
 	{
 		public static string Offline(this Instance instance, string keyString, int waitIfTimeLess = 5)
@@ -3527,11 +3527,74 @@ namespace w3tools //by @w3bgrep
 		}
 
 	}
-
 	public static class Tools
 	{
-		private static readonly object SyncObject = new object();
-		#region Text&Vars
+		private static readonly object LockObject = new object();
+		public static bool SetGlobalVar(IZennoPosterProjectModel project, bool log = false)
+		{
+			lock (LockObject) 
+			{
+				try
+				{
+					var nameSpase = "w3tools";
+					var cleaned = new List<int>();
+					var notDeclared = new List<int>();
+					var busyAccounts = new List<int>();
+					for (int i = int.Parse(project.Variables["cfgRangeStart"].Value); i <= int.Parse(project.Variables["cfgRangeEnd"].Value); i++)
+					{
+						string threadKey = $"Thread{i}";
+						try
+						{
+							var globalVar = project.GlobalVariables[nameSpase, threadKey];
+							if (globalVar != null)
+							{
+								if (!string.IsNullOrEmpty(globalVar.Value)) busyAccounts.Add(i);
+								if (project.Variables["cleanGlobal"].Value == "True")
+								{
+									globalVar.Value = string.Empty;
+									cleaned.Add(i);
+								}
+							}
+							else notDeclared.Add(i);
+						}
+						catch { notDeclared.Add(i); }
+					}
+					if (project.Variables["cleanGlobal"].Value == "True")
+					{
+						if (log) Loggers.W3Log(project, $"GlobalVars cleaned: {string.Join(",", cleaned)}");
+					}
+					else
+					{
+						project.Variables["busyAccounts"].Value = string.Join(",", busyAccounts);
+					}
+					int currentThread = int.Parse(project.Variables["acc0"].Value);
+					string currentThreadKey = $"Thread{currentThread}";
+					if (!busyAccounts.Contains(currentThread))
+					{
+						try
+						{
+							project.GlobalVariables.SetVariable("w3tools", currentThreadKey, project.Variables["projectName"].Value);
+						}
+						catch
+						{
+							project.GlobalVariables["w3tools", currentThreadKey].Value = project.Variables["projectName"].Value;
+						}
+						if (log) Loggers.W3Log(project, $"Thread {currentThread} bound to {project.Variables["projectName"].Value}");
+						return true;
+					}
+					else
+					{
+						if (log) Loggers.W3Log(project, $"Thread {currentThread} is already busy!");
+						return false;
+					}
+				}
+				catch (Exception ex)
+				{
+					if (log) Loggers.W3Log(project, $"⚙  {ex.Message}");
+					throw; // Пробрасываем исключение дальше для обработки вызывающим кодом
+				}
+			}
+		}
 		public static void IncreaseVar(IZennoPosterProjectModel project, string varName)
 		{
 			project.Variables[$"{varName}"].Value = (int.Parse(project.Variables[$"{varName}"].Value) + 1).ToString();
@@ -3608,9 +3671,10 @@ namespace w3tools //by @w3bgrep
 		    
 		    return string.Join(",", results);
 		}
-		#endregion
-        #region Browser		
-		//browser
+	}
+	public static class Browser
+	{		
+		private static readonly object LockObject = new object();
 		public static void WaitClick(this Instance instance, Func<ZennoLab.CommandCenter.HtmlElement> elementSearch, int maxWaitSeconds = 10, int delay = 1, string comment = "")
 		{
 		    DateTime functionStart = DateTime.Now;
@@ -3756,7 +3820,7 @@ namespace w3tools //by @w3bgrep
 		}	
 		public static void CtrlV(this Instance instance, string ToPaste)
 		{
-			lock(SyncObject) {System.Windows.Forms.Clipboard.SetText(ToPaste);instance.ActiveTab.KeyEvent("v","press","ctrl");}
+			lock(LockObject) {System.Windows.Forms.Clipboard.SetText(ToPaste);instance.ActiveTab.KeyEvent("v","press","ctrl");}
 		}
 		public static string DecodeQr(HtmlElement element)
 		{
@@ -3770,9 +3834,8 @@ namespace w3tools //by @w3bgrep
 		    }
 		    catch (Exception){return "qrError";}
 		}
-		#endregion		
 	}
-
+	#endregion
 	public static class StyleConverter
 	{
 	    public static string ConvertStyle(string text, string inputStyle, string outputStyle)
