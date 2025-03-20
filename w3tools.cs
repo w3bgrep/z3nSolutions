@@ -64,6 +64,10 @@ namespace w3tools //by @w3bgrep
 {
 	public static class Migrate
 	{
+		//ЭТОТ КЛАСС СОДЕРЖИТ УСТАРЕВШИЕ ВЫЗОВЫ
+		//  ЕСЛИ ТЫ ИСПОЛЬЗУЕШЬ КАКИЕ-ТО ИЗ НИХ - 
+		// замени их теми к которым они обращаются как можно скорее, 
+		// в следующих версиях эти вызовы будут удалены
 		public static void TwitterTokenSet(this Instance instance, IZennoPosterProjectModel project, string authToken = "", bool log = false, [CallerMemberName] string caller = "")
 		{
 			Twitter.SetToken(instance,project,authToken,log,caller);
