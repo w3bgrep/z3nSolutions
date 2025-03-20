@@ -62,117 +62,7 @@ using Leaf.xNet;
 
 namespace w3tools //by @w3bgrep
 {
-	public static class Migrate
-	{
-		public static void TwitterTokenSet(this Instance instance, IZennoPosterProjectModel project, string authToken = "", bool log = false, [CallerMemberName] string caller = "")
-		{
-			Twitter.SetToken(instance,project,authToken,log,caller);
-		}
-		public static string TwitterGetStatus(this Instance instance, IZennoPosterProjectModel project,bool log = false, [CallerMemberName] string caller = "")
-		{
-			return Twitter.GetStatus(instance,project,log,caller);
-		}
-		public static string TwitterCredentialsLogin(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
-		{
-			return Twitter.Login(instance,project,log,caller);
-		}
-		public static string TwitterTokenSync(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
-		{
-			return Twitter.SyncToken(instance,project,log,caller);
-		}		
-		public static string TwitterMain(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
-		{
-			return Twitter.FullCheck(instance,project,log,caller);
-		}
-		public static string GoogleLoginCheck(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
-		{
-			return Google.CheckLogin(instance,project,log,caller);
-		}		
-		public static string GoogleFullCheck(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
-		{
-			return Google.FullCheck(instance,project,log,caller);
-		}				
-		public static string GoogleAuth(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
-		{
-			return Google.Auth(instance,project,log,caller);
-		}
-		public static string w3Log(IZennoPosterProjectModel project, string toLog = "", string varName = "a0debug") 
-	    {
-	        return Loggers.W3Log(project, toLog, varName);
-	    }
-		public static string w3Query(IZennoPosterProjectModel project, string dbQuery, bool toLog = false)
-		{
-			return SQL.W3Query(project, dbQuery, toLog);
-		}
-		public static string simpleGET(IZennoPosterProjectModel project, string url, string proxy = "")
-		{
-			return Http.W3Get(project, url, proxy);
-		}
-		public static string getTx(IZennoPosterProjectModel project, string chainRPC = "", string hash = "", int deadline = 60,bool log = false)
-		{
-			return Leaf.waitTx(project,chainRPC,hash,deadline,log);
-		}
-		public static T getNative<T>(IZennoPosterProjectModel project, string chainRPC = "", string address = "", string proxy = "",bool log = false)
-		{
-			return Leaf.native<T>(project,chainRPC,address);
-		}
-		public static T getNonce<T>(IZennoPosterProjectModel project, string chainRPC = "", string address = "", string proxy = "",bool log = false)
-		{
-			return Leaf.nonce<T>(project,chainRPC,address);
-		}		
-		public static T getERC20<T>(IZennoPosterProjectModel project, string tokenContract, string chainRPC = "", string address = "", string tokenDecimal = "18", string proxy = "",bool log = false)
-		{
-			return Leaf.bal20<T>(project,chainRPC,address);
-		}
-	    public static string MMConfirm2(this Instance instance,IZennoPosterProjectModel project, bool log = false )
-		{
-			return MM.Confirm(instance,project,log);
-		}
-		public static string MMUnlock(this Instance instance,IZennoPosterProjectModel project,string key = "", bool skipCheck = false)
-		{
-			return MM.Run(instance,project,key,skipCheck);
-		}
-		public static void MMConfirm(this Instance instance) //USE MM.Confirm instead
-		{
-			int i = 0;
-			DateTime deadline = DateTime.Now.AddSeconds(60);
-			while (!instance.ActiveTab.URL.Contains("nkbihfbeogaeaoehlefnkodbefgpgknn"))
-				{
-					Thread.Sleep(1000);
-					 if (i > 5) throw new Exception(""); i++;
-				} 
-			i = 0; Thread.Sleep(2000);
-			
-			while (instance.ActiveTab.URL.Contains("nkbihfbeogaeaoehlefnkodbefgpgknn"))
-			{
-				if (DateTime.Now > deadline) throw new Exception("");
-				try
-				{
-					instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("button", "class", "button\\ btn--rounded\\ btn-primary", "regexp", 0),3); Thread.Sleep(2000);
-				}
-				catch{}
-			}
-			
-		}
-		public static string KeplrApprove(this Instance instance,IZennoPosterProjectModel project)
-		{
-			return Keplr.Approve(instance,project);
-		}
 
-		public static string GetOTP(this Instance instance, string keyString, int waitIfTimeLess = 5)
-		{
-			return OTP.Offline(instance,keyString,waitIfTimeLess);
-		}
-		public static string FirstMailOTP(IZennoPosterProjectModel project,string email = "", string proxy = "")
-		{
-		    return OTP.FirstMail(project,email,proxy);
-		}
-		public static string TelegramMailOTP(IZennoPosterProjectModel project, string email = "", string proxy = "")
-		{
-		    return OTP.Telegram(project,email,proxy);
-		}
-
-	}
     public static class FunctionStorage
     {
         public static ConcurrentDictionary<string, object> Functions = new ConcurrentDictionary<string, object>();
@@ -1606,7 +1496,7 @@ namespace w3tools //by @w3bgrep
 			
 			return (T)Convert.ChangeType(gasGwei, typeof(T));
 		}								
-		public static T bal20<T>(IZennoPosterProjectModel project, string tokenContract, string chainRPC = "", string address = "", string tokenDecimal = "18", string proxy = "",bool log = false)
+		public static T balERC20<T>(IZennoPosterProjectModel project, string tokenContract, string chainRPC = "", string address = "", string tokenDecimal = "18", string proxy = "",bool log = false)
 		{
 			if (address == "") address = project.Variables["addressEvm"].Value;
 			if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
@@ -1661,7 +1551,7 @@ namespace w3tools //by @w3bgrep
 			
 			return (T)Convert.ChangeType(balance, typeof(T));
 		}					
-		public static T bal721<T>(IZennoPosterProjectModel project, string tokenContract, string chainRPC = "", string address = "", string proxy = "",bool log = false)
+		public static T balERC721<T>(IZennoPosterProjectModel project, string tokenContract, string chainRPC = "", string address = "", string proxy = "",bool log = false)
 		{
 			if (address == "") address = project.Variables["addressEvm"].Value;
 			if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
@@ -2161,9 +2051,9 @@ namespace w3tools //by @w3bgrep
 	}
 	#endregion
 	#region Socials
-	public static class Twitter
-	{
-		public static void SetToken(this Instance instance, IZennoPosterProjectModel project, string authToken = "", bool log = false, [CallerMemberName] string caller = "")
+	public static class Socials
+	{	
+		public static void TwitterTokenSet(this Instance instance, IZennoPosterProjectModel project, string authToken = "", bool log = false, [CallerMemberName] string caller = "")
 		{
 			if (project.Variables["debug"].Value == "True") log = true;
 			instance.ClearCookie("x.com");
@@ -2205,7 +2095,7 @@ namespace w3tools //by @w3bgrep
 			instance.SetCookie($@".x.com	TRUE	/	FALSE	05/18/2033 06:33:20	auth_token	{authToken}	FALSE	TRUE");
 			if (log) Loggers.W3Log(project,$"[{caller}].[TwitterTokenSet] {authToken} set");
 		}
-		public static string GetStatus(this Instance instance, IZennoPosterProjectModel project,bool log = false, [CallerMemberName] string caller = "")
+		public static string TwitterGetStatus(this Instance instance, IZennoPosterProjectModel project,bool log = false, [CallerMemberName] string caller = "")
 		{
 			if (project.Variables["debug"].Value == "True") log = true;
 
@@ -2281,7 +2171,7 @@ namespace w3tools //by @w3bgrep
 			}
 			return status;
 		}
-		public static string Login(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
+		public static string TwitterCredentialsLogin(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
 		{
 			DateTime deadline = DateTime.Now.AddSeconds(60);
 			var status = "";
@@ -2364,7 +2254,7 @@ namespace w3tools //by @w3bgrep
 
 
 		}
-		public static string SyncToken(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
+		public static string TwitterTokenSync(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
 		{
 			bool found = false;
 			string authTokenTwitter = "";
@@ -2410,7 +2300,7 @@ namespace w3tools //by @w3bgrep
 			}
 			return "";
 		}		
-		public static string FullCheck(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
+		public static string TwitterMain(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
 		{
 			if (project.Variables["debug"].Value == "True") log = true;
 			bool tokenSet = false;
@@ -2448,11 +2338,8 @@ namespace w3tools //by @w3bgrep
 				if (log) Loggers.W3Log(project,token);				
 			}
 			return status;
-		}		
-	}
-	public static class Google
-	{
-		public static string CheckLogin(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
+		}
+		public static string GoogleLoginCheck(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
 		{
 			instance.ActiveTab.Navigate("https://myaccount.google.com/", "");
 			var status = "";		
@@ -2495,7 +2382,7 @@ namespace w3tools //by @w3bgrep
 			}
 			return status;
 		}		
-		public static string FullCheck(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
+		public static string GoogleFullCheck(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
 		{
 			
 			var status = "";
@@ -2634,7 +2521,7 @@ namespace w3tools //by @w3bgrep
 			}
 
 		}				
-		public static string Auth(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
+		public static string GoogleAuth(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
 		{
 			try
 			{
@@ -2667,9 +2554,8 @@ namespace w3tools //by @w3bgrep
 			{
 				return "FAIL. No loggined Users Found";
 			}
-		}		
+		}
 	}
-
     #endregion
 	#region Time
 	
@@ -2729,22 +2615,27 @@ namespace w3tools //by @w3bgrep
 	#region Tx
 	public static class Onchain
 	{
-		
+
 		public static string HexToString(string hexValue, string convert = "")
 		{
 		    try
 		    {
 		        hexValue = hexValue?.Replace("0x", "").Trim();
 		        if (string.IsNullOrEmpty(hexValue)) return "0";
+		        
 		        BigInteger number = BigInteger.Parse("0" + hexValue, NumberStyles.AllowHexSpecifier);
+		        
+		        // Конвертация в зависимости от параметра
 		        switch(convert.ToLower())
 		        {
 		            case "gwei":
 		                decimal gweiValue = (decimal)number / 1000000000m;
 		                return gweiValue.ToString("0.#########", CultureInfo.InvariantCulture);
+		                
 		            case "eth":
 		                decimal ethValue = (decimal)number / 1000000000000000000m;
 		                return ethValue.ToString("0.##################", CultureInfo.InvariantCulture);
+		                
 		            default:
 		                return number.ToString();
 		        }
@@ -2753,8 +2644,335 @@ namespace w3tools //by @w3bgrep
 		    {
 		        return "0";
 		    }
-		}	
+		}	 
+		public static T getNonce<T>(IZennoPosterProjectModel project, string chainRPC = "", string address = "", string proxy = "")
+		{
+		    if (address == "") address = project.Variables["addressEvm"].Value;
+			if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
+		    string jsonBodyGetNonce = $@"{{""jsonrpc"": ""2.0"",""method"": ""eth_getTransactionCount"",""params"": [""{address}"", ""latest""],""id"": 1}}";
+		    string responseGetNonce = ZennoPoster.HttpPost(chainRPC, jsonBodyGetNonce, "application/json", proxy, "UTF-8", ZennoLab.InterfacesLibrary.Enums.Http.ResponceType.BodyOnly, 5000, "", "Mozilla/5.0", true, 5, null, "", false);
 		
+		    var match = System.Text.RegularExpressions.Regex.Match(responseGetNonce, @"""result""\s*:\s*""([^""]+)""");
+		    string hexResultNonce = match.Success ? match.Groups[1].Value : "0x0";
+		    
+		    if (hexResultNonce == "0x0") 
+		        return (T)Convert.ChangeType("0", typeof(T));
+		    
+		    int transactionCount = Convert.ToInt32(hexResultNonce.TrimStart('0', 'x'), 16);
+		    
+		    if (typeof(T) == typeof(string))
+		        return (T)Convert.ChangeType(transactionCount.ToString(), typeof(T));
+		    
+		    return (T)Convert.ChangeType(transactionCount, typeof(T));
+		}
+		public static T getNative<T>(IZennoPosterProjectModel project, string chainRPC = "", string address = "", string proxy = "")
+		{
+		    
+			if (address == "") address = project.Variables["addressEvm"].Value;
+			if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
+			string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_getBalance"", ""params"": [""{address}"", ""latest""], ""id"": 1 }}";
+		    string responseBalance = ZennoPoster.HttpPost(chainRPC, jsonBody, "application/json", proxy, "UTF-8", ZennoLab.InterfacesLibrary.Enums.Http.ResponceType.BodyOnly, 5000, "", "Mozilla/5.0", true, 5, null, "", false);
+		
+		    var match = System.Text.RegularExpressions.Regex.Match(responseBalance, @"""result""\s*:\s*""([^""]+)""");
+		    string hexResultBalance = match.Success ? match.Groups[1].Value.TrimStart('0', 'x') : "0";
+		    BigInteger balanceWei = BigInteger.Parse("0" + hexResultBalance, NumberStyles.AllowHexSpecifier);
+		    decimal balanceNative = (decimal)balanceWei / 1000000000000000000m;
+		
+		    if (typeof(T) == typeof(string))
+		        return (T)Convert.ChangeType(balanceNative.ToString("0.##################", CultureInfo.InvariantCulture), typeof(T));
+		    
+		    return (T)Convert.ChangeType(balanceNative, typeof(T));
+		}
+		public static T getGas<T>(IZennoPosterProjectModel project, string chainRPC = "", string proxy = "")
+		{
+		    if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
+			string jsonBody = @"{""jsonrpc"":""2.0"",""method"":""eth_gasPrice"",""params"":[],""id"":1}";
+		    string responseGas = ZennoPoster.HttpPost(chainRPC, jsonBody, "application/json", proxy, "UTF-8", ZennoLab.InterfacesLibrary.Enums.Http.ResponceType.BodyOnly, 5000, "", "Mozilla/5.0", true, 5, null, "", false);
+		
+		    var match = System.Text.RegularExpressions.Regex.Match(responseGas, @"""result""\s*:\s*""([^""]+)""");
+		    string hexResultGas = match.Success ? match.Groups[1].Value.TrimStart('0', 'x') : "0";
+		    
+		    BigInteger gasWei = BigInteger.Parse("0" + hexResultGas, NumberStyles.AllowHexSpecifier);
+		    decimal gasGwei = (decimal)gasWei / 1000000000m;
+		    
+		    if (typeof(T) == typeof(string))
+		        return (T)Convert.ChangeType(gasGwei.ToString("0.######", CultureInfo.InvariantCulture), typeof(T));
+		    
+		    return (T)Convert.ChangeType(gasGwei, typeof(T));
+		}
+		public static T getERC20<T>(IZennoPosterProjectModel project, string tokenContract, string chainRPC = "", string address = "", string tokenDecimal = "18", string proxy = "")
+		{
+		    if (address == "") address = project.Variables["addressEvm"].Value;
+		    if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
+		    
+		    string data = "0x70a08231000000000000000000000000" + address.Replace("0x", "");
+		    
+		    string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_call"", ""params"": [{{ ""to"": ""{tokenContract}"", ""data"": ""{data}"" }}, ""latest""], ""id"": 1 }}";
+		    string response = ZennoPoster.HttpPost(chainRPC, jsonBody, "application/json", proxy, "UTF-8", ZennoLab.InterfacesLibrary.Enums.Http.ResponceType.BodyOnly, 5000, "", "Mozilla/5.0", true, 5, null, "", false);
+		
+		    var match = System.Text.RegularExpressions.Regex.Match(response, @"""result""\s*:\s*""([^""]+)""");
+		    string hexResult = match.Success ? match.Groups[1].Value.TrimStart('0', 'x') : "0";
+		    
+		    BigInteger balanceWei = BigInteger.Parse("0" + hexResult, NumberStyles.AllowHexSpecifier);
+		    decimal decimals = (decimal)Math.Pow(10, double.Parse(tokenDecimal));
+		    decimal balance = (decimal)balanceWei / decimals;
+		
+		    if (typeof(T) == typeof(string))
+		        return (T)Convert.ChangeType(balance.ToString("0.##################", CultureInfo.InvariantCulture), typeof(T));
+		    
+		    return (T)Convert.ChangeType(balance, typeof(T));
+		}
+		public static T getChainId<T>(IZennoPosterProjectModel project, string chainRPC = "", string proxy = "")
+		{
+		    if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
+		    
+		    string jsonBodyGetChainId = @"{""jsonrpc"": ""2.0"",""method"": ""eth_chainId"",""params"": [],""id"": 1}";
+		    string responseGetChainId = ZennoPoster.HttpPost(chainRPC, jsonBodyGetChainId, "application/json", proxy, "UTF-8", ZennoLab.InterfacesLibrary.Enums.Http.ResponceType.BodyOnly, 5000, "", "Mozilla/5.0", true, 5, null, "", false);
+		
+		    var match = System.Text.RegularExpressions.Regex.Match(responseGetChainId, @"""result""\s*:\s*""([^""]+)""");
+		    string hexResultChainId = match.Success ? match.Groups[1].Value : "0x0";
+		    
+		    if (hexResultChainId == "0x0")
+		        return (T)Convert.ChangeType("0", typeof(T));
+		    
+		    int chainId = Convert.ToInt32(hexResultChainId.TrimStart('0', 'x'), 16);
+		    
+		    if (typeof(T) == typeof(string))
+		        return (T)Convert.ChangeType(chainId.ToString(), typeof(T));
+		    
+		    return (T)Convert.ChangeType(chainId, typeof(T));
+		}
+		public static T getERC1155<T>(IZennoPosterProjectModel project, string tokenContract, string tokenId, string chainRPC = "", string address = "", string proxy = "")
+		{
+			// Устанавливаем значения по умолчанию из переменных проекта, если не указаны
+			if (address == "") address = project.Variables["addressEvm"].Value;
+			if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
+
+			// Формируем данные для вызова balanceOf(address account, uint256 id)
+			string functionSelector = "0x00fdd58e"; // keccak256("balanceOf(address,uint256)")[:4]
+			string paddedAddress = address.Replace("0x", "").ToLower().PadLeft(64, '0'); // Адрес без 0x, дополненный до 32 байт
+			string paddedTokenId = BigInteger.Parse(tokenId).ToString("x").PadLeft(64, '0'); // tokenId в hex, дополненный до 32 байт
+			string data = functionSelector + paddedAddress + paddedTokenId;
+
+			// Формируем JSON-RPC запрос для eth_call
+			string jsonBody = $@"{{
+				""jsonrpc"": ""2.0"",
+				""method"": ""eth_call"",
+				""params"": [{{
+					""to"": ""{tokenContract}"",
+					""data"": ""{data}""
+				}}, ""latest""],
+				""id"": 1
+			}}";
+
+			// Отправляем запрос через HttpPost
+			string response = ZennoPoster.HttpPost(chainRPC, jsonBody, "application/json", proxy, "UTF-8", ZennoLab.InterfacesLibrary.Enums.Http.ResponceType.BodyOnly, 5000, "", "Mozilla/5.0", true, 5, null, "", false);
+
+			// Извлекаем результат из ответа
+			var match = Regex.Match(response, @"""result""\s*:\s*""([^""]+)""");
+			string hexResult = match.Success ? match.Groups[1].Value.TrimStart('0', 'x') : "0";
+
+			// Преобразуем hex в BigInteger
+			BigInteger balance = BigInteger.Parse("0" + hexResult, NumberStyles.AllowHexSpecifier);
+
+			// Логируем для отладки
+			project.SendInfoToLog($"Баланс токена ERC-1155 (tokenId: {tokenId}) для адреса {address}: {balance}");
+
+			// Возвращаем результат в нужном типе
+			if (typeof(T) == typeof(string))
+				return (T)Convert.ChangeType(balance.ToString(), typeof(T));
+
+			return (T)Convert.ChangeType(balance, typeof(T));
+		}
+		public static T getERC721<T>(IZennoPosterProjectModel project, string tokenContract, string chainRPC = "", string address = "", string proxy = "")
+		{
+			// Устанавливаем значения по умолчанию из переменных проекта, если не указаны
+			if (address == "") address = project.Variables["addressEvm"].Value;
+			if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
+
+			// Формируем данные для вызова balanceOf(address owner)
+			string functionSelector = "0x70a08231"; // keccak256("balanceOf(address)")[:4]
+			string paddedAddress = address.Replace("0x", "").ToLower().PadLeft(64, '0'); // Адрес без 0x, дополненный до 32 байт
+			string data = functionSelector + paddedAddress;
+
+			// Формируем JSON-RPC запрос для eth_call
+			string jsonBody = $@"{{
+				""jsonrpc"": ""2.0"",
+				""method"": ""eth_call"",
+				""params"": [{{
+					""to"": ""{tokenContract}"",
+					""data"": ""{data}""
+				}}, ""latest""],
+				""id"": 1
+			}}";
+
+			// Отправляем запрос через HttpPost
+			string response = ZennoPoster.HttpPost(chainRPC, jsonBody, "application/json", proxy, "UTF-8", ZennoLab.InterfacesLibrary.Enums.Http.ResponceType.BodyOnly, 5000, "", "Mozilla/5.0", true, 5, null, "", false);
+
+			// Извлекаем результат из ответа
+			var match = Regex.Match(response, @"""result""\s*:\s*""([^""]+)""");
+			string hexResult = match.Success ? match.Groups[1].Value.TrimStart('0', 'x') : "0";
+
+			// Преобразуем hex в BigInteger
+			BigInteger balance = BigInteger.Parse("0" + hexResult, NumberStyles.AllowHexSpecifier);
+
+			if (typeof(T) == typeof(string))
+				return (T)Convert.ChangeType(balance.ToString(), typeof(T));
+
+			return (T)Convert.ChangeType(balance, typeof(T));
+		}
+		public static T GetInitiaBalances<T>(IZennoPosterProjectModel project, string chain = "initiation-2", string token = "", string address = "")
+		{
+			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+			
+			if (string.IsNullOrEmpty(address)) address = project.Variables["addressInitia"].Value.Trim();
+
+			string url = $"https://celatone-api-prod.alleslabs.dev/v1/initia/{chain}/accounts/{address}/balances";
+
+			string jsonString = Http.W3Get(project, url);
+
+			try
+			{
+				JArray balances = JArray.Parse(jsonString);
+				List<string> balanceList = new List<string>();
+				foreach (JObject balance in balances)
+				{
+					string denom = balance["denom"].ToString();
+					string amount = balance["amount"].ToString();
+					if (double.TryParse(amount, out double amountValue))
+					{
+						double amountInMillions = amountValue / 1000000;
+						balanceList.Add($"{denom}:{amountInMillions.ToString("0.########", CultureInfo.InvariantCulture)}");
+					}
+					else
+					{
+						balanceList.Add($"{denom}:{amount}");
+					}
+				}
+
+				if (string.IsNullOrEmpty(token))
+				{
+					// Если токен не указан, возвращаем строку со всеми балансами
+					return (T)Convert.ChangeType(string.Join(", ", balanceList), typeof(T));
+				}
+				else
+				{
+					// Если токен указан, возвращаем баланс указанного токена
+					string balanceToken = balanceList.FirstOrDefault(entry => entry.StartsWith(token + ":"))?.Split(':')[1] ?? "";
+					if (typeof(T) == typeof(string))
+						return (T)Convert.ChangeType(balanceToken, typeof(T));
+					else if (double.TryParse(balanceToken, NumberStyles.Float, CultureInfo.InvariantCulture, out double balanceValue))
+						return (T)Convert.ChangeType(balanceValue, typeof(T));
+					else
+						return default(T);
+				}
+			}
+			catch (Exception ex)
+			{
+				project.SendInfoToLog(ex.Message);
+				return default(T);
+			}
+		}
+		public static string getTransactionReceipt(IZennoPosterProjectModel project, string chainRPC, string txHash, string proxy = "")
+		{
+		    string jsonBody = $@"{{""jsonrpc"":""2.0"",""method"":""eth_getTransactionReceipt"",""params"":[""{txHash}""],""id"":1}}";
+		    
+		    string responseReceipt = ZennoPoster.HttpPost(chainRPC, jsonBody, "application/json", "", "UTF-8", ZennoLab.InterfacesLibrary.Enums.Http.ResponceType.BodyOnly, 5000, "", "Mozilla/5.0", true, 5, null, "", false);
+		
+		    // Проверяем наличие результата
+		    if (string.IsNullOrWhiteSpace(responseReceipt) || responseReceipt.Contains("\"result\":null"))
+		        return null;
+		
+		    return responseReceipt;
+		}
+		public static string getTransactionRaw(IZennoPosterProjectModel project, string chainRPC, string txHash, string proxy = "")
+		{
+		    string jsonBody = $@"{{""jsonrpc"":""2.0"",""method"":""eth_getTransactionByHash"",""params"":[""{txHash}""],""id"":1}}";
+		    
+		    string responseTx = ZennoPoster.HttpPost(chainRPC, jsonBody, "application/json", "", "UTF-8", ZennoLab.InterfacesLibrary.Enums.Http.ResponceType.BodyOnly, 5000, "", "Mozilla/5.0", true, 5, null, "", false);
+		
+		    // Проверяем наличие результата
+		    if (string.IsNullOrWhiteSpace(responseTx) || responseTx.Contains("\"result\":null"))
+		        return null;
+		
+		    return responseTx;
+		}
+		public static string getTx(IZennoPosterProjectModel project, string chainRPC = "", int deadline = 60)
+		{
+			string hash = project.Variables["blockchainHash"].Value;
+			if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
+			string jsonRecept = $@"{{""jsonrpc"":""2.0"",""method"":""eth_getTransactionReceipt"",""params"":[""{hash}""],""id"":1}}";
+			string jsonRaw = $@"{{""jsonrpc"":""2.0"",""method"":""eth_getTransactionByHash"",""params"":[""{hash}""],""id"":1}}";
+			string response = "";
+			project.Variables["a0debug"].Value = "";
+			Thread.Sleep(2000);
+			
+			DateTime startTime = DateTime.Now;
+			TimeSpan timeout = TimeSpan.FromSeconds(deadline);
+
+			while (true)
+			{
+				if (DateTime.Now - startTime > timeout) throw new Exception($"timeout {deadline}s");
+				var logString = "";
+				try {
+					response = Http.W3Post(project, chainRPC, jsonRecept);
+					if (!string.IsNullOrEmpty(response)) {
+						project.Json.FromString(response);
+					}
+				} catch {
+					Thread.Sleep(2000);
+					continue;
+				}
+				
+				try
+				{
+					string gasUsed = HexToString(project.Json.result.gasUsed, "gwei");
+					string gasPrice = HexToString(project.Json.result.effectiveGasPrice, "gwei");
+					string status = HexToString(project.Json.result.status);
+					
+					if (status == "1") project.Variables["txStatus"].Value = "SUCCSESS";
+					else project.Variables["txStatus"].Value = "!W FAIL";
+					string result = $"{chainRPC} {hash} [{project.Variables["txStatus"].Value}] gasUsed: {gasUsed}";
+					Loggers.W3Debug(project, result);
+					return result;
+				}
+				catch { project.Variables["txStatus"].Value = "noStatus"; }
+				
+				Thread.Sleep(1000);
+				
+				try {
+					response = Http.W3Post(project, chainRPC, jsonRaw);
+					if (!string.IsNullOrEmpty(response)) {
+						project.Json.FromString(response);
+					}
+				} catch {
+					Thread.Sleep(2000);
+					continue;
+				}
+				
+				try
+				{
+					string gas = HexToString(project.Json.result.maxFeePerGas, "gwei");
+					string gasPrice = HexToString(project.Json.result.gasPrice, "gwei");
+					string nonce = HexToString(project.Json.result.nonce);
+					string value = HexToString(project.Json.result.value, "eth");
+					project.Variables["txStatus"].Value = "PENDING";
+
+					logString = $"[{chainRPC} {hash}] pending  gasLimit:[{gas}] gasNow:[{gasPrice}] nonce:[{nonce}] value:[{value}]";    
+				}
+				catch
+				{
+					project.Variables["txStatus"].Value = "";   
+
+					logString = $"[{chainRPC} {hash}] not found";
+				}
+				
+				Loggers.W3Debug(project,logString);
+				Thread.Sleep(2000);
+			}
+		}
+
+		//SndTx
 		public static string SendLegacy(string chainRpc, string contractAddress, string encodedData, decimal value, string walletKey, int speedup = 1)
 		{
 			try 
@@ -2899,7 +3117,7 @@ namespace w3tools //by @w3bgrep
 				foreach (string RPC in chainList.Split(','))
 				{
 				    chainRPC = RPC.Trim();
-					var native = Leaf.native<decimal>(project, RPC, accountAddress);
+					var native = getNative<decimal>(project, RPC, accountAddress);
 					var required = value + 0.00015m;
 				    if (native > required)
 				    {
@@ -2919,7 +3137,7 @@ namespace w3tools //by @w3bgrep
 			
 			else 
 			{
-				var native = Leaf.native<decimal>(project, chainRPC, accountAddress);
+				var native = getNative<decimal>(project, chainRPC, accountAddress);
 				Loggers.W3Debug(project,$"rpc:[{chainRPC}] native:[{native}]");
 				if (native < value + 0.0002m)
 				{
@@ -2947,7 +3165,7 @@ namespace w3tools //by @w3bgrep
 			    project.Variables["blockchainHash"].Value = txHash;
 			}
 			catch (Exception ex){project.SendWarningToLog($"{ex.Message}",true);throw;}
-			string result = Leaf.waitTx(project,chainRPC);
+			string result = getTx(project,chainRPC);
 			return result;
 		}
 		public static string ApproveMax(IZennoPosterProjectModel project, string contract, string spender, string chainRPC = "")
@@ -2977,7 +3195,7 @@ namespace w3tools //by @w3bgrep
 			catch (Exception ex){Loggers.W3Throw(project,$"!W:{ex.Message}");}
 
 			Loggers.W3Log(project,$"[APPROVE] {contract} for spender {spender}...");
-			return Leaf.waitTx(project);
+			return getTx(project);
 		}
 		public static string ApproveCancel(IZennoPosterProjectModel project, string contract, string spender, string chainRPC = "")
 		{
@@ -3006,7 +3224,7 @@ namespace w3tools //by @w3bgrep
 			catch (Exception ex){Loggers.W3Throw(project,$"!W:{ex.Message}");}
 
 			Loggers.W3Log(project,$"[APPROVE] {contract} for spender {spender}...");
-			return Leaf.waitTx(project);
+			return getTx(project);
 		}
 		public static string WrapNative(IZennoPosterProjectModel project, string contract, decimal value, string chainRPC = "")
 		{
@@ -3035,14 +3253,14 @@ namespace w3tools //by @w3bgrep
 		    catch (Exception ex){Loggers.W3Throw(project,$"!W:{ex.Message}");}
 		    
 		    Loggers.W3Log(project,$"[WRAP] {value} native to {contract}...");
-			return Leaf.waitTx(project);
+		    return getTx(project);
 		}
 	}
 	#endregion
 	#region CEX
-	public static class Binance
+	public static class CEX
 	{ 
-        public static string GetUserAsset(IZennoPosterProjectModel project, string coin = "")
+        public static string BinanceGetUserAsset(IZennoPosterProjectModel project, string coin = "")
 		{
 			string[] keys = Db.BinanceApiKeys(project).Split(';');
 			
@@ -3117,7 +3335,7 @@ namespace w3tools //by @w3bgrep
             return $"{balance}";
 
 		}
-		public static string Withdraw(IZennoPosterProjectModel project, string amount, string network, string coin = "ETH", string address = "")
+		public static string BinanceWithdraw(IZennoPosterProjectModel project, string amount, string network, string coin = "ETH", string address = "")
 		{
 			string[] keys = Db.BinanceApiKeys(project).Split(';');	
 			var apiKey = keys[0]; var secretKey = keys[1]; var proxy = keys[2];
@@ -3149,7 +3367,7 @@ namespace w3tools //by @w3bgrep
 			
 			return response;
 		}
-        public static string GetWithdrawHistory(IZennoPosterProjectModel project, string searchId = "")
+        public static string BinanceGetWithdrawHistory(IZennoPosterProjectModel project, string searchId = "")
         {
 			string[] keys = Db.BinanceApiKeys(project).Split(';');
 			
@@ -3224,10 +3442,31 @@ namespace w3tools //by @w3bgrep
 	}
 	#endregion
 	#region Wallets
-	
-	public static class MM
+	public static class Wallets
 	{
-		public static string Confirm(this Instance instance,IZennoPosterProjectModel project, bool log = false )
+        public static void MMConfirm(this Instance instance)
+		{
+			int i = 0;
+			DateTime deadline = DateTime.Now.AddSeconds(60);
+			while (!instance.ActiveTab.URL.Contains("nkbihfbeogaeaoehlefnkodbefgpgknn"))
+				{
+					Thread.Sleep(1000);
+					 if (i > 5) throw new Exception(""); i++;
+				} 
+			i = 0; Thread.Sleep(2000);
+			
+			while (instance.ActiveTab.URL.Contains("nkbihfbeogaeaoehlefnkodbefgpgknn"))
+			{
+				if (DateTime.Now > deadline) throw new Exception("");
+				try
+				{
+					instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("button", "class", "button\\ btn--rounded\\ btn-primary", "regexp", 0),3); Thread.Sleep(2000);
+				}
+				catch{}
+			}
+			
+		}
+	    public static void MMConfirm2(this Instance instance,IZennoPosterProjectModel project, bool log = false )
 		{
 			instance.UseFullMouseEmulation = false;
 			DateTime urlChangeDeadline = DateTime.Now.AddSeconds(60);
@@ -3286,9 +3525,8 @@ namespace w3tools //by @w3bgrep
 			}
 			if (log)project.SendInfoToLog("MetaMask interaction completed, URL has changed");
 			instance.UseFullMouseEmulation = true;
-			return "done";
 		}
-		public static string Run(this Instance instance,IZennoPosterProjectModel project,string key = "", bool skipCheck = false)
+		public static string MMUnlock(this Instance instance,IZennoPosterProjectModel project,string key = "", bool skipCheck = false)
 		{
 			instance.UseFullMouseEmulation = false;
             string address = "";
@@ -3402,11 +3640,7 @@ namespace w3tools //by @w3bgrep
 				return address;
 			}
 		}
-
-	}
-	public static class Keplr
-	{
-		public static string Approve(this Instance instance,IZennoPosterProjectModel project)
+		public static void KeplrApprove(this Instance instance,IZennoPosterProjectModel project)
 		{
 			string extId = "dmkamcknogkgcdfhhbddcghachkejeap";
 
@@ -3439,14 +3673,16 @@ namespace w3tools //by @w3bgrep
 				if (!instance.ActiveTab.URL.Contains(extId)) break;
 			}
 			Loggers.W3Debug(project,"Keplr tab closed");
-			return "done";
 		}
 	}	
 	#endregion	
 
-	public static class OTP
+	public static class Tools
 	{
-		public static string Offline(this Instance instance, string keyString, int waitIfTimeLess = 5)
+		private static readonly object SyncObject = new object();
+
+		#region OTP
+		public static string GetOTP(this Instance instance, string keyString, int waitIfTimeLess = 5)
 		{
 		    var key = OtpNet.Base32Encoding.ToBytes(keyString);
 		    var otp = new OtpNet.Totp(key);
@@ -3461,7 +3697,7 @@ namespace w3tools //by @w3bgrep
 		
 		    return code;
 		}
-		public static string FirstMail(IZennoPosterProjectModel project,string email = "", string proxy = "")
+		public static string FirstMailOTP(IZennoPosterProjectModel project,string email = "", string proxy = "")
 		{
 		    string encodedLogin = Uri.EscapeDataString(project.Variables["settingsFmailLogin"].Value);
 		    string encodedPass = Uri.EscapeDataString(project.Variables["settingsFmailPass"].Value);
@@ -3503,7 +3739,7 @@ namespace w3tools //by @w3bgrep
 		        else throw new Exception("Fmail: OTP not found in message with correct email");
 		    }
 		}
-		public static string Telegram(IZennoPosterProjectModel project, string email = "", string proxy = "")
+		public static string TelegramMailOTP(IZennoPosterProjectModel project, string email = "", string proxy = "")
 		{
 		    if (email == "") email = project.Variables["login"].Value;
 		    string url = $"https://api.telegram.org/bot{project.Variables["settingsTgLogToken"].Value}/getUpdates?chat_id={project.Variables["settingsTgMailGroup"].Value}&limit=1&offset=-1";
@@ -3525,12 +3761,8 @@ namespace w3tools //by @w3bgrep
 		    
 		    return otpGroups[0].FirstOrDefault();
 		}
-
-	}
-
-	public static class Tools
-	{
-		private static readonly object SyncObject = new object();
+		#endregion
+		
 		#region Text&Vars
 		public static void IncreaseVar(IZennoPosterProjectModel project, string varName)
 		{
@@ -3771,6 +4003,22 @@ namespace w3tools //by @w3bgrep
 		    catch (Exception){return "qrError";}
 		}
 		#endregion		
+	
+		#region Links //temp
+		public static string w3Log(IZennoPosterProjectModel project, string toLog = "", string varName = "a0debug") 
+	    {
+	        return Loggers.W3Log(project, toLog, varName);
+	    }
+		public static string w3Query(IZennoPosterProjectModel project, string dbQuery, bool toLog = false)
+		{
+			return SQL.W3Query(project, dbQuery, toLog);
+		}
+		public static string simpleGET(IZennoPosterProjectModel project, string url, string proxy = "")
+		{
+			return Http.W3Get(project, url, proxy);
+		}
+		#endregion
+			
 	}
 
 	public static class StyleConverter
