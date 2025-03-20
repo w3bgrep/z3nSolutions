@@ -118,7 +118,7 @@ namespace w3tools //by @w3bgrep
 		}
 		public static T getNative<T>(IZennoPosterProjectModel project, string chainRPC = "", string address = "", string proxy = "",bool log = false)
 		{
-			return Leaf.native<T>(project,chainRPC,address);
+			return Leaf.balNative<T>(project,chainRPC,address);
 		}
 		public static T getNonce<T>(IZennoPosterProjectModel project, string chainRPC = "", string address = "", string proxy = "",bool log = false)
 		{
@@ -126,7 +126,7 @@ namespace w3tools //by @w3bgrep
 		}		
 		public static T getERC20<T>(IZennoPosterProjectModel project, string tokenContract, string chainRPC = "", string address = "", string tokenDecimal = "18", string proxy = "",bool log = false)
 		{
-			return Leaf.bal20<T>(project,chainRPC,address);
+			return Leaf.balERC20<T>(project,chainRPC,address);
 		}
 	    public static string MMConfirm2(this Instance instance,IZennoPosterProjectModel project, bool log = false )
 		{
@@ -1526,7 +1526,7 @@ namespace w3tools //by @w3bgrep
     
     return (T)Convert.ChangeType(transactionCount, typeof(T));
 }	
-		public static T native<T>(IZennoPosterProjectModel project, string chainRPC = "", string address = "", string proxy = "",bool log = false)
+		public static T balNative<T>(IZennoPosterProjectModel project, string chainRPC = "", string address = "", string proxy = "",bool log = false)
 		{
 			if (address == "") address = project.Variables["addressEvm"].Value;
 			if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
@@ -1570,7 +1570,7 @@ namespace w3tools //by @w3bgrep
 			if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(balanceNative.ToString("0.##################", CultureInfo.InvariantCulture), typeof(T));
 			return (T)Convert.ChangeType(balanceNative, typeof(T));
 		}
-		public static T gas<T>(IZennoPosterProjectModel project, string chainRPC = "", string proxy = "",bool log = false)
+		public static T gasNow<T>(IZennoPosterProjectModel project, string chainRPC = "", string proxy = "",bool log = false)
 		{
 			if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
 			string jsonBody = @"{""jsonrpc"":""2.0"",""method"":""eth_gasPrice"",""params"":[],""id"":1}";
@@ -1620,7 +1620,7 @@ namespace w3tools //by @w3bgrep
 			
 			return (T)Convert.ChangeType(gasGwei, typeof(T));
 		}								
-		public static T bal20<T>(IZennoPosterProjectModel project, string tokenContract, string chainRPC = "", string address = "", string tokenDecimal = "18", string proxy = "",bool log = false)
+		public static T balERC20<T>(IZennoPosterProjectModel project, string tokenContract, string chainRPC = "", string address = "", string tokenDecimal = "18", string proxy = "",bool log = false)
 		{
 			if (address == "") address = project.Variables["addressEvm"].Value;
 			if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
@@ -1675,7 +1675,7 @@ namespace w3tools //by @w3bgrep
 			
 			return (T)Convert.ChangeType(balance, typeof(T));
 		}					
-		public static T bal721<T>(IZennoPosterProjectModel project, string tokenContract, string chainRPC = "", string address = "", string proxy = "",bool log = false)
+		public static T balERC721<T>(IZennoPosterProjectModel project, string tokenContract, string chainRPC = "", string address = "", string proxy = "",bool log = false)
 		{
 			if (address == "") address = project.Variables["addressEvm"].Value;
 			if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
@@ -1738,7 +1738,7 @@ namespace w3tools //by @w3bgrep
 
 			return (T)Convert.ChangeType(balance, typeof(T));
 		}
-		public static T bal1155<T>(IZennoPosterProjectModel project, string tokenContract, string tokenId, string chainRPC = "", string address = "", string proxy = "",bool log = false)
+		public static T balERC1155<T>(IZennoPosterProjectModel project, string tokenContract, string tokenId, string chainRPC = "", string address = "", string proxy = "",bool log = false)
 		{
 			if (address == "") address = project.Variables["addressEvm"].Value;
 			if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
