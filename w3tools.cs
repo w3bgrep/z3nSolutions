@@ -3479,18 +3479,16 @@ namespace w3tools //by @w3bgrep
 			Loggers.W3Debug(project,"Keplr tab closed");
 			return "done";
 		}
-
 		public static void KeplrClick(this Instance instance, HtmlElement he)
 		{
 			int x = int.Parse(he.GetAttribute("leftInTab"));int y = int.Parse(he.GetAttribute("topInTab"));
 			x = x - 450;instance.Click(x, x, y, y, "Left", "Normal");Thread.Sleep(1000);
 			return;
 		}
-
 		public static string KeplrCheck(this Instance instance)
 		{
 			instance.CloseExtraTabs(); 
-			Tab exTab = instance.NewTab("keplr"); 
+			//Tab exTab = instance.NewTab("keplr"); 
 			instance.ActiveTab.Navigate($"chrome-extension://dmkamcknogkgcdfhhbddcghachkejeap/popup.html#/", "");var toDo = "";
 			int i = 1;
 			DateTime deadline = DateTime.Now.AddSeconds(15);
@@ -3562,7 +3560,7 @@ namespace w3tools //by @w3bgrep
 			}
 			
 		}
-		public static void KeplrSetSource(this Instance instance,IZennoPosterProjectModel project, string source = "pkey")
+		public static void KeplrSetSource(this Instance instance,IZennoPosterProjectModel project, string source)
 		{
 			//var source  = "pkey";//"seed"
 
@@ -3591,11 +3589,20 @@ namespace w3tools //by @w3bgrep
 				}
 			}	
 		}
-
 		public static void KeplrInstallExt(this Instance instance,IZennoPosterProjectModel project)
 		{
 			string path = $"{project.Path}.crx\\keplr0.12.169.crx";
 			instance.InstallCrxExtension(path);Thread.Sleep(2000);
+		}
+		public static void KeplrUnlock(this Instance instance,IZennoPosterProjectModel project)
+		{
+			instance.WaitSetValue(() => instance.ActiveTab.FindElementByAttribute("input:password", "tagname", "input", "regexp", 0),SAFU.HWPass(project));
+			instance.KeplrClick(instance.ActiveTab.FindElementByAttribute("button", "innertext", "Unlock", "regexp", 0));
+			if (!instance.ActiveTab.FindElementByAttribute("div", "innertext", "Invalid\\ password", "regexp", 0).IsVoid) 
+			{
+				instance.CloseAllTabs(); instance.UninstallExtension("dmkamcknogkgcdfhhbddcghachkejeap"); 
+				Loggers.W3Throw(project,$"!WrongPassword");
+			}			
 		}
 		public static string KeplrPrune(this Instance instance,IZennoPosterProjectModel project)
 		{
@@ -3629,6 +3636,36 @@ namespace w3tools //by @w3bgrep
 			}
 			return imported;
 		}
+		public static string KeplrMain(this Instance instance,IZennoPosterProjectModel project, string source, bool log = false)
+		{
+		//var source = "pkey"; //seed | pkey
+			while (true)
+			{
+				var kState = instance.KeplrCheck();
+				if (log) project.SendInfoToLog(kState);
+				if (kState == "install") 
+				{
+					instance.KeplrInstallExt(project);
+					continue;
+				}
+				if (kState == "import") 
+				{
+					instance.KeplrImportSeed(project);
+					continue;
+				}
+				if (kState == "inputPass") 
+				{
+					instance.KeplrUnlock(project);
+					continue;
+				}
+				if (kState == "setSourse") 
+				{
+					instance.KeplrSetSource(project,source);
+					break;
+				}
+			}
+			return $"Keplr set from {source}";
+		}	
 	}
 
 
