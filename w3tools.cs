@@ -2761,7 +2761,16 @@ namespace w3tools //by @w3bgrep
 			var elapsedMinutes = (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - long.Parse(project.Variables["varSessionId"].Value)) / 60.0;
             return TimeSpan.FromSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - long.Parse(project.Variables["varSessionId"].Value)).ToString();
 		}
-
+		public static void RndSleep(IZennoPosterProjectModel project, int min = 0,  int max = 0, bool log = false)
+		{
+			//int min = 0;  int max = 0; bool log = false;
+			var rnd = new Random();
+			if (min == 0) min = int.Parse(project.Variables["delayMin"].Value);
+			if (max == 0) min = int.Parse(project.Variables["delayMax"].Value);
+			int sleep = rnd.Next(min,max);
+			if (log) project.SendInfoToLog($"sleep {sleep}s");
+			Thread.Sleep(sleep*1000);			
+		}
 	}
 	#endregion
 	#region Tx
