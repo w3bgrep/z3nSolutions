@@ -3480,30 +3480,155 @@ namespace w3tools //by @w3bgrep
 			return "done";
 		}
 
-		public static void KeplrClick(this Instance instance, (string, string, string, string, int) obj)
+		public static void KeplrClick(this Instance instance, HtmlElement he)
 		{
-			string tag = obj.Item1;
-			string attribute = obj.Item2;
-			string pattern = obj.Item3;
-			string mode = obj.Item4;
-			int pos = obj.Item5;
-			int index = 0;			
-			while (true)
-			{
-				HtmlElement he = instance.ActiveTab.FindElementByAttribute(tag, attribute, pattern, mode, index);
-				if (he.IsVoid) 
-				{
-					he = instance.ActiveTab.FindElementByAttribute(tag, attribute, pattern, mode, index - 1);
-					int x = int.Parse(he.GetAttribute("leftInTab"));int y = int.Parse(he.GetAttribute("topInTab"));
-					x = x - 450;instance.Click(x, x, y, y, "Left", "Normal");Thread.Sleep(1000);
-					return;
-				}
-				index++;
-			}
+			int x = int.Parse(he.GetAttribute("leftInTab"));int y = int.Parse(he.GetAttribute("topInTab"));
+			x = x - 450;instance.Click(x, x, y, y, "Left", "Normal");Thread.Sleep(1000);
+			return;
 		}
 
+		public static string KeplrCheck(this Instance instance)
+		{
+			instance.CloseExtraTabs(); 
+			Tab exTab = instance.NewTab("keplr"); 
+			instance.ActiveTab.Navigate($"chrome-extension://dmkamcknogkgcdfhhbddcghachkejeap/popup.html#/", "");var toDo = "";
+			int i = 1;
+			DateTime deadline = DateTime.Now.AddSeconds(15);
+			while (true)
+			{
+				if (DateTime.Now > deadline) throw new Exception($"!W cant't check KeplrState");
+				Thread.Sleep(1000);
+				if (!instance.ActiveTab.FindElementByAttribute("div", "class", "error-code", "regexp", 0).IsVoid) return "install";
+				else if (!instance.ActiveTab.FindElementByAttribute("button", "innertext", "Import\\ an\\ existing\\ wallet", "regexp", 0).IsVoid)  return "import";
+				else if (!instance.ActiveTab.FindElementByAttribute("input:password", "tagname", "input", "regexp", 0).IsVoid)  return "inputPass";
+				else if (!instance.ActiveTab.FindElementByAttribute("div", "innertext", "Copy\\ Address", "regexp", 0).IsVoid)  return "setSourse"; 
 
+			}
+			return "unknown";				
+		}
+		public static void KeplrImportSeed(this Instance instance,IZennoPosterProjectModel project)
+		{
+			var WalletPassword = SAFU.HWPass(project);
+			instance.WaitClick(() => 	instance.ActiveTab.FindElementByAttribute("button", "innertext", "Import\\ an\\ existing\\ wallet", "regexp", 0),comment:"Import\\ an\\ existing\\ wallet");
+			instance.WaitClick(() => 	instance.ActiveTab.FindElementByAttribute("button", "innertext", "Use\\ recovery\\ phrase\\ or\\ private\\ key", "regexp", 0));
+			string seedPhrase = Db.Seed(project);
+			int index = 0;	
+			foreach(string word in seedPhrase.Split(' ')) 
+				{ 
+					instance.ActiveTab.FindElementByAttribute("input", "fulltagname", "input:", "regexp", index).SetValue(word, "Full", false);
+					index++;
+				}
+			instance.WaitClick(() => instance.ActiveTab.FindElementByAttribute("button", "innertext", "Import", "regexp", 1));
+			instance.WaitSetValue(() => instance.ActiveTab.FindElementByName("name"),"seed");
+			instance.WaitSetValue(() => instance.ActiveTab.FindElementByName("password"),WalletPassword,2,Throw:false);
+			instance.WaitSetValue(() => instance.ActiveTab.FindElementByName("confirmPassword"),WalletPassword,2,Throw:false);
+			instance.WaitClick(() => instance.ActiveTab.FindElementByAttribute("button", "innertext", "Next", "regexp", 0));
+			
+			string check = instance.WaitGetValue(() => 
+			instance.ActiveTab.FindElementByAttribute("div", "innertext", "Select\\ All", "regexp", 0));
+			int j = 0;	while (!instance.ActiveTab.FindElementByAttribute("div", "innertext", "Select\\ All", "regexp", j).IsVoid) j++;
+			instance.WaitClick(() => instance.ActiveTab.FindElementByAttribute("div", "innertext", "Select\\ All", "regexp", j-1));
 
+			instance.WaitClick(() => 	instance.ActiveTab.FindElementByAttribute("button", "innertext", "Save", "regexp", 0));
+			while  (!instance.ActiveTab.FindElementByAttribute("button", "innertext", "Import", "regexp", 0).IsVoid)
+			{
+				instance.ActiveTab.FindElementByAttribute("button", "innertext", "Import", "regexp", 0).RiseEvent("click", instance.EmulationLevel); 
+				Thread.Sleep(2000);
+			}
+			instance.CloseExtraTabs();
+		}
+		public static void KeplrImportPkey(this Instance instance,IZennoPosterProjectModel project)
+		{
+			var WalletPassword = SAFU.HWPass(project);
+			instance.WaitClick(() => 	instance.ActiveTab.FindElementByAttribute("button", "innertext", "Import\\ an\\ existing\\ wallet", "regexp", 0));
+			instance.WaitClick(() => 	instance.ActiveTab.FindElementByAttribute("button", "innertext", "Use\\ recovery\\ phrase\\ or\\ private\\ key", "regexp", 0));
+			var key = Db.KeyEVM(project);
+			instance.WaitClick(() => instance.ActiveTab.FindElementByAttribute("button", "innertext", "Private\\ key", "regexp", 1));
+			instance.WaitSetValue(() => instance.ActiveTab.FindElementByAttribute("input:password", "tagname", "input", "regexp", 0),key);
+			instance.WaitClick(() => instance.ActiveTab.FindElementByAttribute("button", "innertext", "Import", "regexp", 1));
+			instance.WaitSetValue(() => instance.ActiveTab.FindElementByName("name"),"pkey");
+			instance.WaitSetValue(() => instance.ActiveTab.FindElementByName("password"),WalletPassword,2,Throw:false);
+			instance.WaitSetValue(() => instance.ActiveTab.FindElementByName("confirmPassword"),WalletPassword,2,Throw:false);
+			instance.WaitClick(() => instance.ActiveTab.FindElementByAttribute("button", "innertext", "Next", "regexp", 0));
+			
+			string check = instance.WaitGetValue(() => 
+			instance.ActiveTab.FindElementByAttribute("div", "innertext", "Select\\ All", "regexp", 0));
+			
+			instance.WaitClick(() => 	instance.ActiveTab.FindElementByAttribute("button", "innertext", "Save", "regexp", 0));
+			while  (!instance.ActiveTab.FindElementByAttribute("button", "innertext", "Import", "regexp", 0).IsVoid)
+			{
+				instance.ActiveTab.FindElementByAttribute("button", "innertext", "Import", "regexp", 0).RiseEvent("click", instance.EmulationLevel); 
+				Thread.Sleep(2000);
+			}
+			
+		}
+		public static void KeplrSetSource(this Instance instance,IZennoPosterProjectModel project, string source = "pkey")
+		{
+			//var source  = "pkey";//"seed"
+
+			while (true)
+			{
+				instance.CloseExtraTabs();
+				instance.ActiveTab.Navigate("chrome-extension://dmkamcknogkgcdfhhbddcghachkejeap/popup.html#/wallet/select", "");
+				string heToWait = instance.WaitGetValue(() => 
+					instance.ActiveTab.FindElementByAttribute("button", "innertext", "Add\\ Wallet", "regexp", 0)
+				);
+				
+				var imported = instance.KeplrPrune(project);
+				project.SendInfoToLog(imported);
+				if (imported.Contains("seed") && imported.Contains("pkey")) 
+				{
+					instance.KeplrClick(instance.LastHe(("div", "innertext", source, "regexp", 0)));
+					project.SendInfoToLog($"sourse set to {source}");
+					return;
+				}
+				else 	
+				{
+					project.SendInfoToLog("not all wallets imported");
+					instance.KeplrClick(instance.ActiveTab.FindElementByAttribute("button", "innertext", "Add\\ Wallet", "regexp", 0));
+					instance.KeplrImportPkey(project);
+					continue;
+				}
+			}	
+		}
+
+		public static void KeplrInstallExt(this Instance instance,IZennoPosterProjectModel project)
+		{
+			string path = $"{project.Path}.crx\\keplr0.12.169.crx";
+			instance.InstallCrxExtension(path);Thread.Sleep(2000);
+		}
+		public static string KeplrPrune(this Instance instance,IZennoPosterProjectModel project)
+		{
+			instance.UseFullMouseEmulation = true;
+			int i = 0;
+			var imported = "";
+			while (true)
+			{
+				var dotBtn = instance.ActiveTab.FindElementByAttribute("path", "d", "M10.5 6C10.5 5.17157 11.1716 4.5 12 4.5C12.8284 4.5 13.5 5.17157 13.5 6C13.5 6.82843 12.8284 7.5 12 7.5C11.1716 7.5 10.5 6.82843 10.5 6ZM10.5 12C10.5 11.1716 11.1716 10.5 12 10.5C12.8284 10.5 13.5 11.1716 13.5 12C13.5 12.8284 12.8284 13.5 12 13.5C11.1716 13.5 10.5 12.8284 10.5 12ZM10.5 18C10.5 17.1716 11.1716 16.5 12 16.5C12.8284 16.5 13.5 17.1716 13.5 18C13.5 18.8284 12.8284 19.5 12 19.5C11.1716 19.5 10.5 18.8284 10.5 18Z", "text", i);
+				
+				if (dotBtn.IsVoid) break;
+				var tile = dotBtn.ParentElement.ParentElement.ParentElement.ParentElement.ParentElement.ParentElement;
+				project.SendInfoToLog(tile.InnerText);
+				if (tile.InnerText.Contains("pkey") )
+				{
+					imported += "pkey"; 
+					i++;
+					continue;
+				}
+				if (tile.InnerText.Contains("seed")) 				
+				{
+					imported += "seed"; 
+					i++;
+					continue;
+				}
+				instance.KeplrClick(dotBtn);
+				instance.KeplrClick(instance.LastHe(("div", "innertext", "Delete\\ Wallet", "regexp", 0)));
+				instance.WaitSetValue(() => 	instance.ActiveTab.FindElementByName("password"), SAFU.HWPass(project));
+				instance.KeplrClick(instance.ActiveTab.FindElementByAttribute("button", "type", "submit", "regexp", 0));
+				i++;
+			}
+			return imported;
+		}
 	}
 
 
@@ -3781,7 +3906,7 @@ namespace w3tools //by @w3bgrep
 			}
 		}
 
-		public static void WaitClick(this Instance instance, Func<ZennoLab.CommandCenter.HtmlElement> elementSearch, int maxWaitSeconds = 10, int delay = 1, string comment = "")
+		public static void WaitClick(this Instance instance, Func<ZennoLab.CommandCenter.HtmlElement> elementSearch, int maxWaitSeconds = 10, int delay = 1, string comment = "",bool Throw = true)
 		{
 			DateTime functionStart = DateTime.Now;
 			HtmlElement directElement = TryGetDirectElement(elementSearch);
@@ -3790,7 +3915,8 @@ namespace w3tools //by @w3bgrep
 			while (true)
 			{
 				if ((DateTime.Now - functionStart).TotalSeconds > maxWaitSeconds)
-					throw new TimeoutException($"{comment} not found in {maxWaitSeconds}s");
+					if (Throw) throw new TimeoutException($"{comment} not found in {maxWaitSeconds}s");
+					else return;
 
 				HtmlElement element;
 				if (isDirectElement) element = directElement;
@@ -3834,14 +3960,15 @@ namespace w3tools //by @w3bgrep
 			HtmlElement he = elementSearch();
 			HtmlElement heParent = he.ParentElement;heParent.RemoveChild(he);
 		}
-		public static void WaitSetValue(this Instance instance, Func<ZennoLab.CommandCenter.HtmlElement> elementSearch, string value, int maxWaitSeconds = 10, int delay = 1, string comment = "")
+		public static void WaitSetValue(this Instance instance, Func<ZennoLab.CommandCenter.HtmlElement> elementSearch, string value, int maxWaitSeconds = 10, int delay = 1, string comment = "",bool Throw = true)
 		{
 		    DateTime functionStart = DateTime.Now;
 		    
 		    while (true)
 		    {
-		        if ((DateTime.Now - functionStart).TotalSeconds > maxWaitSeconds)
-		            throw new TimeoutException($"{comment} not found in {maxWaitSeconds}s");
+				if ((DateTime.Now - functionStart).TotalSeconds > maxWaitSeconds)
+					if (Throw) throw new TimeoutException($"{comment} not found in {maxWaitSeconds}s");
+					else return;
 		            
 		        var element = elementSearch();
 		        
