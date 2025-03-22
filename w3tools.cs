@@ -68,38 +68,7 @@ namespace w3tools //by @w3bgrep
 		//  ЕСЛИ ТЫ ИСПОЛЬЗУЕШЬ КАКИЕ-ТО ИЗ НИХ - 
 		// замени их теми к которым они обращаются как можно скорее, 
 		// в следующих версиях эти вызовы будут удалены
-		public static void TwitterTokenSet(this Instance instance, IZennoPosterProjectModel project, string authToken = "", bool log = false, [CallerMemberName] string caller = "")
-		{
-			Twitter.SetToken(instance,project,authToken,log,caller);
-		}
-		public static string TwitterGetStatus(this Instance instance, IZennoPosterProjectModel project,bool log = false, [CallerMemberName] string caller = "")
-		{
-			return Twitter.GetStatus(instance,project,log,caller);
-		}
-		public static string TwitterCredentialsLogin(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
-		{
-			return Twitter.Login(instance,project,log,caller);
-		}
-		public static string TwitterTokenSync(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
-		{
-			return Twitter.SyncToken(instance,project,log,caller);
-		}		
-		public static string TwitterMain(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
-		{
-			return Twitter.FullCheck(instance,project,log,caller);
-		}
-		public static string GoogleLoginCheck(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
-		{
-			return Google.CheckLogin(instance,project,log,caller);
-		}		
-		public static string GoogleFullCheck(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
-		{
-			return Google.FullCheck(instance,project,log,caller);
-		}				
-		public static string GoogleAuth(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
-		{
-			return Google.Auth(instance,project,log,caller);
-		}
+
 		public static string w3Log(IZennoPosterProjectModel project, string toLog = "", string varName = "a0debug") 
 	    {
 	        return Loggers.W3Log(project, toLog, varName);
@@ -126,7 +95,7 @@ namespace w3tools //by @w3bgrep
 		}		
 		public static T getERC20<T>(IZennoPosterProjectModel project, string tokenContract, string chainRPC = "", string address = "", string tokenDecimal = "18", string proxy = "",bool log = false)
 		{
-			return Leaf.balERC20<T>(project,chainRPC,address);
+			return Leaf.balERC20<T>(project,tokenContract);
 		}
 	    public static string MMConfirm2(this Instance instance,IZennoPosterProjectModel project, bool log = false )
 		{
@@ -1398,6 +1367,7 @@ namespace w3tools //by @w3bgrep
 			string response = ZennoPoster.HttpPost(url, body, "application/json", proxy, "UTF-8",ZennoLab.InterfacesLibrary.Enums.Http.ResponceType.BodyOnly, 5000, "", "Mozilla/5.0", true, 5, null, "", false);
 			return response;
 		}
+
 	}
 	public static class Leaf
 	{
@@ -2172,12 +2142,65 @@ namespace w3tools //by @w3bgrep
 				throw;
 			}
 		}
+		public static T GetInitiaBalances<T>(IZennoPosterProjectModel project, string chain = "initiation-2",  string address = "", string token = "")
+		{
+			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+			
+			if (string.IsNullOrEmpty(address)) address = project.Variables["addressInitia"].Value.Trim();
+
+			string url = $"https://celatone-api-prod.alleslabs.dev/v1/initia/{chain}/accounts/{address}/balances";
+
+			string jsonString = Http.W3Get(project, url);
+
+			try
+			{
+				JArray balances = JArray.Parse(jsonString);
+				List<string> balanceList = new List<string>();
+				foreach (JObject balance in balances)
+				{
+					string denom = balance["denom"].ToString();
+					string amount = balance["amount"].ToString();
+					if (double.TryParse(amount, out double amountValue))
+					{
+						double amountInMillions = amountValue / 1000000;
+						balanceList.Add($"{denom}:{amountInMillions.ToString("0.########", CultureInfo.InvariantCulture)}");
+					}
+					else
+					{
+						balanceList.Add($"{denom}:{amount}");
+					}
+				}
+
+				if (string.IsNullOrEmpty(token))
+				{
+					// Если токен не указан, возвращаем строку со всеми балансами
+					return (T)Convert.ChangeType(string.Join(", ", balanceList), typeof(T));
+				}
+				else
+				{
+					// Если токен указан, возвращаем баланс указанного токена
+					string balanceToken = balanceList.FirstOrDefault(entry => entry.StartsWith(token + ":"))?.Split(':')[1] ?? "";
+					if (typeof(T) == typeof(string))
+						return (T)Convert.ChangeType(balanceToken, typeof(T));
+					else if (double.TryParse(balanceToken, NumberStyles.Float, CultureInfo.InvariantCulture, out double balanceValue))
+						return (T)Convert.ChangeType(balanceValue, typeof(T));
+					else
+						return default(T);
+				}
+			}
+			catch (Exception ex)
+			{
+				project.SendInfoToLog(ex.Message);
+				return default(T);
+			}
+		}
+	
 	}
 	#endregion
 	#region Socials
 	public static class Twitter
 	{
-		public static void SetToken(this Instance instance, IZennoPosterProjectModel project, string authToken = "", bool log = false, [CallerMemberName] string caller = "")
+		public static void TwitterSetToken(this Instance instance, IZennoPosterProjectModel project, string authToken = "", bool log = false, [CallerMemberName] string caller = "")
 		{
 			if (project.Variables["debug"].Value == "True") log = true;
 			instance.ClearCookie("x.com");
@@ -2219,7 +2242,7 @@ namespace w3tools //by @w3bgrep
 			instance.SetCookie($@".x.com	TRUE	/	FALSE	05/18/2033 06:33:20	auth_token	{authToken}	FALSE	TRUE");
 			if (log) Loggers.W3Log(project,$"[{caller}].[TwitterTokenSet] {authToken} set");
 		}
-		public static string GetStatus(this Instance instance, IZennoPosterProjectModel project,bool log = false, [CallerMemberName] string caller = "")
+		public static string TwitterGetStatus(this Instance instance, IZennoPosterProjectModel project,bool log = false, [CallerMemberName] string caller = "")
 		{
 			if (project.Variables["debug"].Value == "True") log = true;
 
@@ -2295,7 +2318,7 @@ namespace w3tools //by @w3bgrep
 			}
 			return status;
 		}
-		public static string Login(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
+		public static string TwitterLogin(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
 		{
 			DateTime deadline = DateTime.Now.AddSeconds(60);
 			var status = "";
@@ -2378,7 +2401,7 @@ namespace w3tools //by @w3bgrep
 
 
 		}
-		public static string SyncToken(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
+		public static string TwitterSyncToken(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
 		{
 			bool found = false;
 			string authTokenTwitter = "";
@@ -2424,8 +2447,9 @@ namespace w3tools //by @w3bgrep
 			}
 			return "";
 		}		
-		public static string FullCheck(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
+		public static string TwitterFullCheck(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
 		{
+			Db.Twitter(project);
 			if (project.Variables["debug"].Value == "True") log = true;
 			bool tokenSet = false;
 			DateTime deadline = DateTime.Now.AddSeconds(60);
@@ -2439,14 +2463,14 @@ namespace w3tools //by @w3bgrep
 				{
 					if (tokenSet == false)
 					{
-						instance.TwitterTokenSet(project);
+						instance.TwitterSetToken(project);
 						tokenSet = true;
 						Thread.Sleep(3000);
 						continue;
 					}
 					else
 					{
-						status = instance.TwitterCredentialsLogin(project);
+						status = instance.TwitterLogin(project);
 						if (status != "ok") break;
 						Thread.Sleep(3000);
 						continue;
@@ -2458,7 +2482,7 @@ namespace w3tools //by @w3bgrep
 			Thread.Sleep(3000);
 			if (status == "ok")
 			{
-				var token = instance.TwitterTokenSync(project);	
+				var token = instance.TwitterSyncToken(project);	
 				if (log) Loggers.W3Log(project,token);				
 			}
 			return status;
@@ -2466,7 +2490,7 @@ namespace w3tools //by @w3bgrep
 	}
 	public static class Google
 	{
-		public static string CheckLogin(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
+		public static string GoogleCheckLogin(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
 		{
 			instance.ActiveTab.Navigate("https://myaccount.google.com/", "");
 			var status = "";		
@@ -2509,13 +2533,13 @@ namespace w3tools //by @w3bgrep
 			}
 			return status;
 		}		
-		public static string FullCheck(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
+		public static string GoogleFullCheck(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
 		{
-			
+			Db.Google(project);
 			var status = "";
 			while (true)
 			{
-				status =instance.GoogleLoginCheck(project);
+				status =instance.GoogleCheckLogin(project);
 				if (status == "ok") return status;
 				if (status == "wrong") 
 				{
@@ -2648,7 +2672,7 @@ namespace w3tools //by @w3bgrep
 			}
 
 		}				
-		public static string Auth(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
+		public static string GoogleAuth(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
 		{
 			try
 			{
@@ -2913,7 +2937,7 @@ namespace w3tools //by @w3bgrep
 				foreach (string RPC in chainList.Split(','))
 				{
 				    chainRPC = RPC.Trim();
-					var native = Leaf.native<decimal>(project, RPC, accountAddress);
+					var native = Leaf.balNative<decimal>(project, RPC, accountAddress);
 					var required = value + 0.00015m;
 				    if (native > required)
 				    {
@@ -2933,7 +2957,7 @@ namespace w3tools //by @w3bgrep
 			
 			else 
 			{
-				var native = Leaf.native<decimal>(project, chainRPC, accountAddress);
+				var native = Leaf.balNative<decimal>(project, chainRPC, accountAddress);
 				Loggers.W3Debug(project,$"rpc:[{chainRPC}] native:[{native}]");
 				if (native < value + 0.0002m)
 				{
@@ -3347,7 +3371,7 @@ namespace w3tools //by @w3bgrep
 							break;
 						}
 					}
-                    if (key == "") key = SQL.DBget(project,"KeyEvm");
+                    if (key == "") key = Db.KeyEVM(project);
                     else skipCheck = true;
 					
 					instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("h2", "innertext", "Let\'s\\ get\\ started", "regexp", 0));
@@ -3455,7 +3479,37 @@ namespace w3tools //by @w3bgrep
 			Loggers.W3Debug(project,"Keplr tab closed");
 			return "done";
 		}
-	}	
+
+		public static void KeplrClick(this Instance instance, (string, string, string, string, int) obj)
+		{
+			string tag = obj.Item1;
+			string attribute = obj.Item2;
+			string pattern = obj.Item3;
+			string mode = obj.Item4;
+			int pos = obj.Item5;
+			int index = 0;			
+			while (true)
+			{
+				HtmlElement he = instance.ActiveTab.FindElementByAttribute(tag, attribute, pattern, mode, index);
+				if (he.IsVoid) 
+				{
+					he = instance.ActiveTab.FindElementByAttribute(tag, attribute, pattern, mode, index - 1);
+					int x = int.Parse(he.GetAttribute("leftInTab"));int y = int.Parse(he.GetAttribute("topInTab"));
+					x = x - 450;instance.Click(x, x, y, y, "Left", "Normal");Thread.Sleep(1000);
+					return;
+				}
+				index++;
+			}
+		}
+
+
+
+	}
+
+
+
+
+
 	#endregion	
 	#region Tools&Vars
 	public static class OTP
@@ -3690,28 +3744,69 @@ namespace w3tools //by @w3bgrep
 	public static class Browser
 	{		
 		private static readonly object LockObject = new object();
+		private static HtmlElement TryGetDirectElement(Func<ZennoLab.CommandCenter.HtmlElement> elementFunc)
+		{
+			try
+			{
+				var element = elementFunc();
+				if (element != null && !element.IsVoid)
+				{
+					var secondCall = elementFunc();
+					if (ReferenceEquals(element, secondCall)) return element;
+				}
+			}
+			catch (Exception)
+			{}
+			return null;
+		}
+
+		public static HtmlElement LastHe(this Instance instance, (string, string, string, string, int) obj)
+		{
+			string tag = obj.Item1;
+			string attribute = obj.Item2;
+			string pattern = obj.Item3;
+			string mode = obj.Item4;
+			int pos = obj.Item5;
+			int index = 0;
+			
+			while (true)
+			{
+				HtmlElement he = instance.ActiveTab.FindElementByAttribute(tag, attribute, pattern, mode, index);
+				if (he.IsVoid) 
+				{
+					he = instance.ActiveTab.FindElementByAttribute(tag, attribute, pattern, mode, index - 1);
+					return he;
+				}
+				index++;
+			}
+		}
+
 		public static void WaitClick(this Instance instance, Func<ZennoLab.CommandCenter.HtmlElement> elementSearch, int maxWaitSeconds = 10, int delay = 1, string comment = "")
 		{
-		    DateTime functionStart = DateTime.Now;
-		    var searchExpression = elementSearch.ToString();
-		    
-		    while (true)
-		    {
-		        if ((DateTime.Now - functionStart).TotalSeconds > maxWaitSeconds)
-		            throw new TimeoutException($"{comment} not found in {maxWaitSeconds}s");
-		            
-		        var element = elementSearch();
-		        
-		        if (!element.IsVoid)
-		        {
-		            Thread.Sleep(delay * 1000);
-		            element.RiseEvent("click", instance.EmulationLevel);
-		            break;
-		        }
-		        
-		        Thread.Sleep(500);
-		    }
+			DateTime functionStart = DateTime.Now;
+			HtmlElement directElement = TryGetDirectElement(elementSearch);
+			bool isDirectElement = directElement != null;
+
+			while (true)
+			{
+				if ((DateTime.Now - functionStart).TotalSeconds > maxWaitSeconds)
+					throw new TimeoutException($"{comment} not found in {maxWaitSeconds}s");
+
+				HtmlElement element;
+				if (isDirectElement) element = directElement;
+				else element = elementSearch();
+
+				if (!element.IsVoid)
+				{
+					Thread.Sleep(delay * 1000);
+					element.RiseEvent("click", instance.EmulationLevel);
+					break;
+				}
+
+				Thread.Sleep(500);
+			}
 		}
+
 		public static void ClickOut(this Instance instance, Func<ZennoLab.CommandCenter.HtmlElement> elementSearch, int maxWaitSeconds = 10, int disappearThresholdSeconds = 2, string comment = "")
 		{
 		    DateTime functionStart = DateTime.Now; 
