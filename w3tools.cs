@@ -683,9 +683,7 @@ namespace w3tools //by @w3bgrep
 			};	
             if (project.Variables["DBmode"].Value == "SQLite") tableName = $"_Browser";
             else if (project.Variables["DBmode"].Value == "PostgreSQL") tableName = $"browser";	
-            try{
-            SQL.W3MakeTable(project,tableStructure,tableName,schemaName:"accounts");
-            }catch{}
+			if (project.Variables["makeTable"].Value == "True") SQL.W3MakeTable(project,tableStructure,tableName,schemaName:"accounts");
             var required = "Browser";
             if (project.Variables["DBmode"].Value == "SQLite") tableName = $"_Browser";
             else if (project.Variables["DBmode"].Value == "PostgreSQL") tableName = $"accounts.browser";	
@@ -3651,7 +3649,8 @@ namespace w3tools //by @w3bgrep
 			while (true)
 			{
 				var kState = instance.KeplrCheck();
-				if (log) project.SendInfoToLog(kState);
+				
+				if (log) Loggers.W3Log(project,kState);
 				if (kState == "install") 
 				{
 					instance.KeplrInstallExt(project);
@@ -3778,7 +3777,8 @@ namespace w3tools //by @w3bgrep
 					var nameSpase = "w3tools";
 					var cleaned = new List<int>();
 					var notDeclared = new List<int>();
-					var busyAccounts = new List<int>();
+					//var busyAccounts = new List<int>();
+					var busyAccounts = new List<string>();
 					for (int i = int.Parse(project.Variables["cfgRangeStart"].Value); i <= int.Parse(project.Variables["cfgRangeEnd"].Value); i++)
 					{
 						string threadKey = $"Thread{i}";
@@ -3787,7 +3787,11 @@ namespace w3tools //by @w3bgrep
 							var globalVar = project.GlobalVariables[nameSpase, threadKey];
 							if (globalVar != null)
 							{
-								if (!string.IsNullOrEmpty(globalVar.Value)) busyAccounts.Add(i);
+								if (!string.IsNullOrEmpty(globalVar.Value)) 
+								{
+									//busyAccounts.Add(i);
+									busyAccounts.Add($"{i}:{globalVar.Value}");
+								}
 								if (project.Variables["cleanGlobal"].Value == "True")
 								{
 									globalVar.Value = string.Empty;
@@ -3804,12 +3808,11 @@ namespace w3tools //by @w3bgrep
 					}
 					else
 					{
-						project.Variables["busyAccounts"].Value = string.Join(",", busyAccounts);
-						Loggers.W3Log(project, $"!Buzy now: {string.Join(",", busyAccounts)}");
+						Loggers.W3Log(project, $"buzy Threads: [{string.Join(" | ", busyAccounts)}]");
 					}
 					int currentThread = int.Parse(project.Variables["acc0"].Value);
 					string currentThreadKey = $"Thread{currentThread}";
-					if (!busyAccounts.Contains(currentThread))
+					if (!busyAccounts.Any(x => x.StartsWith($"{currentThread}:"))) //
 					{
 						try
 						{
