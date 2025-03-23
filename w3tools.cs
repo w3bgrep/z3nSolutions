@@ -3545,13 +3545,9 @@ namespace w3tools //by @w3bgrep
 		public static void KeplrImportPkey(this Instance instance,IZennoPosterProjectModel project,bool temp = false)
 		{
 			var walletPassword = SAFU.HWPass(project);
-			var key = Db.KeyEVM(project);
-			var walletName = "pkey";
-			if (temp)
-			{
-				key = new Key().ToHex();
-				walletName = "temp";
-			}
+			var key = new Key().ToHex(); var walletName = "temp";
+			if (!temp) key = Db.KeyEVM(project);
+			if (!temp) walletName = "pkey";
 			instance.WaitClick(() => 	instance.ActiveTab.FindElementByAttribute("button", "innertext", "Import\\ an\\ existing\\ wallet", "regexp", 0));
 			instance.WaitClick(() => 	instance.ActiveTab.FindElementByAttribute("button", "innertext", "Use\\ recovery\\ phrase\\ or\\ private\\ key", "regexp", 0));
 			
