@@ -3542,18 +3542,25 @@ namespace w3tools //by @w3bgrep
 			}
 			instance.CloseExtraTabs();
 		}
-		public static void KeplrImportPkey(this Instance instance,IZennoPosterProjectModel project)
+		public static void KeplrImportPkey(this Instance instance,IZennoPosterProjectModel project,bool temp = false)
 		{
-			var WalletPassword = SAFU.HWPass(project);
+			var walletPassword = SAFU.HWPass(project);
+			var key = Db.KeyEVM(project);
+			var walletName = "pkey";
+			if (temp)
+			{
+				key = new Key().ToHex();
+				walletName = "temp";
+			}
 			instance.WaitClick(() => 	instance.ActiveTab.FindElementByAttribute("button", "innertext", "Import\\ an\\ existing\\ wallet", "regexp", 0));
 			instance.WaitClick(() => 	instance.ActiveTab.FindElementByAttribute("button", "innertext", "Use\\ recovery\\ phrase\\ or\\ private\\ key", "regexp", 0));
-			var key = Db.KeyEVM(project);
+			
 			instance.WaitClick(() => instance.ActiveTab.FindElementByAttribute("button", "innertext", "Private\\ key", "regexp", 1));
 			instance.WaitSetValue(() => instance.ActiveTab.FindElementByAttribute("input:password", "tagname", "input", "regexp", 0),key);
 			instance.WaitClick(() => instance.ActiveTab.FindElementByAttribute("button", "innertext", "Import", "regexp", 1));
-			instance.WaitSetValue(() => instance.ActiveTab.FindElementByName("name"),"pkey");
-			instance.WaitSetValue(() => instance.ActiveTab.FindElementByName("password"),WalletPassword,2,Throw:false);
-			instance.WaitSetValue(() => instance.ActiveTab.FindElementByName("confirmPassword"),WalletPassword,2,Throw:false);
+			instance.WaitSetValue(() => instance.ActiveTab.FindElementByName("name"), walletName);
+			instance.WaitSetValue(() => instance.ActiveTab.FindElementByName("password"),walletPassword,2,Throw:false);
+			instance.WaitSetValue(() => instance.ActiveTab.FindElementByName("confirmPassword"),walletPassword,2,Throw:false);
 			instance.WaitClick(() => instance.ActiveTab.FindElementByAttribute("button", "innertext", "Next", "regexp", 0));
 			
 			string check = instance.WaitGetValue(() => 
@@ -3611,7 +3618,7 @@ namespace w3tools //by @w3bgrep
 				Loggers.W3Throw(project,$"!WrongPassword");
 			}			
 		}
-		public static string KeplrPrune(this Instance instance,IZennoPosterProjectModel project)
+		public static string KeplrPrune(this Instance instance,IZennoPosterProjectModel project, bool keepTemp = false)
 		{
 			instance.UseFullMouseEmulation = true;
 			int i = 0;
@@ -3634,6 +3641,15 @@ namespace w3tools //by @w3bgrep
 					imported += "seed"; 
 					i++;
 					continue;
+				}
+				if(keepTemp)
+				{
+					if (tile.InnerText.Contains("temp")) 				
+					{
+						imported += "temp"; 
+						i++;
+						continue;
+					}
 				}
 				instance.KeplrClick(dotBtn);
 				instance.KeplrClick(instance.LastHe(("div", "innertext", "Delete\\ Wallet", "regexp", 0)));
@@ -3954,7 +3970,102 @@ namespace w3tools //by @w3bgrep
 				index++;
 			}
 		}
+		public static HtmlElement GetHe(this Instance instance, object obj, string method = "id")
+		{
+			Type tupleType = obj.GetType();
+			int tupleLength = tupleType.GetFields().Length;
+			switch (tupleLength)
+			{
+				case 1:
+					string value = tupleType.GetField("Item1").GetValue(obj).ToString();
 
+					if (method == "id")
+					{
+						HtmlElement he = instance.ActiveTab.FindElementById(value);
+						if (he.IsVoid) throw new Exception($"no element by {method}='{value}'");
+						return he;
+					}
+					else if (method == "name")
+					{
+						HtmlElement he = instance.ActiveTab.FindElementByName(value);
+						if (he.IsVoid) throw new Exception($"no element by {method}='{value}'");
+						return he;
+					}
+					else
+					{
+						throw new Exception($"unsupported method for tupple1 {method}");
+					}
+
+				case 5:
+
+					string tag = tupleType.GetField("Item1").GetValue(obj).ToString();
+					string attribute = tupleType.GetField("Item2").GetValue(obj).ToString();
+					string pattern = tupleType.GetField("Item3").GetValue(obj).ToString();
+					string mode = tupleType.GetField("Item4").GetValue(obj).ToString();
+					
+					object posObj = tupleType.GetField("Item5").GetValue(obj);
+					int pos;
+					if (!int.TryParse(posObj.ToString(), out pos)) throw new ArgumentException("5th element of Tupple must be (int).");
+
+					if (method == "last")
+					{
+						int index = 0;
+						while (true)
+						{
+							HtmlElement he = instance.ActiveTab.FindElementByAttribute(tag, attribute, pattern, mode, index);
+							if (he.IsVoid)
+							{
+								he = instance.ActiveTab.FindElementByAttribute(tag, attribute, pattern, mode, index - 1);
+								if (he.IsVoid)
+								{
+									throw new Exception(string.Format("no element by: tag='{0}', attribute='{1}', pattern='{2}', mode='{3}'.", tag, attribute, pattern, mode));
+								}
+								return he;
+							}
+							index++;
+						}
+					}
+					else
+					{
+						HtmlElement he = instance.ActiveTab.FindElementByAttribute(tag, attribute, pattern, mode, pos);
+						if (he.IsVoid)
+						{
+							throw new Exception(string.Format("no element by: tag='{0}', attribute='{1}', pattern='{2}', mode='{3}', pos={4}.", tag, attribute, pattern, mode, pos));
+						}
+						return he;
+					}
+				default:
+					throw new ArgumentException(string.Format("unsupported Tupple: {0}.", tupleLength));
+			}
+		}
+
+		public static void LMB(this Instance instance, object obj, string method = "id", int maxWaitSeconds = 10, int delay = 1, string comment = "", bool Throw = true)
+		{
+			DateTime functionStart = DateTime.Now;
+			string lastExceptionMessage = "";
+
+			while (true)
+			{
+				if ((DateTime.Now - functionStart).TotalSeconds > maxWaitSeconds)
+				{
+					if (Throw) throw new TimeoutException($"{comment} not found in {maxWaitSeconds}s: {lastExceptionMessage}");
+					else return;
+				}
+
+				try
+				{
+					HtmlElement he = instance.GetHe(obj, method);
+					Thread.Sleep(delay * 1000);
+					he.RiseEvent("click", instance.EmulationLevel);
+					break;
+				}
+				catch (Exception ex)
+				{
+					lastExceptionMessage = ex.Message;
+				}
+				Thread.Sleep(500);
+			}
+		}
 		public static void WaitClick(this Instance instance, Func<ZennoLab.CommandCenter.HtmlElement> elementSearch, int maxWaitSeconds = 10, int delay = 1, string comment = "",bool Throw = true)
 		{
 			DateTime functionStart = DateTime.Now;
