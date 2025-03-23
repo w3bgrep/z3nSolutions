@@ -4062,6 +4062,37 @@ namespace w3tools //by @w3bgrep
 				Thread.Sleep(500);
 			}
 		}
+
+		public static string WaitHe(this Instance instance, object obj, string method = "id", int maxWaitSeconds = 10, string atr = "innertext", int delayBeforeGetSeconds = 1, string comment = "", bool Throw = true)
+		{
+			DateTime functionStart = DateTime.Now;
+			string lastExceptionMessage = "";
+
+			while (true)
+			{
+				if ((DateTime.Now - functionStart).TotalSeconds > maxWaitSeconds)
+				{
+					if (Throw) 
+						throw new TimeoutException($"{comment} not found in {maxWaitSeconds}s: {lastExceptionMessage}");
+					else 
+						return null;
+				}
+
+				try
+				{
+					HtmlElement he = instance.GetHe(obj, method);
+					Thread.Sleep(delayBeforeGetSeconds * 1000);
+					return he.GetAttribute(atr);
+				}
+				catch (Exception ex)
+				{
+					lastExceptionMessage = ex.Message;
+				}
+				
+				Thread.Sleep(500);
+			}
+		}
+
 		public static void WaitClick(this Instance instance, Func<ZennoLab.CommandCenter.HtmlElement> elementSearch, int maxWaitSeconds = 10, int delay = 1, string comment = "",bool Throw = true)
 		{
 			DateTime functionStart = DateTime.Now;
