@@ -256,15 +256,12 @@ namespace w3tools //by @w3bgrep
 			var lastAction = project.LastExecutedActionId;
 			var elapsed = Time.TotalTime(project);
 
-		// Проверяем стек вызовов
-			var stackFrame = new System.Diagnostics.StackFrame(1); // 1 = предыдущий кадр стека
+			var stackFrame = new System.Diagnostics.StackFrame(1); 
 			var callingMethod = stackFrame.GetMethod();
 			if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno"))
 			{
-				callerName = "project"; // Если вызывается из ZennoPoster или проекта
+				callerName = "project"; 
 			}
-
-
 			string formated = $"⛑  [{acc0}] ⚙  [{port}] ⏱  [{elapsed}] ⛏ [{callerName}] at [{lastAction}]\n        {toLog}";
 			if (formated.Contains("!W"))   project.SendToLog(formated,LogType.Warning, true, LogColor.Orange);
 			else if (formated.Contains("!E"))   project.SendToLog(formated,LogType.Error, true, LogColor.Orange);
@@ -509,13 +506,6 @@ namespace w3tools //by @w3bgrep
 			    }
 			}
 			Loggers.W3Debug(project, $"after socialCheck [{string.Join("|", availableAccounts)}]");
-			// if (!string.IsNullOrEmpty(project.Variables["busyAccounts"].Value))
-			// {
-			//     availableAccounts.ExceptWith(
-			//         project.Variables["busyAccounts"].Value.Split(',').Select(x => x.Trim())
-			//     );
-			// }
-			// Loggers.W3Debug(project, $"after globalVarsCheck [{string.Join("|", availableAccounts)}]");
 			project.Lists["accs"].Clear();
 			project.Lists["accs"].AddRange(availableAccounts);
 			Loggers.W3Debug(project,$"final list [{string.Join("|", project.Lists["accs"])}]");
@@ -4063,7 +4053,7 @@ namespace w3tools //by @w3bgrep
 			}
 		}
 
-		public static string WaitHe(this Instance instance, object obj, string method = "id", int maxWaitSeconds = 10, string atr = "innertext", int delayBeforeGetSeconds = 1, string comment = "", bool Throw = true)
+		public static string ReadHe(this Instance instance, object obj, string method = "id", int maxWaitSeconds = 10, string atr = "innertext", int delayBeforeGetSeconds = 1, string comment = "", bool Throw = true)
 		{
 			DateTime functionStart = DateTime.Now;
 			string lastExceptionMessage = "";
