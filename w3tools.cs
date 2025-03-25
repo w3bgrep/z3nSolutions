@@ -511,6 +511,77 @@ namespace w3tools //by @w3bgrep
 			Loggers.W3Debug(project,$"final list [{string.Join("|", project.Lists["accs"])}]");
 			return; 
 		}
+
+		public static void FilterAccList(IZennoPosterProjectModel project, List<string> dbQueries)
+		{
+			// Ручной режим
+			if (!string.IsNullOrEmpty(project.Variables["cfgManualAcc0"].Value)) 
+			{
+				project.Lists["accs"].Clear();
+				project.Lists["accs"].Add(project.Variables["cfgManualAcc0"].Value);
+				Loggers.W3Debug(project, $@"manual mode on with {project.Variables["cfgManualAcc0"].Value}");
+				return;
+			}
+
+			// Получаем все аккаунты из всех запросов
+			var allAccounts = new HashSet<string>();
+			foreach (var query in dbQueries)
+			{
+				try
+				{
+					var accsByQuery = SQL.W3Query(project, query).Trim();
+					if (!string.IsNullOrWhiteSpace(accsByQuery))
+					{
+						var accounts = accsByQuery.Split('\n').Select(x => x.Trim().TrimStart(','));
+						allAccounts.UnionWith(accounts);
+					}
+				}
+				catch 
+				{
+					Loggers.W3Throw(project, query);
+				}
+			}
+
+			if (allAccounts.Count == 0)
+			{
+				project.Variables["noAccsToDo"].Value = "True";
+				Loggers.W3Debug(project, $"♻ noAccountsAvailable by queries [{string.Join(" | ", dbQueries)}]");
+				return;
+			}
+
+			Loggers.W3Debug(project, $"Initial availableAccounts: [{string.Join(", ", allAccounts)}]");
+
+			// Фильтрация по социальным сетям
+			if (!string.IsNullOrEmpty(project.Variables["requiredSocial"].Value))
+			{
+				string[] demanded = project.Variables["requiredSocial"].Value.Split(',');
+				Loggers.W3Debug(project, $"Filtering by socials: [{string.Join(", ", demanded)}]");
+				
+				foreach (string social in demanded)
+				{   
+					string socialQuery;
+					if (project.Variables["DBmode"].Value == "SQLite")  
+						socialQuery = $"SELECT acc0 FROM acc{social.Trim()} WHERE status NOT LIKE '%ok%'";
+					else // PostgreSQL
+						socialQuery = $"SELECT acc0 FROM accounts.{social.Trim().ToLower()} WHERE status NOT LIKE '%ok%'";
+					
+					var notOK = SQL.W3Query(project, socialQuery)
+						.Split('\n')
+						.Select(x => x.Trim())
+						.Where(x => !string.IsNullOrEmpty(x));
+						
+					Loggers.W3Debug(project, $"Before {social} filter: [{string.Join("|", allAccounts)}]");
+					allAccounts.ExceptWith(notOK);
+					Loggers.W3Debug(project, $"After {social} filter: [{string.Join("|", allAccounts)}]");
+				}
+			}
+
+			// Финальное заполнение списка
+			project.Lists["accs"].Clear();
+			project.Lists["accs"].AddRange(allAccounts);
+			Loggers.W3Debug(project, $"final list [{string.Join("|", project.Lists["accs"])}]");
+		}
+
 		public static void SetProfile(this Instance instance, IZennoPosterProjectModel project)
 		{
 			var tableName = "";
@@ -4024,7 +4095,7 @@ namespace w3tools //by @w3bgrep
 					throw new ArgumentException(string.Format("unsupported Tupple: {0}.", tupleLength));
 			}
 		}
-
+//new
 		public static void LMB(this Instance instance, object obj, string method = "id", int maxWaitSeconds = 10, int delay = 1, string comment = "", bool Throw = true)
 		{
 			DateTime functionStart = DateTime.Now;
@@ -4082,7 +4153,38 @@ namespace w3tools //by @w3bgrep
 				Thread.Sleep(500);
 			}
 		}
+		public static void SetHe(this Instance instance, object obj, string value, string method = "id", int maxWaitSeconds = 10, int delay = 1, string comment = "", bool Throw = true)
+		{
+			DateTime functionStart = DateTime.Now;
+			string lastExceptionMessage = "";
 
+			while (true)
+			{
+				if ((DateTime.Now - functionStart).TotalSeconds > maxWaitSeconds)
+				{
+					if (Throw) throw new TimeoutException($"{comment} not found in {maxWaitSeconds}s: {lastExceptionMessage}");
+					else return;
+				}
+
+				try
+				{
+					HtmlElement he = instance.GetHe(obj, method);
+					Thread.Sleep(delay * 1000);
+					instance.WaitFieldEmulationDelay(); // Mimics WaitSetValue behavior
+					he.SetValue(value, "Full", false);
+					break;
+				}
+				catch (Exception ex)
+				{
+					lastExceptionMessage = ex.Message;
+				}
+
+				Thread.Sleep(500);
+			}
+		}
+
+
+//old
 		public static void WaitClick(this Instance instance, Func<ZennoLab.CommandCenter.HtmlElement> elementSearch, int maxWaitSeconds = 10, int delay = 1, string comment = "",bool Throw = true)
 		{
 			DateTime functionStart = DateTime.Now;
