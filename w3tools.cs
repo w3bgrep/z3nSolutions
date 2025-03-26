@@ -2660,7 +2660,14 @@ namespace w3tools //by @w3bgrep
 					
 				}catch{}
 				
-				if (status == "capcha") throw new Exception("CAPCHA");
+				if (status == "capcha")
+				{
+					var table = "";
+					if (project.Variables["DBmode"].Value == "SQLite") table = $"accGoogle";
+					else if (project.Variables["DBmode"].Value == "PostgreSQL") table = $"accounts.google";					 
+					SQL.W3Query(project,$@"UPDATE {table} SET status = 'CAPCHA', cooldown = {Time.cd(24 * 60)}, last = '{DateTime.Now.ToString("MM/dd-HH:mm")}' WHERE acc0 = {project.Variables["acc0"].Value};",true);	
+					throw new Exception("CAPCHA");
+				} 
 				try	{
 					string BadBrowser= instance.WaitGetValue(() => instance.ActiveTab.FindElementByAttribute("div", "innertext", "Try\\ using\\ a\\ different\\ browser.\\ If\\ you’re\\ already\\ using\\ a\\ supported\\ browser,\\ you\\ can\\ try\\ again\\ to\\ sign\\ in.", "regexp", 0),1);
 					status = "BadBrowser";
