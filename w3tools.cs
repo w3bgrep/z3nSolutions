@@ -2799,22 +2799,11 @@ namespace w3tools //by @w3bgrep
 		{
 			return ((long)((DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalMilliseconds)).ToString();
 		}
-		public static T Now<T>(string format = "unix") // unix|iso
+		public static string Now(string format = "unix") // unix|iso
 		{
-			if (format == "unix")
-			{
-				long now = (long)((DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalMilliseconds);
-				if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(now.ToString(), typeof(T));
-				return (T)Convert.ChangeType(now, typeof(T));
-			}
-			else if (format == "iso")
-			{
-				string isoNow = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"); // ISO 8601 с миллисекундами
-				if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(isoNow, typeof(T));
-				if (typeof(T) == typeof(DateTime)) return (T)Convert.ChangeType(DateTime.UtcNow, typeof(T));
-				throw new ArgumentException("ISO format supports only string or DateTime return types.");
-			}
-
+			if (format == "unix") return ((long)((DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalMilliseconds)).ToString();	//Unix Epoch
+			else if (format == "iso") return DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"); // ISO 8601 
+			else if (format == "short") return DateTime.UtcNow.ToString("MM-ddTHH:mm"); 		
 			throw new ArgumentException("Invalid format. Use 'unix' or 'iso'.");
 		}
 		public static string Elapsed(string start)
