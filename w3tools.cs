@@ -3658,7 +3658,7 @@ namespace w3tools //by @w3bgrep
 				instance.ActiveTab.FindElementByAttribute("button", "innertext", "Import", "regexp", 0).RiseEvent("click", instance.EmulationLevel); 
 				Thread.Sleep(2000);
 			}
-			
+			instance.CloseExtraTabs();
 		}
 		public static void KeplrSetSource(this Instance instance,IZennoPosterProjectModel project, string source)
 		{
@@ -3666,6 +3666,7 @@ namespace w3tools //by @w3bgrep
 
 			while (true)
 			{
+				Thread.Sleep(1000);
 				instance.CloseExtraTabs();
 				instance.ActiveTab.Navigate("chrome-extension://dmkamcknogkgcdfhhbddcghachkejeap/popup.html#/wallet/select", "");
 				string heToWait = instance.WaitGetValue(() => 
