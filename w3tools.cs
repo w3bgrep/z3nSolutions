@@ -2747,8 +2747,23 @@ namespace w3tools //by @w3bgrep
 				if (userContainer.IndexOf(project.Variables["googleLOGIN"].Value, StringComparison.OrdinalIgnoreCase) >= 0)	
 				{
 					Loggers.W3Debug(project,$"correct user found: {project.Variables["googleLOGIN"].Value}");	
-					instance.WaitClick(() => instance.ActiveTab.FindElementByAttribute("div", "data-authuser", "0", "regexp", 0));
-					instance.ClickOut(() => instance.ActiveTab.FindElementByAttribute("div", "data-authuser", "0", "regexp", 0));
+					instance.LMB(("div", "data-authuser", "0", "regexp", 0),delay:3);
+					//instance.WaitClick(() => instance.ActiveTab.FindElementByAttribute("div", "data-authuser", "0", "regexp", 0));
+					Thread.Sleep(5000);
+					if (!instance.ActiveTab.FindElementByAttribute("div", "data-authuser", "0", "regexp", 0).IsVoid)
+					{
+						while (true)
+						try
+						{
+							Loggers.W3Debug(project,$"auth Buttin !IsVoid");
+							instance.LMB(("div", "data-authuser", "0", "regexp", 0),delay:3);
+						}
+						catch
+						{
+							break;
+						}
+					}
+					//instance.ClickOut(() => instance.ActiveTab.FindElementByAttribute("div", "data-authuser", "0", "regexp", 0));
 					try
 					{
 						instance.WaitClick(() => instance.ActiveTab.FindElementByAttribute("button", "innertext", "Continue", "regexp", 0));
@@ -2783,6 +2798,24 @@ namespace w3tools //by @w3bgrep
 		public static string UnixNow()
 		{
 			return ((long)((DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalMilliseconds)).ToString();
+		}
+		public static T Now<T>(string format = "unix") // unix|iso
+		{
+			if (format == "unix")
+			{
+				long now = (long)((DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalMilliseconds);
+				if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(now.ToString(), typeof(T));
+				return (T)Convert.ChangeType(now, typeof(T));
+			}
+			else if (format == "iso")
+			{
+				string isoNow = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"); // ISO 8601 с миллисекундами
+				if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(isoNow, typeof(T));
+				if (typeof(T) == typeof(DateTime)) return (T)Convert.ChangeType(DateTime.UtcNow, typeof(T));
+				throw new ArgumentException("ISO format supports only string or DateTime return types.");
+			}
+
+			throw new ArgumentException("Invalid format. Use 'unix' or 'iso'.");
 		}
 		public static string Elapsed(string start)
 		{
