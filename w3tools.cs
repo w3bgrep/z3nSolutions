@@ -1080,12 +1080,14 @@ namespace w3tools //by @w3bgrep
                     WHERE table_schema = '{schemaName}'
                     AND table_name = '{tableName}'
                     AND lower(column_name) = lower('{column.Key}');";
-                    if (log) 
-                    {
-                        if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase)) project.SendToLog($"[PstgSQL ▼]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]", LogType.Info, true, LogColor.Gray);
-                        else project.SendToLog($"[PstgSQL ▲]: [{query}]", LogType.Info, true, LogColor.Gray);
-                    }                 
-                string columnExists = db.getOne(query)?.Trim() ?? "0";
+                    // if (log) 
+                    // {
+                    //     if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase)) project.SendToLog($"[PstgSQL ▼]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]", LogType.Info, true, LogColor.Gray);
+                    //     else project.SendToLog($"[PstgSQL ▲]: [{query}]", LogType.Info, true, LogColor.Gray);
+                    // }
+                string columnExists = SQL.W3Query(project,query);
+
+                //string columnExists = db.getOne(query)?.Trim() ?? "0";
                 if (columnExists == "0")
                 {
                     query = $@"ALTER TABLE {schemaName}.{tableName} ADD COLUMN {column.Key} {column.Value};";
@@ -2820,30 +2822,32 @@ namespace w3tools //by @w3bgrep
 		    
 		    return difference;
 		}
-		public static string cd(object input = null)
+		public static string cd(object input = null, string o = "unix")
 		{
-		    DateTime utcNow = DateTime.UtcNow;
-		    
-		    if (input == null)
-		    {
-		        DateTime todayEnd = utcNow.Date.AddHours(23).AddMinutes(59).AddSeconds(59);
-		        return ((int)(todayEnd - new DateTime(1970, 1, 1)).TotalSeconds).ToString();
-		    }
-		    else if (input is decimal || input is int)  
-		    {
+			DateTime utcNow = DateTime.UtcNow;
+			if (input == null)
+			{
+				DateTime todayEnd = utcNow.Date.AddHours(23).AddMinutes(59).AddSeconds(59);
+				if (o == "unix") return ((int)(todayEnd - new DateTime(1970, 1, 1)).TotalSeconds).ToString();
+				else if (o == "iso") return todayEnd.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"); // ISO 8601
+			}
+			else if (input is decimal || input is int)  
+			{
 				decimal minutes = Convert.ToDecimal(input);
 				int secondsToAdd = (int)Math.Round(minutes * 60); 
-				return ((int)(utcNow - new DateTime(1970, 1, 1)).TotalSeconds + secondsToAdd).ToString();
-		    }
-		    else if (input is string timeString)
-		    {
-		        TimeSpan parsedTime = TimeSpan.Parse(timeString);
-		        DateTime futureTime = utcNow.Add(parsedTime);
-		        return ((int)(futureTime - new DateTime(1970, 1, 1)).TotalSeconds).ToString();
-		    }
-		    
-		    throw new ArgumentException("Неподдерживаемый тип входного параметра");
-		}	
+				DateTime futureTime = utcNow.AddSeconds(secondsToAdd);
+				if (o == "unix") return ((int)(futureTime - new DateTime(1970, 1, 1)).TotalSeconds).ToString();
+				else if (o == "iso") return futureTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"); // ISO 8601
+			}
+			else if (input is string timeString)
+			{
+				TimeSpan parsedTime = TimeSpan.Parse(timeString);
+				DateTime futureTime = utcNow.Add(parsedTime);
+				if (o == "unix") return ((int)(futureTime - new DateTime(1970, 1, 1)).TotalSeconds).ToString();
+				else if (o == "iso") return futureTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"); // ISO 8601
+			}		    
+			throw new ArgumentException("Неподдерживаемый тип входного параметра");
+		}
 		public static string TotalTime(IZennoPosterProjectModel project)
 		{
 			var elapsedMinutes = (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - long.Parse(project.Variables["varSessionId"].Value)) / 60.0;
