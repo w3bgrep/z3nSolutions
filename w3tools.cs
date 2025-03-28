@@ -4129,15 +4129,15 @@ namespace w3tools //by @w3bgrep
 				index++;
 			}
 		}
-		public static HtmlElement GetHe(this Instance instance, object obj, string method = "id")
+		public static HtmlElement GetHe(this Instance instance, object obj, string method = "")
 		{
 			Type tupleType = obj.GetType();
 			int tupleLength = tupleType.GetFields().Length;
 			switch (tupleLength)
 			{
-				case 1:
+				case 2:
 					string value = tupleType.GetField("Item1").GetValue(obj).ToString();
-
+					method = tupleType.GetField("Item2").GetValue(obj).ToString();
 					if (method == "id")
 					{
 						HtmlElement he = instance.ActiveTab.FindElementById(value);
@@ -4230,7 +4230,7 @@ namespace w3tools //by @w3bgrep
 			}
 		}
 
-		public static string ReadHe(this Instance instance, object obj, string method = "id", int maxWaitSeconds = 10, string atr = "innertext", int delayBeforeGetSeconds = 1, string comment = "", bool Throw = true)
+		public static string ReadHe(this Instance instance, object obj, int maxWaitSeconds = 10, string atr = "innertext", int delayBeforeGetSeconds = 1, string comment = "", bool Throw = true)
 		{
 			DateTime functionStart = DateTime.Now;
 			string lastExceptionMessage = "";
@@ -4247,7 +4247,7 @@ namespace w3tools //by @w3bgrep
 
 				try
 				{
-					HtmlElement he = instance.GetHe(obj, method);
+					HtmlElement he = instance.GetHe(obj);
 					Thread.Sleep(delayBeforeGetSeconds * 1000);
 					return he.GetAttribute(atr);
 				}
@@ -4468,6 +4468,39 @@ namespace w3tools //by @w3bgrep
 			Thread.Sleep(rnd.Next(3, 4) * 1000);
 			
 		}
+		public static string CF(this Instance instance,int deadline = 60, bool strict = false)
+		{
+			DateTime timeout = DateTime.Now.AddSeconds(deadline);
+			while (true)
+			{
+				if (DateTime.Now > timeout) throw new Exception($"!W CF timeout");
+				Random rnd = new Random(); 
+				
+				Thread.Sleep(rnd.Next(3, 4) * 1000);
+
+				var token = instance.ReadHe(("cf-turnstile-response","name"),atr:"value");
+				if (!string.IsNullOrEmpty(token)) return token;
+
+				string strX = ""; string strY = ""; 
+				
+				try 
+				{
+					var cfBox = instance.GetHe(("cf-turnstile","id"));	
+					strX = cfBox.GetAttribute("leftInbrowser");	strY = cfBox.GetAttribute("topInbrowser");
+				}
+				catch
+				{
+					var cfBox = instance.GetHe(("div", "outerhtml", "<div><input type=\"hidden\" name=\"cf-turnstile-response\"", "regexp", 4));
+					strX = cfBox.GetAttribute("leftInbrowser");	strY = cfBox.GetAttribute("topInbrowser");
+				}
+				
+				int x = (int.Parse(strX) + rnd.Next(23, 26));
+				int y = (int.Parse(strY) + rnd.Next(27, 31));
+				instance.Click(x, x, y, y, "Left", "Normal");
+
+			}
+		}
+		
 		public static void CloseExtraTabs(this Instance instance)
 		{
 			for (; ; ){try{instance.AllTabs[1].Close();Thread.Sleep(1000);}catch{break;}}Thread.Sleep(1000);
@@ -4517,15 +4550,13 @@ namespace w3tools //by @w3bgrep
 
 	public static class Cnvrt
 	{
-		public static string ConvertFormat(IZennoPosterProjectModel project, string toProcess, string input, string output)
+		public static string ConvertFormat(IZennoPosterProjectModel project, string toProcess, string input, string output, bool log = false)
 		{
 			try
 			{
-				// Приводим входной и выходной форматы к нижнему регистру для удобства
 				input = input.ToLower();
 				output = output.ToLower();
 
-				// Проверяем, что входной и выходной форматы поддерживаются
 				string[] supportedFormats = { "hex", "base64", "bech32", "bytes", "text" };
 				if (!supportedFormats.Contains(input))
 				{
@@ -4536,21 +4567,16 @@ namespace w3tools //by @w3bgrep
 					throw new ArgumentException($"Неподдерживаемый выходной формат: {output}. Поддерживаемые форматы: {string.Join(", ", supportedFormats)}");
 				}
 
-				// Шаг 1: Преобразуем входную строку в байты
 				byte[] bytes;
 				switch (input)
 				{
 					case "hex":
-						// Убираем префикс "0x", если есть
 						string hex = toProcess.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? toProcess.Substring(2) : toProcess;
-						// Дополняем ведущими нулями до 32 байт (64 символа), если это адрес
 						hex = hex.PadLeft(64, '0');
-						// Проверяем, что строка валидная hex
 						if (!System.Text.RegularExpressions.Regex.IsMatch(hex, @"^[0-9a-fA-F]+$"))
 						{
 							throw new ArgumentException("Входная строка не является валидной hex-строкой");
 						}
-						// Преобразуем hex в байты
 						bytes = new byte[hex.Length / 2];
 						for (int i = 0; i < hex.Length; i += 2)
 						{
@@ -4559,19 +4585,15 @@ namespace w3tools //by @w3bgrep
 						break;
 
 					case "base64":
-						// Декодируем Base64 в байты
 						bytes = Convert.FromBase64String(toProcess);
 						break;
 
 					case "bech32":
-						// Декодируем Bech32-адрес (например, init1vgw3vz5d2x4s8j7hfts3nlr9z2zkngjcfq9zky)
 						var (hrp, data) = DecodeBech32(toProcess);
-						// Проверяем префикс (должен быть "init" для Initia)
 						if (hrp != "init")
 						{
 							throw new ArgumentException($"Ожидался Bech32-адрес с префиксом 'init', но получен префикс '{hrp}'");
 						}
-						// Преобразуем данные в байты (Bech32 хранит данные в 5-битном формате, нужно преобразовать в 8-битный)
 						bytes = ConvertBits(data, 5, 8, false);
 						if (bytes.Length != 32)
 						{
@@ -4580,7 +4602,6 @@ namespace w3tools //by @w3bgrep
 						break;
 
 					case "bytes":
-						// Предполагаем, что входная строка — это hex-представление байтов (без префикса "0x")
 						if (!System.Text.RegularExpressions.Regex.IsMatch(toProcess, @"^[0-9a-fA-F]+$"))
 						{
 							throw new ArgumentException("Входная строка не является валидной hex-строкой для байтов");
@@ -4593,7 +4614,6 @@ namespace w3tools //by @w3bgrep
 						break;
 
 					case "text":
-						// Преобразуем текст в байты (используем UTF-8)
 						bytes = System.Text.Encoding.UTF8.GetBytes(toProcess);
 						break;
 
@@ -4601,23 +4621,18 @@ namespace w3tools //by @w3bgrep
 						throw new ArgumentException($"Неизвестный входной формат: {input}");
 				}
 
-				// Шаг 2: Преобразуем байты в целевой формат
 				string result;
 				switch (output)
 				{
 					case "hex":
-						// Преобразуем байты в hex с префиксом "0x"
 						result = "0x" + BitConverter.ToString(bytes).Replace("-", "").ToLower();
 						break;
 
 					case "base64":
-						// Кодируем байты в Base64
 						result = Convert.ToBase64String(bytes);
 						break;
 
 					case "bech32":
-						// Кодируем байты в Bech32 с префиксом "init"
-						// Для Bech32 ожидается, что байты представляют 32-байтный адрес
 						if (bytes.Length != 32)
 						{
 							throw new ArgumentException($"Для Bech32 требуется 32 байта, но получено {bytes.Length} байт");
@@ -4627,12 +4642,10 @@ namespace w3tools //by @w3bgrep
 						break;
 
 					case "bytes":
-						// Возвращаем байты как hex-строку (без префикса "0x")
 						result = BitConverter.ToString(bytes).Replace("-", "").ToLower();
 						break;
 
 					case "text":
-						// Преобразуем байты в текст (используем UTF-8)
 						result = System.Text.Encoding.UTF8.GetString(bytes);
 						break;
 
@@ -4640,7 +4653,7 @@ namespace w3tools //by @w3bgrep
 						throw new ArgumentException($"Неизвестный выходной формат: {output}");
 				}
 
-				project.SendInfoToLog($"Преобразование успешно: {toProcess} ({input}) -> {result} ({output})");
+				if (log )project.SendInfoToLog($"convert success: {toProcess} ({input}) -> {result} ({output})");
 				return result;
 			}
 			catch (Exception ex)
