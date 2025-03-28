@@ -4213,6 +4213,10 @@ namespace w3tools //by @w3bgrep
 
 				try
 				{
+					
+					
+					
+					
 					HtmlElement he = instance.GetHe(obj, method);
 					Thread.Sleep(delay * 1000);
 					he.RiseEvent("click", instance.EmulationLevel);
@@ -4284,7 +4288,63 @@ namespace w3tools //by @w3bgrep
 				Thread.Sleep(500);
 			}
 		}
-
+		public static void JsClick(this Instance instance, IZennoPosterProjectModel project, string selector)
+		{
+			selector = TextProcessing.Replace(selector, "\"", "'", "Text", "All");
+			try
+			{
+				// Формируем JavaScript-код, избегая конфликта кавычек
+				string jsCode = $@"
+					(function() {{
+						var element = {selector};
+						if (!element) {{
+							throw new Error(""Элемент не найден по селектору: {selector.Replace("\"", "\"\"")}"");
+						}}
+						element.click();
+						return 'Click successful';
+					}})();
+				";
+		
+				// Выполняем JavaScript-код
+				string result = instance.ActiveTab.MainDocument.EvaluateScript(jsCode);
+				project.SendInfoToLog($"Клик выполнен успешно: {result}");
+			}
+			catch (Exception ex)
+			{
+				project.SendErrorToLog($"Ошибка при выполнении клика по селектору '{selector}': {ex.Message}");
+			}
+		}					
+		public static void JsSet(this Instance instance, IZennoPosterProjectModel project, string selector, string value)
+		{
+			selector = TextProcessing.Replace(selector, "\"", "'", "Text", "All");		
+			try
+			{
+				// Экранируем значение, чтобы избежать конфликта кавычек
+				string escapedValue = value.Replace("\"", "\"\"");
+		
+				// Формируем JavaScript-код для ввода значения
+				string jsCode = $@"
+					(function() {{
+						var element = {selector};
+						if (!element) {{
+							throw new Error(""Элемент не найден по селектору: {selector.Replace("\"", "\"\"")}"");
+						}}
+						element.value = ""{escapedValue}"";
+						var event = new Event('input', {{ bubbles: true }});
+						element.dispatchEvent(event);
+						return 'Value set successfully';
+					}})();
+				";
+		
+				// Выполняем JavaScript-код
+				string result = instance.ActiveTab.MainDocument.EvaluateScript(jsCode);
+				project.SendInfoToLog($"Значение '{value}' успешно установлено: {result}");
+			}
+			catch (Exception ex)
+			{
+				project.SendErrorToLog($"Ошибка при установке значения по селектору '{selector}': {ex.Message}");
+			}
+		}	
 
 //old
 		public static void WaitClick(this Instance instance, Func<ZennoLab.CommandCenter.HtmlElement> elementSearch, int maxWaitSeconds = 10, int delay = 1, string comment = "",bool Throw = true)
@@ -4453,6 +4513,9 @@ namespace w3tools //by @w3bgrep
 		    catch (Exception){return "qrError";}
 		}
 	}
+
+		
+	
 	#endregion
 	public static class StyleConverter
 	{
