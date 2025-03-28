@@ -1480,6 +1480,7 @@ namespace w3tools //by @w3bgrep
 				{
 					try
 					{
+						if (proxy == "+") proxy = project.Variables["proxy"].Value;
 						string proxyString = proxy;
 						ProxyType proxyType = ProxyType.HTTP; 
 						int separatorIndex = proxy.IndexOf("://");
