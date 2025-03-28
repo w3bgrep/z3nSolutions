@@ -1467,17 +1467,124 @@ namespace w3tools //by @w3bgrep
 
 			return response;
 		}
-		public static string POST(IZennoPosterProjectModel project, string url, string body, string proxy = "")
+		public static string POST(IZennoPosterProjectModel project, string url, string body, string proxy = "", bool log = false)
 		{
 			string response;
 			using (var request = new HttpRequest())
 			{
-				// Настройки запроса, аналогичные оригинальной функции
 				request.UserAgent = "Mozilla/5.0";
 				request.IgnoreProtocolErrors = true;
 				request.ConnectTimeout = 5000;
 
-				// Настройка прокси, если он указан
+				if (!string.IsNullOrEmpty(proxy))
+				{
+					try
+					{
+						string proxyString = proxy;
+						ProxyType proxyType = ProxyType.HTTP; 
+						int separatorIndex = proxy.IndexOf("://");
+						if (separatorIndex != -1)
+						{
+							string protocol = proxy.Substring(0, separatorIndex).ToLower();
+							proxyString = proxy.Substring(separatorIndex + 3);
+							if (protocol == "socks5") proxyType = ProxyType.Socks5;
+							else if (protocol == "socks4") proxyType = ProxyType.Socks4;
+							else if (protocol != "http" && protocol != "https")
+							{
+								project.SendErrorToLog($"unsupported protocol:{protocol}");
+								return null;
+							}
+						}
+
+						string formattedProxyString;
+						int atIndex = proxyString.IndexOf('@');
+						if (atIndex != -1)
+						{
+							string credentials = proxyString.Substring(0, atIndex);
+							string hostPort = proxyString.Substring(atIndex + 1);
+
+							int colonIndex = credentials.IndexOf(':');
+							if (colonIndex == -1)
+							{
+								project.SendErrorToLog($"Incorrect proxy string: '{proxy}'. Expected 'login:pass@ip:port'.");
+								return null;
+							}
+
+							string username = credentials.Substring(0, colonIndex);
+							string password = credentials.Substring(colonIndex + 1);
+
+							int hostPortColonIndex = hostPort.LastIndexOf(':');
+							if (hostPortColonIndex == -1)
+							{
+								project.SendErrorToLog($"Incorrect proxy string: '{proxy}'. Expected 'ip:port'.");
+								return null;
+							}
+
+							string host = hostPort.Substring(0, hostPortColonIndex);
+							string port = hostPort.Substring(hostPortColonIndex + 1);
+
+							if (!int.TryParse(port, out int portNumber) || portNumber < 1 || portNumber > 65535)
+							{
+								project.SendErrorToLog($"Incorrect port: '{port}'. must be int in (1, 65535)");
+								return null;
+							}
+							formattedProxyString = $"{host}:{port}:{username}:{password}";
+						}
+						else
+						{
+							formattedProxyString = proxyString;
+
+							int lastColonIndex = formattedProxyString.LastIndexOf(':');
+							if (lastColonIndex == -1)
+							{
+								project.SendErrorToLog($"Incorrect proxy string: '{proxy}'. Expected 'ip:port'.");
+								return null;
+							}
+
+							string port = formattedProxyString.Substring(lastColonIndex + 1);
+							if (!int.TryParse(port, out int portNumber) || portNumber < 1 || portNumber > 65535)
+							{
+								project.SendErrorToLog($"Incorrect port: '{port}'. must be int in (1, 65535)");
+								return null;
+							}
+						}
+
+						request.Proxy = ProxyClient.Parse(proxyType, formattedProxyString);
+						if (log) project.SendInfoToLog($"proxy '{proxy}' set as {proxyType}");
+					}
+					catch (Exception ex)
+					{
+						project.SendErrorToLog($"proxy parse Err '{proxy}': {ex.Message}");
+						return null;
+					}
+				}
+
+				try
+				{
+					HttpResponse httpResponse = request.Post(url, body, "application/json");
+					response = httpResponse.ToString();
+				}
+				catch (HttpException ex)
+				{
+					project.SendErrorToLog($"request Err: {ex.Message}");
+					return null;
+				}
+			}
+
+			return response;
+		}
+		public static T nonce<T>(IZennoPosterProjectModel project, string chainRPC = "", string address = "", string proxy = "")
+		{
+			if (address == "") address = project.Variables["addressEvm"].Value;
+			if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
+			string jsonBodyGetNonce = $@"{{""jsonrpc"": ""2.0"",""method"": ""eth_getTransactionCount"",""params"": [""{address}"", ""latest""],""id"": 1}}";
+
+			string response;
+			using (var request = new HttpRequest())
+			{
+				request.UserAgent = "Mozilla/5.0";
+				request.IgnoreProtocolErrors = true;
+				request.ConnectTimeout = 5000;
 				if (!string.IsNullOrEmpty(proxy))
 				{
 					try
@@ -1487,76 +1594,36 @@ namespace w3tools //by @w3bgrep
 					catch (Exception ex)
 					{
 						project.SendErrorToLog($"Ошибка парсинга прокси '{proxy}': {ex.Message}");
-						return null;
+						throw;
 					}
 				}
 
-				// Выполнение запроса
 				try
 				{
-					HttpResponse httpResponse = request.Post(url, body, "application/json");
+					// Исправление: Передаём jsonBodyGetNonce как строку
+					HttpResponse httpResponse = request.Post(chainRPC, jsonBodyGetNonce, "application/json");
 					response = httpResponse.ToString();
 				}
 				catch (HttpException ex)
 				{
-					project.SendErrorToLog($"Ошибка запроса: {ex.Message}");
-					return null;
+					project.SendErrorToLog($"Ошибка HTTP-запроса: {ex.Message}, Status: {ex.Status}");
+					throw;
 				}
 			}
 
-			return response;
-		}
-		public static T nonce<T>(IZennoPosterProjectModel project, string chainRPC = "", string address = "", string proxy = "")
-{
-    if (address == "") address = project.Variables["addressEvm"].Value;
-    if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
-    string jsonBodyGetNonce = $@"{{""jsonrpc"": ""2.0"",""method"": ""eth_getTransactionCount"",""params"": [""{address}"", ""latest""],""id"": 1}}";
-
-    string response;
-    using (var request = new HttpRequest())
-    {
-        request.UserAgent = "Mozilla/5.0";
-        request.IgnoreProtocolErrors = true;
-        request.ConnectTimeout = 5000;
-        if (!string.IsNullOrEmpty(proxy))
-        {
-            try
-            {
-                request.Proxy = ProxyClient.Parse(proxy.Contains("@") ? proxy : $"HTTP://{proxy}");
-            }
-            catch (Exception ex)
-            {
-                project.SendErrorToLog($"Ошибка парсинга прокси '{proxy}': {ex.Message}");
-                throw;
-            }
-        }
-
-        try
-        {
-            // Исправление: Передаём jsonBodyGetNonce как строку
-            HttpResponse httpResponse = request.Post(chainRPC, jsonBodyGetNonce, "application/json");
-            response = httpResponse.ToString();
-        }
-        catch (HttpException ex)
-        {
-            project.SendErrorToLog($"Ошибка HTTP-запроса: {ex.Message}, Status: {ex.Status}");
-            throw;
-        }
-    }
-
-    var match = Regex.Match(response, @"""result""\s*:\s*""([^""]+)""");
-    string hexResultNonce = match.Success ? match.Groups[1].Value : "0x0";
-    
-    if (hexResultNonce == "0x0") 
-        return (T)Convert.ChangeType("0", typeof(T));
-    
-    int transactionCount = Convert.ToInt32(hexResultNonce.TrimStart('0', 'x'), 16);
-    
-    if (typeof(T) == typeof(string))
-        return (T)Convert.ChangeType(transactionCount.ToString(), typeof(T));
-    
-    return (T)Convert.ChangeType(transactionCount, typeof(T));
-}	
+			var match = Regex.Match(response, @"""result""\s*:\s*""([^""]+)""");
+			string hexResultNonce = match.Success ? match.Groups[1].Value : "0x0";
+			
+			if (hexResultNonce == "0x0") 
+				return (T)Convert.ChangeType("0", typeof(T));
+			
+			int transactionCount = Convert.ToInt32(hexResultNonce.TrimStart('0', 'x'), 16);
+			
+			if (typeof(T) == typeof(string))
+				return (T)Convert.ChangeType(transactionCount.ToString(), typeof(T));
+			
+			return (T)Convert.ChangeType(transactionCount, typeof(T));
+		}	
 		public static T balNative<T>(IZennoPosterProjectModel project, string chainRPC = "", string address = "", string proxy = "",bool log = false)
 		{
 			if (address == "") address = project.Variables["addressEvm"].Value;
