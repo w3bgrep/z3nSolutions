@@ -58,10 +58,16 @@ using ZXing.QrCode;
 using Npgsql;
 using Leaf.xNet;
 
+
 #endregion
 
 namespace w3tools //by @w3bgrep
 {
+	
+	
+	
+	
+	
 	public static class Migrate
 	{
 		//ЭТОТ КЛАСС СОДЕРЖИТ УСТАРЕВШИЕ ВЫЗОВЫ
@@ -1410,6 +1416,14 @@ namespace w3tools //by @w3bgrep
             var dbMode = project.Variables["DBmode"].Value; var resp = "";
                 if (dbMode == "SQLite")  resp = SQL.W3Query(project,$"SELECT value FROM accSettings WHERE var = 'settingsApiBinance';");
                 else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$"SELECT value FROM accounts.settings WHERE var = 'settingsApiBinance';"); return resp;
+		}
+		public static void Upd(IZennoPosterProjectModel project, string toUpd, string tableName = "", bool log = false)
+		{
+			if (tableName == "")tableName = project.Variables["projectTable"].Value;		
+			var Q = $@"UPDATE {tableName} SET
+				{toUpd.Trim().TrimEnd(',')},
+				last = '{Time.Now("short")}' WHERE acc0 = {project.Variables["acc0"].Value};";
+			SQL.W3Query(project,Q,log); 
 		}
 	}    
 
