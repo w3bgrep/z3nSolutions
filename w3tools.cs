@@ -319,7 +319,54 @@ namespace w3tools //by @w3bgrep
 			if (toLog.Contains("fail"))project.SendToLog(toLog.Trim(), LogType.Info, true, LogColor.Orange);
 			else project.SendToLog(toLog.Trim(), LogType.Info, true, LogColor.Green);
 		}		
-	
+		public static void l0g(IZennoPosterProjectModel project, 
+			string toLog = "", 
+			string varName = "a0debug",
+			[CallerMemberName] string callerName = "",
+			LogType logType = LogType.Info,
+			LogColor logColor = LogColor.Default,
+			bool show = true)
+			//
+		{
+			if (toLog == "") toLog = project.Variables[$"{varName}"].Value;
+			else project.Variables[$"{varName}"].Value = toLog;
+			
+			toLog = Regex.Replace(toLog, @"\s+", " ").Trim();
+			var acc0 = project.Variables["acc0"].Value;
+			var port = project.Variables["instancePort"].Value;
+			var lastAction = project.LastExecutedActionId;
+			var inSec = $"{(project.LastExecutedActionElapsedTime / 1000.0).ToString("0.000", CultureInfo.InvariantCulture)}s";
+			var elapsed = Time.TotalTime(project);
+			var stackFrame = new System.Diagnostics.StackFrame(1); 
+			var callingMethod = stackFrame.GetMethod();
+
+
+			if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = project.Variables["projectName"].Value;
+
+			
+			string formated = $"⛑  [{acc0}] ⚙  [{port}] ⏱  [{elapsed}] ⛏ [{callerName}]. LastAction [{lastAction}] took {inSec}]\n        {toLog}";
+			
+			if (logType == LogType.Info && logColor == LogColor.Default)
+			{
+				if (formated.Contains("!W")) 
+				{
+					logType = LogType.Warning;
+					logColor = LogColor.Orange;
+				}
+				else if (formated.Contains("!E")) 
+				{
+					logType = LogType.Error;
+					logColor = LogColor.Orange;
+				}
+				else if (formated.Contains("relax")) 
+				{
+					logType = LogType.Info;
+					logColor = LogColor.LightBlue;
+				}
+			}
+			
+			project.SendToLog(formated, logType, show, logColor);
+		}
 	}
 	#endregion
 	#region OnStart
@@ -1212,7 +1259,7 @@ namespace w3tools //by @w3bgrep
         }
         public static void W3MakeTable(IZennoPosterProjectModel project, Dictionary<string, string> tableStructure, string tableName = "", bool strictMode = false, bool insertData = false, string host = "localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "", string schemaName = "projects", bool log = false)
             {
-                string dbMode = project.Variables["DBmode"].Value;
+				string dbMode = project.Variables["DBmode"].Value;
                 if (project.Variables["debug"].Value == "True") log = true;
                 if (log) 
                 {
@@ -4227,10 +4274,6 @@ namespace w3tools //by @w3bgrep
 
 				try
 				{
-					
-					
-					
-					
 					HtmlElement he = instance.GetHe(obj, method);
 					Thread.Sleep(delay * 1000);
 					he.RiseEvent("click", instance.EmulationLevel);
