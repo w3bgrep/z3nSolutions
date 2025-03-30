@@ -63,15 +63,194 @@ using Leaf.xNet;
 
 namespace w3tools //by @w3bgrep
 {
-	
-	
-	
-	
-	
+  public class Traffic
+  {
+    public static object SyncObject = new object();
+    public enum SearchType
+    {
+      Contains, Exact
+    }
+    public static Random r = new Random();
+
+    private static TrafficItem SearchRequest(Instance instance, string url, string typeRequest, SearchType searchType, int number, int minLength)
+    {
+      //instance.UseTrafficMonitoring = true;
+      List < TrafficItem > urls = new List < TrafficItem > ();
+      var traffic = instance.ActiveTab.GetTraffic();
+      foreach(var t in traffic)
+      {
+        if (searchType == SearchType.Contains)
+        {
+          if (t.Url.Contains(url) && t.Method.Contains(typeRequest))
+          {
+            if (t.Url.Length > minLength) urls.Add(t);
+          }
+        }
+        else if (searchType == SearchType.Exact)
+        {
+          if (t.Url == url && t.Method.Contains(typeRequest))
+          {
+            if (t.Url.Length > minLength) urls.Add(t);
+          }
+        }
+      }
+      if (urls.Count == 0) throw new Exception("искомый урл не найден - " + url);
+      else
+      {
+        try
+        {
+          return urls[number];
+        } catch
+        {
+          throw new Exception($"нет урл по вашему номеру совпадения. всего было найдено {urls.Count} урл");
+        }
+      }
+    }
+
+    private static void RequestHeadersInGetPost(string RequestHeaders, out string Cookies, out string UserAgent, out string[] Headers)
+    {
+      List < string > headers = new List < string > ();
+      List < string > cookies = new List < string > ();
+      string cook = "";
+      string peremenDlySikla = "";
+      string ua = "";
+      headers.AddRange(RequestHeaders.Split('\n')); 
+      for (int i = 0; i < headers.Count; i++)
+      {
+        if (headers[i].Contains("Cookie"))
+        {
+          lock(SyncObjects.ListSyncer)
+          {
+            cook = headers[i].Replace("Cookie: ", ""); 
+            headers.RemoveAt(i);
+          }
+          i--;
+          cookies.AddRange(cook.Split(';')); 
+        }
+        else if (headers[i].Contains("User-Agent"))
+        {
+          lock(SyncObjects.ListSyncer)
+          {
+            ua = headers[i].Replace("User-Agent: ", "").Trim(' ', '\r', '\n'); 
+            headers.RemoveAt(i);
+          }
+          i--;
+        }
+      }
+      cookies.UdalenieDubleiAndPustyhStrokIzSpiska();
+      cook = ""; //очищаем переменную кук
+      foreach(string s in cookies)
+      cook += s + "; ";
+      if (cook != "")
+      {
+        string obrezka = cook.Substring(cook.Length - 2, 1);
+        if (cook.Substring(cook.Length - 2, 1) == ";") cook = cook.Remove(cook.Length - 2);
+      }
+      Cookies = cook; //возвращаем куки с помощью out Cookies
+      UserAgent = ua; //возвращаем user-agent с помощью out UserAgent
+      Headers = headers.ToArray();
+      for (int i = 0; i < Headers.Length; i++) //удаляем переносы строк, которые создает список
+      {
+        Headers[i] = Headers[i].Trim('\r', '\n');
+      }
+    }
+    private static string RequestHeadersInGetPost(string RequestHeaders, out string Cookies, out string UserAgent)
+    {
+      List < string > headers = new List < string > ();
+      List < string > cookies = new List < string > (); //список для кук
+      string cook = "";
+      string peremenDlySikla = "";
+      string ua = "";
+      headers.AddRange(RequestHeaders.Split('\n')); 
+      for (int i = 0; i < headers.Count; i++)
+      {
+        //если в заголовке содержатся куки
+        if (headers[i].Contains("Cookie"))
+        {
+          lock(SyncObjects.ListSyncer)
+          {
+            cook = headers[i].Replace("Cookie: ", "");
+            headers.RemoveAt(i);
+          }
+          i--;
+          cookies.AddRange(cook.Split(';'));
+        }
+        else if (headers[i].Contains("User-Agent"))
+        {
+          lock(SyncObjects.ListSyncer)
+          {
+            ua = headers[i].Replace("User-Agent: ", "").Trim(' ', '\r', '\n');
+            headers.RemoveAt(i);
+          }
+          i--;
+        }
+      }
+      cookies.UdalenieDubleiAndPustyhStrokIzSpiska();
+      cook = ""; //очищаем переменную кук
+      foreach(string s in cookies)
+      cook += s + "; ";
+      if (cook != "")
+      {
+        string obrezka = cook.Substring(cook.Length - 2, 1);
+        if (cook.Substring(cook.Length - 2, 1) == ";") cook = cook.Remove(cook.Length - 2);
+      }
+      Cookies = cook; //возвращаем куки с помощью out Cookies
+      UserAgent = ua; //возвращаем user-agent с помощью out UserAgent
+
+      string Headers = "";
+      for (int i = 0; i < headers.Count; i++)
+      {
+        Headers += headers[i].Trim('\r', '\n') + Environment.NewLine;
+      }
+      return Headers;
+    }
+
+    private static void UrlAndBodyRequest(TrafficItem s, out string url, out string typeMethod, out string body)
+    {
+      url = s.Url;
+      typeMethod = s.Method;
+      body = System.Text.Encoding.UTF8.GetString(s.ResponseBody);
+    }
+
+    public static void GetHeaders(Instance instance, string url, string typeRequest, SearchType searchType, int number, int minLength, out string Cookies, out string UserAgent, out string[] Headers, out string urlR, out string typeMethod, out string body)
+    {
+      TrafficItem t = Traffic.SearchRequest(instance, url, typeRequest, searchType, number, minLength);
+      Traffic.RequestHeadersInGetPost(t.RequestHeaders, out Cookies, out UserAgent, out Headers);
+      Traffic.UrlAndBodyRequest(t, out urlR, out typeMethod, out body);
+    }
+    public static void GetHeaders(Instance instance, string url, string typeRequest, SearchType searchType, int number, int minLength, ILocalVariable Headers, ILocalVariable Cookies, ILocalVariable UserAgent, ILocalVariable urlR, ILocalVariable typeMethod, ILocalVariable body)
+    {
+      TrafficItem t = SearchRequest(instance, url, typeRequest, searchType, number, minLength);
+      string s = RequestHeadersInGetPost(t.RequestHeaders, out string cookies, out string userAgent);
+      Headers.Value = s;
+      Cookies.Value = cookies;
+      UserAgent.Value = userAgent;
+      UrlAndBodyRequest(t, out string z1, out string z2, out string z3);
+      urlR.Value = z1;
+      typeMethod.Value = z2;
+      body.Value = z3;
+    }
+
+
+  }
+    public static class ListExtension
+    {
+        public static void UdalenieDubleiAndPustyhStrokIzSpiska(this List < string > Spisok)
+        {
+        string dlySikla = "";
+        List < string > timeList = new List < string > ();
+        List < string > spisok = Spisok.ToList();
+        timeList.AddRange(spisok.Distinct().ToList().Where(arg => !string.IsNullOrWhiteSpace(arg)).ToList());
+        lock(SyncObjects.ListSyncer)
+        {
+            Spisok.Clear();
+            Spisok.AddRange(timeList);
+        }
+        }
+    }
 	public static class Migrate
 	{
-		
-
+	
 	}
     public static class FunctionStorage
     {
@@ -203,12 +382,6 @@ namespace w3tools //by @w3bgrep
 			if(project.Variables["debug"].Value == "True") 
 				project.SendToLog($"⚙: {log}",LogType.Info, true, LogColor.Default);
 		}
-		public static void W3Throw(IZennoPosterProjectModel project, string log)
-		{
-			Time.TotalTime(project);
-			project.SendToLog(log,LogType.Warning, true, LogColor.Orange); 
-			throw new Exception($"{log}");
-		}
 		public static void Report(IZennoPosterProjectModel project)
 		{
 			string time = project.ExecuteMacro(DateTime.Now.ToString("MM-dd HH:mm"));
@@ -301,7 +474,7 @@ namespace w3tools //by @w3bgrep
 		{
 			if (author == "") author = project.Variables["projectAuthor"].Value;
             project.Variables["varSessionId"].Value = (DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString();
-            if (project.Variables["cfgPin"].Value == "") Loggers.W3Throw(project,"PIN IS EMPTY");
+            if (project.Variables["cfgPin"].Value == "") Loggers.l0g(project,"PIN IS EMPTY",thr0w:true);
 			if (project.Variables["DBsqltPath"].Value == "") Loggers.l0g(project,"!W SQLite path IS EMPTY");
 			project.Variables["instancePort"].Value = $"noInstance";
 			project.Variables["timeToday"].Value = DateTime.Now.ToString("MM-dd");
@@ -461,7 +634,7 @@ namespace w3tools //by @w3bgrep
 				    Loggers.W3Debug(project,$"♻ noAccoutsAvaliable by query [{dbQuery}] ");
 				    return; 
 				}
-			} catch {Loggers.W3Throw(project,dbQuery);}
+			} catch {Loggers.l0g(project,dbQuery,thr0w:true);}
 			//
 			
 			var availableAccounts = accsByQuery.Split('\n').Select(x => x.Trim().TrimStart(',')).ToHashSet(); 
@@ -516,7 +689,7 @@ namespace w3tools //by @w3bgrep
 				}
 				catch 
 				{
-					Loggers.W3Throw(project, query);
+					Loggers.l0g(project, query,thr0w:true);
 				}
 			}
 
@@ -610,7 +783,8 @@ namespace w3tools //by @w3bgrep
 			{
 				try {project.GlobalVariables[$"w3tools", $"Thread{project.Variables["acc0"].Value}"].Value = null;}catch{}
 				project.Variables["acc0"].Value = "";
-				Loggers.W3Throw(project,ex.Message);
+				
+                Loggers.l0g(project, ex.Message, thr0w:true);
 			}
 			
 		}
@@ -630,7 +804,8 @@ namespace w3tools //by @w3bgrep
 				project.SendInfoToLog(ipProxy);
 				if (ipLocal != ipProxy) return;
 			}
-			Loggers.W3Throw(project,"badProxy");
+            Loggers.l0g(project, "badProxy", thr0w:true);
+			
 		}
 		public static void SetCookiesFromJson(this Instance instance, IZennoPosterProjectModel project, string filePath = "")
 		{
@@ -1137,7 +1312,7 @@ namespace w3tools //by @w3bgrep
 		    }
 		    catch (Exception ex)
 		    {   
-                if (!ignoreErrors) Loggers.W3Throw(project,$"{ex.Message}: {query}");
+                if (!ignoreErrors) Loggers.l0g(project,$"{ex.Message}: {query}", thr0w:true);               
                 project.SendToLog($"{ex.Message}", LogType.Warning);
 				return string.Empty;
 		    }
@@ -2377,7 +2552,7 @@ namespace w3tools //by @w3bgrep
 
 				if (log) Loggers.l0g(project,$"{instance.ActiveTab.URL}");
 				
-				if (DateTime.Now > deadline) Loggers.W3Throw(project,"TwitterGetStatus timeout");
+				if (DateTime.Now > deadline) Loggers.l0g(project,"TwitterGetStatus timeout",thr0w:true);
 				
 				if (!instance.ActiveTab.FindElementByAttribute("span", "innertext", "Something\\ went\\ wrong.\\ Try\\ reloading.", "regexp", 0).IsVoid)
 				{	
@@ -2571,7 +2746,7 @@ namespace w3tools //by @w3bgrep
 			var status = "";
 			while (true)
 			{
-				if (DateTime.Now > deadline) Loggers.W3Throw(project,"twitter timeout");
+				if (DateTime.Now > deadline) Loggers.l0g(project,"twitter full timeout",thr0w:true);
 				status = instance.TwitterGetStatus(project);
 				if (log) Loggers.l0g(project,status);
 				if (status == "unlogged")
@@ -2834,7 +3009,6 @@ namespace w3tools //by @w3bgrep
 					instance.ClearCookie("google.com");
 					instance.ClearCookie("google.com");
 					instance.SetCookiesFromDB(project);
-					//W3Throw(project,"!W mixedAccounts [google]");
 					return "FAIL. Wrong account";
 				}
 			}
@@ -3167,7 +3341,7 @@ namespace w3tools //by @w3bgrep
 				
 				project.Variables["blockchainHash"].Value = txHash;
 			}
-			catch (Exception ex){Loggers.W3Throw(project,$"!W:{ex.Message}");}
+			catch (Exception ex){Loggers.l0g(project,$"!W:{ex.Message}",thr0w:true);}
 
 			Loggers.l0g(project,$"[APPROVE] {contract} for spender {spender}...");
 			return Leaf.waitTx(project);
@@ -3196,7 +3370,8 @@ namespace w3tools //by @w3bgrep
 				
 				project.Variables["blockchainHash"].Value = txHash;
 			}
-			catch (Exception ex){Loggers.W3Throw(project,$"!W:{ex.Message}");}
+			catch (Exception ex){Loggers.l0g(project,$"!W:{ex.Message}",thr0w:true);}
+
 
 			Loggers.l0g(project,$"[APPROVE] {contract} for spender {spender}...");
 			return Leaf.waitTx(project);
@@ -3225,7 +3400,7 @@ namespace w3tools //by @w3bgrep
 		        
 		        project.Variables["blockchainHash"].Value = txHash;
 		    }
-		    catch (Exception ex){Loggers.W3Throw(project,$"!W:{ex.Message}");}
+			catch (Exception ex){Loggers.l0g(project,$"!W:{ex.Message}",thr0w:true);}
 		    
 		    Loggers.l0g(project,$"[WRAP] {value} native to {contract}...");
 			return Leaf.waitTx(project);
@@ -3455,7 +3630,8 @@ namespace w3tools //by @w3bgrep
 							instance.ActiveTab.Touch.SwipeBetween(600, 400, 600, 300);
 							instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("button", "data-testid", "page-container-footer-cancel", "regexp", 0));
 						}
-						Loggers.W3Throw(project,error);
+                        
+						Loggers.l0g(project,error,thr0w:true);
 			}
 			if (log)project.SendInfoToLog("Starting button click loop on MetaMask page...");
 			while (instance.ActiveTab.URL.Contains("nkbihfbeogaeaoehlefnkodbefgpgknn"))
@@ -3628,7 +3804,7 @@ namespace w3tools //by @w3bgrep
 			deadline = DateTime.Now.AddSeconds(10);
 			while (true)
 			{
-				if (DateTime.Now > deadline) Loggers.W3Throw(project,"Keplr tab stucked");
+				if (DateTime.Now > deadline)  Loggers.l0g(project,"Keplr tab stucked",thr0w:true);
 				if (!instance.ActiveTab.URL.Contains(extId)) break;
 			}
 			Loggers.W3Debug(project,"Keplr tab closed");
@@ -3760,7 +3936,8 @@ namespace w3tools //by @w3bgrep
 			if (!instance.ActiveTab.FindElementByAttribute("div", "innertext", "Invalid\\ password", "regexp", 0).IsVoid) 
 			{
 				instance.CloseAllTabs(); instance.UninstallExtension("dmkamcknogkgcdfhhbddcghachkejeap"); 
-				Loggers.W3Throw(project,$"!WrongPassword");
+                Loggers.l0g(project,$"!WrongPassword",thr0w:true);
+
 			}			
 		}
 		public static string KeplrPrune(this Instance instance,IZennoPosterProjectModel project, bool keepTemp = false)
