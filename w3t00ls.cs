@@ -48,7 +48,6 @@ using Nethereum.Web3;
 using Nethereum.Web3.Accounts;
 
 using NBitcoin;
-using QBitNinja.Client;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -2971,51 +2970,44 @@ namespace w3tools //by @w3bgrep
 		}				
 		public static string GoogleAuth(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
 		{
-			try
-			{
-				var userContainer = instance.WaitGetValue(() => instance.ActiveTab.FindElementByAttribute("div", "data-authuser", "0", "regexp", 0));
-				Loggers.W3Debug(project,$"container:{userContainer} catched");	
-				if (userContainer.IndexOf(project.Variables["googleLOGIN"].Value, StringComparison.OrdinalIgnoreCase) >= 0)	
-				{
-					Loggers.W3Debug(project,$"correct user found: {project.Variables["googleLOGIN"].Value}");	
-					instance.LMB(("div", "data-authuser", "0", "regexp", 0),delay:3);
-					//instance.WaitClick(() => instance.ActiveTab.FindElementByAttribute("div", "data-authuser", "0", "regexp", 0));
-					Thread.Sleep(5000);
-					if (!instance.ActiveTab.FindElementByAttribute("div", "data-authuser", "0", "regexp", 0).IsVoid)
-					{
-						while (true)
-						try
-						{
-							Loggers.W3Debug(project,$"auth Buttin !IsVoid");
-							instance.LMB(("div", "data-authuser", "0", "regexp", 0),delay:3);
-						}
-						catch
-						{
-							break;
-						}
-					}
-					//instance.ClickOut(() => instance.ActiveTab.FindElementByAttribute("div", "data-authuser", "0", "regexp", 0));
-					try
-					{
-						instance.WaitClick(() => instance.ActiveTab.FindElementByAttribute("button", "innertext", "Continue", "regexp", 0));
-						Loggers.W3Debug(project,$"{project.Variables["googleLOGIN"].Value} Auth SUCCESSFUL");
-						return "SUCCESS";
-					}catch{return "SUCCESS. No confirmation after clic was required";}					
-				}
-				else
-				{
-					Loggers.l0g(project,$"!Wrong account [{userContainer}]. Expected: {project.Variables["googleLOGIN"].Value}. Cleaning");
-					instance.CloseAllTabs();
-					instance.ClearCookie("google.com");
-					instance.ClearCookie("google.com");
-					instance.SetCookiesFromDB(project);
-					return "FAIL. Wrong account";
-				}
-			}
-			catch
-			{
-				return "FAIL. No loggined Users Found";
-			}
+            //bool log = true;
+            try
+            {
+                var userContainer = instance.ReadHe(("div", "data-authuser", "0", "regexp", 0));
+                if (log) Loggers.l0g(project,$"container:{userContainer} catched");	
+                if (userContainer.IndexOf(project.Variables["googleLOGIN"].Value, StringComparison.OrdinalIgnoreCase) >= 0)	
+                {
+                    if (log) Loggers.l0g(project,$"correct user found: {project.Variables["googleLOGIN"].Value}");	
+                    instance.LMB(("div", "data-authuser", "0", "regexp", 0),delay:3);
+                    Thread.Sleep(5000);
+                    if (!instance.ActiveTab.FindElementByAttribute("div", "data-authuser", "0", "regexp", 0).IsVoid)
+                    {
+                        while (true) instance.LMB(("div", "data-authuser", "0", "regexp", 0),"clickOut",delay:3);
+                    }
+                    try
+                    {
+                        instance.LMB(("button", "innertext", "Continue", "regexp", 0),deadline:2,delay:1);
+                        return "SUCCESS with continue";
+                    }
+                    catch
+                    {
+                        return "SUCCESS. without confirmation";
+                    }					
+                }
+                else
+                {
+                    Loggers.l0g(project,$"!Wrong account [{userContainer}]. Expected: {project.Variables["googleLOGIN"].Value}. Cleaning");
+                    instance.CloseAllTabs();
+                    instance.ClearCookie("google.com");
+                    instance.ClearCookie("google.com");
+                    instance.SetCookiesFromDB(project);
+                    return "FAIL. Wrong account";
+                }
+            }
+            catch
+            {
+                return "FAIL. No loggined Users Found";
+            }
 		}		
 	}
 
@@ -4361,20 +4353,20 @@ namespace w3tools //by @w3bgrep
 			}
 		}
 //new
-		public static void LMB(this Instance instance, object obj, string method = "id", int maxWaitSeconds = 10, int delay = 1, string comment = "", bool Throw = true)
+		public static void LMB(this Instance instance, object obj, string method = "id", int deadline = 10, int delay = 1, string comment = "", bool Throw = true)
 		{
 			DateTime functionStart = DateTime.Now;
 			string lastExceptionMessage = "";
 
 			while (true)
 			{
-				if ((DateTime.Now - functionStart).TotalSeconds > maxWaitSeconds)
+				if ((DateTime.Now - functionStart).TotalSeconds > deadline)
 				{
-					if (Throw) throw new TimeoutException($"{comment} not found in {maxWaitSeconds}s: {lastExceptionMessage}");
+					if (Throw) throw new TimeoutException($"{comment} not found in {deadline}s: {lastExceptionMessage}");
 					else return;
 				}
-
-				try
+				
+                try
 				{
 					HtmlElement he = instance.GetHe(obj, method);
 					Thread.Sleep(delay * 1000);
@@ -4387,6 +4379,32 @@ namespace w3tools //by @w3bgrep
 				}
 				Thread.Sleep(500);
 			}
+
+            if (method == "clickOut")
+            {
+				if ((DateTime.Now - functionStart).TotalSeconds > deadline)
+				{
+					if (Throw) throw new TimeoutException($"{comment} not found in {deadline}s: {lastExceptionMessage}");
+					else return;
+				}
+				while (true)
+                {
+                    try
+                    {
+                        HtmlElement he = instance.GetHe(obj, method);
+                        Thread.Sleep(delay * 1000);
+                        he.RiseEvent("click", instance.EmulationLevel);
+                        continue;
+                    }
+                    catch 
+                    {
+                        break;
+                    }
+                    Thread.Sleep(500);
+                }
+
+            }
+
 		}
 
 		public static string ReadHe(this Instance instance, object obj, int maxWaitSeconds = 10, string atr = "innertext", int delayBeforeGetSeconds = 1, string comment = "", bool Throw = true)
@@ -5438,30 +5456,7 @@ namespace w3tools //by @w3bgrep
             var balance = web3.Eth.GetBalance.SendRequestAsync(address).Result;
 			return balance.Value.ToString();
         }
-		
-		public static string GetBtcAccountBalance(string address)
-        {
-            var network = Network.Main;
-            var client = new QBitNinjaClient(network);
-            var dest = BitcoinAddress.Create(address, network);
-            var balance = client.GetBalance(dest, true).Result;
 
-            long money = new Money(0);
-
-            if (balance.Operations.Count != 0)
-            {
-                foreach (var operations in balance.Operations)
-                {
-                    money += operations.Amount;
-                }
-            }
-            
-            return money.ToString();
-        }
-		
-		
-		
-		
     }
 	public class Function
 	{
