@@ -70,86 +70,7 @@ namespace w3tools //by @w3bgrep
 	
 	public static class Migrate
 	{
-		//ЭТОТ КЛАСС СОДЕРЖИТ УСТАРЕВШИЕ ВЫЗОВЫ
-		//  ЕСЛИ ТЫ ИСПОЛЬЗУЕШЬ КАКИЕ-ТО ИЗ НИХ - 
-		// замени их теми к которым они обращаются как можно скорее, 
-		// в следующих версиях эти вызовы будут удалены
-
-		public static string w3Log(IZennoPosterProjectModel project, string toLog = "", string varName = "a0debug") 
-	    {
-	        return Loggers.W3Log(project, toLog, varName);
-	    }
-		public static string w3Query(IZennoPosterProjectModel project, string dbQuery, bool toLog = false)
-		{
-			return SQL.W3Query(project, dbQuery, toLog);
-		}
-		public static string simpleGET(IZennoPosterProjectModel project, string url, string proxy = "")
-		{
-			return Http.W3Get(project, url, proxy);
-		}
-		public static string getTx(IZennoPosterProjectModel project, string chainRPC = "", string hash = "", int deadline = 60,bool log = false)
-		{
-			return Leaf.waitTx(project,chainRPC,hash,deadline,log);
-		}
-		public static T getNative<T>(IZennoPosterProjectModel project, string chainRPC = "", string address = "", string proxy = "",bool log = false)
-		{
-			return Leaf.balNative<T>(project,chainRPC,address);
-		}
-		public static T getNonce<T>(IZennoPosterProjectModel project, string chainRPC = "", string address = "", string proxy = "",bool log = false)
-		{
-			return Leaf.nonce<T>(project,chainRPC,address);
-		}		
-		public static T getERC20<T>(IZennoPosterProjectModel project, string tokenContract, string chainRPC = "", string address = "", string tokenDecimal = "18", string proxy = "",bool log = false)
-		{
-			return Leaf.balERC20<T>(project,tokenContract);
-		}
-	    public static string MMConfirm2(this Instance instance,IZennoPosterProjectModel project, bool log = false )
-		{
-			return MM.Confirm(instance,project,log);
-		}
-		public static string MMUnlock(this Instance instance,IZennoPosterProjectModel project,string key = "", bool skipCheck = false)
-		{
-			return MM.Run(instance,project,key,skipCheck);
-		}
-		public static void MMConfirm(this Instance instance) //USE MM.Confirm instead
-		{
-			int i = 0;
-			DateTime deadline = DateTime.Now.AddSeconds(60);
-			while (!instance.ActiveTab.URL.Contains("nkbihfbeogaeaoehlefnkodbefgpgknn"))
-				{
-					Thread.Sleep(1000);
-					 if (i > 5) throw new Exception(""); i++;
-				} 
-			i = 0; Thread.Sleep(2000);
-			
-			while (instance.ActiveTab.URL.Contains("nkbihfbeogaeaoehlefnkodbefgpgknn"))
-			{
-				if (DateTime.Now > deadline) throw new Exception("");
-				try
-				{
-					instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("button", "class", "button\\ btn--rounded\\ btn-primary", "regexp", 0),3); Thread.Sleep(2000);
-				}
-				catch{}
-			}
-			
-		}
-		public static string KeplrApprove(this Instance instance,IZennoPosterProjectModel project)
-		{
-			return Keplr.Approve(instance,project);
-		}
-
-		public static string GetOTP(this Instance instance, string keyString, int waitIfTimeLess = 5)
-		{
-			return OTP.Offline(instance,keyString,waitIfTimeLess);
-		}
-		public static string FirstMailOTP(IZennoPosterProjectModel project,string email = "", string proxy = "")
-		{
-		    return OTP.FirstMail(project,email,proxy);
-		}
-		public static string TelegramMailOTP(IZennoPosterProjectModel project, string email = "", string proxy = "")
-		{
-		    return OTP.Telegram(project,email,proxy);
-		}
+		
 
 	}
     public static class FunctionStorage
@@ -326,7 +247,8 @@ namespace w3tools //by @w3bgrep
 			[CallerMemberName] string callerName = "",
 			LogType logType = LogType.Info,
 			LogColor logColor = LogColor.Default,
-			bool show = true)
+			bool show = true,
+            bool thr0w = false)
 			//
 		{
 			if (toLog == "") toLog = project.Variables[$"{varName}"].Value;
@@ -368,6 +290,7 @@ namespace w3tools //by @w3bgrep
 			}
 			
 			project.SendToLog(formated, logType, show, logColor);
+            if (thr0w) throw new Exception($"{formated}");
 		}
 	}
 	#endregion
@@ -379,7 +302,7 @@ namespace w3tools //by @w3bgrep
 			if (author == "") author = project.Variables["projectAuthor"].Value;
             project.Variables["varSessionId"].Value = (DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString();
             if (project.Variables["cfgPin"].Value == "") Loggers.W3Throw(project,"PIN IS EMPTY");
-			if (project.Variables["DBsqltPath"].Value == "") Loggers.W3Log(project,"!W SQLite path IS EMPTY");
+			if (project.Variables["DBsqltPath"].Value == "") Loggers.l0g(project,"!W SQLite path IS EMPTY");
 			project.Variables["instancePort"].Value = $"noInstance";
 			project.Variables["timeToday"].Value = DateTime.Now.ToString("MM-dd");
 			string name = project.ExecuteMacro(project.Name).Split('.')[0];
@@ -720,7 +643,7 @@ namespace w3tools //by @w3bgrep
 				var cookies = File.ReadAllText(project.Variables["pathCookies"].Value);
 				instance.SetCookie(cookies);
 			}
-			catch{Loggers.W3Log(project,$"!W noCookiesAvaliable by path {filePath}");}
+			catch{Loggers.l0g(project,$"!W noCookiesAvaliable by path {filePath}");}
 		}
 		public static void SetCookiesFromDB(this Instance instance, IZennoPosterProjectModel project, string filePath = "")
 		{
@@ -733,7 +656,7 @@ namespace w3tools //by @w3bgrep
 				var cookies = SQL.W3Query(project,$@"SELECT cookies FROM {tableName} WHERE acc0 = {project.Variables["acc0"].Value}");
 				instance.SetCookie(cookies);
 			}
-			catch{Loggers.W3Log(project,$"!W noCookiesAvaliable by path {filePath}");}
+			catch{Loggers.l0g(project,$"!W noCookiesAvaliable by path {filePath}");}
 		}
 		public static void ExportCookiesAsJson(IZennoPosterProjectModel project, string filePath = "")
 		{
@@ -1229,7 +1152,7 @@ namespace w3tools //by @w3bgrep
 		        string createTableQuery = $"CREATE TABLE {tableName} (";
 		        createTableQuery += string.Join(", ", tableStructure.Select(kvp => $"{kvp.Key} {kvp.Value}"));
 		        createTableQuery += ");";
-		        Loggers.W3Log(project, createTableQuery);
+		        Loggers.l0g(project, createTableQuery);
 		        lSQL(project, createTableQuery);
 		    }
 		    else {
@@ -2432,7 +2355,7 @@ namespace w3tools //by @w3bgrep
 			
 			instance.SetCookie($@".twitter.com	TRUE	/	FALSE	05/18/2033 06:33:20	auth_token	{authToken}	FALSE	TRUE");
 			instance.SetCookie($@".x.com	TRUE	/	FALSE	05/18/2033 06:33:20	auth_token	{authToken}	FALSE	TRUE");
-			if (log) Loggers.W3Log(project,$"[{caller}].[TwitterTokenSet] {authToken} set");
+			if (log) Loggers.l0g(project,$"[{caller}].[TwitterTokenSet] {authToken} set");
 		}
 		public static string TwitterGetStatus(this Instance instance, IZennoPosterProjectModel project,bool log = false, [CallerMemberName] string caller = "")
 		{
@@ -2452,7 +2375,7 @@ namespace w3tools //by @w3bgrep
 			{
 				Thread.Sleep(2000);
 
-				if (log) Loggers.W3Log(project,$"{instance.ActiveTab.URL}");
+				if (log) Loggers.l0g(project,$"{instance.ActiveTab.URL}");
 				
 				if (DateTime.Now > deadline) Loggers.W3Throw(project,"TwitterGetStatus timeout");
 				
@@ -2488,7 +2411,7 @@ namespace w3tools //by @w3bgrep
 						    Thread.Sleep(1000);
 						}
 						Thread.Sleep(1000);	
-						if (log) Loggers.W3Log(project,$"[{caller}].[TwitterGetStatus] getting data from logOut button url now is {instance.ActiveTab.URL}");
+						if (log) Loggers.l0g(project,$"[{caller}].[TwitterGetStatus] getting data from logOut button url now is {instance.ActiveTab.URL}");
 						string attribute = instance.ActiveTab.FindElementByAttribute("a", "data-testid", "AccountSwitcher_Logout_Button", "regexp", 0).GetAttribute("innertext");
 						instance.ActiveTab.FindElementByAttribute("button", "data-testid", "SideNav_AccountSwitcher_Button", "regexp", 0).RiseEvent("click", instance.EmulationLevel);
 						
@@ -2499,7 +2422,7 @@ namespace w3tools //by @w3bgrep
 							instance.CloseAllTabs();
 							instance.ClearCookie("x.com");instance.ClearCache("x.com");
 							instance.ClearCookie("twitter.com");instance.ClearCache("twitter.com");
-							if (log) Loggers.W3Log(project,$"string [@{login}] not found in attribute [{attribute}]");
+							if (log) Loggers.l0g(project,$"string [@{login}] not found in attribute [{attribute}]");
 							//Loggers.W3Debug(project,$"string [@{login}] not found in attribute [{attribute}]");
 							instance.ActiveTab.Navigate($"https://x.com/{project.Variables["twitterLOGIN"].Value}", "");
 							Thread.Sleep(2000);
@@ -2551,14 +2474,14 @@ namespace w3tools //by @w3bgrep
 			try
 			{var check = instance.WaitGetValue(() => 
 			    instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Wrong password!')]", 0),2);
-				Loggers.W3Log(project,$"!Wrong password!");
+				Loggers.l0g(project,$"!Wrong password!");
 				status = "wrongPassword"; return status;}
 			catch{}
 			
 			Loggers.W3Debug(project,$"input otp");
-			var OTP = instance.GetOTP(project.Variables["twitterCODE2FA"].Value); 
+			var codeOTP = OTP.Offline(project.Variables["twitterCODE2FA"].Value); 
 			instance.WaitSetValue(() => 
-				instance.ActiveTab.GetDocumentByAddress("0").FindElementByName("text"),OTP);
+				instance.ActiveTab.GetDocumentByAddress("0").FindElementByName("text"),codeOTP);
 			
 			instance.ClickOut(() => 
 				instance.ActiveTab.GetDocumentByAddress("0").FindElementByAttribute("span", "innertext", "Next", "regexp", 1));
@@ -2566,21 +2489,21 @@ namespace w3tools //by @w3bgrep
 			try
 			{var check = instance.WaitGetValue(() => 
 			    instance.ActiveTab.FindElementByAttribute("span", "innertext", "Oops,\\ something\\ went\\ wrong.\\ Please\\ try\\ again\\ later.", "regexp", 0),3);
-				Loggers.W3Log(project,$"!W Oops,\\ something\\ went\\ wrong");
+				Loggers.l0g(project,$"!W Oops,\\ something\\ went\\ wrong");
 				status = "somethingWrong"; return status;}
 			catch{}
 			
 			try
 			{var check = instance.WaitGetValue(() => 
 			    instance.ActiveTab.FindElementByAttribute("*", "innertext", "Suspicious\\ login\\ prevented", "regexp", 0),1);
-				Loggers.W3Log(project,$"!W Suspicious\\ login\\ prevented");
+				Loggers.l0g(project,$"!W Suspicious\\ login\\ prevented");
 				status = "suspiciousLogin"; return status;}
 			catch{}
 			
 			try
 			{var check = instance.WaitGetValue(() => 
 			    instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Your account is suspended')]", 0),1);
-				Loggers.W3Log(project,$"!W Your account is suspended");
+				Loggers.l0g(project,$"!W Your account is suspended");
 				status = "suspended"; return status;}
 			catch{}
 			
@@ -2650,7 +2573,7 @@ namespace w3tools //by @w3bgrep
 			{
 				if (DateTime.Now > deadline) Loggers.W3Throw(project,"twitter timeout");
 				status = instance.TwitterGetStatus(project);
-				if (log) Loggers.W3Log(project,status);
+				if (log) Loggers.l0g(project,status);
 				if (status == "unlogged")
 				{
 					if (tokenSet == false)
@@ -2668,14 +2591,14 @@ namespace w3tools //by @w3bgrep
 						continue;
 					}
 				}
-				if (log) Loggers.W3Log(project,status);
+				if (log) Loggers.l0g(project,status);
 				break;
 			}
 			Thread.Sleep(3000);
 			if (status == "ok")
 			{
 				var token = instance.TwitterSyncToken(project);	
-				if (log) Loggers.W3Log(project,token);				
+				if (log) Loggers.l0g(project,token);				
 			}
 			return status;
 		}		
@@ -2698,7 +2621,7 @@ namespace w3tools //by @w3bgrep
 				}	
 				else 
 				{
-					Loggers.W3Log (project,$"!W {currentAcc} is InCorrect. MustBe {project.Variables["googleLOGIN"].Value}");
+					Loggers.l0g (project,$"!W {currentAcc} is InCorrect. MustBe {project.Variables["googleLOGIN"].Value}");
 					status = "wrong";	
 					return status;
 				}	
@@ -2765,14 +2688,14 @@ namespace w3tools //by @w3bgrep
 					instance.ClearCookie("google.com");
 					instance.ClearCookie("google.com");
 					//instance.SetCookiesFromDB(project);
-					Loggers.W3Log (project,$"!W {userContainer} is Wrong. MustBe {project.Variables["googleLOGIN"].Value}");
+					Loggers.l0g (project,$"!W {userContainer} is Wrong. MustBe {project.Variables["googleLOGIN"].Value}");
 					status = "wrong";	
 					continue;
 				}
 			}
 			catch
 			{
-				Loggers.W3Log(project,$"no loggined Accounts detected");	
+				Loggers.l0g(project,$"no loggined Accounts detected");	
 				try	{
 					instance.WaitSetValue(() => instance.ActiveTab.FindElementById("identifierId"),project.Variables["googleLOGIN"].Value);
 					instance.WaitClick(() => 	instance.ActiveTab.FindElementByAttribute("button", "innertext", "Next", "regexp", 0),5);
@@ -2821,7 +2744,7 @@ namespace w3tools //by @w3bgrep
 					var userContainer = instance.WaitGetValue(() => instance.ActiveTab.FindElementByAttribute("div", "data-authuser", "-1", "regexp", 0));	
 					if (userContainer.IndexOf(project.Variables["googleLOGIN"].Value, StringComparison.OrdinalIgnoreCase) >= 0)	
 					{
-						Loggers.W3Log(project,$"Signed Out acc detected [{userContainer}]");	
+						Loggers.l0g(project,$"Signed Out acc detected [{userContainer}]");	
 						instance.WaitClick(() => instance.ActiveTab.FindElementByAttribute("div", "data-authuser", "-1", "regexp", 0));
 					}
 					else
@@ -2830,7 +2753,7 @@ namespace w3tools //by @w3bgrep
 						instance.ClearCookie("google.com");
 						instance.ClearCookie("google.com");
 						//instance.SetCookiesFromDB(project);
-						Loggers.W3Log (project,$"!W {userContainer} is Wrong. MustBe {project.Variables["googleLOGIN"].Value}");
+						Loggers.l0g (project,$"!W {userContainer} is Wrong. MustBe {project.Variables["googleLOGIN"].Value}");
 						status = "wrong";	
 						continue;
 					}
@@ -2844,7 +2767,7 @@ namespace w3tools //by @w3bgrep
 				
 				try
 				{
-					instance.WaitSetValue(() => instance.ActiveTab.FindElementById("totpPin"),instance.GetOTP(project.Variables["google2FACODE"].Value));	
+					instance.WaitSetValue(() => instance.ActiveTab.FindElementById("totpPin"),OTP.Offline(project.Variables["google2FACODE"].Value));	
 					instance.WaitClick(() => instance.ActiveTab.FindElementByAttribute("button", "innertext", "Next", "regexp", 0));
 				}catch{}
 				
@@ -2906,7 +2829,7 @@ namespace w3tools //by @w3bgrep
 				}
 				else
 				{
-					Loggers.W3Log(project,$"!Wrong account [{userContainer}]. Expected: {project.Variables["googleLOGIN"].Value}. Cleaning");
+					Loggers.l0g(project,$"!Wrong account [{userContainer}]. Expected: {project.Variables["googleLOGIN"].Value}. Cleaning");
 					instance.CloseAllTabs();
 					instance.ClearCookie("google.com");
 					instance.ClearCookie("google.com");
@@ -3246,7 +3169,7 @@ namespace w3tools //by @w3bgrep
 			}
 			catch (Exception ex){Loggers.W3Throw(project,$"!W:{ex.Message}");}
 
-			Loggers.W3Log(project,$"[APPROVE] {contract} for spender {spender}...");
+			Loggers.l0g(project,$"[APPROVE] {contract} for spender {spender}...");
 			return Leaf.waitTx(project);
 		}
 		public static string ApproveCancel(IZennoPosterProjectModel project, string contract, string spender, string chainRPC = "")
@@ -3275,7 +3198,7 @@ namespace w3tools //by @w3bgrep
 			}
 			catch (Exception ex){Loggers.W3Throw(project,$"!W:{ex.Message}");}
 
-			Loggers.W3Log(project,$"[APPROVE] {contract} for spender {spender}...");
+			Loggers.l0g(project,$"[APPROVE] {contract} for spender {spender}...");
 			return Leaf.waitTx(project);
 		}
 		public static string WrapNative(IZennoPosterProjectModel project, string contract, decimal value, string chainRPC = "")
@@ -3304,7 +3227,7 @@ namespace w3tools //by @w3bgrep
 		    }
 		    catch (Exception ex){Loggers.W3Throw(project,$"!W:{ex.Message}");}
 		    
-		    Loggers.W3Log(project,$"[WRAP] {value} native to {contract}...");
+		    Loggers.l0g(project,$"[WRAP] {value} native to {contract}...");
 			return Leaf.waitTx(project);
 		}
 	}
@@ -3497,7 +3420,7 @@ namespace w3tools //by @w3bgrep
 	
 	public static class MM
 	{
-		public static string Confirm(this Instance instance,IZennoPosterProjectModel project, bool log = false )
+		public static string MMConfirm(this Instance instance,IZennoPosterProjectModel project, bool log = false )
 		{
 			instance.UseFullMouseEmulation = false;
 			DateTime urlChangeDeadline = DateTime.Now.AddSeconds(60);
@@ -3558,7 +3481,7 @@ namespace w3tools //by @w3bgrep
 			instance.UseFullMouseEmulation = true;
 			return "done";
 		}
-		public static string Run(this Instance instance,IZennoPosterProjectModel project,string key = "", bool skipCheck = false)
+		public static string MMRun(this Instance instance,IZennoPosterProjectModel project,string key = "", bool skipCheck = false)
 		{
 			instance.UseFullMouseEmulation = false;
             string address = "";
@@ -3581,13 +3504,13 @@ namespace w3tools //by @w3bgrep
 				else if (!instance.ActiveTab.FindElementByAttribute("button", "data-testid", "unlock-submit", "regexp", 0).IsVoid) 
 					{toDo = "unlock";break;}
 				}
-				Loggers.W3Log(project,toDo);
+				Loggers.l0g(project,toDo);
 				
 				if ( toDo.Contains("install")) 
 				{
 					string path = $"{project.Path}.crx\\MetaMask 11.16.0.crx"; 
 					instance.InstallCrxExtension(path);
-					Loggers.W3Log(project,$"installing {path}"); 
+					Loggers.l0g(project,$"installing {path}"); 
 				}
 				if (toDo.Contains("import")) 
 				{
@@ -3638,7 +3561,7 @@ namespace w3tools //by @w3bgrep
 					if (!instance.ActiveTab.FindElementByAttribute("p", "innertext", "Incorrect password", "text", 0).IsVoid) 
 					{
 					    instance.CloseAllTabs(); instance.UninstallExtension("nkbihfbeogaeaoehlefnkodbefgpgknn"); 
-					    project.Variables["a0debug"].Value = $"wallet fuckup"; project.SendWarningToLog(Loggers.W3Log(project),true); throw new Exception("wrongPassword");
+					    project.Variables["a0debug"].Value = $"wallet fuckup";  Loggers.l0g(project,"wrongPassword",thr0w:true);
 					}	
 					toDo = "checkAddress";
 				}
@@ -3665,7 +3588,7 @@ namespace w3tools //by @w3bgrep
 						if(!String.Equals(address,project.Variables["addressEvm"].Value,StringComparison.OrdinalIgnoreCase))
 						{
 						    instance.CloseAllTabs(); instance.UninstallExtension("nkbihfbeogaeaoehlefnkodbefgpgknn"); 
-						    Loggers.W3Log(project,$"!WrongWallet expected: {project.Variables["addressEvm"].Value}. InWallet {address}"); continue;//throw new Exception("!WrongWallet");
+						    Loggers.l0g(project,$"!WrongWallet expected: {project.Variables["addressEvm"].Value}. InWallet {address}"); continue;//throw new Exception("!WrongWallet");
 						}	
 				}
 				instance.UseFullMouseEmulation = true;
@@ -3676,7 +3599,7 @@ namespace w3tools //by @w3bgrep
 	}
 	public static class Keplr
 	{
-		public static string Approve(this Instance instance,IZennoPosterProjectModel project)
+		public static string KeplrApprove(this Instance instance,IZennoPosterProjectModel project)
 		{
 			string extId = "dmkamcknogkgcdfhhbddcghachkejeap";
 
@@ -3888,7 +3811,7 @@ namespace w3tools //by @w3bgrep
 			{
 				var kState = instance.KeplrCheck();
 				
-				if (log) Loggers.W3Log(project,kState);
+				if (log) Loggers.l0g(project,kState);
 				if (kState == "install") 
 				{
 					instance.KeplrInstallExt(project);
@@ -3922,7 +3845,7 @@ namespace w3tools //by @w3bgrep
 	#region Tools&Vars
 	public static class OTP
 	{
-		public static string Offline(this Instance instance, string keyString, int waitIfTimeLess = 5)
+		public static string Offline(string keyString, int waitIfTimeLess = 5)
 		{
 		    var key = OtpNet.Base32Encoding.ToBytes(keyString);
 		    var otp = new OtpNet.Totp(key);
@@ -4042,11 +3965,11 @@ namespace w3tools //by @w3bgrep
 					}
 					if (project.Variables["cleanGlobal"].Value == "True")
 					{
-						Loggers.W3Log(project, $"!W cleanGlobal is [on] Cleaned: {string.Join(",", cleaned)}");
+						Loggers.l0g(project, $"!W cleanGlobal is [on] Cleaned: {string.Join(",", cleaned)}");
 					}
 					else
 					{
-						Loggers.W3Log(project, $"buzy Threads: [{string.Join(" | ", busyAccounts)}]");
+						Loggers.l0g(project, $"buzy Threads: [{string.Join(" | ", busyAccounts)}]");
 					}
 					int currentThread = int.Parse(project.Variables["acc0"].Value);
 					string currentThreadKey = $"Thread{currentThread}";
@@ -4060,18 +3983,18 @@ namespace w3tools //by @w3bgrep
 						{
 							project.GlobalVariables["w3tools", currentThreadKey].Value = project.Variables["projectName"].Value;
 						}
-						if (log) Loggers.W3Log(project, $"Thread {currentThread} bound to {project.Variables["projectName"].Value}");
+						if (log) Loggers.l0g(project, $"Thread {currentThread} bound to {project.Variables["projectName"].Value}");
 						return true;
 					}
 					else
 					{
-						if (log) Loggers.W3Log(project, $"Thread {currentThread} is already busy!");
+						if (log) Loggers.l0g(project, $"Thread {currentThread} is already busy!");
 						return false;
 					}
 				}
 				catch (Exception ex)
 				{
-					if (log) Loggers.W3Log(project, $"⚙  {ex.Message}");
+					if (log) Loggers.l0g(project, $"⚙  {ex.Message}");
 					throw; // Пробрасываем исключение дальше для обработки вызывающим кодом
 				}
 			}
@@ -4406,6 +4329,21 @@ namespace w3tools //by @w3bgrep
 			}
 		}	
 
+
+		public static string JsPost(this Instance instance,  string script, int delay = 0)
+		{
+			Thread.Sleep(1000 * delay);
+			var jsCode = TextProcessing.Replace(script, "\"", "'", "Text", "All");
+			try
+			{
+				string result = instance.ActiveTab.MainDocument.EvaluateScript(jsCode);
+                return result;
+			}
+			catch (Exception ex)
+			{
+				return "_";
+			}
+		}			
 //old
 		public static void WaitClick(this Instance instance, Func<ZennoLab.CommandCenter.HtmlElement> elementSearch, int maxWaitSeconds = 10, int delay = 1, string comment = "",bool Throw = true)
 		{
