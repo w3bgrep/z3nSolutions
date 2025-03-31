@@ -48,7 +48,7 @@ using Nethereum.Web3;
 using Nethereum.Web3.Accounts;
 
 using NBitcoin;
-using QBitNinja.Client;
+
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -5325,28 +5325,6 @@ namespace w3tools //by @w3bgrep
             var balance = web3.Eth.GetBalance.SendRequestAsync(address).Result;
 			return balance.Value.ToString();
         }
-		
-		public static string GetBtcAccountBalance(string address)
-        {
-            var network = Network.Main;
-            var client = new QBitNinjaClient(network);
-            var dest = BitcoinAddress.Create(address, network);
-            var balance = client.GetBalance(dest, true).Result;
-
-            long money = new Money(0);
-
-            if (balance.Operations.Count != 0)
-            {
-                foreach (var operations in balance.Operations)
-                {
-                    money += operations.Amount;
-                }
-            }
-            
-            return money.ToString();
-        }
-		
-		
 		
 		
     }
