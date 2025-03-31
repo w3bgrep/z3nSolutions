@@ -109,7 +109,7 @@ namespace w3tools //by @w3bgrep
 		}
 		public static string MMUnlock(this Instance instance,IZennoPosterProjectModel project,string key = "", bool skipCheck = false)
 		{
-			return MM.Run(instance,project,key,skipCheck);
+			return MM.MMRun(instance,project,key,skipCheck);
 		}
 		public static void MMConfirm(this Instance instance) //USE MM.Confirm instead
 		{
@@ -326,7 +326,8 @@ namespace w3tools //by @w3bgrep
 			[CallerMemberName] string callerName = "",
 			LogType logType = LogType.Info,
 			LogColor logColor = LogColor.Default,
-			bool show = true)
+			bool show = true,
+            bool thr0w = false)
 			//
 		{
 			if (toLog == "") toLog = project.Variables[$"{varName}"].Value;
@@ -368,6 +369,7 @@ namespace w3tools //by @w3bgrep
 			}
 			
 			project.SendToLog(formated, logType, show, logColor);
+            if (thr0w) throw new Exception($"{formated}");
 		}
 	}
 	#endregion
@@ -3558,7 +3560,7 @@ namespace w3tools //by @w3bgrep
 			instance.UseFullMouseEmulation = true;
 			return "done";
 		}
-		public static string Run(this Instance instance,IZennoPosterProjectModel project,string key = "", bool skipCheck = false)
+		public static string MMRun(this Instance instance,IZennoPosterProjectModel project,string key = "", bool skipCheck = false)
 		{
 			instance.UseFullMouseEmulation = false;
             string address = "";

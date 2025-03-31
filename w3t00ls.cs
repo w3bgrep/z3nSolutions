@@ -2982,7 +2982,7 @@ namespace w3tools //by @w3bgrep
                     Thread.Sleep(5000);
                     if (!instance.ActiveTab.FindElementByAttribute("div", "data-authuser", "0", "regexp", 0).IsVoid)
                     {
-                        while (true) instance.LMB(("div", "data-authuser", "0", "regexp", 0),"clickOut",delay:3);
+                        while (true) instance.LMB(("div", "data-authuser", "0", "regexp", 0),"clickOut",deadline:5, delay:3);
                     }
                     try
                     {
@@ -4286,12 +4286,15 @@ namespace w3tools //by @w3bgrep
 		}
 		public static HtmlElement GetHe(this Instance instance, object obj, string method = "")
 		{
-			Type tupleType = obj.GetType();
+			
+            
+            Type tupleType = obj.GetType();
 			int tupleLength = tupleType.GetFields().Length;
 			switch (tupleLength)
 			{
 				case 2:
-					string value = tupleType.GetField("Item1").GetValue(obj).ToString();
+					                    
+                    string value = tupleType.GetField("Item1").GetValue(obj).ToString();
 					method = tupleType.GetField("Item2").GetValue(obj).ToString();
 					if (method == "id")
 					{
@@ -4353,7 +4356,7 @@ namespace w3tools //by @w3bgrep
 			}
 		}
 //new
-		public static void LMB(this Instance instance, object obj, string method = "id", int deadline = 10, int delay = 1, string comment = "", bool Throw = true)
+		public static void LMB(this Instance instance, object obj, string method = "", int deadline = 10, int delay = 1, string comment = "", bool thr0w = true)
 		{
 			DateTime functionStart = DateTime.Now;
 			string lastExceptionMessage = "";
@@ -4362,7 +4365,7 @@ namespace w3tools //by @w3bgrep
 			{
 				if ((DateTime.Now - functionStart).TotalSeconds > deadline)
 				{
-					if (Throw) throw new TimeoutException($"{comment} not found in {deadline}s: {lastExceptionMessage}");
+					if (thr0w) throw new TimeoutException($"{comment} not found in {deadline}s: {lastExceptionMessage}");
 					else return;
 				}
 				
@@ -4384,7 +4387,7 @@ namespace w3tools //by @w3bgrep
             {
 				if ((DateTime.Now - functionStart).TotalSeconds > deadline)
 				{
-					if (Throw) throw new TimeoutException($"{comment} not found in {deadline}s: {lastExceptionMessage}");
+					if (thr0w) throw new TimeoutException($"{comment} not found in {deadline}s: {lastExceptionMessage}");
 					else return;
 				}
 				while (true)
@@ -4407,35 +4410,96 @@ namespace w3tools //by @w3bgrep
 
 		}
 
-		public static string ReadHe(this Instance instance, object obj, int maxWaitSeconds = 10, string atr = "innertext", int delayBeforeGetSeconds = 1, string comment = "", bool Throw = true)
-		{
-			DateTime functionStart = DateTime.Now;
-			string lastExceptionMessage = "";
+		// public static string ReadHe(this Instance instance, object obj, string method = "", int deadline = 10, string atr = "innertext", int delayBeforeGetSeconds = 1, string comment = "", bool thr0w = true)
+		// {
+		// 	DateTime functionStart = DateTime.Now;
+		// 	string lastExceptionMessage = "";
 
-			while (true)
-			{
-				if ((DateTime.Now - functionStart).TotalSeconds > maxWaitSeconds)
-				{
-					if (Throw) 
-						throw new TimeoutException($"{comment} not found in {maxWaitSeconds}s: {lastExceptionMessage}");
-					else 
-						return null;
-				}
+		// 	while (true)
+		// 	{
+		// 		if ((DateTime.Now - functionStart).TotalSeconds > deadline)
+		// 		{
+		// 			if (thr0w) 
+		// 				throw new TimeoutException($"{comment} not found in {deadline}s: {lastExceptionMessage}");
+		// 			else 
+		// 				return null;
+		// 		}
 
-				try
-				{
-					HtmlElement he = instance.GetHe(obj);
-					Thread.Sleep(delayBeforeGetSeconds * 1000);
-					return he.GetAttribute(atr);
-				}
-				catch (Exception ex)
-				{
-					lastExceptionMessage = ex.Message;
-				}
+		// 		try
+		// 		{
+		// 			HtmlElement he = instance.GetHe(obj);
+		// 			Thread.Sleep(delayBeforeGetSeconds * 1000);
+		// 			return he.GetAttribute(atr);
+		// 		}
+		// 		catch (Exception ex)
+		// 		{
+		// 			lastExceptionMessage = ex.Message;
+		// 		}
 				
-				Thread.Sleep(500);
-			}
-		}
+		// 		Thread.Sleep(500);
+		// 	}
+		// }
+
+        public static string ReadHe(this Instance instance, object obj, string method = "", int deadline = 10, string atr = "innertext", int delay = 1, string comment = "", bool thr0w = true)
+        {
+            DateTime functionStart = DateTime.Now;
+            string lastExceptionMessage = "";
+
+            while (true)
+            {
+                if ((DateTime.Now - functionStart).TotalSeconds > deadline)
+                {
+                    if (method == "!")
+                    {
+                        // Элемент не найден в течение дедлайна — это успех
+                        return null; // или можно вернуть "not found" для явности
+                    }
+                    else if (thr0w)
+                    {
+                        throw new TimeoutException($"{comment} not found in {deadline}s: {lastExceptionMessage}");
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+
+                try
+                {
+                    HtmlElement he = instance.GetHe(obj, method); // Передаём method в GetHe, если он там обрабатывается
+                    if (method == "!")
+                    {
+                        // Элемент найден, а не должен быть — выбрасываем исключение
+                        throw new Exception($"{comment} element detected when it should not be: {atr}='{he.GetAttribute(atr)}'");
+                    }
+                    else
+                    {
+                        // Обычное поведение: элемент найден, возвращаем атрибут
+                        Thread.Sleep(delay * 1000);
+                        return he.GetAttribute(atr);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lastExceptionMessage = ex.Message;
+                    if (method == "!" && ex.Message.Contains("no element by"))
+                    {
+                        // Элемент не найден — это нормально, продолжаем ждать
+                    }
+                    else if (method != "!")
+                    {
+                        // Обычное поведение: элемент не найден, записываем ошибку и ждём
+                    }
+                    else
+                    {
+                        // Неожиданная ошибка при method = "!", пробрасываем её
+                        throw;
+                    }
+                }
+
+                Thread.Sleep(500);
+            }
+        }
 		public static void SetHe(this Instance instance, object obj, string value, string method = "id", int maxWaitSeconds = 10, int delay = 1, string comment = "", bool Throw = true)
 		{
 			DateTime functionStart = DateTime.Now;
