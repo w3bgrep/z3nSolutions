@@ -62,7 +62,57 @@ using Leaf.xNet;
 
 namespace w3tools //by @w3bgrep
 {
-  public class Traffic
+
+    public static class Migrate
+	{
+		//ЭТОТ КЛАСС СОДЕРЖИТ УСТАРЕВШИЕ ВЫЗОВЫ
+		//  ЕСЛИ ТЫ ИСПОЛЬЗУЕШЬ КАКИЕ-ТО ИЗ НИХ - 
+		// замени их теми к которым они обращаются как можно скорее, 
+		// в следующих версиях эти вызовы будут удалены
+        public static void W3Throw(IZennoPosterProjectModel project, string log)
+        {
+            Loggers.l0g(project, log, thr0w:true);
+            //return;
+        }
+        public static void W3Log(IZennoPosterProjectModel project, string toLog = "", string varName = "a0debug", [CallerMemberName] string callerName = "")
+        {
+            Loggers.l0g(project, toLog, varName);
+        }
+		public static void w3Log(IZennoPosterProjectModel project, string toLog = "", string varName = "a0debug") 
+	    {
+	        Loggers.l0g(project, toLog, varName);
+	    }
+		public static string w3Query(IZennoPosterProjectModel project, string dbQuery, bool toLog = false)
+		{
+			return SQL.W3Query(project, dbQuery, toLog);
+		}
+		public static string simpleGET(IZennoPosterProjectModel project, string url, string proxy = "")
+		{
+			return Http.W3Get(project, url, proxy);
+		}
+		public static string getTx(IZennoPosterProjectModel project, string chainRPC = "", string hash = "", int deadline = 60,bool log = false)
+		{
+			return Leaf.waitTx(project,chainRPC,hash,deadline,log);
+		}
+		public static T getNative<T>(IZennoPosterProjectModel project, string chainRPC = "", string address = "", string proxy = "",bool log = false)
+		{
+			return Leaf.balNative<T>(project,chainRPC,address);
+		}
+		public static T getNonce<T>(IZennoPosterProjectModel project, string chainRPC = "", string address = "", string proxy = "",bool log = false)
+		{
+			return Leaf.nonce<T>(project,chainRPC,address);
+		}		
+		public static T getERC20<T>(IZennoPosterProjectModel project, string tokenContract, string chainRPC = "", string address = "", string tokenDecimal = "18", string proxy = "",bool log = false)
+		{
+			return Leaf.balERC20<T>(project,tokenContract);
+		}
+		public static string TelegramMailOTP(IZennoPosterProjectModel project, string email = "", string proxy = "")
+		{
+		    return OTP.Telegram(project,email,proxy);
+		}
+
+	}
+    public class Traffic
   {
     public static object SyncObject = new object();
     public enum SearchType
@@ -247,10 +297,7 @@ namespace w3tools //by @w3bgrep
         }
         }
     }
-	public static class Migrate
-	{
 	
-	}
     public static class FunctionStorage
     {
         public static ConcurrentDictionary<string, object> Functions = new ConcurrentDictionary<string, object>();
@@ -351,30 +398,6 @@ namespace w3tools //by @w3bgrep
 
 	public static class Loggers
 	{
-		public static string W3Log(IZennoPosterProjectModel project, string toLog = "", string varName = "a0debug",[CallerMemberName] string callerName = "")
-		{
-			if (toLog == "") toLog = project.Variables[$"{varName}"].Value;
-			else project.Variables[$"{varName}"].Value = toLog;
-			toLog = Regex.Replace(toLog, @"\s+", " ").Trim();
-			var acc0 = project.Variables["acc0"].Value;
-			var port = project.Variables["instancePort"].Value;
-			var lastAction = project.LastExecutedActionId;
-			var elapsed = Time.TotalTime(project);
-			
-
-			var stackFrame = new System.Diagnostics.StackFrame(1); 
-			var callingMethod = stackFrame.GetMethod();
-			if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno"))
-			{
-				callerName = "project"; 
-			}
-			string formated = $"⛑  [{acc0}] ⚙  [{port}] ⏱  [{elapsed}] ⛏ [{callerName}] at [{lastAction}]\n        {toLog}";
-			if (formated.Contains("!W"))   project.SendToLog(formated,LogType.Warning, true, LogColor.Orange);
-			else if (formated.Contains("!E"))   project.SendToLog(formated,LogType.Error, true, LogColor.Orange);
-			else if (formated.Contains("relax"))   project.SendToLog(formated,LogType.Info, true, LogColor.LightBlue);
-			else  project.SendToLog(formated,LogType.Info, true, LogColor.Default);
-			return formated;
-		}
 		public static void W3Debug(IZennoPosterProjectModel project, string log)
 		{
 			Time.TotalTime(project);
@@ -413,15 +436,7 @@ namespace w3tools //by @w3bgrep
 			if (toLog.Contains("fail"))project.SendToLog(toLog.Trim(), LogType.Info, true, LogColor.Orange);
 			else project.SendToLog(toLog.Trim(), LogType.Info, true, LogColor.Green);
 		}		
-		public static void l0g(IZennoPosterProjectModel project, 
-			string toLog = "", 
-			string varName = "a0debug",
-			[CallerMemberName] string callerName = "",
-			LogType logType = LogType.Info,
-			LogColor logColor = LogColor.Default,
-			bool show = true,
-            bool thr0w = false)
-			//
+		public static void l0g(IZennoPosterProjectModel project, string toLog = "", string varName = "a0debug", [CallerMemberName] string callerName = "", LogType logType = LogType.Info, LogColor logColor = LogColor.Default, bool show = true, bool thr0w = false)
 		{
 			if (toLog == "") toLog = project.Variables[$"{varName}"].Value;
 			else project.Variables[$"{varName}"].Value = toLog;
@@ -467,10 +482,10 @@ namespace w3tools //by @w3bgrep
 	}
 	#endregion
 	#region OnStart
-    public static class OnStart
-	{
+    public static class OnStart	{
 		public static void InitVariables(IZennoPosterProjectModel project, string author = "")
 		{
+			w3tools.OnStart.DisableLogs();
 			if (author == "") author = project.Variables["projectAuthor"].Value;
             project.Variables["varSessionId"].Value = (DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString();
             if (project.Variables["cfgPin"].Value == "") Loggers.l0g(project,"PIN IS EMPTY",thr0w:true);
@@ -481,11 +496,12 @@ namespace w3tools //by @w3bgrep
             var logo = Logo(name,author);
             project.SendInfoToLog(logo,true);
 			project.Variables["projectName"].Value = name;
-            if (project.Variables["DBmode"].Value == "SQLite") project.Variables["projectTable"].Value = $"_{name}";
+            if (project.Variables["DBmode"].Value == "SQLite") project.Variables["projectTable"].Value = $"_{name.ToLower()}";
             else if (project.Variables["DBmode"].Value == "PostgreSQL") project.Variables["projectTable"].Value = $"projects.{name.ToLower()}";
 			SAFU.Initialize(project);
+			SetRange(project);
         }
-		public static void SetRange(IZennoPosterProjectModel project)
+		private static void SetRange(IZennoPosterProjectModel project)
 		{
 			string accRange = project.Variables["cfgAccRange"].Value;
 			int rangeS, rangeE;
@@ -511,8 +527,8 @@ namespace w3tools //by @w3bgrep
 			    rangeS = int.Parse(accRange);
 			    range = accRange;
 			}
-			project.Variables["cfgRangeStart"].Value = $"{rangeS}";
-			project.Variables["cfgRangeEnd"].Value = $"{rangeE}";
+			project.Variables["rangeStart"].Value = $"{rangeS}";
+			project.Variables["rangeEnd"].Value = $"{rangeE}";
 			project.Variables["range"].Value = range;
 		}
 		public static void GetGlobalVars(IZennoPosterProjectModel project)
@@ -523,7 +539,7 @@ namespace w3tools //by @w3bgrep
 			    var cleaned = new List<int>();
 			    var notDeclared = new List<int>();
 			    var busyAccounts = new List<int>();
-			    for (int i = int.Parse(project.Variables["cfgRangeStart"].Value); i <= int.Parse(project.Variables["cfgRangeEnd"].Value); i++)
+			    for (int i = int.Parse(project.Variables["rangeStart"].Value); i <= int.Parse(project.Variables["rangeEnd"].Value); i++)
 			    {
 			        string threadKey = $"Thread{i}";
 			        try 
@@ -565,7 +581,7 @@ namespace w3tools //by @w3bgrep
 				catch (Exception ex){Loggers.W3Debug(project,$"⚙  {ex.Message}");}
 			}
 		}
-		public static void DisableLogs()
+		private static void DisableLogs()
 		{
 		    try
 		    {
@@ -605,71 +621,21 @@ namespace w3tools //by @w3bgrep
 		}
 		public static void IntitProjectEvironment(IZennoPosterProjectModel project)
 		{
-			w3tools.OnStart.DisableLogs();
+			//w3tools.OnStart.DisableLogs();
 			w3tools.OnStart.InitVariables(project);
-			w3tools.OnStart.SetRange(project);
+			//w3tools.OnStart.SetRange(project);
 			w3tools.OnStart.GetGlobalVars(project);
 			w3tools.OnStart.SetSettingsFromDb(project);
 		}
-		public static void BuildAccList(IZennoPosterProjectModel project, string dbQuery, bool log = false)
-		{
-			
-			var tableName = "";
-            //ifManual
-			if (!string.IsNullOrEmpty(project.Variables["cfgManualAcc0"].Value)) 
-			{
-				project.Lists["accs"].Clear();
-				project.Lists["accs"].Add(project.Variables["cfgManualAcc0"].Value);
-				Loggers.W3Debug(project, $@"manual mode on with {project.Variables["cfgManualAcc0"].Value}");
-				return;
-			}
-			//fromDb
-			var accsByQuery = "";
-			try
-			{accsByQuery = SQL.W3Query(project, dbQuery).Trim();
-				if (string.IsNullOrWhiteSpace(accsByQuery)) 
-				{
-				    project.Variables["noAccsToDo"].Value = "True";
-				    Loggers.W3Debug(project,$"♻ noAccoutsAvaliable by query [{dbQuery}] ");
-				    return; 
-				}
-			} catch {Loggers.l0g(project,dbQuery,thr0w:true);}
-			//
-			
-			var availableAccounts = accsByQuery.Split('\n').Select(x => x.Trim().TrimStart(',')).ToHashSet(); 
-			Loggers.W3Debug(project, $"Initial availableAccounts: [{string.Join(", ", availableAccounts)}]");
 
-			if (!string.IsNullOrEmpty(project.Variables["requiredSocial"].Value))
-			{
-			    string[] demanded = project.Variables["requiredSocial"].Value.Split(',');
-				Loggers.W3Debug(project, $"Filtring by socials: [{string.Join(", ", demanded)}]");
-			    foreach (string social in demanded)
-			    {   
-			        
-					if (project.Variables["DBmode"].Value == "SQLite")  dbQuery = $"SELECT acc0 FROM acc{social.Trim()} WHERE status NOT LIKE '%ok%'";
-                    else if (project.Variables["DBmode"].Value == "PostgreSQL") dbQuery = $"SELECT acc0 FROM accounts.{social.Trim().ToLower()} WHERE status NOT LIKE '%ok%'";
-                    
-					var notOK = SQL.W3Query(project,dbQuery).Split('\n').Select(x => x.Trim()).Where(x => !string.IsNullOrEmpty(x));
-						Loggers.W3Debug(project, $"Before {social} filter: [{string.Join("|", availableAccounts)}]");
-						availableAccounts.ExceptWith(notOK);
-						Loggers.W3Debug(project, $"After {social} filter: [{string.Join("|", availableAccounts)}]");
-			    }
-			}
-			Loggers.W3Debug(project, $"after socialCheck [{string.Join("|", availableAccounts)}]");
-			project.Lists["accs"].Clear();
-			project.Lists["accs"].AddRange(availableAccounts);
-			Loggers.W3Debug(project,$"final list [{string.Join("|", project.Lists["accs"])}]");
-			return; 
-		}
-
-		public static void FilterAccList(IZennoPosterProjectModel project, List<string> dbQueries)
+		public static void FilterAccList(IZennoPosterProjectModel project, List<string> dbQueries, bool log = false)
 		{
 			// Ручной режим
 			if (!string.IsNullOrEmpty(project.Variables["cfgManualAcc0"].Value)) 
 			{
 				project.Lists["accs"].Clear();
 				project.Lists["accs"].Add(project.Variables["cfgManualAcc0"].Value);
-				Loggers.W3Debug(project, $@"manual mode on with {project.Variables["cfgManualAcc0"].Value}");
+				if (log) Loggers.l0g(project, $@"manual mode on with {project.Variables["cfgManualAcc0"].Value}");
 				return;
 			}
 
@@ -688,48 +654,42 @@ namespace w3tools //by @w3bgrep
 				}
 				catch 
 				{
-					Loggers.l0g(project, query,thr0w:true);
+					if (log) Loggers.l0g(project, query,thr0w:true);
 				}
 			}
 
 			if (allAccounts.Count == 0)
 			{
 				project.Variables["noAccsToDo"].Value = "True";
-				Loggers.W3Debug(project, $"♻ noAccountsAvailable by queries [{string.Join(" | ", dbQueries)}]");
+				if (log) Loggers.l0g(project, $"♻ noAccountsAvailable by queries [{string.Join(" | ", dbQueries)}]");
 				return;
 			}
 
-			Loggers.W3Debug(project, $"Initial availableAccounts: [{string.Join(", ", allAccounts)}]");
+			if (log) Loggers.l0g(project, $"Initial availableAccounts: [{string.Join(", ", allAccounts)}]");
 
 			// Фильтрация по социальным сетям
 			if (!string.IsNullOrEmpty(project.Variables["requiredSocial"].Value))
 			{
 				string[] demanded = project.Variables["requiredSocial"].Value.Split(',');
-				Loggers.W3Debug(project, $"Filtering by socials: [{string.Join(", ", demanded)}]");
+				if (log) Loggers.l0g(project, $"Filtering by socials: [{string.Join(", ", demanded)}]");
 				
 				foreach (string social in demanded)
 				{   
-					string socialQuery;
-					if (project.Variables["DBmode"].Value == "SQLite")  
-						socialQuery = $"SELECT acc0 FROM acc{social.Trim()} WHERE status NOT LIKE '%ok%'";
-					else // PostgreSQL
-						socialQuery = $"SELECT acc0 FROM accounts.{social.Trim().ToLower()} WHERE status NOT LIKE '%ok%'";
-					
-					var notOK = SQL.W3Query(project, socialQuery)
+                    string tableName = social.Trim().ToLower();
+                    if (project.Variables["DBmode"].Value != "SQLite") tableName = $"accounts.{tableName}";
+					var notOK = SQL.W3Query(project, $"SELECT acc0 FROM {tableName} WHERE status NOT LIKE '%ok%'",log)
 						.Split('\n')
 						.Select(x => x.Trim())
 						.Where(x => !string.IsNullOrEmpty(x));
-						
-					Loggers.W3Debug(project, $"Before {social} filter: [{string.Join("|", allAccounts)}]");
 					allAccounts.ExceptWith(notOK);
-					Loggers.W3Debug(project, $"After {social} filter: [{string.Join("|", allAccounts)}]");
+					if (log) Loggers.l0g(project, $"After {social} filter: [{string.Join("|", allAccounts)}]");
 				}
 			}
 
 			// Финальное заполнение списка
 			project.Lists["accs"].Clear();
 			project.Lists["accs"].AddRange(allAccounts);
-			Loggers.W3Debug(project, $"final list [{string.Join("|", project.Lists["accs"])}]");
+			if (log) Loggers.l0g(project, $"final list [{string.Join("|", project.Lists["accs"])}]");
 		}
 
 		public static void SetProfile(this Instance instance, IZennoPosterProjectModel project)
@@ -874,10 +834,15 @@ namespace w3tools //by @w3bgrep
 		}
 		public static void BrowserScanCheck(this Instance instance, IZennoPosterProjectModel project)
 		{
-			bool set = false;
+			if (project.Variables["skipBrowserScan"].Value == "True") 
+            {
+                Loggers.l0g(project,"BrowserCheck skipped");
+                return;
+            }
+            bool set = false;
 			string timezoneOffset = "";
 			string timezoneName = "";
-            var tableName = "";
+            var tableName = "browser";
 
 			var tableStructure = new Dictionary<string, string>
 			{
@@ -894,14 +859,11 @@ namespace w3tools //by @w3bgrep
 				{"TimeFromIP", "TEXT DEFAULT '_'"},  
 				
 			};	
-            if (project.Variables["DBmode"].Value == "SQLite") tableName = $"_Browser";
-            else if (project.Variables["DBmode"].Value == "PostgreSQL") tableName = $"browser";	
-			if (project.Variables["makeTable"].Value == "True") SQL.W3MakeTable(project,tableStructure,tableName,schemaName:"accounts");
+
+            if (project.Variables["DBmode"].Value != "SQLite") tableName = $"accounts.{tableName}";
+			if (project.Variables["makeTable"].Value == "True") SQL.W3MakeTable(project,tableStructure,tableName);
+            
             var required = "Browser";
-            if (project.Variables["DBmode"].Value == "SQLite") tableName = $"_Browser";
-            else if (project.Variables["DBmode"].Value == "PostgreSQL") tableName = $"accounts.browser";	
-
-
 
 			while (true)
 			{
@@ -981,7 +943,7 @@ namespace w3tools //by @w3bgrep
 				break;
 			}
 		}
-		public static string Logo(string name, string author)
+		private static string Logo(string name, string author)
         {
             if (author != "") author = $" script author: @{author}";
             string logo = $@"using w3tools;
@@ -991,7 +953,7 @@ namespace w3tools //by @w3bgrep
                         ► init {name} ░▒▓█ {author}";
             return logo;
         }
-	}
+		}
 	#endregion	
 	#region SQL 
 	public class PostgresDB : IDisposable
@@ -1166,9 +1128,9 @@ namespace w3tools //by @w3bgrep
                     CheckAndCreateTable(db, schemaName, tableName, tableStructure, project, log:log);
                     ManageColumns(db, schemaName, tableName, tableStructure, strictMode, project, log:log);
                     
-                    if (tableStructure.ContainsKey("acc0") && !string.IsNullOrEmpty(project.Variables["cfgRangeEnd"].Value))
+                    if (tableStructure.ContainsKey("acc0") && !string.IsNullOrEmpty(project.Variables["rangeEnd"].Value))
                     {
-                        InsertInitialData(db, schemaName, tableName, project.Variables["cfgRangeEnd"].Value, project, log:log);
+                        InsertInitialData(db, schemaName, tableName, project.Variables["rangeEnd"].Value, project, log:log);
                     }
 
                 }
@@ -1340,8 +1302,8 @@ namespace w3tools //by @w3bgrep
 				}
 		    }
 		
-		    if (tableStructure.ContainsKey("acc0") && !string.IsNullOrEmpty(project.Variables["cfgRangeEnd"].Value))
-		    {for (int currentAcc0 = 1; currentAcc0 <= int.Parse(project.Variables["cfgRangeEnd"].Value); currentAcc0++)
+		    if (tableStructure.ContainsKey("acc0") && !string.IsNullOrEmpty(project.Variables["rangeEnd"].Value))
+		    {for (int currentAcc0 = 1; currentAcc0 <= int.Parse(project.Variables["rangeEnd"].Value); currentAcc0++)
 		        {lSQL(project, $"INSERT OR IGNORE INTO {tableName} (acc0) VALUES ('{currentAcc0}');");}}
 		}
 
@@ -1421,6 +1383,201 @@ namespace w3tools //by @w3bgrep
             return resp;
 
         }
+		public static void CreateSchema(IZennoPosterProjectModel project, bool log = false, string schema = "accounts")
+		{
+			//settable
+			var tableStructure = new Dictionary<string, string>{};
+			string data = "", tableName = "";
+			string defaultColumn = $"TEXT DEFAULT ''";
+
+			string schemaName = project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schema}." : "";
+			if (!string.IsNullOrEmpty(schemaName)) W3Query(project, "CREATE SCHEMA IF NOT EXISTS accounts;", true);
+
+			//Profile
+			data = "profile";
+			tableName = schemaName + data;
+			tableStructure = new Dictionary<string, string>
+			{
+				{"acc0", "INTEGER PRIMARY KEY"},
+				{"nickname", defaultColumn},
+				{"bio", defaultColumn},
+				{"cookies", defaultColumn},
+				{"webGL", defaultColumn},
+				{"timezone", defaultColumn},
+				{"proxy", defaultColumn},  
+			};
+			W3MakeTable(project, tableStructure,tableName,true);
+
+			//Twitter
+			data = "twitter";
+			tableName = schemaName + data;
+			tableStructure = new Dictionary<string, string>
+			{
+				{"acc0", "INTEGER PRIMARY KEY"},
+				{"cooldown", "INTEGER DEFAULT 0"},	
+				{"status", defaultColumn},
+				{"last", defaultColumn},
+				{"token", defaultColumn},
+				{"login", defaultColumn},
+				{"password", defaultColumn},
+				{"code2FA", defaultColumn},
+				{"emailLogin", defaultColumn},
+				{"emailPass", defaultColumn},
+				{"recovery2FA", defaultColumn},
+
+			};
+			W3MakeTable(project, tableStructure, tableName, true);
+			//Discord
+			data = "discord";
+			tableName = schemaName + data;
+			tableStructure = new Dictionary<string, string>
+			{
+				{"acc0", "INTEGER PRIMARY KEY"},
+				{"cooldown", "INTEGER DEFAULT 0"},
+				{"status", defaultColumn},
+				{"last", defaultColumn},
+				{"servers", defaultColumn},
+				{"roles", defaultColumn},
+				{"token", defaultColumn},
+				{"login", defaultColumn},
+				{"password", defaultColumn},
+				{"code2FA", defaultColumn},
+				
+			};
+			W3MakeTable(project, tableStructure, tableName, true);
+			//Google
+			data = "google";
+			tableName = schemaName + data;
+			tableStructure = new Dictionary<string, string>
+			{
+				{"acc0", "INTEGER PRIMARY KEY"},
+				{"cooldown", "INTEGER DEFAULT 0"},
+				{"status", defaultColumn},
+				{"last", defaultColumn},
+				{"login", defaultColumn},
+				{"password", defaultColumn},
+				{"recoveryEmail", defaultColumn},
+				{"code2FA", defaultColumn},
+				{"recovery2FA", defaultColumn},
+				{"icloud", defaultColumn},
+			};
+			W3MakeTable(project, tableStructure, tableName, true);
+
+
+			//Blockchain
+			data = "blockchain_private";
+			tableName = schemaName + data;
+			tableStructure = new Dictionary<string, string>
+			{
+				{"acc0", "INTEGER PRIMARY KEY"},
+				{"secp256k1", defaultColumn},
+				{"base58", defaultColumn},
+				{"bip39", defaultColumn},
+			};
+			W3MakeTable(project, tableStructure, tableName, true);
+			data = "blockchain_public";
+			tableName = schemaName + data;
+			tableStructure = new Dictionary<string, string>
+			{
+				{"acc0", "INTEGER PRIMARY KEY"},
+				{"evm", defaultColumn},
+				{"sol", defaultColumn},
+				{"apt", defaultColumn},
+				{"sui", defaultColumn},
+				{"osmo", defaultColumn},
+				{"xion", defaultColumn},
+				{"ton", defaultColumn},
+				{"taproot", defaultColumn},
+			};
+			W3MakeTable(project, tableStructure, tableName, true);
+
+		
+			tableName = "settings"; // Имя таблицы без schemaName, так как она не должна зависеть от схемы
+			tableStructure = new Dictionary<string, string>
+			{
+				{"var", "TEXT PRIMARY KEY"},
+				{"value", "TEXT DEFAULT ''"},
+			};
+			W3MakeTable(project, tableStructure, tableName, true);
+		}
+		public static void ImportKeys(IZennoPosterProjectModel project,string filePath, string keyType, string schema = "accounts")
+		{
+
+			var acc0 = project.Variables["acc0"];
+			int rangeEnd = int.Parse(project.Variables["rangeEnd"].Value);
+			var blockchain = new Blockchain();
+
+			string schemaName = project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schema}." : "";
+
+			string privateTable = schemaName + "blockchain_private";
+			string publicTable = schemaName + "blockchain_public";			
+			acc0.Value = "1";
+			
+			if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+			{
+				project.SendWarningToLog($"Path is empty or file not found: {filePath}");
+				return;
+			}
+
+			string[] lines = File.ReadAllLines(filePath);
+			project.SendInfoToLog($"Reading [{lines.Length}] strings from [{filePath}]", false);
+
+			for (int i = 0; i < lines.Length && int.Parse(acc0.Value) <= rangeEnd; i++)
+			{
+				string key = lines[i].Trim();
+				if (string.IsNullOrWhiteSpace(key)) continue;
+
+				try
+				{
+					switch (keyType)
+					{
+						case "seed":
+							string encodedSeed = SAFU.Encode(project, key);
+							SQL.W3Query(project, $@"UPDATE {privateTable} SET bip39 = '{encodedSeed}' WHERE acc0 == {acc0.Value};", true);
+							break;
+
+						case "evm":
+							string privateKey;
+							string address;
+							
+							// Если это мнемоника, а не прямой приватный ключ
+							if (key.Split(' ').Length > 1) // Простая проверка на мнемонику
+							{
+								var mnemonicObj = new Mnemonic(key);
+								var hdRoot = mnemonicObj.DeriveExtKey();
+								var derivationPath = new NBitcoin.KeyPath("m/44'/60'/0'/0/0");
+								privateKey = hdRoot.Derive(derivationPath).PrivateKey.ToHex();
+							}
+							else
+							{
+								privateKey = key;
+							}
+							
+							string encodedEvmKey = SAFU.Encode(project, privateKey);
+							address = blockchain.GetAddressFromPrivateKey(privateKey);
+							SQL.W3Query(project, $@"UPDATE {privateTable} SET secp256k1 = '{encodedEvmKey}' WHERE acc0 == {acc0.Value};", true);
+							SQL.W3Query(project, $@"UPDATE {publicTable} SET evm = '{address}' WHERE acc0 == {acc0.Value};", true);
+							break;
+
+						case "sol":
+							string encodedSolKey = SAFU.Encode(project, key);
+							SQL.W3Query(project, $@"UPDATE {privateTable} SET base58 = '{encodedSolKey}' WHERE acc0 == {acc0.Value};", true);
+							break;
+
+						default:
+							project.SendWarningToLog($"Unknown key type: {keyType}");
+							return;
+					}
+					
+					acc0.Value = (int.Parse(acc0.Value) + 1).ToString();
+				}
+				catch (Exception ex)
+				{
+					project.SendWarningToLog($"Error processing record {acc0.Value}: {ex.Message}", false);
+					acc0.Value = (int.Parse(acc0.Value) + 1).ToString();
+				}
+			}
+		}
 
 	}
 
@@ -4109,7 +4266,7 @@ namespace w3tools //by @w3bgrep
 					var notDeclared = new List<int>();
 					//var busyAccounts = new List<int>();
 					var busyAccounts = new List<string>();
-					for (int i = int.Parse(project.Variables["cfgRangeStart"].Value); i <= int.Parse(project.Variables["cfgRangeEnd"].Value); i++)
+					for (int i = int.Parse(project.Variables["rangeStart"].Value); i <= int.Parse(project.Variables["rangeEnd"].Value); i++)
 					{
 						string threadKey = $"Thread{i}";
 						try

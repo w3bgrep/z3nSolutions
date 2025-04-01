@@ -137,7 +137,6 @@ namespace w3tools //by @w3bgrep
 		{
 			return Keplr.Approve(instance,project);
 		}
-
 		public static string GetOTP(this Instance instance, string keyString, int waitIfTimeLess = 5)
 		{
 			return OTP.Offline(instance,keyString,waitIfTimeLess);
@@ -1476,6 +1475,101 @@ namespace w3tools //by @w3bgrep
 				last = '{Time.Now("short")}' WHERE acc0 = {project.Variables["acc0"].Value};";
 			SQL.W3Query(project,Q,log); 
 		}
+		public static void ImportKeys(IZennoPosterProjectModel project,string filePath, string keyType)
+		{
+
+			var acc0 = project.Variables["acc0"];
+			int rangeEnd = int.Parse(project.Variables["cfgRangeEnd"].Value);
+			var blockchain = new Blockchain();
+			string tName = "blockchain";	
+			string schemaName = project.Variables["DBmode"].Value == "SQLite" ? "" : "accounts.";
+			string tableName = schemaName + tName;
+			if 
+			var tableStructure = new Dictionary<string, string>
+			{
+				{"acc0", "INTEGER PRIMARY KEY"},
+				{"publicEVM", "TEXT DEFAULT ''"},
+				{"publicSOL", "TEXT DEFAULT ''"},
+				{"publicAPT", "TEXT DEFAULT ''"},
+				{"publicSUI", "TEXT DEFAULT ''"},
+				{"publicOSMO", "TEXT DEFAULT ''"},
+				{"publicXION", "TEXT DEFAULT ''"},
+				{"publicTON", "TEXT DEFAULT ''"},
+				{"publicP2TR", "TEXT DEFAULT ''"},
+				{"private256K1", "TEXT DEFAULT ''"},
+				{"privateBASE58", "TEXT DEFAULT ''"},
+				{"seedBIP39", "TEXT DEFAULT ''"},
+			};
+			SQL.W3MakeTable(project, tableStructure, tableName, true);
+			acc0.Value = "1";
+			
+			if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+			{
+				project.SendWarningToLog($"Path is empty or file not found: {filePath}");
+				return;
+			}
+
+			string[] lines = File.ReadAllLines(filePath);
+			project.SendInfoToLog($"Reading [{lines.Length}] strings from [{filePath}]", false);
+
+			for (int i = 0; i < lines.Length && int.Parse(acc0.Value) <= rangeEnd; i++)
+			{
+				string key = lines[i].Trim();
+				if (string.IsNullOrWhiteSpace(key)) continue;
+
+				try
+				{
+					switch (keyType)
+					{
+						case "SeedBIP39":
+							string encodedSeed = SAFU.Encode(project, key);
+							SQL.W3Query(project, $@"UPDATE {tableName} SET seedBIP39 = '{encodedSeed}' WHERE acc0 == {acc0.Value};", true);
+							break;
+
+						case "Secp256k1":
+							string privateKey;
+							string address;
+							
+							// Если это мнемоника, а не прямой приватный ключ
+							if (key.Split(' ').Length > 1) // Простая проверка на мнемонику
+							{
+								var mnemonicObj = new Mnemonic(key);
+								var hdRoot = mnemonicObj.DeriveExtKey();
+								var derivationPath = new NBitcoin.KeyPath("m/44'/60'/0'/0/0");
+								privateKey = hdRoot.Derive(derivationPath).PrivateKey.ToHex();
+							}
+							else
+							{
+								privateKey = key;
+							}
+							
+							string encodedEvmKey = SAFU.Encode(project, privateKey);
+							address = blockchain.GetAddressFromPrivateKey(privateKey);
+							SQL.W3Query(project, $@"UPDATE {tableName} SET publicEVM = '{address}', private256K1 = '{encodedEvmKey}' WHERE acc0 == {acc0.Value};", true);
+							break;
+
+						case "Base58":
+							string encodedSolKey = SAFU.Encode(project, key);
+							SQL.W3Query(project, $@"UPDATE {tableName} SET privateBASE58 = '{encodedSolKey}' WHERE acc0 == {acc0.Value};", true);
+							break;
+
+						default:
+							project.SendWarningToLog($"Unknown key type: {keyType}");
+							return;
+					}
+					
+					acc0.Value = (int.Parse(acc0.Value) + 1).ToString();
+				}
+				catch (Exception ex)
+				{
+					project.SendWarningToLog($"Error processing record {acc0.Value}: {ex.Message}", false);
+					acc0.Value = (int.Parse(acc0.Value) + 1).ToString();
+				}
+			}
+		}
+
+
+
 	}    
 
     #endregion
