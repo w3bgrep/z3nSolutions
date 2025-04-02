@@ -1683,12 +1683,58 @@ namespace w3tools //by @w3bgrep
 					project.SendInfoToLog($"Inserted into {tableName}: {varName} = {newValue}", true);
 				}
 			}
-
-			// Логируем закрытие формы
-			project.SendInfoToLog("Variables input dialog closed", true);
 		}
 
+		public static string ImportProxy(IZennoPosterProjectModel project, string schema = "accounts")
+		{
+			var tableName = "profile";
+			string schemaName = project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schema}." : "";
 
+			string table = schemaName + tableName; // Параметризация имени таблицы
+			int lineCount = 0;
+
+			// Интерактивный ввод вместо чтения из файла
+		input:
+			var text = Tools.InputBox("Input proxy list (format: protocol://user:pass@host:port), separated by new lines");
+			if (string.IsNullOrEmpty(text))
+			{
+				project.SendWarningToLog("Input cannot be empty");
+				goto input;
+			}
+
+			string[] proxyLines = text.Trim().Split('\n');
+			project.SendInfoToLog($"Parsing [{proxyLines.Length}] proxy strings", true);
+
+			// Регулярное выражение для проверки формата прокси
+			string proxyPattern = @"^(http|https|socks4|socks5)://([^:]+):([^@]+)@([^:]+):(\d+)$";
+			var regex = new Regex(proxyPattern);
+
+			// Обработка строк
+			for (int acc0 = 0; acc0 < proxyLines.Length; acc0++)
+			{
+				string proxy = proxyLines[acc0].Trim();
+				if (string.IsNullOrWhiteSpace(proxy) || !regex.IsMatch(proxy))
+				{
+					project.SendWarningToLog($"Proxy on line {acc0 + 1} does not match required format: {proxy} or null");
+					lineCount++;
+					continue;
+				}
+
+				try
+				{
+					// Обновление записи в таблице
+					SQL.W3Query(project, $@"UPDATE {table} SET proxy = '{proxy}' WHERE acc0 = {acc0 + 1};", true);
+					lineCount++;
+				}
+				catch (Exception ex)
+				{
+					project.SendWarningToLog($"Error processing proxy on line {acc0 + 1}: {ex.Message}", false);
+				}
+			}
+
+			project.SendInfoToLog($"[{lineCount}] proxies added to [{table}]", true);
+			return lineCount.ToString();
+		}
 	}
 
     public static class Db
