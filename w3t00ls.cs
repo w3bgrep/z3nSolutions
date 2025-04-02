@@ -1693,7 +1693,6 @@ namespace w3tools //by @w3bgrep
 			string table = schemaName + tableName; // Параметризация имени таблицы
 			int lineCount = 0;
 
-			// Интерактивный ввод вместо чтения из файла
 		input:
 			var text = Tools.InputBox("Input proxy list (format: protocol://user:pass@host:port), separated by new lines");
 			if (string.IsNullOrEmpty(text))
@@ -1733,6 +1732,228 @@ namespace w3tools //by @w3bgrep
 			}
 
 			project.SendInfoToLog($"[{lineCount}] proxies added to [{table}]", true);
+			return lineCount.ToString();
+		}
+
+		public static string ImportBio(IZennoPosterProjectModel project, string schema = "accounts")
+		{
+			var tableName = "profile"; // Статичное имя таблицы
+			string schemaName = project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schema}." : "";
+			string table = schemaName + tableName; // Итоговое имя с учётом схемы
+			int lineCount = 0;
+
+			// Ввод никнеймов
+		inputNicknames:
+			var nicknamesText = Tools.InputBox("Input nicknames, separated by new lines");
+			if (string.IsNullOrEmpty(nicknamesText))
+			{
+				project.SendWarningToLog("Nicknames input cannot be empty");
+				goto inputNicknames;
+			}
+
+			string[] nicknameLines = nicknamesText.Trim().Split('\n');
+			project.SendInfoToLog($"Parsing [{nicknameLines.Length}] nicknames", true);
+
+			// Ввод биографий
+		inputBios:
+			var biosText = Tools.InputBox("Input bios, separated by new lines");
+			if (string.IsNullOrEmpty(biosText))
+			{
+				project.SendWarningToLog("Bios input cannot be empty");
+				goto inputBios;
+			}
+
+			string[] bioLines = biosText.Trim().Split('\n');
+			project.SendInfoToLog($"Parsing [{bioLines.Length}] bios", true);
+
+			// Определяем максимальное количество записей (по числу никнеймов)
+			int maxRecords = nicknameLines.Length;
+
+			// Если биографий меньше, предупреждаем
+			if (bioLines.Length < nicknameLines.Length)
+			{
+				project.SendWarningToLog($"Fewer bios ({bioLines.Length}) than nicknames ({nicknameLines.Length}). Missing bios will be empty.", false);
+			}
+			// Если биографий больше, предупреждаем
+			else if (bioLines.Length > nicknameLines.Length)
+			{
+				project.SendWarningToLog($"More bios ({bioLines.Length}) than nicknames ({nicknameLines.Length}). Extra bios will be ignored.", false);
+			}
+
+			// Обработка строк
+			for (int acc0 = 0; acc0 < maxRecords; acc0++)
+			{
+				string nickname = nicknameLines[acc0].Trim();
+				string bio = (acc0 < bioLines.Length) ? bioLines[acc0].Trim() : ""; // Если биографий не хватает, bio = ""
+
+				if (string.IsNullOrWhiteSpace(nickname))
+				{
+					project.SendWarningToLog($"Nickname on line {acc0 + 1} is empty, skipping", false);
+					continue; // Пропускаем запись, если никнейм пустой
+				}
+
+				try
+				{
+					// Обновление записи в таблице
+					SQL.W3Query(project, $@"UPDATE {table} SET nickname = '{nickname}', bio = '{bio}' WHERE acc0 = {acc0 + 1};", true);
+					lineCount++;
+				}
+				catch (Exception ex)
+				{
+					project.SendWarningToLog($"Error processing record on line {acc0 + 1}: {ex.Message}", false);
+				}
+			}
+
+			project.SendInfoToLog($"[{lineCount}] records added to [{table}]", true);
+			return lineCount.ToString();
+		}
+		public static string ImportTwitter(IZennoPosterProjectModel project, string schema = "accounts")
+		{
+			var tableName = "twitter";
+			string schemaName = project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schema}." : "";
+			string table = schemaName + tableName; 
+			int lineCount = 0;
+
+			System.Windows.Forms.Form form = new System.Windows.Forms.Form();
+			form.Text = "Import Twitter Data";
+			form.Width = 600;
+			form.Height = 400;
+
+			string[] availableFields = new string[] { "LOGIN", "PASSWORD", "EMAIL", "EMAIL_PASSWORD", "TOKEN", "CODE2FA", "RECOVERY_SEED" };
+			List<string> selectedFormat = new List<string>();
+			System.Windows.Forms.TextBox formatDisplay = new System.Windows.Forms.TextBox();
+			System.Windows.Forms.TextBox dataInput = new System.Windows.Forms.TextBox();
+
+			System.Windows.Forms.Label formatLabel = new System.Windows.Forms.Label();
+			formatLabel.Text = "Select format fields (in order):";
+			formatLabel.AutoSize = true;
+			formatLabel.Left = 10;
+			formatLabel.Top = 10;
+			form.Controls.Add(formatLabel);
+
+			System.Windows.Forms.ComboBox formatComboBox = new System.Windows.Forms.ComboBox();
+			formatComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+			formatComboBox.Items.AddRange(availableFields);
+			formatComboBox.Left = 10;
+			formatComboBox.Top = 30;
+			formatComboBox.Width = form.ClientSize.Width - 90;
+			form.Controls.Add(formatComboBox);
+
+			System.Windows.Forms.Button addFormatButton = new System.Windows.Forms.Button();
+			addFormatButton.Text = "Add";
+			addFormatButton.Left = formatComboBox.Right + 10;
+			addFormatButton.Top = 30;
+			addFormatButton.Width = 50;
+			addFormatButton.Click += (s, e) =>
+			{
+				if (formatComboBox.SelectedItem != null && !selectedFormat.Contains(formatComboBox.SelectedItem.ToString()))
+				{
+					selectedFormat.Add(formatComboBox.SelectedItem.ToString());
+					formatDisplay.Text = string.Join(":", selectedFormat);
+				}
+			};
+			form.Controls.Add(addFormatButton);
+
+			formatDisplay.Left = 10;
+			formatDisplay.Top = 60;
+			formatDisplay.Width = 560;
+			formatDisplay.ReadOnly = true;
+			form.Controls.Add(formatDisplay);
+
+			System.Windows.Forms.Label dataLabel = new System.Windows.Forms.Label();
+			dataLabel.Text = "Input data (one per line, matching format):";
+			dataLabel.AutoSize = true;
+			dataLabel.Left = 10;
+			dataLabel.Top = 90;
+			form.Controls.Add(dataLabel);
+
+			dataInput.Left = 10;
+			dataInput.Top = 110;
+			dataInput.Width = 560;
+			dataInput.Height = 200;
+			dataInput.Multiline = true;
+			dataInput.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+			form.Controls.Add(dataInput);
+
+			System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
+			okButton.Text = "OK";
+			okButton.Left = (form.Width - 100) / 2;
+			okButton.Top = 320;
+			okButton.Width = 100;
+			okButton.Click += (s, e) => { form.Close(); };
+			form.Controls.Add(okButton);
+			
+			input:
+			form.ShowDialog();
+
+			if (string.IsNullOrEmpty(dataInput.Text) || selectedFormat.Count == 0)
+			{
+				project.SendWarningToLog("Data or format cannot be empty");
+				goto input;
+			}
+
+			string[] lines = dataInput.Text.Trim().Split('\n');
+			project.SendInfoToLog($"Parsing [{lines.Length}] Twitter data lines", true);
+
+			for (int acc0 = 1; acc0 <= lines.Length; acc0++)
+			{
+				string line = lines[acc0 - 1].Trim();
+				if (string.IsNullOrWhiteSpace(line))
+				{
+					project.SendWarningToLog($"Line {acc0} is empty", false);
+					continue;
+				}
+
+				string[] data_parts = line.Split(':');
+				Dictionary<string, string> parsed_data = new Dictionary<string, string>();
+
+				for (int i = 0; i < selectedFormat.Count && i < data_parts.Length; i++)
+				{
+					parsed_data[selectedFormat[i]] = data_parts[i].Trim();
+				}
+
+				string LOGIN = parsed_data.ContainsKey("LOGIN") ? parsed_data["LOGIN"] : "";
+				string PASSWORD = parsed_data.ContainsKey("PASSWORD") ? parsed_data["PASSWORD"] : "";
+				string EMAIL = parsed_data.ContainsKey("EMAIL") ? parsed_data["EMAIL"] : "";
+				string EMAIL_PASSWORD = parsed_data.ContainsKey("EMAIL_PASSWORD") ? parsed_data["EMAIL_PASSWORD"] : "";
+				string TOKEN = parsed_data.ContainsKey("TOKEN") ? parsed_data["TOKEN"] : "";
+				string CODE2FA = parsed_data.ContainsKey("CODE2FA") ? parsed_data["CODE2FA"] : "";
+				string RECOVERY = parsed_data.ContainsKey("RECOVERY_SEED") ? parsed_data["RECOVERY_SEED"] : "";
+
+				if (CODE2FA.Contains('/'))
+					CODE2FA = CODE2FA.Split('/').Last();
+
+				// Экранирование одинарных кавычек
+				LOGIN = LOGIN.Replace("'", "''");
+				PASSWORD = PASSWORD.Replace("'", "''");
+				TOKEN = TOKEN.Replace("'", "''");
+				CODE2FA = CODE2FA.Replace("'", "''");
+				EMAIL = EMAIL.Replace("'", "''");
+				EMAIL_PASSWORD = EMAIL_PASSWORD.Replace("'", "''");
+				RECOVERY = RECOVERY.Replace("'", "''");
+
+				try
+				{
+					string dbQuery = $@"UPDATE {table} SET 
+						token = '{TOKEN}', 
+						login = '{LOGIN}', 
+						password = '{PASSWORD}', 
+						code2FA = '{CODE2FA}', 
+						emailLogin = '{EMAIL}', 
+						emailPass = '{EMAIL_PASSWORD}', 
+						recovery2FA = '{RECOVERY}', 
+						cooldown = 0
+						WHERE acc0 = {acc0};";
+					SQL.W3Query(project, dbQuery, true);
+					lineCount++;
+				}
+				catch (Exception ex)
+				{
+					project.SendWarningToLog($"Error processing line {acc0}: {ex.Message}", false);
+				}
+			}
+
+			project.SendInfoToLog($"[{lineCount}] records added to [{table}]", true);
 			return lineCount.ToString();
 		}
 	}
