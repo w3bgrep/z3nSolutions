@@ -1402,7 +1402,7 @@ namespace w3tools //by @w3bgrep
 				{"nickname", defaultColumn},
 				{"bio", defaultColumn},
 				{"cookies", defaultColumn},
-				{"webGL", defaultColumn},
+				{"webgl", defaultColumn},
 				{"timezone", defaultColumn},
 				{"proxy", defaultColumn},  
 			};
@@ -1421,9 +1421,9 @@ namespace w3tools //by @w3bgrep
 				{"login", defaultColumn},
 				{"password", defaultColumn},
 				{"code2FA", defaultColumn},
-				{"emailLogin", defaultColumn},
-				{"emailPass", defaultColumn},
-				{"recovery2FA", defaultColumn},
+				{"email", defaultColumn},
+				{"email_pass", defaultColumn},
+				{"recovery2fa", defaultColumn},
 
 			};
 			W3MakeTable(project, tableStructure, tableName, true);
@@ -1441,7 +1441,7 @@ namespace w3tools //by @w3bgrep
 				{"token", defaultColumn},
 				{"login", defaultColumn},
 				{"password", defaultColumn},
-				{"code2FA", defaultColumn},
+				{"code2fa", defaultColumn},
 				
 			};
 			W3MakeTable(project, tableStructure, tableName, true);
@@ -1456,9 +1456,9 @@ namespace w3tools //by @w3bgrep
 				{"last", defaultColumn},
 				{"login", defaultColumn},
 				{"password", defaultColumn},
-				{"recoveryEmail", defaultColumn},
-				{"code2FA", defaultColumn},
-				{"recovery2FA", defaultColumn},
+				{"recovery_email", defaultColumn},
+				{"code2fa", defaultColumn},
+				{"recovery2fa", defaultColumn},
 				{"icloud", defaultColumn},
 			};
 			W3MakeTable(project, tableStructure, tableName, true);
@@ -1807,59 +1807,413 @@ namespace w3tools //by @w3bgrep
 			project.SendInfoToLog($"[{lineCount}] records added to [{table}]", true);
 			return lineCount.ToString();
 		}
-		public static string ImportTwitter(IZennoPosterProjectModel project, string schema = "accounts")
+		// public static string ImportTwitter(IZennoPosterProjectModel project, string schema = "accounts")
+		// {
+		// 	var tableName = "twitter"; // Статичное имя таблицы
+		// 	string schemaName = project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schema}." : "";
+		// 	string table = schemaName + tableName; // Итоговое имя с учётом схемы
+		// 	int lineCount = 0;
+
+		// 	// Создание формы
+		// 	System.Windows.Forms.Form form = new System.Windows.Forms.Form();
+		// 	form.Text = "Import Twitter Data";
+		// 	form.Width = 700;
+		// 	form.Height = 700;
+
+		// 	// Возможные поля формата
+		// 	string[] availableFields = new string[] { "", "LOGIN", "PASSWORD", "EMAIL", "EMAIL_PASSWORD", "TOKEN", "CODE2FA", "RECOVERY_SEED" };
+		// 	List<string> selectedFormat = new List<string>(); // Объявляем один раз здесь
+		// 	System.Windows.Forms.TextBox formatDisplay = new System.Windows.Forms.TextBox();
+		// 	System.Windows.Forms.TextBox dataInput = new System.Windows.Forms.TextBox();
+
+		// 	// Метка для выбора формата
+		// 	System.Windows.Forms.Label formatLabel = new System.Windows.Forms.Label();
+		// 	formatLabel.Text = "Select format (one field per box):";
+		// 	formatLabel.AutoSize = true;
+		// 	formatLabel.Left = 10;
+		// 	formatLabel.Top = 10;
+		// 	form.Controls.Add(formatLabel);
+
+		// 	System.Windows.Forms.ComboBox[] formatComboBoxes = new System.Windows.Forms.ComboBox[availableFields.Length - 1];
+		// 	int spacing = 5;
+		// 	int totalSpacing = spacing * (formatComboBoxes.Length - 1); // Общий отступ между ComboBox
+		// 	int comboWidth = (form.ClientSize.Width - 20 - totalSpacing) / formatComboBoxes.Length; // 20 — отступы слева и справа
+		// 	for (int i = 0; i < formatComboBoxes.Length; i++)
+		// 	{
+		// 		formatComboBoxes[i] = new System.Windows.Forms.ComboBox();
+		// 		formatComboBoxes[i].DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+		// 		formatComboBoxes[i].Items.AddRange(availableFields);
+		// 		formatComboBoxes[i].SelectedIndex = 0; // По умолчанию пусто
+		// 		formatComboBoxes[i].Left = 10 + i * (comboWidth + spacing);
+		// 		formatComboBoxes[i].Top = 30;
+		// 		formatComboBoxes[i].Width = comboWidth;
+		// 		formatComboBoxes[i].SelectedIndexChanged += (s, e) =>
+		// 		{
+		// 			selectedFormat.Clear(); // Очищаем перед обновлением
+		// 			foreach (var combo in formatComboBoxes)
+		// 			{
+		// 				if (!string.IsNullOrEmpty(combo.SelectedItem?.ToString()))
+		// 					selectedFormat.Add(combo.SelectedItem.ToString());
+		// 			}
+		// 			formatDisplay.Text = string.Join(":", selectedFormat);
+		// 		};
+		// 		form.Controls.Add(formatComboBoxes[i]);
+		// 	}
+
+		// 	// Поле для отображения текущего формата
+		// 	formatDisplay.Left = 10;
+		// 	formatDisplay.Top = 60;
+		// 	formatDisplay.Width = form.ClientSize.Width - 20;
+		// 	formatDisplay.ReadOnly = true;
+		// 	form.Controls.Add(formatDisplay);
+
+		// 	// Метка и поле для ввода данных
+		// 	System.Windows.Forms.Label dataLabel = new System.Windows.Forms.Label();
+		// 	dataLabel.Text = "Input data (one per line, matching format):";
+		// 	dataLabel.AutoSize = true;
+		// 	dataLabel.Left = 10;
+		// 	dataLabel.Top = 90;
+		// 	form.Controls.Add(dataLabel);
+
+		// 	dataInput.Left = 10;
+		// 	dataInput.Top = 110;
+		// 	dataInput.Width = form.ClientSize.Width - 20;
+		// 	//dataInput.Height = 200;
+		// 	dataInput.Multiline = true;
+		// 	dataInput.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+		// 	form.Controls.Add(dataInput);
+
+		// 	// Кнопка "OK"
+		// 	System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
+		// 	okButton.Text = "OK";
+		// 	okButton.Width = form.ClientSize.Width - 10; 
+		// 	okButton.Height = 25; 
+		// 	okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
+		// 	okButton.Top = form.ClientSize.Height - okButton.Height - 5; 
+		// 	okButton.Click += (s, e) => { form.Close(); };
+		// 	form.Controls.Add(okButton);
+		// 	dataInput.Height = okButton.Top - dataInput.Top - 5;
+
+		// 	// Показываем форму
+		// 	form.ShowDialog();
+
+		// 	// Собираем формат из ComboBox (на случай, если пользователь не менял выбор)
+		// 	selectedFormat.Clear(); // Очищаем перед финальным сбором
+		// 	foreach (var combo in formatComboBoxes)
+		// 	{
+		// 		if (!string.IsNullOrEmpty(combo.SelectedItem?.ToString()))
+		// 			selectedFormat.Add(combo.SelectedItem.ToString());
+		// 	}
+
+		// 	// Проверка введённых данных
+		// 	if (string.IsNullOrEmpty(dataInput.Text) || selectedFormat.Count == 0)
+		// 	{
+		// 		project.SendWarningToLog("Data or format cannot be empty");
+		// 		return "0";
+		// 	}
+
+		// 	string[] lines = dataInput.Text.Trim().Split('\n');
+		// 	project.SendInfoToLog($"Parsing [{lines.Length}] Twitter data lines", true);
+
+		// 	// Обработка строк
+		// 	for (int acc0 = 1; acc0 <= lines.Length; acc0++)
+		// 	{
+		// 		string line = lines[acc0 - 1].Trim();
+		// 		if (string.IsNullOrWhiteSpace(line))
+		// 		{
+		// 			project.SendWarningToLog($"Line {acc0} is empty", false);
+		// 			continue;
+		// 		}
+
+		// 		string[] data_parts = line.Split(':');
+		// 		Dictionary<string, string> parsed_data = new Dictionary<string, string>();
+
+		// 		for (int i = 0; i < selectedFormat.Count && i < data_parts.Length; i++)
+		// 		{
+		// 			parsed_data[selectedFormat[i]] = data_parts[i].Trim();
+		// 		}
+
+		// 		string LOGIN = parsed_data.ContainsKey("LOGIN") ? parsed_data["LOGIN"] : "";
+		// 		string PASSWORD = parsed_data.ContainsKey("PASSWORD") ? parsed_data["PASSWORD"] : "";
+		// 		string EMAIL = parsed_data.ContainsKey("EMAIL") ? parsed_data["EMAIL"] : "";
+		// 		string EMAIL_PASSWORD = parsed_data.ContainsKey("EMAIL_PASSWORD") ? parsed_data["EMAIL_PASSWORD"] : "";
+		// 		string TOKEN = parsed_data.ContainsKey("TOKEN") ? parsed_data["TOKEN"] : "";
+		// 		string CODE2FA = parsed_data.ContainsKey("CODE2FA") ? parsed_data["CODE2FA"] : "";
+		// 		string RECOVERY = parsed_data.ContainsKey("RECOVERY_SEED") ? parsed_data["RECOVERY_SEED"] : "";
+
+		// 		if (CODE2FA.Contains('/'))
+		// 			CODE2FA = CODE2FA.Split('/').Last();
+
+		// 		// Экранирование одинарных кавычек
+		// 		LOGIN = LOGIN.Replace("'", "''");
+		// 		PASSWORD = PASSWORD.Replace("'", "''");
+		// 		TOKEN = TOKEN.Replace("'", "''");
+		// 		CODE2FA = CODE2FA.Replace("'", "''");
+		// 		EMAIL = EMAIL.Replace("'", "''");
+		// 		EMAIL_PASSWORD = EMAIL_PASSWORD.Replace("'", "''");
+		// 		RECOVERY = RECOVERY.Replace("'", "''");
+
+		// 		try
+		// 		{
+		// 			string dbQuery = $@"UPDATE {table} SET 
+		// 				token = '{TOKEN}', 
+		// 				login = '{LOGIN}', 
+		// 				password = '{PASSWORD}', 
+		// 				code2fa = '{CODE2FA}', 
+		// 				email = '{EMAIL}', 
+		// 				email_pass = '{EMAIL_PASSWORD}', 
+		// 				recovery2fa = '{RECOVERY}', 
+		// 				cooldown = 0
+		// 				WHERE acc0 = {acc0};";
+		// 			SQL.W3Query(project, dbQuery, true);
+		// 			lineCount++;
+		// 		}
+		// 		catch (Exception ex)
+		// 		{
+		// 			project.SendWarningToLog($"Error processing line {acc0}: {ex.Message}", false);
+		// 		}
+		// 	}
+
+		// 	project.SendInfoToLog($"[{lineCount}] records added to [{table}]", true);
+		// 	return lineCount.ToString();
+
+		// }
+
+		// public static string ImportDiscord(IZennoPosterProjectModel project, string schema = "accounts")
+		// {
+		// 	var tableName = "discord"; // Статичное имя таблицы
+		// 	string schemaName = project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schema}." : "";
+		// 	string table = schemaName + tableName; // Итоговое имя с учётом схемы
+		// 	int lineCount = 0;
+
+		// 	// Создание формы
+		// 	System.Windows.Forms.Form form = new System.Windows.Forms.Form();
+		// 	form.Text = "Import Discord Data";
+		// 	form.Width = 420;
+		// 	form.Height = 700;
+
+		// 	// Возможные поля формата
+		// 	string[] availableFields = new string[] { "", "LOGIN", "PASSWORD", "TOKEN", "CODE2FA" }; // Урезаем до актуальных полей
+		// 	List<string> selectedFormat = new List<string>();
+		// 	System.Windows.Forms.TextBox formatDisplay = new System.Windows.Forms.TextBox();
+		// 	System.Windows.Forms.TextBox dataInput = new System.Windows.Forms.TextBox();
+
+		// 	// Метка для выбора формата
+		// 	System.Windows.Forms.Label formatLabel = new System.Windows.Forms.Label();
+		// 	formatLabel.Text = "Select format (one field per box):";
+		// 	formatLabel.AutoSize = true;
+		// 	formatLabel.Left = 10;
+		// 	formatLabel.Top = 10;
+		// 	form.Controls.Add(formatLabel);
+
+		// 	System.Windows.Forms.ComboBox[] formatComboBoxes = new System.Windows.Forms.ComboBox[availableFields.Length - 1];
+		// 	int spacing = 5;
+		// 	int totalSpacing = spacing * (formatComboBoxes.Length - 1); // Общий отступ между ComboBox
+		// 	int comboWidth = (form.ClientSize.Width - 20 - totalSpacing) / formatComboBoxes.Length; // 20 — отступы слева и справа
+		// 	for (int i = 0; i < formatComboBoxes.Length; i++)
+		// 	{
+		// 		formatComboBoxes[i] = new System.Windows.Forms.ComboBox();
+		// 		formatComboBoxes[i].DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+		// 		formatComboBoxes[i].Items.AddRange(availableFields);
+		// 		formatComboBoxes[i].SelectedIndex = 0; // По умолчанию пусто
+		// 		formatComboBoxes[i].Left = 10 + i * (comboWidth + spacing);
+		// 		formatComboBoxes[i].Top = 30;
+		// 		formatComboBoxes[i].Width = comboWidth;
+		// 		formatComboBoxes[i].SelectedIndexChanged += (s, e) =>
+		// 		{
+		// 			selectedFormat.Clear(); // Очищаем перед обновлением
+		// 			foreach (var combo in formatComboBoxes)
+		// 			{
+		// 				if (!string.IsNullOrEmpty(combo.SelectedItem?.ToString()))
+		// 					selectedFormat.Add(combo.SelectedItem.ToString());
+		// 			}
+		// 			formatDisplay.Text = string.Join(":", selectedFormat);
+		// 		};
+		// 		form.Controls.Add(formatComboBoxes[i]);
+		// 	}
+
+		// 	// Поле для отображения текущего формата
+		// 	formatDisplay.Left = 10;
+		// 	formatDisplay.Top = 60;
+		// 	formatDisplay.Width = form.ClientSize.Width - 20;
+		// 	formatDisplay.ReadOnly = true;
+		// 	form.Controls.Add(formatDisplay);
+
+		// 	// Метка и поле для ввода данных
+		// 	System.Windows.Forms.Label dataLabel = new System.Windows.Forms.Label();
+		// 	dataLabel.Text = "Input data (one per line, matching format):";
+		// 	dataLabel.AutoSize = true;
+		// 	dataLabel.Left = 10;
+		// 	dataLabel.Top = 90;
+		// 	form.Controls.Add(dataLabel);
+
+		// 	dataInput.Left = 10;
+		// 	dataInput.Top = 110;
+		// 	dataInput.Width = form.ClientSize.Width - 20;
+		// 	//dataInput.Height = 200;
+		// 	dataInput.Multiline = true;
+		// 	dataInput.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+		// 	form.Controls.Add(dataInput);
+
+		// 	// Кнопка "OK"
+		// 	System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
+		// 	okButton.Text = "OK";
+		// 	okButton.Width = form.ClientSize.Width - 10; 
+		// 	okButton.Height = 25; 
+		// 	okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
+		// 	okButton.Top = form.ClientSize.Height - okButton.Height - 5; 
+		// 	okButton.Click += (s, e) => { form.Close(); };
+		// 	form.Controls.Add(okButton);
+		// 	dataInput.Height = okButton.Top - dataInput.Top - 5;
+
+		// 	// Показываем форму
+		// 	form.ShowDialog();
+
+		// 	// Собираем формат из ComboBox
+		// 	selectedFormat.Clear();
+		// 	foreach (var combo in formatComboBoxes)
+		// 	{
+		// 		if (!string.IsNullOrEmpty(combo.SelectedItem?.ToString()))
+		// 			selectedFormat.Add(combo.SelectedItem.ToString());
+		// 	}
+
+		// 	// Проверка введённых данных
+		// 	if (string.IsNullOrEmpty(dataInput.Text) || selectedFormat.Count == 0)
+		// 	{
+		// 		project.SendWarningToLog("Data or format cannot be empty");
+		// 		return "0";
+		// 	}
+
+		// 	string[] lines = dataInput.Text.Trim().Split('\n');
+		// 	project.SendInfoToLog($"Parsing [{lines.Length}] Discord data lines", true);
+
+		// 	// Обработка строк
+		// 	for (int acc0 = 1; acc0 <= lines.Length; acc0++)
+		// 	{
+		// 		string line = lines[acc0 - 1].Trim();
+		// 		if (string.IsNullOrWhiteSpace(line))
+		// 		{
+		// 			project.SendWarningToLog($"Line {acc0} is empty", false);
+		// 			continue;
+		// 		}
+
+		// 		string[] data_parts = line.Split(':');
+		// 		Dictionary<string, string> parsed_data = new Dictionary<string, string>();
+
+		// 		for (int i = 0; i < selectedFormat.Count && i < data_parts.Length; i++)
+		// 		{
+		// 			parsed_data[selectedFormat[i]] = data_parts[i].Trim();
+		// 		}
+
+		// 		string LOGIN = parsed_data.ContainsKey("LOGIN") ? parsed_data["LOGIN"] : "";
+		// 		string PASSWORD = parsed_data.ContainsKey("PASSWORD") ? parsed_data["PASSWORD"] : "";
+		// 		string TOKEN = parsed_data.ContainsKey("TOKEN") ? parsed_data["TOKEN"] : "";
+		// 		string CODE2FA = parsed_data.ContainsKey("CODE2FA") ? parsed_data["CODE2FA"] : "";
+
+		// 		if (CODE2FA.Contains('/'))
+		// 			CODE2FA = CODE2FA.Split('/').Last();
+
+		// 		// Экранирование одинарных кавычек
+		// 		LOGIN = LOGIN.Replace("'", "''");
+		// 		PASSWORD = PASSWORD.Replace("'", "''");
+		// 		TOKEN = TOKEN.Replace("'", "''");
+		// 		CODE2FA = CODE2FA.Replace("'", "''");
+
+		// 		try
+		// 		{
+		// 			string dbQuery = $@"UPDATE {table} SET 
+		// 				token = '{TOKEN}', 
+		// 				login = '{LOGIN}', 
+		// 				password = '{PASSWORD}', 
+		// 				code2fa = '{CODE2FA}', 
+		// 				cooldown = 0
+		// 				WHERE acc0 = {acc0};";
+		// 			SQL.W3Query(project, dbQuery, true);
+		// 			lineCount++;
+		// 		}
+		// 		catch (Exception ex)
+		// 		{
+		// 			project.SendWarningToLog($"Error processing line {acc0}: {ex.Message}", false);
+		// 		}
+		// 	}
+
+		// 	project.SendInfoToLog($"[{lineCount}] records added to [{table}]", true);
+		// 	return lineCount.ToString();
+		// }
+
+
+	}
+
+	public class DataImporter
+	{
+		private readonly IZennoPosterProjectModel _project;
+		private readonly string _schema;
+
+		public DataImporter(IZennoPosterProjectModel project, string schema = "accounts")
 		{
-			var tableName = "twitter";
-			string schemaName = project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schema}." : "";
-			string table = schemaName + tableName; 
+			_project = project;
+			_schema = schema;
+		}
+
+		public string ImportData(string tableName, string formTitle, string[] availableFields, Dictionary<string, string> columnMapping)
+		{
+			string schemaName = _project.Variables["DBmode"].Value == "PostgreSQL" ? $"{_schema}." : "";
+			string table = schemaName + tableName;
 			int lineCount = 0;
 
+			// Создание формы
 			System.Windows.Forms.Form form = new System.Windows.Forms.Form();
-			form.Text = "Import Twitter Data";
-			form.Width = 600;
-			form.Height = 400;
+			form.Text = formTitle;
+			form.Width = 800;
+			form.Height = 700;
 
-			string[] availableFields = new string[] { "LOGIN", "PASSWORD", "EMAIL", "EMAIL_PASSWORD", "TOKEN", "CODE2FA", "RECOVERY_SEED" };
 			List<string> selectedFormat = new List<string>();
 			System.Windows.Forms.TextBox formatDisplay = new System.Windows.Forms.TextBox();
 			System.Windows.Forms.TextBox dataInput = new System.Windows.Forms.TextBox();
 
+			// Метка для выбора формата
 			System.Windows.Forms.Label formatLabel = new System.Windows.Forms.Label();
-			formatLabel.Text = "Select format fields (in order):";
+			formatLabel.Text = "Select format (one field per box):";
 			formatLabel.AutoSize = true;
 			formatLabel.Left = 10;
 			formatLabel.Top = 10;
 			form.Controls.Add(formatLabel);
 
-			System.Windows.Forms.ComboBox formatComboBox = new System.Windows.Forms.ComboBox();
-			formatComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-			formatComboBox.Items.AddRange(availableFields);
-			formatComboBox.Left = 10;
-			formatComboBox.Top = 30;
-			formatComboBox.Width = form.ClientSize.Width - 90;
-			form.Controls.Add(formatComboBox);
-
-			System.Windows.Forms.Button addFormatButton = new System.Windows.Forms.Button();
-			addFormatButton.Text = "Add";
-			addFormatButton.Left = formatComboBox.Right + 10;
-			addFormatButton.Top = 30;
-			addFormatButton.Width = 50;
-			addFormatButton.Click += (s, e) =>
+			// Создаём ComboBox в строку
+			System.Windows.Forms.ComboBox[] formatComboBoxes = new System.Windows.Forms.ComboBox[availableFields.Length - 1]; // -1 из-за пустой строки
+			int spacing = 5;
+			int totalSpacing = spacing * (formatComboBoxes.Length - 1);
+			int comboWidth = (form.ClientSize.Width - 20 - totalSpacing) / formatComboBoxes.Length;
+			for (int i = 0; i < formatComboBoxes.Length; i++)
 			{
-				if (formatComboBox.SelectedItem != null && !selectedFormat.Contains(formatComboBox.SelectedItem.ToString()))
+				formatComboBoxes[i] = new System.Windows.Forms.ComboBox();
+				formatComboBoxes[i].DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+				formatComboBoxes[i].Items.AddRange(availableFields);
+				formatComboBoxes[i].SelectedIndex = 0;
+				formatComboBoxes[i].Left = 10 + i * (comboWidth + spacing);
+				formatComboBoxes[i].Top = 30;
+				formatComboBoxes[i].Width = comboWidth;
+				formatComboBoxes[i].SelectedIndexChanged += (s, e) =>
 				{
-					selectedFormat.Add(formatComboBox.SelectedItem.ToString());
+					selectedFormat.Clear();
+					foreach (var combo in formatComboBoxes)
+					{
+						if (!string.IsNullOrEmpty(combo.SelectedItem?.ToString()))
+							selectedFormat.Add(combo.SelectedItem.ToString());
+					}
 					formatDisplay.Text = string.Join(":", selectedFormat);
-				}
-			};
-			form.Controls.Add(addFormatButton);
+				};
+				form.Controls.Add(formatComboBoxes[i]);
+			}
 
+			// Поле для отображения текущего формата
 			formatDisplay.Left = 10;
 			formatDisplay.Top = 60;
-			formatDisplay.Width = 560;
+			formatDisplay.Width = form.ClientSize.Width - 20;
 			formatDisplay.ReadOnly = true;
 			form.Controls.Add(formatDisplay);
 
+			// Метка и поле для ввода данных
 			System.Windows.Forms.Label dataLabel = new System.Windows.Forms.Label();
 			dataLabel.Text = "Input data (one per line, matching format):";
 			dataLabel.AutoSize = true;
@@ -1869,38 +2223,50 @@ namespace w3tools //by @w3bgrep
 
 			dataInput.Left = 10;
 			dataInput.Top = 110;
-			dataInput.Width = 560;
-			dataInput.Height = 200;
+			dataInput.Width = form.ClientSize.Width - 20;
 			dataInput.Multiline = true;
 			dataInput.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
 			form.Controls.Add(dataInput);
 
+			// Кнопка "OK"
 			System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
 			okButton.Text = "OK";
-			okButton.Left = (form.Width - 100) / 2;
-			okButton.Top = 320;
-			okButton.Width = 100;
+			okButton.Width = form.ClientSize.Width - 10;
+			okButton.Height = 25;
+			okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
+			okButton.Top = form.ClientSize.Height - okButton.Height - 5;
 			okButton.Click += (s, e) => { form.Close(); };
 			form.Controls.Add(okButton);
-			
-			input:
+			dataInput.Height = okButton.Top - dataInput.Top - 5;
+
+			// Показываем форму
 			form.ShowDialog();
 
+			// Собираем формат из ComboBox
+			selectedFormat.Clear();
+			foreach (var combo in formatComboBoxes)
+			{
+				if (!string.IsNullOrEmpty(combo.SelectedItem?.ToString()))
+					selectedFormat.Add(combo.SelectedItem.ToString());
+			}
+
+			// Проверка введённых данных
 			if (string.IsNullOrEmpty(dataInput.Text) || selectedFormat.Count == 0)
 			{
-				project.SendWarningToLog("Data or format cannot be empty");
-				goto input;
+				_project.SendWarningToLog("Data or format cannot be empty");
+				return "0";
 			}
 
 			string[] lines = dataInput.Text.Trim().Split('\n');
-			project.SendInfoToLog($"Parsing [{lines.Length}] Twitter data lines", true);
+			_project.SendInfoToLog($"Parsing [{lines.Length}] {tableName} data lines", true);
 
+			// Обработка строк
 			for (int acc0 = 1; acc0 <= lines.Length; acc0++)
 			{
 				string line = lines[acc0 - 1].Trim();
 				if (string.IsNullOrWhiteSpace(line))
 				{
-					project.SendWarningToLog($"Line {acc0} is empty", false);
+					_project.SendWarningToLog($"Line {acc0} is empty", false);
 					continue;
 				}
 
@@ -1912,51 +2278,80 @@ namespace w3tools //by @w3bgrep
 					parsed_data[selectedFormat[i]] = data_parts[i].Trim();
 				}
 
-				string LOGIN = parsed_data.ContainsKey("LOGIN") ? parsed_data["LOGIN"] : "";
-				string PASSWORD = parsed_data.ContainsKey("PASSWORD") ? parsed_data["PASSWORD"] : "";
-				string EMAIL = parsed_data.ContainsKey("EMAIL") ? parsed_data["EMAIL"] : "";
-				string EMAIL_PASSWORD = parsed_data.ContainsKey("EMAIL_PASSWORD") ? parsed_data["EMAIL_PASSWORD"] : "";
-				string TOKEN = parsed_data.ContainsKey("TOKEN") ? parsed_data["TOKEN"] : "";
-				string CODE2FA = parsed_data.ContainsKey("CODE2FA") ? parsed_data["CODE2FA"] : "";
-				string RECOVERY = parsed_data.ContainsKey("RECOVERY_SEED") ? parsed_data["RECOVERY_SEED"] : "";
-
-				if (CODE2FA.Contains('/'))
-					CODE2FA = CODE2FA.Split('/').Last();
-
-				// Экранирование одинарных кавычек
-				LOGIN = LOGIN.Replace("'", "''");
-				PASSWORD = PASSWORD.Replace("'", "''");
-				TOKEN = TOKEN.Replace("'", "''");
-				CODE2FA = CODE2FA.Replace("'", "''");
-				EMAIL = EMAIL.Replace("'", "''");
-				EMAIL_PASSWORD = EMAIL_PASSWORD.Replace("'", "''");
-				RECOVERY = RECOVERY.Replace("'", "''");
+				// Формируем SQL-запрос на основе маппинга
+				var queryParts = new List<string>();
+				foreach (var field in columnMapping.Keys)
+				{
+					string value = parsed_data.ContainsKey(field) ? parsed_data[field].Replace("'", "''") : "";
+					if (field == "CODE2FA" && value.Contains('/'))
+						value = value.Split('/').Last();
+					queryParts.Add($"{columnMapping[field]} = '{value}'");
+				}
+				queryParts.Add("cooldown = 0");
 
 				try
 				{
-					string dbQuery = $@"UPDATE {table} SET 
-						token = '{TOKEN}', 
-						login = '{LOGIN}', 
-						password = '{PASSWORD}', 
-						code2FA = '{CODE2FA}', 
-						emailLogin = '{EMAIL}', 
-						emailPass = '{EMAIL_PASSWORD}', 
-						recovery2FA = '{RECOVERY}', 
-						cooldown = 0
-						WHERE acc0 = {acc0};";
-					SQL.W3Query(project, dbQuery, true);
+					string dbQuery = $@"UPDATE {table} SET {string.Join(", ", queryParts)} WHERE acc0 = {acc0};";
+					SQL.W3Query(_project, dbQuery, true);
 					lineCount++;
 				}
 				catch (Exception ex)
 				{
-					project.SendWarningToLog($"Error processing line {acc0}: {ex.Message}", false);
+					_project.SendWarningToLog($"Error processing line {acc0}: {ex.Message}", false);
 				}
 			}
 
-			project.SendInfoToLog($"[{lineCount}] records added to [{table}]", true);
+			_project.SendInfoToLog($"[{lineCount}] records added to [{table}]", true);
 			return lineCount.ToString();
 		}
+
+		// Публичный метод для Twitter
+		public string ImportTwitter()
+		{
+			string[] twitterFields = new string[] { "", "LOGIN", "PASSWORD", "EMAIL", "EMAIL_PASSWORD", "TOKEN", "CODE2FA", "RECOVERY_SEED" };
+			var twitterMapping = new Dictionary<string, string>
+			{
+				{ "LOGIN", "login" },
+				{ "PASSWORD", "password" },
+				{ "EMAIL", "email" },
+				{ "EMAIL_PASSWORD", "email_pass" },
+				{ "TOKEN", "token" },
+				{ "CODE2FA", "code2fa" },
+				{ "RECOVERY_SEED", "recovery2fa" }
+			};
+			return ImportData("twitter", "Import Twitter Data", twitterFields, twitterMapping);
+		}
+
+		// Публичный метод для Discord
+		public string ImportDiscord()
+		{
+			string[] discordFields = new string[] { "", "LOGIN", "PASSWORD", "TOKEN", "CODE2FA" };
+			var discordMapping = new Dictionary<string, string>
+			{
+				{ "LOGIN", "login" },
+				{ "PASSWORD", "password" },
+				{ "TOKEN", "token" },
+				{ "CODE2FA", "code2fa" }
+			};
+			return ImportData("discord", "Import Discord Data", discordFields, discordMapping);
+		}
+
+		// Публичный метод для Google
+		public string ImportGoogle()
+		{
+			string[] googleFields = new string[] { "", "LOGIN", "PASSWORD", "RECOVERY_EMAIL", "CODE2FA", "RECOVERY_SEED" };
+			var googleMapping = new Dictionary<string, string>
+			{
+				{ "LOGIN", "login" },
+				{ "PASSWORD", "password" },
+				{ "RECOVERY_EMAIL", "recovery_email" },
+				{ "CODE2FA", "code2fa" },
+				{ "RECOVERY_SEED", "recovery2fa" }
+			};
+			return ImportData("google", "Import Google Data", googleFields, googleMapping);
+		}
 	}
+
 
     public static class Db
     {
