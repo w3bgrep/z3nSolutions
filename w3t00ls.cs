@@ -1581,566 +1581,6 @@ namespace w3tools //by @w3bgrep
 			return lines.Length.ToString();
 		}
 
-		public static void ImportSettings(IZennoPosterProjectModel project, string message = "input data please", int width = 600, int height = 600)
-		{
-			// Логируем открытие формы
-			project.SendInfoToLog($"Opening variables input dialog: {message}", true);
-
-			// Создаем форму
-			System.Windows.Forms.Form form = new System.Windows.Forms.Form();
-			form.Text = message;
-			form.Width = width;
-			form.Height = height;
-
-			// Список переменных
-			string[] variableNames = new string[]
-			{
-				"settingsApiFirstMail",
-				"settingsApiPerplexity",
-				"settingsDsInviteOwn",
-				"settingsDsOwnServer",
-				"settingsFmailLogin",
-				"settingsFmailPass",
-				"settingsTgLogGroup",
-				"settingsTgLogToken",
-				"settingsTgLogTopic",
-				"settingsTgMailGroup",
-				"settingsZenFolder",
-				"settingsApiBinance",
-			};
-
-			// Словарь для хранения TextBox'ов для каждой переменной
-			var textBoxes = new Dictionary<string, System.Windows.Forms.TextBox>();
-
-			// Начальные координаты для размещения элементов
-			int currentTop = 5;
-			int labelWidth = 150; // Ширина метки
-			int textBoxWidth = 400; // Ширина текстового поля
-			int spacing = 5; // Отступ между элементами
-
-			// Создаем метку и текстовое поле для каждой переменной
-			foreach (string varName in variableNames)
-			{
-				// Создаем метку (Label) с названием переменной
-				System.Windows.Forms.Label label = new System.Windows.Forms.Label();
-				label.Text = varName + ":";
-				label.AutoSize = true;
-				label.Left = 5;
-				label.Top = currentTop;
-				form.Controls.Add(label);
-
-				// Создаем текстовое поле (TextBox)
-				System.Windows.Forms.TextBox textBox = new System.Windows.Forms.TextBox();
-				textBox.Left = label.Left + labelWidth + spacing;
-				textBox.Top = currentTop;
-				textBox.Width = textBoxWidth;
-				textBox.Text = project.Variables[varName].Value; // Заполняем текущим значением переменной
-				form.Controls.Add(textBox);
-
-				// Сохраняем TextBox в словарь
-				textBoxes[varName] = textBox;
-
-				// Увеличиваем текущую позицию по вертикали
-				currentTop += textBox.Height + spacing;
-			}
-
-			// Добавляем кнопку "OK"
-			System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
-			okButton.Text = "OK";
-			okButton.Width = 50;
-			okButton.Height = 25;
-			okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
-			okButton.Top = currentTop + 10;
-			okButton.Click += new System.EventHandler((sender, e) => { form.Close(); });
-			form.Controls.Add(okButton);
-
-			// Устанавливаем минимальную высоту формы, чтобы все элементы поместились
-			int requiredHeight = okButton.Top + okButton.Height + 40; // 40 пикселей для отступов и заголовка
-			if (form.Height < requiredHeight)
-			{
-				form.Height = requiredHeight;
-			}
-
-			// Отображаем форму модально
-			form.ShowDialog();
-
-			// Сохраняем введенные данные в переменные ZennoPoster и записываем в таблицу
-			string tableName = "settings";
-			foreach (string varName in variableNames)
-			{
-				// Получаем введенное значение
-				string newValue = textBoxes[varName].Text;
-
-				// Сохраняем в переменную ZennoPoster
-				project.Variables[varName].Value = newValue;
-				project.SendInfoToLog($"Updated variable {varName}: {newValue}", true);
-
-				// Записываем в таблицу accSettings
-				if (!string.IsNullOrEmpty(newValue))
-				{
-					string escapedValue = newValue.Replace("'", "''"); // Экранируем одинарные кавычки
-					W3Query(project, $"INSERT OR REPLACE INTO {tableName} (var, value) VALUES ('{varName}', '{escapedValue}');");
-					project.SendInfoToLog($"Inserted into {tableName}: {varName} = {newValue}", true);
-				}
-			}
-		}
-
-		public static string ImportProxy(IZennoPosterProjectModel project, string schema = "accounts")
-		{
-			var tableName = "profile";
-			string schemaName = project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schema}." : "";
-
-			string table = schemaName + tableName; // Параметризация имени таблицы
-			int lineCount = 0;
-
-		input:
-			var text = Tools.InputBox("Input proxy list (format: protocol://user:pass@host:port), separated by new lines");
-			if (string.IsNullOrEmpty(text))
-			{
-				project.SendWarningToLog("Input cannot be empty");
-				goto input;
-			}
-
-			string[] proxyLines = text.Trim().Split('\n');
-			project.SendInfoToLog($"Parsing [{proxyLines.Length}] proxy strings", true);
-
-			// Регулярное выражение для проверки формата прокси
-			string proxyPattern = @"^(http|https|socks4|socks5)://([^:]+):([^@]+)@([^:]+):(\d+)$";
-			var regex = new Regex(proxyPattern);
-
-			// Обработка строк
-			for (int acc0 = 0; acc0 < proxyLines.Length; acc0++)
-			{
-				string proxy = proxyLines[acc0].Trim();
-				if (string.IsNullOrWhiteSpace(proxy) || !regex.IsMatch(proxy))
-				{
-					project.SendWarningToLog($"Proxy on line {acc0 + 1} does not match required format: {proxy} or null");
-					lineCount++;
-					continue;
-				}
-
-				try
-				{
-					// Обновление записи в таблице
-					SQL.W3Query(project, $@"UPDATE {table} SET proxy = '{proxy}' WHERE acc0 = {acc0 + 1};", true);
-					lineCount++;
-				}
-				catch (Exception ex)
-				{
-					project.SendWarningToLog($"Error processing proxy on line {acc0 + 1}: {ex.Message}", false);
-				}
-			}
-
-			project.SendInfoToLog($"[{lineCount}] proxies added to [{table}]", true);
-			return lineCount.ToString();
-		}
-
-		public static string ImportBio(IZennoPosterProjectModel project, string schema = "accounts")
-		{
-			var tableName = "profile"; // Статичное имя таблицы
-			string schemaName = project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schema}." : "";
-			string table = schemaName + tableName; // Итоговое имя с учётом схемы
-			int lineCount = 0;
-
-			// Ввод никнеймов
-		inputNicknames:
-			var nicknamesText = Tools.InputBox("Input nicknames, separated by new lines");
-			if (string.IsNullOrEmpty(nicknamesText))
-			{
-				project.SendWarningToLog("Nicknames input cannot be empty");
-				goto inputNicknames;
-			}
-
-			string[] nicknameLines = nicknamesText.Trim().Split('\n');
-			project.SendInfoToLog($"Parsing [{nicknameLines.Length}] nicknames", true);
-
-			// Ввод биографий
-		inputBios:
-			var biosText = Tools.InputBox("Input bios, separated by new lines");
-			if (string.IsNullOrEmpty(biosText))
-			{
-				project.SendWarningToLog("Bios input cannot be empty");
-				goto inputBios;
-			}
-
-			string[] bioLines = biosText.Trim().Split('\n');
-			project.SendInfoToLog($"Parsing [{bioLines.Length}] bios", true);
-
-			// Определяем максимальное количество записей (по числу никнеймов)
-			int maxRecords = nicknameLines.Length;
-
-			// Если биографий меньше, предупреждаем
-			if (bioLines.Length < nicknameLines.Length)
-			{
-				project.SendWarningToLog($"Fewer bios ({bioLines.Length}) than nicknames ({nicknameLines.Length}). Missing bios will be empty.", false);
-			}
-			// Если биографий больше, предупреждаем
-			else if (bioLines.Length > nicknameLines.Length)
-			{
-				project.SendWarningToLog($"More bios ({bioLines.Length}) than nicknames ({nicknameLines.Length}). Extra bios will be ignored.", false);
-			}
-
-			// Обработка строк
-			for (int acc0 = 0; acc0 < maxRecords; acc0++)
-			{
-				string nickname = nicknameLines[acc0].Trim();
-				string bio = (acc0 < bioLines.Length) ? bioLines[acc0].Trim() : ""; // Если биографий не хватает, bio = ""
-
-				if (string.IsNullOrWhiteSpace(nickname))
-				{
-					project.SendWarningToLog($"Nickname on line {acc0 + 1} is empty, skipping", false);
-					continue; // Пропускаем запись, если никнейм пустой
-				}
-
-				try
-				{
-					// Обновление записи в таблице
-					SQL.W3Query(project, $@"UPDATE {table} SET nickname = '{nickname}', bio = '{bio}' WHERE acc0 = {acc0 + 1};", true);
-					lineCount++;
-				}
-				catch (Exception ex)
-				{
-					project.SendWarningToLog($"Error processing record on line {acc0 + 1}: {ex.Message}", false);
-				}
-			}
-
-			project.SendInfoToLog($"[{lineCount}] records added to [{table}]", true);
-			return lineCount.ToString();
-		}
-		// public static string ImportTwitter(IZennoPosterProjectModel project, string schema = "accounts")
-		// {
-		// 	var tableName = "twitter"; // Статичное имя таблицы
-		// 	string schemaName = project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schema}." : "";
-		// 	string table = schemaName + tableName; // Итоговое имя с учётом схемы
-		// 	int lineCount = 0;
-
-		// 	// Создание формы
-		// 	System.Windows.Forms.Form form = new System.Windows.Forms.Form();
-		// 	form.Text = "Import Twitter Data";
-		// 	form.Width = 700;
-		// 	form.Height = 700;
-
-		// 	// Возможные поля формата
-		// 	string[] availableFields = new string[] { "", "LOGIN", "PASSWORD", "EMAIL", "EMAIL_PASSWORD", "TOKEN", "CODE2FA", "RECOVERY_SEED" };
-		// 	List<string> selectedFormat = new List<string>(); // Объявляем один раз здесь
-		// 	System.Windows.Forms.TextBox formatDisplay = new System.Windows.Forms.TextBox();
-		// 	System.Windows.Forms.TextBox dataInput = new System.Windows.Forms.TextBox();
-
-		// 	// Метка для выбора формата
-		// 	System.Windows.Forms.Label formatLabel = new System.Windows.Forms.Label();
-		// 	formatLabel.Text = "Select format (one field per box):";
-		// 	formatLabel.AutoSize = true;
-		// 	formatLabel.Left = 10;
-		// 	formatLabel.Top = 10;
-		// 	form.Controls.Add(formatLabel);
-
-		// 	System.Windows.Forms.ComboBox[] formatComboBoxes = new System.Windows.Forms.ComboBox[availableFields.Length - 1];
-		// 	int spacing = 5;
-		// 	int totalSpacing = spacing * (formatComboBoxes.Length - 1); // Общий отступ между ComboBox
-		// 	int comboWidth = (form.ClientSize.Width - 20 - totalSpacing) / formatComboBoxes.Length; // 20 — отступы слева и справа
-		// 	for (int i = 0; i < formatComboBoxes.Length; i++)
-		// 	{
-		// 		formatComboBoxes[i] = new System.Windows.Forms.ComboBox();
-		// 		formatComboBoxes[i].DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-		// 		formatComboBoxes[i].Items.AddRange(availableFields);
-		// 		formatComboBoxes[i].SelectedIndex = 0; // По умолчанию пусто
-		// 		formatComboBoxes[i].Left = 10 + i * (comboWidth + spacing);
-		// 		formatComboBoxes[i].Top = 30;
-		// 		formatComboBoxes[i].Width = comboWidth;
-		// 		formatComboBoxes[i].SelectedIndexChanged += (s, e) =>
-		// 		{
-		// 			selectedFormat.Clear(); // Очищаем перед обновлением
-		// 			foreach (var combo in formatComboBoxes)
-		// 			{
-		// 				if (!string.IsNullOrEmpty(combo.SelectedItem?.ToString()))
-		// 					selectedFormat.Add(combo.SelectedItem.ToString());
-		// 			}
-		// 			formatDisplay.Text = string.Join(":", selectedFormat);
-		// 		};
-		// 		form.Controls.Add(formatComboBoxes[i]);
-		// 	}
-
-		// 	// Поле для отображения текущего формата
-		// 	formatDisplay.Left = 10;
-		// 	formatDisplay.Top = 60;
-		// 	formatDisplay.Width = form.ClientSize.Width - 20;
-		// 	formatDisplay.ReadOnly = true;
-		// 	form.Controls.Add(formatDisplay);
-
-		// 	// Метка и поле для ввода данных
-		// 	System.Windows.Forms.Label dataLabel = new System.Windows.Forms.Label();
-		// 	dataLabel.Text = "Input data (one per line, matching format):";
-		// 	dataLabel.AutoSize = true;
-		// 	dataLabel.Left = 10;
-		// 	dataLabel.Top = 90;
-		// 	form.Controls.Add(dataLabel);
-
-		// 	dataInput.Left = 10;
-		// 	dataInput.Top = 110;
-		// 	dataInput.Width = form.ClientSize.Width - 20;
-		// 	//dataInput.Height = 200;
-		// 	dataInput.Multiline = true;
-		// 	dataInput.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-		// 	form.Controls.Add(dataInput);
-
-		// 	// Кнопка "OK"
-		// 	System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
-		// 	okButton.Text = "OK";
-		// 	okButton.Width = form.ClientSize.Width - 10; 
-		// 	okButton.Height = 25; 
-		// 	okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
-		// 	okButton.Top = form.ClientSize.Height - okButton.Height - 5; 
-		// 	okButton.Click += (s, e) => { form.Close(); };
-		// 	form.Controls.Add(okButton);
-		// 	dataInput.Height = okButton.Top - dataInput.Top - 5;
-
-		// 	// Показываем форму
-		// 	form.ShowDialog();
-
-		// 	// Собираем формат из ComboBox (на случай, если пользователь не менял выбор)
-		// 	selectedFormat.Clear(); // Очищаем перед финальным сбором
-		// 	foreach (var combo in formatComboBoxes)
-		// 	{
-		// 		if (!string.IsNullOrEmpty(combo.SelectedItem?.ToString()))
-		// 			selectedFormat.Add(combo.SelectedItem.ToString());
-		// 	}
-
-		// 	// Проверка введённых данных
-		// 	if (string.IsNullOrEmpty(dataInput.Text) || selectedFormat.Count == 0)
-		// 	{
-		// 		project.SendWarningToLog("Data or format cannot be empty");
-		// 		return "0";
-		// 	}
-
-		// 	string[] lines = dataInput.Text.Trim().Split('\n');
-		// 	project.SendInfoToLog($"Parsing [{lines.Length}] Twitter data lines", true);
-
-		// 	// Обработка строк
-		// 	for (int acc0 = 1; acc0 <= lines.Length; acc0++)
-		// 	{
-		// 		string line = lines[acc0 - 1].Trim();
-		// 		if (string.IsNullOrWhiteSpace(line))
-		// 		{
-		// 			project.SendWarningToLog($"Line {acc0} is empty", false);
-		// 			continue;
-		// 		}
-
-		// 		string[] data_parts = line.Split(':');
-		// 		Dictionary<string, string> parsed_data = new Dictionary<string, string>();
-
-		// 		for (int i = 0; i < selectedFormat.Count && i < data_parts.Length; i++)
-		// 		{
-		// 			parsed_data[selectedFormat[i]] = data_parts[i].Trim();
-		// 		}
-
-		// 		string LOGIN = parsed_data.ContainsKey("LOGIN") ? parsed_data["LOGIN"] : "";
-		// 		string PASSWORD = parsed_data.ContainsKey("PASSWORD") ? parsed_data["PASSWORD"] : "";
-		// 		string EMAIL = parsed_data.ContainsKey("EMAIL") ? parsed_data["EMAIL"] : "";
-		// 		string EMAIL_PASSWORD = parsed_data.ContainsKey("EMAIL_PASSWORD") ? parsed_data["EMAIL_PASSWORD"] : "";
-		// 		string TOKEN = parsed_data.ContainsKey("TOKEN") ? parsed_data["TOKEN"] : "";
-		// 		string CODE2FA = parsed_data.ContainsKey("CODE2FA") ? parsed_data["CODE2FA"] : "";
-		// 		string RECOVERY = parsed_data.ContainsKey("RECOVERY_SEED") ? parsed_data["RECOVERY_SEED"] : "";
-
-		// 		if (CODE2FA.Contains('/'))
-		// 			CODE2FA = CODE2FA.Split('/').Last();
-
-		// 		// Экранирование одинарных кавычек
-		// 		LOGIN = LOGIN.Replace("'", "''");
-		// 		PASSWORD = PASSWORD.Replace("'", "''");
-		// 		TOKEN = TOKEN.Replace("'", "''");
-		// 		CODE2FA = CODE2FA.Replace("'", "''");
-		// 		EMAIL = EMAIL.Replace("'", "''");
-		// 		EMAIL_PASSWORD = EMAIL_PASSWORD.Replace("'", "''");
-		// 		RECOVERY = RECOVERY.Replace("'", "''");
-
-		// 		try
-		// 		{
-		// 			string dbQuery = $@"UPDATE {table} SET 
-		// 				token = '{TOKEN}', 
-		// 				login = '{LOGIN}', 
-		// 				password = '{PASSWORD}', 
-		// 				code2fa = '{CODE2FA}', 
-		// 				email = '{EMAIL}', 
-		// 				email_pass = '{EMAIL_PASSWORD}', 
-		// 				recovery2fa = '{RECOVERY}', 
-		// 				cooldown = 0
-		// 				WHERE acc0 = {acc0};";
-		// 			SQL.W3Query(project, dbQuery, true);
-		// 			lineCount++;
-		// 		}
-		// 		catch (Exception ex)
-		// 		{
-		// 			project.SendWarningToLog($"Error processing line {acc0}: {ex.Message}", false);
-		// 		}
-		// 	}
-
-		// 	project.SendInfoToLog($"[{lineCount}] records added to [{table}]", true);
-		// 	return lineCount.ToString();
-
-		// }
-
-		// public static string ImportDiscord(IZennoPosterProjectModel project, string schema = "accounts")
-		// {
-		// 	var tableName = "discord"; // Статичное имя таблицы
-		// 	string schemaName = project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schema}." : "";
-		// 	string table = schemaName + tableName; // Итоговое имя с учётом схемы
-		// 	int lineCount = 0;
-
-		// 	// Создание формы
-		// 	System.Windows.Forms.Form form = new System.Windows.Forms.Form();
-		// 	form.Text = "Import Discord Data";
-		// 	form.Width = 420;
-		// 	form.Height = 700;
-
-		// 	// Возможные поля формата
-		// 	string[] availableFields = new string[] { "", "LOGIN", "PASSWORD", "TOKEN", "CODE2FA" }; // Урезаем до актуальных полей
-		// 	List<string> selectedFormat = new List<string>();
-		// 	System.Windows.Forms.TextBox formatDisplay = new System.Windows.Forms.TextBox();
-		// 	System.Windows.Forms.TextBox dataInput = new System.Windows.Forms.TextBox();
-
-		// 	// Метка для выбора формата
-		// 	System.Windows.Forms.Label formatLabel = new System.Windows.Forms.Label();
-		// 	formatLabel.Text = "Select format (one field per box):";
-		// 	formatLabel.AutoSize = true;
-		// 	formatLabel.Left = 10;
-		// 	formatLabel.Top = 10;
-		// 	form.Controls.Add(formatLabel);
-
-		// 	System.Windows.Forms.ComboBox[] formatComboBoxes = new System.Windows.Forms.ComboBox[availableFields.Length - 1];
-		// 	int spacing = 5;
-		// 	int totalSpacing = spacing * (formatComboBoxes.Length - 1); // Общий отступ между ComboBox
-		// 	int comboWidth = (form.ClientSize.Width - 20 - totalSpacing) / formatComboBoxes.Length; // 20 — отступы слева и справа
-		// 	for (int i = 0; i < formatComboBoxes.Length; i++)
-		// 	{
-		// 		formatComboBoxes[i] = new System.Windows.Forms.ComboBox();
-		// 		formatComboBoxes[i].DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-		// 		formatComboBoxes[i].Items.AddRange(availableFields);
-		// 		formatComboBoxes[i].SelectedIndex = 0; // По умолчанию пусто
-		// 		formatComboBoxes[i].Left = 10 + i * (comboWidth + spacing);
-		// 		formatComboBoxes[i].Top = 30;
-		// 		formatComboBoxes[i].Width = comboWidth;
-		// 		formatComboBoxes[i].SelectedIndexChanged += (s, e) =>
-		// 		{
-		// 			selectedFormat.Clear(); // Очищаем перед обновлением
-		// 			foreach (var combo in formatComboBoxes)
-		// 			{
-		// 				if (!string.IsNullOrEmpty(combo.SelectedItem?.ToString()))
-		// 					selectedFormat.Add(combo.SelectedItem.ToString());
-		// 			}
-		// 			formatDisplay.Text = string.Join(":", selectedFormat);
-		// 		};
-		// 		form.Controls.Add(formatComboBoxes[i]);
-		// 	}
-
-		// 	// Поле для отображения текущего формата
-		// 	formatDisplay.Left = 10;
-		// 	formatDisplay.Top = 60;
-		// 	formatDisplay.Width = form.ClientSize.Width - 20;
-		// 	formatDisplay.ReadOnly = true;
-		// 	form.Controls.Add(formatDisplay);
-
-		// 	// Метка и поле для ввода данных
-		// 	System.Windows.Forms.Label dataLabel = new System.Windows.Forms.Label();
-		// 	dataLabel.Text = "Input data (one per line, matching format):";
-		// 	dataLabel.AutoSize = true;
-		// 	dataLabel.Left = 10;
-		// 	dataLabel.Top = 90;
-		// 	form.Controls.Add(dataLabel);
-
-		// 	dataInput.Left = 10;
-		// 	dataInput.Top = 110;
-		// 	dataInput.Width = form.ClientSize.Width - 20;
-		// 	//dataInput.Height = 200;
-		// 	dataInput.Multiline = true;
-		// 	dataInput.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-		// 	form.Controls.Add(dataInput);
-
-		// 	// Кнопка "OK"
-		// 	System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
-		// 	okButton.Text = "OK";
-		// 	okButton.Width = form.ClientSize.Width - 10; 
-		// 	okButton.Height = 25; 
-		// 	okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
-		// 	okButton.Top = form.ClientSize.Height - okButton.Height - 5; 
-		// 	okButton.Click += (s, e) => { form.Close(); };
-		// 	form.Controls.Add(okButton);
-		// 	dataInput.Height = okButton.Top - dataInput.Top - 5;
-
-		// 	// Показываем форму
-		// 	form.ShowDialog();
-
-		// 	// Собираем формат из ComboBox
-		// 	selectedFormat.Clear();
-		// 	foreach (var combo in formatComboBoxes)
-		// 	{
-		// 		if (!string.IsNullOrEmpty(combo.SelectedItem?.ToString()))
-		// 			selectedFormat.Add(combo.SelectedItem.ToString());
-		// 	}
-
-		// 	// Проверка введённых данных
-		// 	if (string.IsNullOrEmpty(dataInput.Text) || selectedFormat.Count == 0)
-		// 	{
-		// 		project.SendWarningToLog("Data or format cannot be empty");
-		// 		return "0";
-		// 	}
-
-		// 	string[] lines = dataInput.Text.Trim().Split('\n');
-		// 	project.SendInfoToLog($"Parsing [{lines.Length}] Discord data lines", true);
-
-		// 	// Обработка строк
-		// 	for (int acc0 = 1; acc0 <= lines.Length; acc0++)
-		// 	{
-		// 		string line = lines[acc0 - 1].Trim();
-		// 		if (string.IsNullOrWhiteSpace(line))
-		// 		{
-		// 			project.SendWarningToLog($"Line {acc0} is empty", false);
-		// 			continue;
-		// 		}
-
-		// 		string[] data_parts = line.Split(':');
-		// 		Dictionary<string, string> parsed_data = new Dictionary<string, string>();
-
-		// 		for (int i = 0; i < selectedFormat.Count && i < data_parts.Length; i++)
-		// 		{
-		// 			parsed_data[selectedFormat[i]] = data_parts[i].Trim();
-		// 		}
-
-		// 		string LOGIN = parsed_data.ContainsKey("LOGIN") ? parsed_data["LOGIN"] : "";
-		// 		string PASSWORD = parsed_data.ContainsKey("PASSWORD") ? parsed_data["PASSWORD"] : "";
-		// 		string TOKEN = parsed_data.ContainsKey("TOKEN") ? parsed_data["TOKEN"] : "";
-		// 		string CODE2FA = parsed_data.ContainsKey("CODE2FA") ? parsed_data["CODE2FA"] : "";
-
-		// 		if (CODE2FA.Contains('/'))
-		// 			CODE2FA = CODE2FA.Split('/').Last();
-
-		// 		// Экранирование одинарных кавычек
-		// 		LOGIN = LOGIN.Replace("'", "''");
-		// 		PASSWORD = PASSWORD.Replace("'", "''");
-		// 		TOKEN = TOKEN.Replace("'", "''");
-		// 		CODE2FA = CODE2FA.Replace("'", "''");
-
-		// 		try
-		// 		{
-		// 			string dbQuery = $@"UPDATE {table} SET 
-		// 				token = '{TOKEN}', 
-		// 				login = '{LOGIN}', 
-		// 				password = '{PASSWORD}', 
-		// 				code2fa = '{CODE2FA}', 
-		// 				cooldown = 0
-		// 				WHERE acc0 = {acc0};";
-		// 			SQL.W3Query(project, dbQuery, true);
-		// 			lineCount++;
-		// 		}
-		// 		catch (Exception ex)
-		// 		{
-		// 			project.SendWarningToLog($"Error processing line {acc0}: {ex.Message}", false);
-		// 		}
-		// 	}
-
-		// 	project.SendInfoToLog($"[{lineCount}] records added to [{table}]", true);
-		// 	return lineCount.ToString();
-		// }
-
 
 	}
 
@@ -2155,7 +1595,7 @@ namespace w3tools //by @w3bgrep
 			_schema = schema;
 		}
 
-		public string ImportData(string tableName, string formTitle, string[] availableFields, Dictionary<string, string> columnMapping)
+		public string ImportData(string tableName, string formTitle, string[] availableFields, Dictionary<string, string> columnMapping, string message = "Select format (one field per box):")
 		{
 			string schemaName = _project.Variables["DBmode"].Value == "PostgreSQL" ? $"{_schema}." : "";
 			string table = schemaName + tableName;
@@ -2173,7 +1613,7 @@ namespace w3tools //by @w3bgrep
 
 			// Метка для выбора формата
 			System.Windows.Forms.Label formatLabel = new System.Windows.Forms.Label();
-			formatLabel.Text = "Select format (one field per box):";
+			formatLabel.Text = message;
 			formatLabel.AutoSize = true;
 			formatLabel.Left = 10;
 			formatLabel.Top = 10;
@@ -2349,6 +1789,122 @@ namespace w3tools //by @w3bgrep
 				{ "RECOVERY_SEED", "recovery2fa" }
 			};
 			return ImportData("google", "Import Google Data", googleFields, googleMapping);
+		}
+
+		public string ImportNickname()
+		{
+			string[] fields = new string[] { "", "NICKNAME" };
+			var mapping = new Dictionary<string, string>
+			{
+				{ "NICKNAME", "nickname" },
+			};
+			return ImportData("profile", "Import nickname", fields, mapping);
+		}
+
+		public string ImportBio()
+		{
+			string[] fields = new string[] { "", "BIO" };
+			var mapping = new Dictionary<string, string>
+			{
+				{ "BIO", "bio" },
+			};
+			return ImportData("profile", "Import Bio", fields, mapping);
+		}
+
+		public string ImportProxy()
+		{
+			string[] fields = new string[] { "", "PROXY" };
+			var mapping = new Dictionary<string, string>
+			{
+				{ "PROXY", "proxy" },
+			};
+			return ImportData("profile", "Import Proxy ", fields, mapping, message:"Proxy format: http://login1:pass1@111.111.111.111:1111" );
+		}
+
+		// Публичный метод для настроек
+		public void ImportSettings(string message = "input data please", int width = 600, int height = 400)
+		{
+			_project.SendInfoToLog($"Opening variables input dialog: {message}", true);
+
+			System.Windows.Forms.Form form = new System.Windows.Forms.Form();
+			form.Text = message;
+			form.Width = width;
+			form.Height = height;
+
+			string[] variableNames = new string[]
+			{
+				"settingsApiFirstMail",
+				"settingsApiPerplexity",
+				"settingsDsInviteOwn",
+				"settingsDsOwnServer",
+				"settingsFmailLogin",
+				"settingsFmailPass",
+				"settingsTgLogGroup",
+				"settingsTgLogToken",
+				"settingsTgLogTopic",
+				"settingsTgMailGroup",
+				"settingsZenFolder",
+				"settingsApiBinance"
+			};
+
+			var textBoxes = new Dictionary<string, System.Windows.Forms.TextBox>();
+
+			int currentTop = 5;
+			int labelWidth = 150;
+			int textBoxWidth = 400;
+			int spacing = 5;
+
+			foreach (string varName in variableNames)
+			{
+				System.Windows.Forms.Label label = new System.Windows.Forms.Label();
+				label.Text = varName + ":";
+				label.AutoSize = true;
+				label.Left = 5;
+				label.Top = currentTop;
+				form.Controls.Add(label);
+
+				System.Windows.Forms.TextBox textBox = new System.Windows.Forms.TextBox();
+				textBox.Left = label.Left + labelWidth + spacing;
+				textBox.Top = currentTop;
+				textBox.Width = textBoxWidth;
+				textBox.Text = _project.Variables[varName].Value;
+				form.Controls.Add(textBox);
+
+				textBoxes[varName] = textBox;
+				currentTop += textBox.Height + spacing;
+			}
+
+			System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
+			okButton.Text = "OK";
+			okButton.Width = 50;
+			okButton.Height = 25;
+			okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
+			okButton.Top = currentTop + 10;
+			okButton.Click += (s, e) => { form.Close(); };
+			form.Controls.Add(okButton);
+
+			int requiredHeight = okButton.Top + okButton.Height + 40;
+			if (form.Height < requiredHeight)
+			{
+				form.Height = requiredHeight;
+			}
+
+			form.ShowDialog();
+
+			string tableName = "settings";
+			foreach (string varName in variableNames)
+			{
+				string newValue = textBoxes[varName].Text;
+				_project.Variables[varName].Value = newValue;
+				_project.SendInfoToLog($"Updated variable {varName}: {newValue}", true);
+
+				if (!string.IsNullOrEmpty(newValue))
+				{
+					string escapedValue = newValue.Replace("'", "''");
+					SQL.W3Query(_project, $"INSERT OR REPLACE INTO {tableName} (var, value) VALUES ('{varName}', '{escapedValue}');");
+					_project.SendInfoToLog($"Inserted into {tableName}: {varName} = {newValue}", true);
+				}
+			}
 		}
 	}
 
