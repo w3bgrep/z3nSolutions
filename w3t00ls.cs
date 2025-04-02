@@ -1502,7 +1502,6 @@ namespace w3tools //by @w3bgrep
 		}
 		public static void ImportKeys(IZennoPosterProjectModel project,string filePath, string keyType, string schema = "accounts")
 		{
-
 			var acc0 = project.Variables["acc0"];
 			int rangeEnd = int.Parse(project.Variables["rangeEnd"].Value);
 			var blockchain = new Blockchain();
@@ -1540,7 +1539,6 @@ namespace w3tools //by @w3bgrep
 							string privateKey;
 							string address;
 							
-							// Если это мнемоника, а не прямой приватный ключ
 							if (key.Split(' ').Length > 1) // Простая проверка на мнемонику
 							{
 								var mnemonicObj = new Mnemonic(key);
@@ -1583,67 +1581,56 @@ namespace w3tools //by @w3bgrep
 
     public static class Db
     {
-        public static string KeyEVM(IZennoPosterProjectModel project)
+        public static string KeyEVM(IZennoPosterProjectModel project, string tableName ="blockchain_private", string schemaName = "accounts")
         {
-            var dbMode = project.Variables["DBmode"].Value; var resp = "";
-            if (dbMode == "SQLite")  resp = SQL.W3Query(project,$"SELECT private256K1 FROM accBlockchain WHERE acc0 = {project.Variables["acc0"].Value}");
-            else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$"SELECT private256K1 FROM accounts.blockchain WHERE acc0 = {project.Variables["acc0"].Value}");
+			string table = (project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+            var resp = SQL.W3Query(project,$"SELECT secp256k1 FROM {table} WHERE acc0 = {project.Variables["acc0"].Value}");
             return SAFU.Decode(project,resp);
         }
-        public static string KeySOL(IZennoPosterProjectModel project)
+        public static string KeySOL(IZennoPosterProjectModel project, string tableName ="blockchain_private", string schemaName = "accounts")
         {
-            var dbMode = project.Variables["DBmode"].Value; var resp = "";
-            if (dbMode == "SQLite")  resp = SQL.W3Query(project,$"SELECT privateBASE58 FROM accBlockchain WHERE acc0 = {project.Variables["acc0"].Value}");
-            else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$"SELECT privateBASE58 FROM accounts.blockchain WHERE acc0 = {project.Variables["acc0"].Value}");
+            string table = (project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;			
+            var  resp = SQL.W3Query(project,$"SELECT base58 FROM {table} WHERE acc0 = {project.Variables["acc0"].Value}");
             return SAFU.Decode(project,resp);
         }
-        public static string Seed(IZennoPosterProjectModel project)
+        public static string Seed(IZennoPosterProjectModel project, string tableName ="blockchain_private", string schemaName = "accounts")
         {
-            var dbMode = project.Variables["DBmode"].Value; var resp = "";
-            if (dbMode == "SQLite")  resp = SQL.W3Query(project,$"SELECT seedBIP39 FROM accBlockchain WHERE acc0 = {project.Variables["acc0"].Value}");
-            else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$"SELECT seedBIP39 FROM accounts.blockchain WHERE acc0 = {project.Variables["acc0"].Value}");
+            string table = (project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;			
+            var resp = SQL.W3Query(project,$"SELECT bip39 FROM {table} WHERE acc0 = {project.Variables["acc0"].Value}");
             return SAFU.Decode(project,resp);
         }   
-        public static string AdrEvm(IZennoPosterProjectModel project)
+        public static string AdrEvm(IZennoPosterProjectModel project, string tableName ="blockchain_public", string schemaName = "accounts")
         {
-            var dbMode = project.Variables["DBmode"].Value; var resp = "";
-            if (dbMode == "SQLite") resp = SQL.W3Query(project,$"SELECT publicEVM FROM accBlockchain WHERE acc0 = {project.Variables["acc0"].Value}");
-            else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$"SELECT publicEVM FROM accounts.blockchain WHERE acc0 = {project.Variables["acc0"].Value}");
+            string table = (project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;	
+            var resp = SQL.W3Query(project,$"SELECT evm FROM {table} WHERE acc0 = {project.Variables["acc0"].Value}");
             project.Variables["addressEvm"].Value = resp;  return resp;
         }   
-        public static string Proxy(IZennoPosterProjectModel project)
+        public static string Proxy(IZennoPosterProjectModel project, string tableName ="profile", string schemaName = "accounts")
         {
-            var dbMode = project.Variables["DBmode"].Value; var resp = "";
-            if (dbMode == "SQLite")  resp = SQL.W3Query(project,$"SELECT proxy FROM accProfile WHERE acc0 = {project.Variables["acc0"].Value}");
-            else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$"SELECT proxy FROM accounts.profile WHERE acc0 = {project.Variables["acc0"].Value}");
+            string table = (project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+            var resp = SQL.W3Query(project,$"SELECT proxy FROM {table} WHERE acc0 = {project.Variables["acc0"].Value}");
             project.Variables["proxy"].Value = resp;   return resp;
         }   
-        public static string NickName(IZennoPosterProjectModel project)
+        public static string Bio(IZennoPosterProjectModel project, string tableName ="profile", string schemaName = "accounts")
         {
-            var dbMode = project.Variables["DBmode"].Value; var resp = "";
-			var emailMode = project.Variables["cfgMail"].Value; 
-            if (dbMode == "SQLite")  resp = SQL.W3Query(project,$@"SELECT nickname, bio FROM accProfile WHERE acc0 = {project.Variables["acc0"].Value};");
-            else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$@"SELECT nickname, bio FROM accounts.profile WHERE acc0 = {project.Variables["acc0"].Value};");	
 
+			string table = (project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+            var resp = SQL.W3Query(project,$@"SELECT nickname, bio FROM {table} WHERE acc0 = {project.Variables["acc0"].Value};");
             string[] respData = resp.Split('|');
             project.Variables["accNICKNAME"].Value = respData[0].Trim();
-            project.Variables["accBIO"].Value = respData[1].Trim();
-			
+            project.Variables["accBIO"].Value = respData[1].Trim();			
             return resp;
         }   
-        public static string Settings(IZennoPosterProjectModel project)
+        public static string Settings(IZennoPosterProjectModel project, string tableName ="settings", string schemaName = "accounts")
         {
-            var dbMode = project.Variables["DBmode"].Value; var resp = "";
-                if (dbMode == "SQLite")  resp = SQL.W3Query(project,$"SELECT var, value FROM accSettings");
-                else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$"SELECT var, value FROM accounts.settings"); return resp;
+			return SQL.W3Query(project,$"SELECT var, value FROM {tableName}");
         }   
-        public static string Email(IZennoPosterProjectModel project)
+        public static string Email(IZennoPosterProjectModel project, string tableName ="google", string schemaName = "accounts")
         {
-            var dbMode = project.Variables["DBmode"].Value; var resp = "";
+            string table = (project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
 			var emailMode = project.Variables["cfgMail"].Value; 
-            if (dbMode == "SQLite")  resp = SQL.W3Query(project,$@"SELECT login, icloud FROM accGoogle WHERE acc0 = {project.Variables["acc0"].Value};");
-            else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$@"SELECT login, icloud FROM accounts.google WHERE acc0 = {project.Variables["acc0"].Value};");	
-
+            var resp = SQL.W3Query(project,$@"SELECT login, icloud FROM {table} WHERE acc0 = {project.Variables["acc0"].Value};");
+			
             string[] emailData = resp.Split('|');
             project.Variables["emailGOOGLE"].Value = emailData[0].Trim();
             project.Variables["emailICLOUD"].Value = emailData[1].Trim();
@@ -1652,12 +1639,11 @@ namespace w3tools //by @w3bgrep
 			if (emailMode == "Icloud" ) resp = emailData[1].Trim();
             return resp;
         }   
-        public static string Twitter(IZennoPosterProjectModel project)
+        public static string Twitter(IZennoPosterProjectModel project, string tableName ="twitter", string schemaName = "accounts")
         {
-            var dbMode = project.Variables["DBmode"].Value; var resp = "";
-            if (dbMode == "SQLite")  resp = SQL.W3Query(project,$@"SELECT status, token, login, password, code2fa, emailLogin, emailPass FROM accTwitter WHERE acc0 = {project.Variables["acc0"].Value};");
-            else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$@"SELECT status, token, login, password, code2fa, emailLogin, emailPass FROM accounts.twitter WHERE acc0 = {project.Variables["acc0"].Value};");
-            
+            string table = (project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+			var resp = SQL.W3Query(project,$@"SELECT status, token, login, password, code2fa, emailLogin, emailPass FROM {table} WHERE acc0 = {project.Variables["acc0"].Value};");
+			   
             string[] twitterData = resp.Split('|');
             project.Variables["twitterSTATUS"].Value = twitterData[0].Trim();
             project.Variables["twitterTOKEN"].Value = twitterData[1].Trim();
@@ -1668,28 +1654,26 @@ namespace w3tools //by @w3bgrep
             project.Variables["twitterEMAIL_PASSWORD"].Value = twitterData[6].Trim();			
             return project.Variables["twitterSTATUS"].Value;
         }  
-        public static string Discord(IZennoPosterProjectModel project)
+        public static string Discord(IZennoPosterProjectModel project, string tableName ="discord", string schemaName = "accounts")
         {
-            var dbMode = project.Variables["DBmode"].Value; var resp = "";
-				if (dbMode == "SQLite")  resp = SQL.W3Query(project,$@"SELECT status, token, login, password, code2FA, username, servers FROM accDiscord WHERE acc0 = {project.Variables["acc0"].Value};");
-                else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$@"SELECT status, token, login, password, code2FA, username, servers FROM accounts.discord WHERE acc0 = {project.Variables["acc0"].Value};");
-				
-                string[] discordData = resp.Split('|');
-				project.Variables["discordSTATUS"].Value = discordData[0].Trim();
-				project.Variables["discordTOKEN"].Value = discordData[1].Trim();
-				project.Variables["discordLOGIN"].Value = discordData[2].Trim();
-				project.Variables["discordPASSWORD"].Value = discordData[3].Trim();
-				project.Variables["discord2FACODE"].Value = discordData[4].Trim();
-				project.Variables["discordUSERNAME"].Value = discordData[5].Trim();
-				project.Variables["discordSERVERS"].Value = discordData[6].Trim();
-                return project.Variables["discordSTATUS"].Value;
+            string table = (project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+			var resp = SQL.W3Query(project,$@"SELECT status, token, login, password, code2FA, username, servers FROM {table} WHERE acc0 = {project.Variables["acc0"].Value};");
+			string[] discordData = resp.Split('|');
+			project.Variables["discordSTATUS"].Value = discordData[0].Trim();
+			project.Variables["discordTOKEN"].Value = discordData[1].Trim();
+			project.Variables["discordLOGIN"].Value = discordData[2].Trim();
+			project.Variables["discordPASSWORD"].Value = discordData[3].Trim();
+			project.Variables["discord2FACODE"].Value = discordData[4].Trim();
+			project.Variables["discordUSERNAME"].Value = discordData[5].Trim();
+			project.Variables["discordSERVERS"].Value = discordData[6].Trim();
+			return project.Variables["discordSTATUS"].Value;
         }  
-        public static string Google(IZennoPosterProjectModel project)
+        public static string Google(IZennoPosterProjectModel project, string tableName ="google", string schemaName = "accounts")
         {
-            var dbMode = project.Variables["DBmode"].Value; var resp = "";
-            if (dbMode == "SQLite")  resp = SQL.W3Query(project,$@"SELECT status, login, password, code2FA, recoveryEmail, recovery2FA FROM accGoogle WHERE acc0 = {project.Variables["acc0"].Value};");
-            else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$@"SELECT status, login, password, code2FA, recoveryEmail, recovery2FA FROM accounts.google WHERE acc0 = {project.Variables["acc0"].Value};");	
-
+            string table = (project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+			
+			var resp = SQL.W3Query(project,$@"SELECT status, login, password, code2FA, recoveryEmail, recovery2FA FROM {table} WHERE acc0 = {project.Variables["acc0"].Value};");
+            
             string[] googleData = resp.Split('|');
             project.Variables["googleSTATUS"].Value = googleData[0].Trim();
             project.Variables["googleLOGIN"].Value = googleData[1].Trim();
@@ -1699,26 +1683,23 @@ namespace w3tools //by @w3bgrep
             project.Variables["googleBACKUP_CODES"].Value = googleData[5].Trim();
             return project.Variables["googleSTATUS"].Value;
         }  
- 		public static string TwitterTokenUpdate(IZennoPosterProjectModel project)  
+ 		public static void TwitterTokenUpdate(IZennoPosterProjectModel project, string tableName ="twitter", string schemaName = "accounts")  
 		{
-			var dbMode = project.Variables["DBmode"].Value;  var resp = "";
-            if (dbMode == "SQLite")  resp = SQL.W3Query(project,$"UPDATE accTwitter SET token = '{project.Variables["twitterTOKEN"].Value}' WHERE acc0 = {project.Variables["acc0"].Value};");
-            else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$"UPDATE accounts.twitter SET token = '{project.Variables["twitterTOKEN"].Value}' WHERE acc0 = {project.Variables["acc0"].Value};");
-            return resp;
+			string table = (project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+			var resp = SQL.W3Query(project,$"UPDATE {table} SET token = '{project.Variables["twitterTOKEN"].Value}' WHERE acc0 = {project.Variables["acc0"].Value};");
+
 		}
-		public static string UpdAddressSol(IZennoPosterProjectModel project,string address = "")  
+		public static void UpdAddressSol(IZennoPosterProjectModel project,string address = "", string tableName ="blockchain_public", string schemaName = "accounts")  
 		{
-			var dbMode = project.Variables["DBmode"].Value;  var resp = "";
+			string table = (project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
 			if (address == "") address = project.Variables["addressSol"].Value;
-            if (dbMode == "SQLite")  resp = SQL.W3Query(project,$"UPDATE accBlockchain SET publicSOL = '{address}' WHERE acc0 = {project.Variables["acc0"].Value};");
-            else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$"UPDATE accounts.blockchain SET publicsol = '{address}' WHERE acc0 = {project.Variables["acc0"].Value};");
-            return resp;
+			SQL.W3Query(project,$"UPDATE {table} SET publicSOL = '{address}' WHERE acc0 = {project.Variables["acc0"].Value};");
+
 		}
-		public static string BinanceApiKeys(IZennoPosterProjectModel project)  
+		public static string BinanceApiKeys(IZennoPosterProjectModel project, string tableName ="settings", string schemaName = "accounts")  
 		{
-            var dbMode = project.Variables["DBmode"].Value; var resp = "";
-                if (dbMode == "SQLite")  resp = SQL.W3Query(project,$"SELECT value FROM accSettings WHERE var = 'settingsApiBinance';");
-                else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$"SELECT value FROM accounts.settings WHERE var = 'settingsApiBinance';"); return resp;
+            string table = (project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+			return SQL.W3Query(project,$"SELECT value FROM {tableName} WHERE var = 'settingsApiBinance';");
 		}
 		public static void Upd(IZennoPosterProjectModel project, string toUpd, string tableName = "", bool log = false)
 		{
@@ -4401,6 +4382,34 @@ namespace w3tools //by @w3bgrep
 		    
 		    return string.Join(",", results);
 		}
+
+		public static string InputBox(string message = "input data please", int width = 600, int height = 600)
+		{
+
+			System.Windows.Forms.Form form = new System.Windows.Forms.Form();
+			form.Text = message;
+			form.Width = width;
+			form.Height = height;
+			System.Windows.Forms.TextBox smsBox = new System.Windows.Forms.TextBox();
+			smsBox.Multiline = true;
+			smsBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			smsBox.Left = 5;
+			smsBox.Top = 5;
+			smsBox.Width = form.ClientSize.Width - 10;
+			System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
+			okButton.Text = "OK";
+			okButton.Width = form.ClientSize.Width - 10; 
+			okButton.Height = 25; 
+			okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
+			okButton.Top = form.ClientSize.Height - okButton.Height - 5; 
+			okButton.Click += new System.EventHandler((sender, e) => { form.Close(); }); 
+			smsBox.Height = okButton.Top - smsBox.Top - 5;
+			form.Controls.Add(smsBox);
+			form.Controls.Add(okButton);
+			form.ShowDialog();
+			return smsBox.Text;
+		}
+
 	}
 	public static class Browser
 	{		
