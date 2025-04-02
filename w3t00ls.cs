@@ -1500,7 +1500,7 @@ namespace w3tools //by @w3bgrep
 			};
 			W3MakeTable(project, tableStructure, tableName, true);
 		}
-		public static void ImportKeys(IZennoPosterProjectModel project,string filePath, string keyType, string schema = "accounts")
+		public static string ImportKeys(IZennoPosterProjectModel project, string keyType, string schema = "accounts")
 		{
 			var acc0 = project.Variables["acc0"];
 			int rangeEnd = int.Parse(project.Variables["rangeEnd"].Value);
@@ -1511,15 +1511,18 @@ namespace w3tools //by @w3bgrep
 			string privateTable = schemaName + "blockchain_private";
 			string publicTable = schemaName + "blockchain_public";			
 			acc0.Value = "1";
-			
-			if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+
+			input:
+			var text = Tools.InputBox($"Input {keyType} keys devided by new string");
+
+			if (string.IsNullOrEmpty(text)) 
 			{
-				project.SendWarningToLog($"Path is empty or file not found: {filePath}");
-				return;
+				Loggers.l0g(project,"!W could not be empty");
+				goto input;
 			}
 
-			string[] lines = File.ReadAllLines(filePath);
-			project.SendInfoToLog($"Reading [{lines.Length}] strings from [{filePath}]", false);
+			string[] lines = text.Trim().Split('\n');
+			project.SendInfoToLog($"Parsing [{lines.Length}] strings", false);
 
 			for (int i = 0; i < lines.Length && int.Parse(acc0.Value) <= rangeEnd; i++)
 			{
@@ -1564,7 +1567,7 @@ namespace w3tools //by @w3bgrep
 
 						default:
 							project.SendWarningToLog($"Unknown key type: {keyType}");
-							return;
+							return lines.Length.ToString();
 					}
 					
 					acc0.Value = (int.Parse(acc0.Value) + 1).ToString();
@@ -1575,7 +1578,116 @@ namespace w3tools //by @w3bgrep
 					acc0.Value = (int.Parse(acc0.Value) + 1).ToString();
 				}
 			}
+			return lines.Length.ToString();
 		}
+
+		public static void ImportSettings(IZennoPosterProjectModel project, string message = "input data please", int width = 600, int height = 600)
+		{
+			// Логируем открытие формы
+			project.SendInfoToLog($"Opening variables input dialog: {message}", true);
+
+			// Создаем форму
+			System.Windows.Forms.Form form = new System.Windows.Forms.Form();
+			form.Text = message;
+			form.Width = width;
+			form.Height = height;
+
+			// Список переменных
+			string[] variableNames = new string[]
+			{
+				"settingsApiFirstMail",
+				"settingsApiPerplexity",
+				"settingsDsInviteOwn",
+				"settingsDsOwnServer",
+				"settingsFmailLogin",
+				"settingsFmailPass",
+				"settingsTgLogGroup",
+				"settingsTgLogToken",
+				"settingsTgLogTopic",
+				"settingsTgMailGroup",
+				"settingsZenFolder",
+				"settingsApiBinance",
+			};
+
+			// Словарь для хранения TextBox'ов для каждой переменной
+			var textBoxes = new Dictionary<string, System.Windows.Forms.TextBox>();
+
+			// Начальные координаты для размещения элементов
+			int currentTop = 5;
+			int labelWidth = 150; // Ширина метки
+			int textBoxWidth = 400; // Ширина текстового поля
+			int spacing = 5; // Отступ между элементами
+
+			// Создаем метку и текстовое поле для каждой переменной
+			foreach (string varName in variableNames)
+			{
+				// Создаем метку (Label) с названием переменной
+				System.Windows.Forms.Label label = new System.Windows.Forms.Label();
+				label.Text = varName + ":";
+				label.AutoSize = true;
+				label.Left = 5;
+				label.Top = currentTop;
+				form.Controls.Add(label);
+
+				// Создаем текстовое поле (TextBox)
+				System.Windows.Forms.TextBox textBox = new System.Windows.Forms.TextBox();
+				textBox.Left = label.Left + labelWidth + spacing;
+				textBox.Top = currentTop;
+				textBox.Width = textBoxWidth;
+				textBox.Text = project.Variables[varName].Value; // Заполняем текущим значением переменной
+				form.Controls.Add(textBox);
+
+				// Сохраняем TextBox в словарь
+				textBoxes[varName] = textBox;
+
+				// Увеличиваем текущую позицию по вертикали
+				currentTop += textBox.Height + spacing;
+			}
+
+			// Добавляем кнопку "OK"
+			System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
+			okButton.Text = "OK";
+			okButton.Width = 50;
+			okButton.Height = 25;
+			okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
+			okButton.Top = currentTop + 10;
+			okButton.Click += new System.EventHandler((sender, e) => { form.Close(); });
+			form.Controls.Add(okButton);
+
+			// Устанавливаем минимальную высоту формы, чтобы все элементы поместились
+			int requiredHeight = okButton.Top + okButton.Height + 40; // 40 пикселей для отступов и заголовка
+			if (form.Height < requiredHeight)
+			{
+				form.Height = requiredHeight;
+			}
+
+			// Отображаем форму модально
+			form.ShowDialog();
+
+			// Сохраняем введенные данные в переменные ZennoPoster и записываем в таблицу
+			string tableName = "settings";
+			foreach (string varName in variableNames)
+			{
+				// Получаем введенное значение
+				string newValue = textBoxes[varName].Text;
+
+				// Сохраняем в переменную ZennoPoster
+				project.Variables[varName].Value = newValue;
+				project.SendInfoToLog($"Updated variable {varName}: {newValue}", true);
+
+				// Записываем в таблицу accSettings
+				if (!string.IsNullOrEmpty(newValue))
+				{
+					string escapedValue = newValue.Replace("'", "''"); // Экранируем одинарные кавычки
+					W3Query(project, $"INSERT OR REPLACE INTO {tableName} (var, value) VALUES ('{varName}', '{escapedValue}');");
+					project.SendInfoToLog($"Inserted into {tableName}: {varName} = {newValue}", true);
+				}
+			}
+
+			// Логируем закрытие формы
+			project.SendInfoToLog("Variables input dialog closed", true);
+		}
+
 
 	}
 
