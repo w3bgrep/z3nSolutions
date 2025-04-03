@@ -627,7 +627,6 @@ namespace w3tools //by @w3bgrep
 			w3tools.OnStart.GetGlobalVars(project);
 			w3tools.OnStart.SetSettingsFromDb(project);
 		}
-
 		public static void FilterAccList(IZennoPosterProjectModel project, List<string> dbQueries, bool log = false)
 		{
 			// Ручной режим
@@ -691,7 +690,6 @@ namespace w3tools //by @w3bgrep
 			project.Lists["accs"].AddRange(allAccounts);
 			if (log) Loggers.l0g(project, $"final list [{string.Join("|", project.Lists["accs"])}]");
 		}
-
 		public static void SetProfile(this Instance instance, IZennoPosterProjectModel project)
 		{
 			var tableName = "";
@@ -2179,7 +2177,36 @@ namespace w3tools //by @w3bgrep
 			}
 		}
 
+		public void ShowCreateDbWarning()
+		{
+			System.Windows.Forms.Form form = new System.Windows.Forms.Form();
+			form.Text = "Warning";
+			form.Width = 400;
+			form.Height = 200;
+			form.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen; // Центрируем окно
 
+			System.Windows.Forms.Label messageLabel = new System.Windows.Forms.Label();
+			messageLabel.Text = "Please uncheck the 'CreateDb' checkbox.";
+			messageLabel.Font = new System.Drawing.Font("Arial", 12, System.Drawing.FontStyle.Bold); // Жирный шрифт
+			messageLabel.AutoSize = true;
+			messageLabel.Left = (form.ClientSize.Width - messageLabel.Width) / 2; // Центрируем по горизонтали
+			messageLabel.Top = 30; // Отступ сверху
+			form.Controls.Add(messageLabel);
+
+			// Пересчитываем позицию после добавления, так как AutoSize может изменить ширину
+			messageLabel.Left = (form.ClientSize.Width - messageLabel.Width) / 2;
+
+			System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
+			okButton.Text = "OK";
+			okButton.Width = 100;
+			okButton.Height = 30;
+			okButton.Left = (form.ClientSize.Width - okButton.Width) / 2; // Центрируем кнопку
+			okButton.Top = form.ClientSize.Height - okButton.Height - 40; // Отступ снизу
+			okButton.Click += (s, e) => { form.Close(); };
+			form.Controls.Add(okButton);
+
+			form.ShowDialog();
+		}
 	}
 
 
