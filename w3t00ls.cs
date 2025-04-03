@@ -1339,62 +1339,9 @@ namespace w3tools //by @w3bgrep
                 else if (dbMode == "PostgreSQL") PostgresDB.pSQLMakeTable(project, tableStructure, tableName, strictMode, insertData, host, dbName, dbUser, dbPswd, schemaName, log:log);
                 else throw new Exception($"Неподдерживаемый режим базы данных: {dbMode}");
             }
-        public static string DBget(IZennoPosterProjectModel project, string req)
-        {
-            var dbMode = project.Variables["DBmode"].Value; var resp = "";
-            //socials
-            if (req == "Twitter")
-            {
-				if (dbMode == "SQLite")  resp = SQL.W3Query(project,$@"SELECT status, token, login, password, code2fa, emailLogin, emailPass FROM accTwitter WHERE acc0 = {project.Variables["acc0"].Value};");
-                else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$@"SELECT status, token, login, password, code2fa, emailLogin, emailPass FROM accounts.twitter WHERE acc0 = {project.Variables["acc0"].Value};");
-                string[] twitterData = resp.Split('|');
-				project.Variables["twitterSTATUS"].Value = twitterData[0].Trim();
-				project.Variables["twitterTOKEN"].Value = twitterData[1].Trim();
-				project.Variables["twitterLOGIN"].Value = twitterData[2].Trim();
-				project.Variables["twitterPASSWORD"].Value = twitterData[3].Trim();
-				project.Variables["twitterCODE2FA"].Value = twitterData[4].Trim();
-				project.Variables["twitterEMAIL"].Value = twitterData[5].Trim();
-				project.Variables["twitterEMAIL_PASSWORD"].Value = twitterData[6].Trim();			
-				return project.Variables["twitterSTATUS"].Value;
-            }
-
-			if (req == "Discord")
-			{
-
-				if (dbMode == "SQLite")  resp = SQL.W3Query(project,$@"SELECT status, token, login, password, code2FA, username, servers FROM accDiscord WHERE acc0 = {project.Variables["acc0"].Value};");
-                else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$@"SELECT status, token, login, password, code2FA, username, servers FROM accounts.discord WHERE acc0 = {project.Variables["acc0"].Value};");
-
-				string[] discordData = resp.Split('|');
-				project.Variables["discordSTATUS"].Value = discordData[0].Trim();
-				project.Variables["discordTOKEN"].Value = discordData[1].Trim();
-				project.Variables["discordLOGIN"].Value = discordData[2].Trim();
-				project.Variables["discordPASSWORD"].Value = discordData[3].Trim();
-				project.Variables["discord2FACODE"].Value = discordData[4].Trim();
-				project.Variables["discordUSERNAME"].Value = discordData[5].Trim();
-				project.Variables["discordSERVERS"].Value = discordData[6].Trim();
-                return project.Variables["discordSTATUS"].Value;
-			}
-
-			if (req == "Google")
-			{
- 				if (dbMode == "SQLite")  resp = SQL.W3Query(project,$@"SELECT status, login, password, code2FA, recoveryEmail, recovery2FA FROM accGoogle WHERE acc0 = {project.Variables["acc0"].Value};");
-                else if (dbMode == "PostgreSQL") resp = SQL.W3Query(project,$@"SELECT status, login, password, code2FA, recoveryEmail, recovery2FA FROM accounts.google WHERE acc0 = {project.Variables["acc0"].Value};");	
-
-				string[] googleData = resp.Split('|');
-				project.Variables["googleSTATUS"].Value = googleData[0].Trim();
-				project.Variables["googleLOGIN"].Value = googleData[1].Trim();
-				project.Variables["googlePASSWORD"].Value = googleData[2].Trim();
-				project.Variables["google2FACODE"].Value =googleData[3].Trim();
-				project.Variables["googleSECURITY_MAIL"].Value = googleData[4].Trim();
-				project.Variables["googleBACKUP_CODES"].Value = googleData[5].Trim();
-                return project.Variables["googleSTATUS"].Value;
-            }
-            return resp;
-
-        }
+        
 		
 	}
-
 	public class DataImporter
 	{
 		private readonly IZennoPosterProjectModel _project;
@@ -2145,101 +2092,6 @@ namespace w3tools //by @w3bgrep
 			_instance.CanvasRenderMode = ZennoLab.InterfacesLibrary.Enums.Browser.CanvasMode.Block;
 			try { _instance.Launch(ZennoLab.InterfacesLibrary.Enums.Browser.BrowserType.WithoutBrowser, false); } catch { }
 		}
-		// private void ImportSettings(string message = "input data please", int width = 600, int height = 400)
-		// {
-		// 	_project.SendInfoToLog($"Opening variables input dialog: {message}", true);
-
-		// 	System.Windows.Forms.Form form = new System.Windows.Forms.Form();
-		// 	form.Text = message;
-		// 	form.Width = width;
-		// 	form.Height = height;
-		// 	form.TopMost = true; // Форма поверх всех окон
-		// 	form.Location = new System.Drawing.Point(108, 108);		
-
-		// 	string[] variableNames = new string[]
-		// 	{
-		// 		"settingsApiFirstMail",
-		// 		"settingsApiPerplexity",
-		// 		"settingsDsInviteOwn",
-		// 		"settingsDsOwnServer",
-		// 		"settingsFmailLogin",
-		// 		"settingsFmailPass",
-		// 		"settingsTgLogGroup",
-		// 		"settingsTgLogToken",
-		// 		"settingsTgLogTopic",
-		// 		"settingsTgMailGroup",
-		// 		"settingsZenFolder",
-		// 		"settingsApiBinance"
-		// 	};
-
-		// 	var textBoxes = new Dictionary<string, System.Windows.Forms.TextBox>();
-
-		// 	int currentTop = 5;
-		// 	int labelWidth = 150;
-		// 	int textBoxWidth = 400;
-		// 	int spacing = 5;
-
-		// 	foreach (string varName in variableNames)
-		// 	{
-		// 		System.Windows.Forms.Label label = new System.Windows.Forms.Label();
-		// 		label.Text = varName + ":";
-		// 		label.AutoSize = true;
-		// 		label.Left = 5;
-		// 		label.Top = currentTop;
-		// 		form.Controls.Add(label);
-
-		// 		System.Windows.Forms.TextBox textBox = new System.Windows.Forms.TextBox();
-		// 		textBox.Left = label.Left + labelWidth + spacing;
-		// 		textBox.Top = currentTop;
-		// 		textBox.Width = textBoxWidth;
-		// 		textBox.Text = _project.Variables[varName].Value;
-		// 		form.Controls.Add(textBox);
-
-		// 		textBoxes[varName] = textBox;
-		// 		currentTop += textBox.Height + spacing;
-		// 	}
-
-		// 	System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
-		// 	okButton.Text = "OK";
-		// 	okButton.Width = 50;
-		// 	okButton.Height = 25;
-		// 	okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
-		// 	okButton.Top = currentTop + 10;
-		// 	okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
-		// 	form.Controls.Add(okButton);
-
-		// 	int requiredHeight = okButton.Top + okButton.Height + 40;
-		// 	if (form.Height < requiredHeight)
-		// 	{
-		// 		form.Height = requiredHeight;
-		// 	}
-		// 	form.Load += (s, e) => { form.Location = new System.Drawing.Point(108, 108); }; // Фиксируем позицию перед показом
-
-		// 	form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
-
-		// 	form.ShowDialog();
-
-		// 	if (form.DialogResult != System.Windows.Forms.DialogResult.OK)
-		// 	{
-		// 		_project.SendInfoToLog("Import cancelled by user", true);
-		// 		return;
-		// 	}
-
-		// 	string tableName = "settings";
-		// 	foreach (string varName in variableNames)
-		// 	{
-		// 		string newValue = textBoxes[varName].Text;
-		// 		_project.Variables[varName].Value = newValue;
-		// 		_project.SendInfoToLog($"Updated variable {varName}: {newValue}", true);
-
-		// 		if (!string.IsNullOrEmpty(newValue))
-		// 		{
-		// 			string escapedValue = newValue.Replace("'", "''");
-		// 			SQL.W3Query(_project, $"INSERT OR REPLACE INTO {tableName} (var, value) VALUES ('{varName}', '{escapedValue}');");
-		// 			_project.SendInfoToLog($"Inserted into {tableName}: {varName} = {newValue}", true);
-		// 		}
-		// 	}
-		// }
 
 	private void ImportSettings(string message = "input data please", int width = 600, int height = 400)
 	{
@@ -2496,7 +2348,8 @@ namespace w3tools //by @w3bgrep
         }   
         public static string Settings(IZennoPosterProjectModel project, string tableName ="settings", string schemaName = "accounts")
         {
-			return SQL.W3Query(project,$"SELECT var, value FROM {tableName}");
+			string table = (project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+			return SQL.W3Query(project,$"SELECT var, value FROM {table}");
         }   
         public static string Email(IZennoPosterProjectModel project, string tableName ="google", string schemaName = "accounts")
         {
