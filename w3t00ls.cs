@@ -1383,205 +1383,7 @@ namespace w3tools //by @w3bgrep
             return resp;
 
         }
-		public static void CreateSchema(IZennoPosterProjectModel project, bool log = false, string schema = "accounts")
-		{
-			//settable
-			var tableStructure = new Dictionary<string, string>{};
-			string data = "", tableName = "";
-			string defaultColumn = $"TEXT DEFAULT ''";
-
-			string schemaName = project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schema}." : "";
-			if (!string.IsNullOrEmpty(schemaName)) W3Query(project, "CREATE SCHEMA IF NOT EXISTS accounts;", true);
-
-			//Profile
-			data = "profile";
-			tableName = schemaName + data;
-			tableStructure = new Dictionary<string, string>
-			{
-				{"acc0", "INTEGER PRIMARY KEY"},
-				{"nickname", defaultColumn},
-				{"bio", defaultColumn},
-				{"cookies", defaultColumn},
-				{"webgl", defaultColumn},
-				{"timezone", defaultColumn},
-				{"proxy", defaultColumn},  
-			};
-			W3MakeTable(project, tableStructure,tableName,true);
-
-			//Twitter
-			data = "twitter";
-			tableName = schemaName + data;
-			tableStructure = new Dictionary<string, string>
-			{
-				{"acc0", "INTEGER PRIMARY KEY"},
-				{"cooldown", "INTEGER DEFAULT 0"},	
-				{"status", defaultColumn},
-				{"last", defaultColumn},
-				{"token", defaultColumn},
-				{"login", defaultColumn},
-				{"password", defaultColumn},
-				{"code2FA", defaultColumn},
-				{"email", defaultColumn},
-				{"email_pass", defaultColumn},
-				{"recovery2fa", defaultColumn},
-
-			};
-			W3MakeTable(project, tableStructure, tableName, true);
-			//Discord
-			data = "discord";
-			tableName = schemaName + data;
-			tableStructure = new Dictionary<string, string>
-			{
-				{"acc0", "INTEGER PRIMARY KEY"},
-				{"cooldown", "INTEGER DEFAULT 0"},
-				{"status", defaultColumn},
-				{"last", defaultColumn},
-				{"servers", defaultColumn},
-				{"roles", defaultColumn},
-				{"token", defaultColumn},
-				{"login", defaultColumn},
-				{"password", defaultColumn},
-				{"code2fa", defaultColumn},
-				
-			};
-			W3MakeTable(project, tableStructure, tableName, true);
-			//Google
-			data = "google";
-			tableName = schemaName + data;
-			tableStructure = new Dictionary<string, string>
-			{
-				{"acc0", "INTEGER PRIMARY KEY"},
-				{"cooldown", "INTEGER DEFAULT 0"},
-				{"status", defaultColumn},
-				{"last", defaultColumn},
-				{"login", defaultColumn},
-				{"password", defaultColumn},
-				{"recovery_email", defaultColumn},
-				{"code2fa", defaultColumn},
-				{"recovery2fa", defaultColumn},
-				{"icloud", defaultColumn},
-			};
-			W3MakeTable(project, tableStructure, tableName, true);
-
-
-			//Blockchain
-			data = "blockchain_private";
-			tableName = schemaName + data;
-			tableStructure = new Dictionary<string, string>
-			{
-				{"acc0", "INTEGER PRIMARY KEY"},
-				{"secp256k1", defaultColumn},
-				{"base58", defaultColumn},
-				{"bip39", defaultColumn},
-			};
-			W3MakeTable(project, tableStructure, tableName, true);
-			data = "blockchain_public";
-			tableName = schemaName + data;
-			tableStructure = new Dictionary<string, string>
-			{
-				{"acc0", "INTEGER PRIMARY KEY"},
-				{"evm", defaultColumn},
-				{"sol", defaultColumn},
-				{"apt", defaultColumn},
-				{"sui", defaultColumn},
-				{"osmo", defaultColumn},
-				{"xion", defaultColumn},
-				{"ton", defaultColumn},
-				{"taproot", defaultColumn},
-			};
-			W3MakeTable(project, tableStructure, tableName, true);
-
 		
-			tableName = "settings"; // Имя таблицы без schemaName, так как она не должна зависеть от схемы
-			tableStructure = new Dictionary<string, string>
-			{
-				{"var", "TEXT PRIMARY KEY"},
-				{"value", "TEXT DEFAULT ''"},
-			};
-			W3MakeTable(project, tableStructure, tableName, true);
-		}
-		public static string ImportKeys(IZennoPosterProjectModel project, string keyType, string schema = "accounts")
-		{
-			var acc0 = project.Variables["acc0"];
-			int rangeEnd = int.Parse(project.Variables["rangeEnd"].Value);
-			var blockchain = new Blockchain();
-
-			string schemaName = project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schema}." : "";
-
-			string privateTable = schemaName + "blockchain_private";
-			string publicTable = schemaName + "blockchain_public";			
-			acc0.Value = "1";
-
-			input:
-			var text = Tools.InputBox($"Input {keyType} keys devided by new string");
-
-			if (string.IsNullOrEmpty(text)) 
-			{
-				Loggers.l0g(project,"!W could not be empty");
-				goto input;
-			}
-
-			string[] lines = text.Trim().Split('\n');
-			project.SendInfoToLog($"Parsing [{lines.Length}] strings", false);
-
-			for (int i = 0; i < lines.Length && int.Parse(acc0.Value) <= rangeEnd; i++)
-			{
-				string key = lines[i].Trim();
-				if (string.IsNullOrWhiteSpace(key)) continue;
-
-				try
-				{
-					switch (keyType)
-					{
-						case "seed":
-							string encodedSeed = SAFU.Encode(project, key);
-							SQL.W3Query(project, $@"UPDATE {privateTable} SET bip39 = '{encodedSeed}' WHERE acc0 == {acc0.Value};", true);
-							break;
-
-						case "evm":
-							string privateKey;
-							string address;
-							
-							if (key.Split(' ').Length > 1) // Простая проверка на мнемонику
-							{
-								var mnemonicObj = new Mnemonic(key);
-								var hdRoot = mnemonicObj.DeriveExtKey();
-								var derivationPath = new NBitcoin.KeyPath("m/44'/60'/0'/0/0");
-								privateKey = hdRoot.Derive(derivationPath).PrivateKey.ToHex();
-							}
-							else
-							{
-								privateKey = key;
-							}
-							
-							string encodedEvmKey = SAFU.Encode(project, privateKey);
-							address = blockchain.GetAddressFromPrivateKey(privateKey);
-							SQL.W3Query(project, $@"UPDATE {privateTable} SET secp256k1 = '{encodedEvmKey}' WHERE acc0 == {acc0.Value};", true);
-							SQL.W3Query(project, $@"UPDATE {publicTable} SET evm = '{address}' WHERE acc0 == {acc0.Value};", true);
-							break;
-
-						case "sol":
-							string encodedSolKey = SAFU.Encode(project, key);
-							SQL.W3Query(project, $@"UPDATE {privateTable} SET base58 = '{encodedSolKey}' WHERE acc0 == {acc0.Value};", true);
-							break;
-
-						default:
-							project.SendWarningToLog($"Unknown key type: {keyType}");
-							return lines.Length.ToString();
-					}
-					
-					acc0.Value = (int.Parse(acc0.Value) + 1).ToString();
-				}
-				catch (Exception ex)
-				{
-					project.SendWarningToLog($"Error processing record {acc0.Value}: {ex.Message}", false);
-					acc0.Value = (int.Parse(acc0.Value) + 1).ToString();
-				}
-			}
-			return lines.Length.ToString();
-		}
-
-
 	}
 
 	public class DataImporter
@@ -1594,7 +1396,126 @@ namespace w3tools //by @w3bgrep
 			_project = project;
 			_schema = schema;
 		}
+		public void CreateSchema(bool log = false)
+		{
+			string defaultColumn = "TEXT DEFAULT ''";
+			string schemaName = _project.Variables["DBmode"].Value == "PostgreSQL" ? $"{_schema}." : "";
 
+			if (!string.IsNullOrEmpty(schemaName))
+			{
+				SQL.W3Query(_project, "CREATE SCHEMA IF NOT EXISTS accounts;", true);
+				if (log) _project.SendInfoToLog("Schema 'accounts' created or already exists", true);
+			}
+
+			// Profile
+			string tableName = schemaName + "profile";
+			var tableStructure = new Dictionary<string, string>
+			{
+				{"acc0", "INTEGER PRIMARY KEY"},
+				{"nickname", defaultColumn},
+				{"bio", defaultColumn},
+				{"cookies", defaultColumn},
+				{"webgl", defaultColumn},
+				{"timezone", defaultColumn},
+				{"proxy", defaultColumn}
+			};
+			SQL.W3MakeTable(_project, tableStructure, tableName, true);
+			if (log) _project.SendInfoToLog($"Table {tableName} created", true);
+
+			// Twitter
+			tableName = schemaName + "twitter";
+			tableStructure = new Dictionary<string, string>
+			{
+				{"acc0", "INTEGER PRIMARY KEY"},
+				{"cooldown", "INTEGER DEFAULT 0"},
+				{"status", defaultColumn},
+				{"last", defaultColumn},
+				{"token", defaultColumn},
+				{"login", defaultColumn},
+				{"password", defaultColumn},
+				{"code2fa", defaultColumn},
+				{"email", defaultColumn},
+				{"email_pass", defaultColumn},
+				{"recovery2fa", defaultColumn}
+			};
+			SQL.W3MakeTable(_project, tableStructure, tableName, true);
+			if (log) _project.SendInfoToLog($"Table {tableName} created", true);
+
+			// Discord
+			tableName = schemaName + "discord";
+			tableStructure = new Dictionary<string, string>
+			{
+				{"acc0", "INTEGER PRIMARY KEY"},
+				{"cooldown", "INTEGER DEFAULT 0"},
+				{"status", defaultColumn},
+				{"last", defaultColumn},
+				{"servers", defaultColumn},
+				{"roles", defaultColumn},
+				{"token", defaultColumn},
+				{"login", defaultColumn},
+				{"password", defaultColumn},
+				{"code2fa", defaultColumn}
+			};
+			SQL.W3MakeTable(_project, tableStructure, tableName, true);
+			if (log) _project.SendInfoToLog($"Table {tableName} created", true);
+
+			// Google
+			tableName = schemaName + "google";
+			tableStructure = new Dictionary<string, string>
+			{
+				{"acc0", "INTEGER PRIMARY KEY"},
+				{"cooldown", "INTEGER DEFAULT 0"},
+				{"status", defaultColumn},
+				{"last", defaultColumn},
+				{"login", defaultColumn},
+				{"password", defaultColumn},
+				{"recovery_email", defaultColumn},
+				{"code2fa", defaultColumn},
+				{"recovery2fa", defaultColumn},
+				{"icloud", defaultColumn}
+			};
+			SQL.W3MakeTable(_project, tableStructure, tableName, true);
+			if (log) _project.SendInfoToLog($"Table {tableName} created", true);
+
+			// Blockchain Private
+			tableName = schemaName + "blockchain_private";
+			tableStructure = new Dictionary<string, string>
+			{
+				{"acc0", "INTEGER PRIMARY KEY"},
+				{"secp256k1", defaultColumn},
+				{"base58", defaultColumn},
+				{"bip39", defaultColumn}
+			};
+			SQL.W3MakeTable(_project, tableStructure, tableName, true);
+			if (log) _project.SendInfoToLog($"Table {tableName} created", true);
+
+			// Blockchain Public
+			tableName = schemaName + "blockchain_public";
+			tableStructure = new Dictionary<string, string>
+			{
+				{"acc0", "INTEGER PRIMARY KEY"},
+				{"evm", defaultColumn},
+				{"sol", defaultColumn},
+				{"apt", defaultColumn},
+				{"sui", defaultColumn},
+				{"osmo", defaultColumn},
+				{"xion", defaultColumn},
+				{"ton", defaultColumn},
+				{"taproot", defaultColumn}
+			};
+			SQL.W3MakeTable(_project, tableStructure, tableName, true);
+			if (log) _project.SendInfoToLog($"Table {tableName} created", true);
+
+			// Settings (без schemaName)
+			tableName = "settings";
+			tableStructure = new Dictionary<string, string>
+			{
+				{"var", "TEXT PRIMARY KEY"},
+				{"value", "TEXT DEFAULT ''"}
+			};
+			SQL.W3MakeTable(_project, tableStructure, tableName, true);
+			if (log) _project.SendInfoToLog($"Table {tableName} created", true);
+		}
 		public string ImportData(string tableName, string formTitle, string[] availableFields, Dictionary<string, string> columnMapping, string message = "Select format (one field per box):")
 		{
 			string schemaName = _project.Variables["DBmode"].Value == "PostgreSQL" ? $"{_schema}." : "";
@@ -1675,12 +1596,19 @@ namespace w3tools //by @w3bgrep
 			okButton.Height = 25;
 			okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
 			okButton.Top = form.ClientSize.Height - okButton.Height - 5;
-			okButton.Click += (s, e) => { form.Close(); };
+			okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
 			form.Controls.Add(okButton);
 			dataInput.Height = okButton.Top - dataInput.Top - 5;
 
+			form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
 			// Показываем форму
 			form.ShowDialog();
+			// Если форма закрыта крестиком, прерываем выполнение
+			if (form.DialogResult != System.Windows.Forms.DialogResult.OK)
+			{
+				_project.SendInfoToLog($"Import to {tableName} cancelled by user", true);
+				return "0";
+			}
 
 			// Собираем формат из ComboBox
 			selectedFormat.Clear();
@@ -1709,43 +1637,57 @@ namespace w3tools //by @w3bgrep
 					_project.SendWarningToLog($"Line {acc0} is empty", false);
 					continue;
 				}
-
-				string[] data_parts = line.Split(':');
-				Dictionary<string, string> parsed_data = new Dictionary<string, string>();
-
-				for (int i = 0; i < selectedFormat.Count && i < data_parts.Length; i++)
+				if (tableName == "profile")
 				{
-					parsed_data[selectedFormat[i]] = data_parts[i].Trim();
+					// Для таблицы proxy записываем строку целиком в колонку proxy
+					try
+					{
+						string dbQuery = $@"UPDATE {table} SET proxy = '{line.Replace("'", "''")}' WHERE acc0 = {acc0};";
+						SQL.W3Query(_project, dbQuery, true);
+						lineCount++;
+					}
+					catch (Exception ex)
+					{
+						_project.SendWarningToLog($"Error processing line {acc0}: {ex.Message}", false);
+					}
 				}
+				else
+				{
+					string[] data_parts = line.Split(':');
+					Dictionary<string, string> parsed_data = new Dictionary<string, string>();
 
-				// Формируем SQL-запрос на основе маппинга
-				var queryParts = new List<string>();
-				foreach (var field in columnMapping.Keys)
-				{
-					string value = parsed_data.ContainsKey(field) ? parsed_data[field].Replace("'", "''") : "";
-					if (field == "CODE2FA" && value.Contains('/'))
-						value = value.Split('/').Last();
-					queryParts.Add($"{columnMapping[field]} = '{value}'");
-				}
-				queryParts.Add("cooldown = 0");
+					for (int i = 0; i < selectedFormat.Count && i < data_parts.Length; i++)
+					{
+						parsed_data[selectedFormat[i]] = data_parts[i].Trim();
+					}
 
-				try
-				{
-					string dbQuery = $@"UPDATE {table} SET {string.Join(", ", queryParts)} WHERE acc0 = {acc0};";
-					SQL.W3Query(_project, dbQuery, true);
-					lineCount++;
-				}
-				catch (Exception ex)
-				{
-					_project.SendWarningToLog($"Error processing line {acc0}: {ex.Message}", false);
+					// Формируем SQL-запрос на основе маппинга
+					var queryParts = new List<string>();
+					foreach (var field in columnMapping.Keys)
+					{
+						string value = parsed_data.ContainsKey(field) ? parsed_data[field].Replace("'", "''") : "";
+						if (field == "CODE2FA" && value.Contains('/'))
+							value = value.Split('/').Last();
+						queryParts.Add($"{columnMapping[field]} = '{value}'");
+					}
+					//queryParts.Add("cooldown = 0");
+
+					try
+					{
+						string dbQuery = $@"UPDATE {table} SET {string.Join(", ", queryParts)} WHERE acc0 = {acc0};";
+						SQL.W3Query(_project, dbQuery, true);
+						lineCount++;
+					}
+					catch (Exception ex)
+					{
+						_project.SendWarningToLog($"Error processing line {acc0}: {ex.Message}", false);
+					}
 				}
 			}
 
 			_project.SendInfoToLog($"[{lineCount}] records added to [{table}]", true);
 			return lineCount.ToString();
 		}
-
-		// Публичный метод для Twitter
 		public string ImportTwitter()
 		{
 			string[] twitterFields = new string[] { "", "LOGIN", "PASSWORD", "EMAIL", "EMAIL_PASSWORD", "TOKEN", "CODE2FA", "RECOVERY_SEED" };
@@ -1761,8 +1703,6 @@ namespace w3tools //by @w3bgrep
 			};
 			return ImportData("twitter", "Import Twitter Data", twitterFields, twitterMapping);
 		}
-
-		// Публичный метод для Discord
 		public string ImportDiscord()
 		{
 			string[] discordFields = new string[] { "", "LOGIN", "PASSWORD", "TOKEN", "CODE2FA" };
@@ -1775,8 +1715,6 @@ namespace w3tools //by @w3bgrep
 			};
 			return ImportData("discord", "Import Discord Data", discordFields, discordMapping);
 		}
-
-		// Публичный метод для Google
 		public string ImportGoogle()
 		{
 			string[] googleFields = new string[] { "", "LOGIN", "PASSWORD", "RECOVERY_EMAIL", "CODE2FA", "RECOVERY_SEED" };
@@ -1790,38 +1728,364 @@ namespace w3tools //by @w3bgrep
 			};
 			return ImportData("google", "Import Google Data", googleFields, googleMapping);
 		}
-
+		public string ImportIcloud()
+		{
+			string[] fields = new string[] { "ICLOUD", "" };
+			var mapping = new Dictionary<string, string>
+			{
+				{ "ICLOUD", "icloud" },
+			};
+			return ImportData("google", "Import Icloud", fields, mapping);
+		}
 		public string ImportNickname()
 		{
-			string[] fields = new string[] { "", "NICKNAME" };
+			string[] fields = new string[] { "NICKNAME", "" };
 			var mapping = new Dictionary<string, string>
 			{
 				{ "NICKNAME", "nickname" },
 			};
 			return ImportData("profile", "Import nickname", fields, mapping);
 		}
-
 		public string ImportBio()
 		{
-			string[] fields = new string[] { "", "BIO" };
+			string[] fields = new string[] { "BIO", "" };
 			var mapping = new Dictionary<string, string>
 			{
 				{ "BIO", "bio" },
 			};
 			return ImportData("profile", "Import Bio", fields, mapping);
 		}
-
 		public string ImportProxy()
 		{
-			string[] fields = new string[] { "", "PROXY" };
+			string[] fields = new string[] { "PROXY", "" };
 			var mapping = new Dictionary<string, string>
 			{
 				{ "PROXY", "proxy" },
 			};
 			return ImportData("profile", "Import Proxy ", fields, mapping, message:"Proxy format: http://login1:pass1@111.111.111.111:1111" );
 		}
+		public string ImportKeys(string keyType)
+		{
+			var acc0 = _project.Variables["acc0"];
+			int rangeEnd = int.Parse(_project.Variables["rangeEnd"].Value);
+			var blockchain = new Blockchain();
 
-		// Публичный метод для настроек
+			string schemaName = _project.Variables["DBmode"].Value == "PostgreSQL" ? $"{_schema}." : "";
+			string privateTable = schemaName + "blockchain_private";
+			string publicTable = schemaName + "blockchain_public";
+			acc0.Value = "1";
+
+			// Создание формы
+			System.Windows.Forms.Form form = new System.Windows.Forms.Form();
+			form.Text = $"Import {keyType} keys";
+			form.Width = 420;
+			form.Height = 700;
+
+			System.Windows.Forms.Label dataLabel = new System.Windows.Forms.Label();
+			dataLabel.Text = $"Input {keyType} keys (one per line):";
+			dataLabel.AutoSize = true;
+			dataLabel.Left = 10;
+			dataLabel.Top = 10;
+			form.Controls.Add(dataLabel);
+
+			System.Windows.Forms.TextBox dataInput = new System.Windows.Forms.TextBox();
+			dataInput.Left = 10;
+			dataInput.Top = 30;
+			dataInput.Width = form.ClientSize.Width - 20;
+			dataInput.Multiline = true;
+			dataInput.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+			form.Controls.Add(dataInput);
+
+			System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
+			okButton.Text = "OK";
+			okButton.Width = form.ClientSize.Width - 10;
+			okButton.Height = 25;
+			okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
+			okButton.Top = form.ClientSize.Height - okButton.Height - 5;
+			okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
+			form.Controls.Add(okButton);
+			dataInput.Height = okButton.Top - dataInput.Top - 5;
+
+			form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
+
+			form.ShowDialog();
+
+			if (form.DialogResult != System.Windows.Forms.DialogResult.OK)
+			{
+				_project.SendInfoToLog("Import cancelled by user", true);
+				return "0";
+			}
+
+			if (string.IsNullOrEmpty(dataInput.Text))
+			{
+				_project.SendWarningToLog("Input could not be empty");
+				return "0"; // Возвращаем "0", так как обработка не началась
+			}
+
+			string[] lines = dataInput.Text.Trim().Split('\n');
+			_project.SendInfoToLog($"Parsing [{lines.Length}] strings", false);
+
+			for (int i = 0; i < lines.Length && int.Parse(acc0.Value) <= rangeEnd; i++)
+			{
+				string key = lines[i].Trim();
+				if (string.IsNullOrWhiteSpace(key)) continue;
+
+				try
+				{
+					switch (keyType)
+					{
+						case "seed":
+							string encodedSeed = SAFU.Encode(_project, key);
+							SQL.W3Query(_project, $@"UPDATE {privateTable} SET bip39 = '{encodedSeed}' WHERE acc0 = {acc0.Value};", true);
+							break;
+
+						case "evm":
+							string privateKey;
+							string address;
+
+							if (key.Split(' ').Length > 1) // Простая проверка на мнемонику
+							{
+								var mnemonicObj = new Mnemonic(key);
+								var hdRoot = mnemonicObj.DeriveExtKey();
+								var derivationPath = new NBitcoin.KeyPath("m/44'/60'/0'/0/0");
+								privateKey = hdRoot.Derive(derivationPath).PrivateKey.ToHex();
+							}
+							else
+							{
+								privateKey = key;
+							}
+
+							string encodedEvmKey = SAFU.Encode(_project, privateKey);
+							address = blockchain.GetAddressFromPrivateKey(privateKey);
+							SQL.W3Query(_project, $@"UPDATE {privateTable} SET secp256k1 = '{encodedEvmKey}' WHERE acc0 = {acc0.Value};", true);
+							SQL.W3Query(_project, $@"UPDATE {publicTable} SET evm = '{address}' WHERE acc0 = {acc0.Value};", true);
+							break;
+
+						case "sol":
+							string encodedSolKey = SAFU.Encode(_project, key);
+							SQL.W3Query(_project, $@"UPDATE {privateTable} SET base58 = '{encodedSolKey}' WHERE acc0 = {acc0.Value};", true);
+							break;
+
+						default:
+							_project.SendWarningToLog($"Unknown key type: {keyType}");
+							return lines.Length.ToString();
+					}
+
+					acc0.Value = (int.Parse(acc0.Value) + 1).ToString();
+				}
+				catch (Exception ex)
+				{
+					_project.SendWarningToLog($"Error processing record {acc0.Value}: {ex.Message}", false);
+					acc0.Value = (int.Parse(acc0.Value) + 1).ToString();
+				}
+			}
+
+			return lines.Length.ToString();
+		}
+		public string ImportDepositAddresses()
+		{
+			string tableName = "cex_deps"; // Обновил имя таблицы для консистентности
+			string schemaName = _project.Variables["DBmode"].Value == "PostgreSQL" ? $"{_schema}." : "";
+			string table = schemaName + tableName;
+
+			// Создание формы
+			System.Windows.Forms.Form form = new System.Windows.Forms.Form();
+			form.Text = "Import Deposit Addresses";
+			form.Width = 420;
+			form.Height = 700;
+
+			// Поле для ввода CHAIN
+			System.Windows.Forms.Label chainLabel = new System.Windows.Forms.Label();
+			chainLabel.Text = "Chain (e.g., ETH, BSC):";
+			chainLabel.AutoSize = true;
+			chainLabel.Left = 10;
+			chainLabel.Top = 10;
+			form.Controls.Add(chainLabel);
+
+			System.Windows.Forms.TextBox chainInput = new System.Windows.Forms.TextBox();
+			chainInput.Left = 10;
+			chainInput.Top = 30;
+			chainInput.Width = form.ClientSize.Width - 20;
+			chainInput.Text = _project.Variables["depositChain"].Value; // Текущее значение из переменной
+			form.Controls.Add(chainInput);
+
+			// Поле для ввода CEX
+			System.Windows.Forms.Label cexLabel = new System.Windows.Forms.Label();
+			cexLabel.Text = "CEX (e.g., binance, kucoin):";
+			cexLabel.AutoSize = true;
+			cexLabel.Left = 10;
+			cexLabel.Top = 60;
+			form.Controls.Add(cexLabel);
+
+			System.Windows.Forms.TextBox cexInput = new System.Windows.Forms.TextBox();
+			cexInput.Left = 10;
+			cexInput.Top = 80;
+			cexInput.Width = form.ClientSize.Width - 20;
+			cexInput.Text = _project.Variables["depositCEX"].Value; // Текущее значение из переменной
+			form.Controls.Add(cexInput);
+
+			// Поле для ввода адресов
+			System.Windows.Forms.Label addressLabel = new System.Windows.Forms.Label();
+			addressLabel.Text = "Deposit addresses (one per line):";
+			addressLabel.AutoSize = true;
+			addressLabel.Left = 10;
+			addressLabel.Top = 110;
+			form.Controls.Add(addressLabel);
+
+			System.Windows.Forms.TextBox addressInput = new System.Windows.Forms.TextBox();
+			addressInput.Left = 10;
+			addressInput.Top = 130;
+			addressInput.Width = form.ClientSize.Width - 20;
+			addressInput.Multiline = true;
+			addressInput.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+			form.Controls.Add(addressInput);
+
+			// Кнопка "OK"
+			System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
+			okButton.Text = "OK";
+			okButton.Width = form.ClientSize.Width - 10;
+			okButton.Height = 25;
+			okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
+			okButton.Top = form.ClientSize.Height - okButton.Height - 5;
+			okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
+			form.Controls.Add(okButton);
+			addressInput.Height = okButton.Top - addressInput.Top - 5;
+
+			form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
+
+			form.ShowDialog();
+
+			if (form.DialogResult != System.Windows.Forms.DialogResult.OK)
+			{
+				_project.SendInfoToLog("Import cancelled by user", true);
+				return "0";
+			}
+
+			// Проверка ввода
+			if (string.IsNullOrEmpty(chainInput.Text) || string.IsNullOrEmpty(cexInput.Text) || string.IsNullOrEmpty(addressInput.Text))
+			{
+				_project.SendWarningToLog("Chain, CEX, or addresses cannot be empty");
+				return "0";
+			}
+
+			// Формирование имени столбца
+			string CHAIN = chainInput.Text.ToLower();
+			string CEX = cexInput.Text.ToLower();
+			string columnName = $"{CEX}_{CHAIN}";
+
+			// Создание таблицы
+			var tableStructure = new Dictionary<string, string>
+			{
+				{"acc0", "INTEGER PRIMARY KEY"},
+				{columnName, "TEXT DEFAULT ''"}
+			};
+			SQL.W3MakeTable(_project, tableStructure, table); // Используем полное имя с схемой
+
+			// Обработка адресов
+			string[] lines = addressInput.Text.Trim().Split('\n');
+			int lineCount = 0;
+
+			for (int acc0 = 1; acc0 <= lines.Length; acc0++) // Начинаем с 1, как в других методах
+			{
+				string line = lines[acc0 - 1].Trim();
+				if (string.IsNullOrWhiteSpace(line))
+				{
+					_project.SendWarningToLog($"Line {acc0} is empty");
+					continue;
+				}
+
+				try
+				{
+					SQL.W3Query(_project, $@"UPDATE {table} SET
+						{columnName} = '{line}'
+						WHERE acc0 = {acc0};");
+					lineCount++;
+				}
+				catch (Exception ex)
+				{
+					_project.SendWarningToLog($"Error processing line {acc0}: {ex.Message}");
+					continue;
+				}
+			}
+
+			_project.SendInfoToLog($"[{lineCount}] strings added to [{table}]", true);
+			return lineCount.ToString();
+		}
+		public void ImportWebGL(Instance instance, string tableName = "profile")
+		{
+			
+			_project.SendWarningToLog("This function works only on ZennoPoster versions below 7.8", true);
+			instance.CanvasRenderMode = ZennoLab.InterfacesLibrary.Enums.Browser.CanvasMode.Allow;
+
+			string schemaName = _project.Variables["DBmode"].Value == "PostgreSQL" ? $"{_schema}." : "";
+			string table = schemaName + tableName;
+
+			// Создание формы для выбора вендора
+			System.Windows.Forms.Form form = new System.Windows.Forms.Form();
+			form.Text = "Import WebGL Data";
+			form.Width = 420;
+			form.Height = 200; // Компактная форма, так как только выбор вендора
+
+			System.Windows.Forms.Label vendorLabel = new System.Windows.Forms.Label();
+			vendorLabel.Text = "Select WebGL Vendor:";
+			vendorLabel.AutoSize = true;
+			vendorLabel.Left = 10;
+			vendorLabel.Top = 10;
+			form.Controls.Add(vendorLabel);
+
+			System.Windows.Forms.ComboBox vendorComboBox = new System.Windows.Forms.ComboBox();
+			vendorComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+			vendorComboBox.Items.AddRange(new string[] { "Intel", "NVIDIA", "AMD" });
+			vendorComboBox.SelectedIndex = 0; // По умолчанию Intel
+			vendorComboBox.Left = 10;
+			vendorComboBox.Top = 30;
+			vendorComboBox.Width = form.ClientSize.Width - 20;
+			form.Controls.Add(vendorComboBox);
+
+			System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
+			okButton.Text = "OK";
+			okButton.Width = form.ClientSize.Width - 10;
+			okButton.Height = 25;
+			okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
+			okButton.Top = form.ClientSize.Height - okButton.Height - 5;
+			okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
+			form.Controls.Add(okButton);
+
+			form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
+
+			form.ShowDialog();
+
+			if (form.DialogResult != System.Windows.Forms.DialogResult.OK)
+			{
+				_project.SendInfoToLog("Import cancelled by user", true);
+				return;
+			}
+
+			string webGLvendor = vendorComboBox.SelectedItem.ToString();
+			int targetCount = int.Parse(_project.Variables["rangeEnd"].Value);
+			List<string> tempList = new List<string>();
+
+			while (tempList.Count < targetCount)
+			{
+				_project.SendToLog($"Parsing {webGLvendor} WebGL. {tempList.Count}/{_project.Variables["rangeEnd"].Value} strings parsed", LogType.Info, true, LogColor.Default);
+				try { instance.Launch(ZennoLab.InterfacesLibrary.Enums.Browser.BrowserType.WithoutBrowser, false); } catch { }
+				instance.Launch(ZennoLab.InterfacesLibrary.Enums.Browser.BrowserType.Chromium, false);
+				string webglData = instance.WebGLPreferences.Save();
+				_project.SendInfoToLog(webglData);
+				if (webglData.Contains(webGLvendor)) tempList.Add(webglData);
+			}
+
+			for (int acc0 = 0; acc0 < tempList.Count; acc0++)
+			{
+				string webGLrenderer = tempList[acc0];
+				if (string.IsNullOrEmpty(webGLrenderer)) continue;
+				SQL.W3Query(_project, $@"UPDATE {table} SET webgl = '{tempList[acc0].Replace("'", "''")}' WHERE acc0 = {acc0 + 1};");
+			}
+
+			_project.SendInfoToLog($"[{tempList.Count}] strings added to [{table}]", true);
+			instance.CanvasRenderMode = ZennoLab.InterfacesLibrary.Enums.Browser.CanvasMode.Block;
+			try { instance.Launch(ZennoLab.InterfacesLibrary.Enums.Browser.BrowserType.WithoutBrowser, false); } catch { }
+		}
 		public void ImportSettings(string message = "input data please", int width = 600, int height = 400)
 		{
 			_project.SendInfoToLog($"Opening variables input dialog: {message}", true);
@@ -1880,7 +2144,7 @@ namespace w3tools //by @w3bgrep
 			okButton.Height = 25;
 			okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
 			okButton.Top = currentTop + 10;
-			okButton.Click += (s, e) => { form.Close(); };
+			okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
 			form.Controls.Add(okButton);
 
 			int requiredHeight = okButton.Top + okButton.Height + 40;
@@ -1889,7 +2153,15 @@ namespace w3tools //by @w3bgrep
 				form.Height = requiredHeight;
 			}
 
+			form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
+
 			form.ShowDialog();
+
+			if (form.DialogResult != System.Windows.Forms.DialogResult.OK)
+			{
+				_project.SendInfoToLog("Import cancelled by user", true);
+				return;
+			}
 
 			string tableName = "settings";
 			foreach (string varName in variableNames)
@@ -1906,6 +2178,8 @@ namespace w3tools //by @w3bgrep
 				}
 			}
 		}
+
+
 	}
 
 
