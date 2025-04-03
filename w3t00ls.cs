@@ -1387,13 +1387,51 @@ namespace w3tools //by @w3bgrep
 	public class DataImporter
 	{
 		private readonly IZennoPosterProjectModel _project;
+		private readonly Instance _instance;
 		private readonly string _schema;
 
-		public DataImporter(IZennoPosterProjectModel project, string schema = "accounts")
+		public DataImporter(IZennoPosterProjectModel project, Instance instance, string schema = "accounts")
 		{
 			_project = project;
+			_instance = instance;
 			_schema = schema;
 		}
+
+		public bool ImportAll()
+		{
+			OnStart.InitVariables(_project); // Предполагаю, что это статический метод вне класса
+
+			if (_project.Variables["cfgConfirmRebuildDB"].Value != "True")
+			{
+				_project.SendInfoToLog("Database rebuild not confirmed, skipping import", true);
+				return false;
+			}
+
+			var import = _project.Variables["toImport"].Value;
+			if (!ImportStart()) return false;
+
+			CreateSchema(true);
+			if (import.Contains("settings")) ImportSettings();
+			if (import.Contains("proxy")) ImportProxy();
+
+			if (import.Contains("evm")) ImportKeys("evm");
+			if (import.Contains("sol")) ImportKeys("sol");
+			if (import.Contains("seed")) ImportKeys("seed");
+			if (import.Contains("deps")) ImportDepositAddresses();
+
+			if (import.Contains("google")) ImportGoogle();
+			if (import.Contains("icloud")) ImportIcloud();
+			if (import.Contains("twitter")) ImportTwitter();
+			if (import.Contains("discord")) ImportDiscord();
+
+			if (import.Contains("nickname")) ImportNickname();
+			if (import.Contains("bio")) ImportBio();
+
+			if (import.Contains("webgl")) ImportWebGL(_instance);
+			ImportDone();
+			return true;
+		}
+
 		public void CreateSchema(bool log = false)
 		{
 			string defaultColumn = "TEXT DEFAULT ''";
@@ -1436,7 +1474,7 @@ namespace w3tools //by @w3bgrep
 				{"email_pass", defaultColumn},
 				{"recovery2fa", defaultColumn}
 			};
-			SQL.W3MakeTable(_project, tableStructure, tableName, true);
+			SQL.W3MakeTable(_project, tableStructure, tableName, false);
 			if (log) _project.SendInfoToLog($"Table {tableName} created", true);
 
 			// Discord
@@ -1454,7 +1492,7 @@ namespace w3tools //by @w3bgrep
 				{"password", defaultColumn},
 				{"code2fa", defaultColumn}
 			};
-			SQL.W3MakeTable(_project, tableStructure, tableName, true);
+			SQL.W3MakeTable(_project, tableStructure, tableName, false);
 			if (log) _project.SendInfoToLog($"Table {tableName} created", true);
 
 			// Google
@@ -1472,7 +1510,7 @@ namespace w3tools //by @w3bgrep
 				{"recovery2fa", defaultColumn},
 				{"icloud", defaultColumn}
 			};
-			SQL.W3MakeTable(_project, tableStructure, tableName, true);
+			SQL.W3MakeTable(_project, tableStructure, tableName, false);
 			if (log) _project.SendInfoToLog($"Table {tableName} created", true);
 
 			// Blockchain Private
@@ -1484,7 +1522,7 @@ namespace w3tools //by @w3bgrep
 				{"base58", defaultColumn},
 				{"bip39", defaultColumn}
 			};
-			SQL.W3MakeTable(_project, tableStructure, tableName, true);
+			SQL.W3MakeTable(_project, tableStructure, tableName, false);
 			if (log) _project.SendInfoToLog($"Table {tableName} created", true);
 
 			// Blockchain Public
@@ -1501,7 +1539,7 @@ namespace w3tools //by @w3bgrep
 				{"ton", defaultColumn},
 				{"taproot", defaultColumn}
 			};
-			SQL.W3MakeTable(_project, tableStructure, tableName, true);
+			SQL.W3MakeTable(_project, tableStructure, tableName, false);
 			if (log) _project.SendInfoToLog($"Table {tableName} created", true);
 
 			// Settings (без schemaName)
@@ -1525,6 +1563,8 @@ namespace w3tools //by @w3bgrep
 			form.Text = formTitle;
 			form.Width = 800;
 			form.Height = 700;
+			form.TopMost = true; // Форма поверх всех окон
+			form.Location = new System.Drawing.Point(108, 108);				
 
 			List<string> selectedFormat = new List<string>();
 			System.Windows.Forms.TextBox formatDisplay = new System.Windows.Forms.TextBox();
@@ -1598,6 +1638,7 @@ namespace w3tools //by @w3bgrep
 			form.Controls.Add(okButton);
 			dataInput.Height = okButton.Top - dataInput.Top - 5;
 
+			form.Load += (s, e) => { form.Location = new System.Drawing.Point(108, 108); }; // Фиксируем позицию перед показом
 			form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
 			// Показываем форму
 			form.ShowDialog();
@@ -1778,6 +1819,8 @@ namespace w3tools //by @w3bgrep
 			form.Text = $"Import {keyType} keys";
 			form.Width = 420;
 			form.Height = 700;
+			form.TopMost = true; // Форма поверх всех окон
+			form.Location = new System.Drawing.Point(108, 108);			
 
 			System.Windows.Forms.Label dataLabel = new System.Windows.Forms.Label();
 			dataLabel.Text = $"Input {keyType} keys (one per line):";
@@ -1803,6 +1846,8 @@ namespace w3tools //by @w3bgrep
 			okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
 			form.Controls.Add(okButton);
 			dataInput.Height = okButton.Top - dataInput.Top - 5;
+
+			form.Load += (s, e) => { form.Location = new System.Drawing.Point(108, 108); }; // Фиксируем позицию перед показом
 
 			form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
 
@@ -1891,6 +1936,8 @@ namespace w3tools //by @w3bgrep
 			form.Text = "Import Deposit Addresses";
 			form.Width = 420;
 			form.Height = 700;
+			form.TopMost = true; // Форма поверх всех окон
+			form.Location = new System.Drawing.Point(108, 108);		
 
 			// Поле для ввода CHAIN
 			System.Windows.Forms.Label chainLabel = new System.Windows.Forms.Label();
@@ -1948,6 +1995,7 @@ namespace w3tools //by @w3bgrep
 			okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
 			form.Controls.Add(okButton);
 			addressInput.Height = okButton.Top - addressInput.Top - 5;
+			form.Load += (s, e) => { form.Location = new System.Drawing.Point(108, 108); }; // Фиксируем позицию перед показом
 
 			form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
 
@@ -2013,7 +2061,7 @@ namespace w3tools //by @w3bgrep
 		{
 			
 			_project.SendWarningToLog("This function works only on ZennoPoster versions below 7.8", true);
-			instance.CanvasRenderMode = ZennoLab.InterfacesLibrary.Enums.Browser.CanvasMode.Allow;
+			_instance.CanvasRenderMode = ZennoLab.InterfacesLibrary.Enums.Browser.CanvasMode.Allow;
 
 			string schemaName = _project.Variables["DBmode"].Value == "PostgreSQL" ? $"{_schema}." : "";
 			string table = schemaName + tableName;
@@ -2023,6 +2071,8 @@ namespace w3tools //by @w3bgrep
 			form.Text = "Import WebGL Data";
 			form.Width = 420;
 			form.Height = 200; // Компактная форма, так как только выбор вендора
+			form.TopMost = true; // Форма поверх всех окон
+			form.Location = new System.Drawing.Point(108, 108);					
 
 			System.Windows.Forms.Label vendorLabel = new System.Windows.Forms.Label();
 			vendorLabel.Text = "Select WebGL Vendor:";
@@ -2048,6 +2098,7 @@ namespace w3tools //by @w3bgrep
 			okButton.Top = form.ClientSize.Height - okButton.Height - 5;
 			okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
 			form.Controls.Add(okButton);
+			form.Load += (s, e) => { form.Location = new System.Drawing.Point(108, 108); }; // Фиксируем позицию перед показом
 
 			form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
 
@@ -2066,9 +2117,9 @@ namespace w3tools //by @w3bgrep
 			while (tempList.Count < targetCount)
 			{
 				_project.SendToLog($"Parsing {webGLvendor} WebGL. {tempList.Count}/{_project.Variables["rangeEnd"].Value} strings parsed", LogType.Info, true, LogColor.Default);
-				try { instance.Launch(ZennoLab.InterfacesLibrary.Enums.Browser.BrowserType.WithoutBrowser, false); } catch { }
-				instance.Launch(ZennoLab.InterfacesLibrary.Enums.Browser.BrowserType.Chromium, false);
-				string webglData = instance.WebGLPreferences.Save();
+				try { _instance.Launch(ZennoLab.InterfacesLibrary.Enums.Browser.BrowserType.WithoutBrowser, false); } catch { }
+				_instance.Launch(ZennoLab.InterfacesLibrary.Enums.Browser.BrowserType.Chromium, false);
+				string webglData = _instance.WebGLPreferences.Save();
 				_project.SendInfoToLog(webglData);
 				if (webglData.Contains(webGLvendor)) tempList.Add(webglData);
 			}
@@ -2081,8 +2132,8 @@ namespace w3tools //by @w3bgrep
 			}
 
 			_project.SendInfoToLog($"[{tempList.Count}] strings added to [{table}]", true);
-			instance.CanvasRenderMode = ZennoLab.InterfacesLibrary.Enums.Browser.CanvasMode.Block;
-			try { instance.Launch(ZennoLab.InterfacesLibrary.Enums.Browser.BrowserType.WithoutBrowser, false); } catch { }
+			_instance.CanvasRenderMode = ZennoLab.InterfacesLibrary.Enums.Browser.CanvasMode.Block;
+			try { _instance.Launch(ZennoLab.InterfacesLibrary.Enums.Browser.BrowserType.WithoutBrowser, false); } catch { }
 		}
 		public void ImportSettings(string message = "input data please", int width = 600, int height = 400)
 		{
@@ -2092,6 +2143,8 @@ namespace w3tools //by @w3bgrep
 			form.Text = message;
 			form.Width = width;
 			form.Height = height;
+			form.TopMost = true; // Форма поверх всех окон
+			form.Location = new System.Drawing.Point(108, 108);		
 
 			string[] variableNames = new string[]
 			{
@@ -2150,6 +2203,7 @@ namespace w3tools //by @w3bgrep
 			{
 				form.Height = requiredHeight;
 			}
+			form.Load += (s, e) => { form.Location = new System.Drawing.Point(108, 108); }; // Фиксируем позицию перед показом
 
 			form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
 
@@ -2176,40 +2230,108 @@ namespace w3tools //by @w3bgrep
 				}
 			}
 		}
-
-		public void ShowCreateDbWarning()
+		public bool ImportStart()
 		{
 			System.Windows.Forms.Form form = new System.Windows.Forms.Form();
-			form.Text = "Warning";
+			form.Text = "!!!Warning";
 			form.Width = 400;
 			form.Height = 200;
+			form.BackColor = System.Drawing.Color.Red;
+			form.TopMost = true; // Форма поверх всех окон
+			//form.Location = new System.Drawing.Point(108, 108);		
 			form.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen; // Центрируем окно
 
 			System.Windows.Forms.Label messageLabel = new System.Windows.Forms.Label();
-			messageLabel.Text = "Please uncheck the 'CreateDb' checkbox.";
-			messageLabel.Font = new System.Drawing.Font("Arial", 12, System.Drawing.FontStyle.Bold); // Жирный шрифт
+			messageLabel.Text = "Db data will be overwritten!\nContinue?";
+			messageLabel.Font = new System.Drawing.Font("Consolas", 15, System.Drawing.FontStyle.Bold); // Жирный шрифт
+			messageLabel.ForeColor = System.Drawing.Color.White;
+			messageLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 			messageLabel.AutoSize = true;
 			messageLabel.Left = (form.ClientSize.Width - messageLabel.Width) / 2; // Центрируем по горизонтали
 			messageLabel.Top = 30; // Отступ сверху
 			form.Controls.Add(messageLabel);
 
-			// Пересчитываем позицию после добавления, так как AutoSize может изменить ширину
 			messageLabel.Left = (form.ClientSize.Width - messageLabel.Width) / 2;
 
 			System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
-			okButton.Text = "OK";
+			okButton.Text = "YES";
+			okButton.Font = new System.Drawing.Font("Consolas", 10, System.Drawing.FontStyle.Bold);
+			okButton.ForeColor = System.Drawing.Color.White;
+			okButton.BackColor = System.Drawing.Color.Red;
+			okButton.Width = 100;
+			okButton.Height = 30;
+			okButton.Left = (form.ClientSize.Width - okButton.Width) / 4; // Центрируем кнопку
+			okButton.Top = form.ClientSize.Height - okButton.Height - 40; // Отступ снизу
+			okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
+			form.Controls.Add(okButton);
+			
+			
+			System.Windows.Forms.Button cancelButton = new System.Windows.Forms.Button();
+			cancelButton.Text = "Cancel";
+			cancelButton.Font = new System.Drawing.Font("Consolas", 10, System.Drawing.FontStyle.Bold);
+			cancelButton.ForeColor = System.Drawing.Color.White;
+			cancelButton.BackColor = System.Drawing.Color.Black;
+			cancelButton.Width = 100;
+			cancelButton.Height = 30;
+			cancelButton.Left = (form.ClientSize.Width - cancelButton.Width) / 4 * 3; // Центрируем кнопку
+			cancelButton.Top = form.ClientSize.Height - cancelButton.Height - 40; // Отступ снизу
+			cancelButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.Cancel; form.Close(); };
+			form.Controls.Add(cancelButton);			
+			
+			
+
+			form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
+			form.ShowDialog();
+
+			if (form.DialogResult != System.Windows.Forms.DialogResult.OK)
+			{
+				_project.SendInfoToLog("Import cancelled by user", true);
+				return false;
+			}
+			return true;
+		}
+		public bool ImportDone()
+		{
+						System.Windows.Forms.Form form = new System.Windows.Forms.Form();
+			form.Text = "Done";
+			form.Width = 500;
+			form.Height = 200;
+			form.BackColor = System.Drawing.Color.Green;
+			form.TopMost = true;
+			form.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen; // Центрируем окно
+
+			System.Windows.Forms.Label messageLabel = new System.Windows.Forms.Label();
+			messageLabel.Text = "Db data imported successful.\nPlease switch off \"CreateDb\" option\n in \"Import\" tab of script settings";
+			messageLabel.Font = new System.Drawing.Font("Consolas", 10, System.Drawing.FontStyle.Bold); // Жирный шрифт
+			messageLabel.ForeColor = System.Drawing.Color.White;
+			messageLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+			messageLabel.AutoSize = true;
+			messageLabel.Left = (form.ClientSize.Width - messageLabel.Width) / 2; // Центрируем по горизонтали
+			messageLabel.Top = 20; // Отступ сверху
+			form.Controls.Add(messageLabel);
+
+			messageLabel.Left = (form.ClientSize.Width - messageLabel.Width) / 2;
+
+			System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
+			okButton.Text = "Nice";
+			okButton.Font = new System.Drawing.Font("Consolas", 10, System.Drawing.FontStyle.Bold);
+			okButton.ForeColor = System.Drawing.Color.White;
+			okButton.BackColor = System.Drawing.Color.Black;
 			okButton.Width = 100;
 			okButton.Height = 30;
 			okButton.Left = (form.ClientSize.Width - okButton.Width) / 2; // Центрируем кнопку
 			okButton.Top = form.ClientSize.Height - okButton.Height - 40; // Отступ снизу
-			okButton.Click += (s, e) => { form.Close(); };
+			okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
 			form.Controls.Add(okButton);
+			
+
+			form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
 
 			form.ShowDialog();
+			return true;
 		}
+
 	}
-
-
     public static class Db
     {
         public static string KeyEVM(IZennoPosterProjectModel project, string tableName ="blockchain_private", string schemaName = "accounts")
