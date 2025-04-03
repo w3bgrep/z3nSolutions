@@ -619,14 +619,6 @@ namespace w3tools //by @w3bgrep
 		    }
 		    catch (Exception ex){}
 		}
-		public static void IntitProjectEvironment(IZennoPosterProjectModel project)
-		{
-			//w3tools.OnStart.DisableLogs();
-			w3tools.OnStart.InitVariables(project);
-			//w3tools.OnStart.SetRange(project);
-			w3tools.OnStart.GetGlobalVars(project);
-			w3tools.OnStart.SetSettingsFromDb(project);
-		}
 		public static void FilterAccList(IZennoPosterProjectModel project, List<string> dbQueries, bool log = false)
 		{
 			// Ручной режим
@@ -1039,8 +1031,12 @@ namespace w3tools //by @w3bgrep
 	            return result?.ToString() ?? string.Empty;
 	        }
 	    }
-		public static string pSQL(IZennoPosterProjectModel project, string query, bool log = false, bool ignoreErrors = false, string host ="localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "", [CallerMemberName] string callerName = "")
+		public static string pSQL(IZennoPosterProjectModel project, string query, bool log = false, bool ignoreErrors = false, string host ="localhost:5432", string dbName = "", string dbUser = "", string dbPswd = "", [CallerMemberName] string callerName = "")
 		{
+
+			if (string.IsNullOrEmpty(dbName)) dbName = project.Variables["DBpstgrName"].Value;
+			if (string.IsNullOrEmpty(dbUser)) dbUser = project.Variables["DBpstgrUser"].Value;
+			
 			if (string.IsNullOrEmpty(dbPswd)) 
             {
                 dbPswd = project.Variables["DBpstgrPass"].Value;
@@ -1106,9 +1102,8 @@ namespace w3tools //by @w3bgrep
 		}
         public static void pSQLMakeTable (IZennoPosterProjectModel project, Dictionary<string, string> tableStructure, string tableName = "", bool strictMode = false, bool insertData = true, string host = "localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "", string schemaName = "projects", bool log = false)
         {
-            string query = ""; string dbMode = "PostgreSQL";
-           
             
+			string query = ""; string dbMode = "PostgreSQL";
             if (string.IsNullOrEmpty(tableName))
                 tableName = project.Variables["projectTable"].Value;
 
@@ -1141,7 +1136,12 @@ namespace w3tools //by @w3bgrep
         }
         private static void CheckAndCreateTable(PostgresDB db, string schemaName, string tableName, Dictionary<string, string> tableStructure, IZennoPosterProjectModel project, bool log = false)
         {
-
+			if (tableName.Contains(".")) 
+			{
+				schemaName = tableName.Split('.')[0];
+				tableName = tableName.Split('.')[1];
+			}
+			
             string tableExists = SQL.W3Query(project,$@"SELECT COUNT(*)
                 FROM information_schema.tables
                 WHERE table_schema = '{schemaName}'
@@ -1158,7 +1158,13 @@ namespace w3tools //by @w3bgrep
         }
         private static void ManageColumns(PostgresDB db, string schemaName, string tableName, Dictionary<string, string> tableStructure, bool strictMode, IZennoPosterProjectModel project, bool log = false)
         {
-            string query = ""; string dbMode = "PostgreSQL";
+            if (tableName.Contains(".")) 
+			{
+				schemaName = tableName.Split('.')[0];
+				tableName = tableName.Split('.')[1];
+			}
+			
+			string query = ""; string dbMode = "PostgreSQL";
             query = $@"SELECT column_name
                 FROM information_schema.columns
                 WHERE table_schema = '{schemaName}'
@@ -1214,6 +1220,11 @@ namespace w3tools //by @w3bgrep
         }
 		private static void InsertInitialData(PostgresDB db, string schemaName, string tableName, string cfgRangeEnd, IZennoPosterProjectModel project, bool log = false)
 		{
+			if (tableName.Contains(".")) 
+			{
+				schemaName = tableName.Split('.')[0];
+				tableName = tableName.Split('.')[1];
+			}
 			if (!int.TryParse(cfgRangeEnd, out int rangeEnd) || rangeEnd <= 0)
 				throw new ArgumentException("cfgRangeEnd must be a positive integer");
 
@@ -1399,14 +1410,13 @@ namespace w3tools //by @w3bgrep
 
 		public bool ImportAll()
 		{
-			OnStart.InitVariables(_project); // Предполагаю, что это статический метод вне класса
+			OnStart.InitVariables(_project); 
 
 			if (_project.Variables["cfgConfirmRebuildDB"].Value != "True")
 			{
 				_project.SendInfoToLog("Database rebuild not confirmed, skipping import", true);
 				return false;
 			}
-
 			var import = _project.Variables["toImport"].Value;
 			if (!ImportStart()) return false;
 
@@ -1432,7 +1442,7 @@ namespace w3tools //by @w3bgrep
 			return true;
 		}
 
-		public void CreateSchema(bool log = false)
+		private void CreateSchema(bool log = false)
 		{
 			string defaultColumn = "TEXT DEFAULT ''";
 			string schemaName = _project.Variables["DBmode"].Value == "PostgreSQL" ? $"{_schema}." : "";
@@ -1455,7 +1465,7 @@ namespace w3tools //by @w3bgrep
 				{"timezone", defaultColumn},
 				{"proxy", defaultColumn}
 			};
-			SQL.W3MakeTable(_project, tableStructure, tableName, true);
+			SQL.W3MakeTable(_project, tableStructure, tableName, false, schemaName:"");
 			if (log) _project.SendInfoToLog($"Table {tableName} created", true);
 
 			// Twitter
@@ -1474,7 +1484,7 @@ namespace w3tools //by @w3bgrep
 				{"email_pass", defaultColumn},
 				{"recovery2fa", defaultColumn}
 			};
-			SQL.W3MakeTable(_project, tableStructure, tableName, false);
+			SQL.W3MakeTable(_project, tableStructure, tableName, false, schemaName:"");
 			if (log) _project.SendInfoToLog($"Table {tableName} created", true);
 
 			// Discord
@@ -1492,7 +1502,7 @@ namespace w3tools //by @w3bgrep
 				{"password", defaultColumn},
 				{"code2fa", defaultColumn}
 			};
-			SQL.W3MakeTable(_project, tableStructure, tableName, false);
+			SQL.W3MakeTable(_project, tableStructure, tableName, false, schemaName:"");
 			if (log) _project.SendInfoToLog($"Table {tableName} created", true);
 
 			// Google
@@ -1510,7 +1520,7 @@ namespace w3tools //by @w3bgrep
 				{"recovery2fa", defaultColumn},
 				{"icloud", defaultColumn}
 			};
-			SQL.W3MakeTable(_project, tableStructure, tableName, false);
+			SQL.W3MakeTable(_project, tableStructure, tableName, false, schemaName:"");
 			if (log) _project.SendInfoToLog($"Table {tableName} created", true);
 
 			// Blockchain Private
@@ -1522,7 +1532,7 @@ namespace w3tools //by @w3bgrep
 				{"base58", defaultColumn},
 				{"bip39", defaultColumn}
 			};
-			SQL.W3MakeTable(_project, tableStructure, tableName, false);
+			SQL.W3MakeTable(_project, tableStructure, tableName, false, schemaName:"");
 			if (log) _project.SendInfoToLog($"Table {tableName} created", true);
 
 			// Blockchain Public
@@ -1539,20 +1549,20 @@ namespace w3tools //by @w3bgrep
 				{"ton", defaultColumn},
 				{"taproot", defaultColumn}
 			};
-			SQL.W3MakeTable(_project, tableStructure, tableName, false);
+			SQL.W3MakeTable(_project, tableStructure, tableName, false, schemaName:"accounts");
 			if (log) _project.SendInfoToLog($"Table {tableName} created", true);
 
 			// Settings (без schemaName)
-			tableName = "settings";
+			tableName = schemaName + "settings";
 			tableStructure = new Dictionary<string, string>
 			{
 				{"var", "TEXT PRIMARY KEY"},
 				{"value", "TEXT DEFAULT ''"}
 			};
-			SQL.W3MakeTable(_project, tableStructure, tableName, true);
+			SQL.W3MakeTable(_project, tableStructure, tableName, false, schemaName:"");
 			if (log) _project.SendInfoToLog($"Table {tableName} created", true);
 		}
-		public string ImportData(string tableName, string formTitle, string[] availableFields, Dictionary<string, string> columnMapping, string message = "Select format (one field per box):")
+		private string ImportData(string tableName, string formTitle, string[] availableFields, Dictionary<string, string> columnMapping, string message = "Select format (one field per box):")
 		{
 			string schemaName = _project.Variables["DBmode"].Value == "PostgreSQL" ? $"{_schema}." : "";
 			string table = schemaName + tableName;
@@ -1727,7 +1737,7 @@ namespace w3tools //by @w3bgrep
 			_project.SendInfoToLog($"[{lineCount}] records added to [{table}]", true);
 			return lineCount.ToString();
 		}
-		public string ImportTwitter()
+		private string ImportTwitter()
 		{
 			string[] twitterFields = new string[] { "", "LOGIN", "PASSWORD", "EMAIL", "EMAIL_PASSWORD", "TOKEN", "CODE2FA", "RECOVERY_SEED" };
 			var twitterMapping = new Dictionary<string, string>
@@ -1742,7 +1752,7 @@ namespace w3tools //by @w3bgrep
 			};
 			return ImportData("twitter", "Import Twitter Data", twitterFields, twitterMapping);
 		}
-		public string ImportDiscord()
+		private string ImportDiscord()
 		{
 			string[] discordFields = new string[] { "", "LOGIN", "PASSWORD", "TOKEN", "CODE2FA" };
 			var discordMapping = new Dictionary<string, string>
@@ -1754,7 +1764,7 @@ namespace w3tools //by @w3bgrep
 			};
 			return ImportData("discord", "Import Discord Data", discordFields, discordMapping);
 		}
-		public string ImportGoogle()
+		private string ImportGoogle()
 		{
 			string[] googleFields = new string[] { "", "LOGIN", "PASSWORD", "RECOVERY_EMAIL", "CODE2FA", "RECOVERY_SEED" };
 			var googleMapping = new Dictionary<string, string>
@@ -1767,7 +1777,7 @@ namespace w3tools //by @w3bgrep
 			};
 			return ImportData("google", "Import Google Data", googleFields, googleMapping);
 		}
-		public string ImportIcloud()
+		private string ImportIcloud()
 		{
 			string[] fields = new string[] { "ICLOUD", "" };
 			var mapping = new Dictionary<string, string>
@@ -1776,7 +1786,7 @@ namespace w3tools //by @w3bgrep
 			};
 			return ImportData("google", "Import Icloud", fields, mapping);
 		}
-		public string ImportNickname()
+		private string ImportNickname()
 		{
 			string[] fields = new string[] { "NICKNAME", "" };
 			var mapping = new Dictionary<string, string>
@@ -1785,7 +1795,7 @@ namespace w3tools //by @w3bgrep
 			};
 			return ImportData("profile", "Import nickname", fields, mapping);
 		}
-		public string ImportBio()
+		private string ImportBio()
 		{
 			string[] fields = new string[] { "BIO", "" };
 			var mapping = new Dictionary<string, string>
@@ -1794,7 +1804,7 @@ namespace w3tools //by @w3bgrep
 			};
 			return ImportData("profile", "Import Bio", fields, mapping);
 		}
-		public string ImportProxy()
+		private string ImportProxy()
 		{
 			string[] fields = new string[] { "PROXY", "" };
 			var mapping = new Dictionary<string, string>
@@ -1803,7 +1813,7 @@ namespace w3tools //by @w3bgrep
 			};
 			return ImportData("profile", "Import Proxy ", fields, mapping, message:"Proxy format: http://login1:pass1@111.111.111.111:1111" );
 		}
-		public string ImportKeys(string keyType)
+		private string ImportKeys(string keyType)
 		{
 			var acc0 = _project.Variables["acc0"];
 			int rangeEnd = int.Parse(_project.Variables["rangeEnd"].Value);
@@ -1925,7 +1935,7 @@ namespace w3tools //by @w3bgrep
 
 			return lines.Length.ToString();
 		}
-		public string ImportDepositAddresses()
+		private string ImportDepositAddresses()
 		{
 			string tableName = "cex_deps"; // Обновил имя таблицы для консистентности
 			string schemaName = _project.Variables["DBmode"].Value == "PostgreSQL" ? $"{_schema}." : "";
@@ -2057,7 +2067,7 @@ namespace w3tools //by @w3bgrep
 			_project.SendInfoToLog($"[{lineCount}] strings added to [{table}]", true);
 			return lineCount.ToString();
 		}
-		public void ImportWebGL(Instance instance, string tableName = "profile")
+		private void ImportWebGL(Instance instance, string tableName = "profile")
 		{
 			
 			_project.SendWarningToLog("This function works only on ZennoPoster versions below 7.8", true);
@@ -2135,102 +2145,212 @@ namespace w3tools //by @w3bgrep
 			_instance.CanvasRenderMode = ZennoLab.InterfacesLibrary.Enums.Browser.CanvasMode.Block;
 			try { _instance.Launch(ZennoLab.InterfacesLibrary.Enums.Browser.BrowserType.WithoutBrowser, false); } catch { }
 		}
-		public void ImportSettings(string message = "input data please", int width = 600, int height = 400)
+		// private void ImportSettings(string message = "input data please", int width = 600, int height = 400)
+		// {
+		// 	_project.SendInfoToLog($"Opening variables input dialog: {message}", true);
+
+		// 	System.Windows.Forms.Form form = new System.Windows.Forms.Form();
+		// 	form.Text = message;
+		// 	form.Width = width;
+		// 	form.Height = height;
+		// 	form.TopMost = true; // Форма поверх всех окон
+		// 	form.Location = new System.Drawing.Point(108, 108);		
+
+		// 	string[] variableNames = new string[]
+		// 	{
+		// 		"settingsApiFirstMail",
+		// 		"settingsApiPerplexity",
+		// 		"settingsDsInviteOwn",
+		// 		"settingsDsOwnServer",
+		// 		"settingsFmailLogin",
+		// 		"settingsFmailPass",
+		// 		"settingsTgLogGroup",
+		// 		"settingsTgLogToken",
+		// 		"settingsTgLogTopic",
+		// 		"settingsTgMailGroup",
+		// 		"settingsZenFolder",
+		// 		"settingsApiBinance"
+		// 	};
+
+		// 	var textBoxes = new Dictionary<string, System.Windows.Forms.TextBox>();
+
+		// 	int currentTop = 5;
+		// 	int labelWidth = 150;
+		// 	int textBoxWidth = 400;
+		// 	int spacing = 5;
+
+		// 	foreach (string varName in variableNames)
+		// 	{
+		// 		System.Windows.Forms.Label label = new System.Windows.Forms.Label();
+		// 		label.Text = varName + ":";
+		// 		label.AutoSize = true;
+		// 		label.Left = 5;
+		// 		label.Top = currentTop;
+		// 		form.Controls.Add(label);
+
+		// 		System.Windows.Forms.TextBox textBox = new System.Windows.Forms.TextBox();
+		// 		textBox.Left = label.Left + labelWidth + spacing;
+		// 		textBox.Top = currentTop;
+		// 		textBox.Width = textBoxWidth;
+		// 		textBox.Text = _project.Variables[varName].Value;
+		// 		form.Controls.Add(textBox);
+
+		// 		textBoxes[varName] = textBox;
+		// 		currentTop += textBox.Height + spacing;
+		// 	}
+
+		// 	System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
+		// 	okButton.Text = "OK";
+		// 	okButton.Width = 50;
+		// 	okButton.Height = 25;
+		// 	okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
+		// 	okButton.Top = currentTop + 10;
+		// 	okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
+		// 	form.Controls.Add(okButton);
+
+		// 	int requiredHeight = okButton.Top + okButton.Height + 40;
+		// 	if (form.Height < requiredHeight)
+		// 	{
+		// 		form.Height = requiredHeight;
+		// 	}
+		// 	form.Load += (s, e) => { form.Location = new System.Drawing.Point(108, 108); }; // Фиксируем позицию перед показом
+
+		// 	form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
+
+		// 	form.ShowDialog();
+
+		// 	if (form.DialogResult != System.Windows.Forms.DialogResult.OK)
+		// 	{
+		// 		_project.SendInfoToLog("Import cancelled by user", true);
+		// 		return;
+		// 	}
+
+		// 	string tableName = "settings";
+		// 	foreach (string varName in variableNames)
+		// 	{
+		// 		string newValue = textBoxes[varName].Text;
+		// 		_project.Variables[varName].Value = newValue;
+		// 		_project.SendInfoToLog($"Updated variable {varName}: {newValue}", true);
+
+		// 		if (!string.IsNullOrEmpty(newValue))
+		// 		{
+		// 			string escapedValue = newValue.Replace("'", "''");
+		// 			SQL.W3Query(_project, $"INSERT OR REPLACE INTO {tableName} (var, value) VALUES ('{varName}', '{escapedValue}');");
+		// 			_project.SendInfoToLog($"Inserted into {tableName}: {varName} = {newValue}", true);
+		// 		}
+		// 	}
+		// }
+
+	private void ImportSettings(string message = "input data please", int width = 600, int height = 400)
+	{
+		_project.SendInfoToLog($"Opening variables input dialog: {message}", true);
+
+		System.Windows.Forms.Form form = new System.Windows.Forms.Form();
+		form.Text = message;
+		form.Width = width;
+		form.Height = height;
+		form.TopMost = true;
+		form.Location = new System.Drawing.Point(108, 108);
+
+		// Массив с именами переменных и плейсхолдерами
+		(string varName, string placeholder)[] variableNames = new (string, string)[]
 		{
-			_project.SendInfoToLog($"Opening variables input dialog: {message}", true);
+			("settingsApiFirstMail", "API First Mail для доступа к переадресованной почте"),
+			("settingsApiPerplexity", "API perplexity для запросов к AI (например прогрева твиттера)"),
+			("settingsDsInviteOwn", "Инвайт на свой сервер"),
+			("settingsDsOwnServer", "ID канала с инвайтами на вашем сервере"),
+			("settingsFmailLogin", "Логин от общего ящика для форвардов на FirstMail"),
+			("settingsFmailPass", "Пароль от общего ящика для форвардов на FirstMail"),
+			("settingsTgLogGroup", "Id группы для логов в Telegram. Формат {-1002000000009}"),
+			("settingsTgLogToken", "Токен Telegram логгера"),
+			("settingsTgLogTopic", "Id топика в группе для логов. 0 - если нет топиков"),
+			("settingsTgMailGroup", "Id группы с переадресованной почтой в Telegram. Формат {-1002000000009}"),
+			("settingsZenFolder", "Путь к папке с профилями и причастным данным. Формат: {F:\\farm\\}"),
+			("settingsApiBinance", "Данные для вывода с Binance. Формат: {API_KEY;SECRET_KEY;PROXY}")
+		};
 
-			System.Windows.Forms.Form form = new System.Windows.Forms.Form();
-			form.Text = message;
-			form.Width = width;
-			form.Height = height;
-			form.TopMost = true; // Форма поверх всех окон
-			form.Location = new System.Drawing.Point(108, 108);		
+		var textBoxes = new Dictionary<string, System.Windows.Forms.TextBox>();
 
-			string[] variableNames = new string[]
+		int currentTop = 5;
+		int labelWidth = 150;
+		int textBoxWidth = 400;
+		int spacing = 5;
+
+		foreach (var (varName, placeholder) in variableNames)
+		{
+			System.Windows.Forms.Label label = new System.Windows.Forms.Label();
+			label.Text = varName + ":";
+			label.AutoSize = true;
+			label.Left = 5;
+			label.Top = currentTop;
+			form.Controls.Add(label);
+
+			System.Windows.Forms.TextBox textBox = new System.Windows.Forms.TextBox();
+			textBox.Left = label.Left + labelWidth + spacing;
+			textBox.Top = currentTop;
+			textBox.Width = textBoxWidth;
+			textBox.Text = _project.Variables[varName].Value;
+
+			// Установка плейсхолдера
+			if (string.IsNullOrEmpty(textBox.Text)) // Если поле пустое, показываем плейсхолдер
 			{
-				"settingsApiFirstMail",
-				"settingsApiPerplexity",
-				"settingsDsInviteOwn",
-				"settingsDsOwnServer",
-				"settingsFmailLogin",
-				"settingsFmailPass",
-				"settingsTgLogGroup",
-				"settingsTgLogToken",
-				"settingsTgLogTopic",
-				"settingsTgMailGroup",
-				"settingsZenFolder",
-				"settingsApiBinance"
-			};
-
-			var textBoxes = new Dictionary<string, System.Windows.Forms.TextBox>();
-
-			int currentTop = 5;
-			int labelWidth = 150;
-			int textBoxWidth = 400;
-			int spacing = 5;
-
-			foreach (string varName in variableNames)
-			{
-				System.Windows.Forms.Label label = new System.Windows.Forms.Label();
-				label.Text = varName + ":";
-				label.AutoSize = true;
-				label.Left = 5;
-				label.Top = currentTop;
-				form.Controls.Add(label);
-
-				System.Windows.Forms.TextBox textBox = new System.Windows.Forms.TextBox();
-				textBox.Left = label.Left + labelWidth + spacing;
-				textBox.Top = currentTop;
-				textBox.Width = textBoxWidth;
-				textBox.Text = _project.Variables[varName].Value;
-				form.Controls.Add(textBox);
-
-				textBoxes[varName] = textBox;
-				currentTop += textBox.Height + spacing;
+				textBox.Text = placeholder;
+				textBox.ForeColor = System.Drawing.Color.Gray;
 			}
+			textBox.Enter += (s, e) => { if (textBox.Text == placeholder) { textBox.Text = ""; textBox.ForeColor = System.Drawing.Color.Black; } };
+			textBox.Leave += (s, e) => { if (string.IsNullOrEmpty(textBox.Text)) { textBox.Text = placeholder; textBox.ForeColor = System.Drawing.Color.Gray; } };
 
-			System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
-			okButton.Text = "OK";
-			okButton.Width = 50;
-			okButton.Height = 25;
-			okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
-			okButton.Top = currentTop + 10;
-			okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
-			form.Controls.Add(okButton);
+			form.Controls.Add(textBox);
 
-			int requiredHeight = okButton.Top + okButton.Height + 40;
-			if (form.Height < requiredHeight)
+			textBoxes[varName] = textBox;
+			currentTop += textBox.Height + spacing;
+		}
+
+		System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
+		okButton.Text = "OK";
+		okButton.Width = 50;
+		okButton.Height = 25;
+		okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
+		okButton.Top = currentTop + 10;
+		okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
+		form.Controls.Add(okButton);
+
+		int requiredHeight = okButton.Top + okButton.Height + 40;
+		if (form.Height < requiredHeight)
+		{
+			form.Height = requiredHeight;
+		}
+		form.Load += (s, e) => { form.Location = new System.Drawing.Point(108, 108); };
+
+		form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
+
+		form.ShowDialog();
+
+		if (form.DialogResult != System.Windows.Forms.DialogResult.OK)
+		{
+			_project.SendInfoToLog("Import cancelled by user", true);
+			return;
+		}
+
+		string tableName = "settings";
+		foreach (var (varName, placeholder) in variableNames)
+		{
+			string newValue = textBoxes[varName].Text;
+			if (newValue == placeholder) newValue = ""; // Если текст — это плейсхолдер, считаем поле пустым
+			_project.Variables[varName].Value = newValue;
+			_project.SendInfoToLog($"Updated variable {varName}: {newValue}", true);
+
+			if (!string.IsNullOrEmpty(newValue))
 			{
-				form.Height = requiredHeight;
-			}
-			form.Load += (s, e) => { form.Location = new System.Drawing.Point(108, 108); }; // Фиксируем позицию перед показом
-
-			form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
-
-			form.ShowDialog();
-
-			if (form.DialogResult != System.Windows.Forms.DialogResult.OK)
-			{
-				_project.SendInfoToLog("Import cancelled by user", true);
-				return;
-			}
-
-			string tableName = "settings";
-			foreach (string varName in variableNames)
-			{
-				string newValue = textBoxes[varName].Text;
-				_project.Variables[varName].Value = newValue;
-				_project.SendInfoToLog($"Updated variable {varName}: {newValue}", true);
-
-				if (!string.IsNullOrEmpty(newValue))
-				{
-					string escapedValue = newValue.Replace("'", "''");
-					SQL.W3Query(_project, $"INSERT OR REPLACE INTO {tableName} (var, value) VALUES ('{varName}', '{escapedValue}');");
-					_project.SendInfoToLog($"Inserted into {tableName}: {varName} = {newValue}", true);
-				}
+				string escapedValue = newValue.Replace("'", "''");
+				SQL.W3Query(_project, $"INSERT OR REPLACE INTO {tableName} (var, value) VALUES ('{varName}', '{escapedValue}');");
+				_project.SendInfoToLog($"Inserted into {tableName}: {varName} = {newValue}", true);
 			}
 		}
-		public bool ImportStart()
+	}
+
+
+		private bool ImportStart()
 		{
 			System.Windows.Forms.Form form = new System.Windows.Forms.Form();
 			form.Text = "!!!Warning";
@@ -2290,7 +2410,7 @@ namespace w3tools //by @w3bgrep
 			}
 			return true;
 		}
-		public bool ImportDone()
+		private bool ImportDone()
 		{
 						System.Windows.Forms.Form form = new System.Windows.Forms.Form();
 			form.Text = "Done";
