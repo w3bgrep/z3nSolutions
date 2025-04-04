@@ -769,18 +769,15 @@ namespace w3tools //by @w3bgrep
 			}
 			catch{Loggers.l0g(project,$"!W noCookiesAvaliable by path {filePath}");}
 		}
-		public static void SetCookiesFromDB(this Instance instance, IZennoPosterProjectModel project, string filePath = "")
+		public static void SetCookiesFromDB(this Instance instance, IZennoPosterProjectModel project, string tableName ="profile", string schemaName = "accounts")
 		{
-            var required = "Profile";var tableName = "";
-            if (project.Variables["DBmode"].Value == "SQLite") tableName = $"acc{required.Trim()}";
-            else if (project.Variables["DBmode"].Value == "PostgreSQL") tableName = $"accounts.{required.Trim().ToLower()}";				
-                        
+			string table = (project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;			           
             try
 			{
-				var cookies = SQL.W3Query(project,$@"SELECT cookies FROM {tableName} WHERE acc0 = {project.Variables["acc0"].Value}");
+				var cookies = SQL.W3Query(project,$@"SELECT cookies FROM {table} WHERE acc0 = {project.Variables["acc0"].Value}");
 				instance.SetCookie(cookies);
 			}
-			catch{Loggers.l0g(project,$"!W noCookiesAvaliable by path {filePath}");}
+			catch{Loggers.l0g(project,$"!W noCookiesAvaliable by query");}
 		}
 		public static void ExportCookiesAsJson(IZennoPosterProjectModel project, string filePath = "")
 		{
@@ -1357,7 +1354,7 @@ namespace w3tools //by @w3bgrep
 
 		public bool ImportAll()
 		{
-			OnStart.InitVariables(_project); 
+			//OnStart.InitVariables(_project); 
 
 			if (_project.Variables["cfgConfirmRebuildDB"].Value != "True")
 			{
@@ -2334,7 +2331,9 @@ namespace w3tools //by @w3bgrep
         {
             string table = (project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
             var resp = SQL.W3Query(project,$"SELECT proxy FROM {table} WHERE acc0 = {project.Variables["acc0"].Value}");
-            project.Variables["proxy"].Value = resp;   return resp;
+            project.Variables["proxy"].Value = resp;
+			try {project.Variables["proxyLeaf"].Value = resp.Replace("//", "").Replace("@", ":");} catch{}
+			return resp;
         }   
         public static string Bio(IZennoPosterProjectModel project, string tableName ="profile", string schemaName = "accounts")
         {
@@ -2419,7 +2418,7 @@ namespace w3tools //by @w3bgrep
 		{
 			string table = (project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
 			if (address == "") address = project.Variables["addressSol"].Value;
-			SQL.W3Query(project,$"UPDATE {table} SET publicSOL = '{address}' WHERE acc0 = {project.Variables["acc0"].Value};");
+			SQL.W3Query(project,$"UPDATE {table} SET sol = '{address}' WHERE acc0 = {project.Variables["acc0"].Value};");
 
 		}
 		public static string BinanceApiKeys(IZennoPosterProjectModel project, string tableName ="settings", string schemaName = "accounts")  
@@ -5302,35 +5301,6 @@ namespace w3tools //by @w3bgrep
 
 		}
 
-		// public static string ReadHe(this Instance instance, object obj, string method = "", int deadline = 10, string atr = "innertext", int delayBeforeGetSeconds = 1, string comment = "", bool thr0w = true)
-		// {
-		// 	DateTime functionStart = DateTime.Now;
-		// 	string lastExceptionMessage = "";
-
-		// 	while (true)
-		// 	{
-		// 		if ((DateTime.Now - functionStart).TotalSeconds > deadline)
-		// 		{
-		// 			if (thr0w) 
-		// 				throw new TimeoutException($"{comment} not found in {deadline}s: {lastExceptionMessage}");
-		// 			else 
-		// 				return null;
-		// 		}
-
-		// 		try
-		// 		{
-		// 			HtmlElement he = instance.GetHe(obj);
-		// 			Thread.Sleep(delayBeforeGetSeconds * 1000);
-		// 			return he.GetAttribute(atr);
-		// 		}
-		// 		catch (Exception ex)
-		// 		{
-		// 			lastExceptionMessage = ex.Message;
-		// 		}
-				
-		// 		Thread.Sleep(500);
-		// 	}
-		// }
 
         public static string ReadHe(this Instance instance, object obj, string method = "", int deadline = 10, string atr = "innertext", int delay = 1, string comment = "", bool thr0w = true)
         {
