@@ -1353,7 +1353,8 @@ public class C00kies
 
     public string c00kies(string domainFilter = "")
     {
-        var cookieContainer = _project.Profile.CookieContainer;
+        if (domainFilter == ".") domainFilter = _instance.ActiveTab.MainDomain;
+		var cookieContainer = _project.Profile.CookieContainer;
         var cookieList = new List<object>();
 
         foreach (var domain in cookieContainer.Domains)
@@ -1382,6 +1383,7 @@ public class C00kies
 
         string cookiesJson = Global.ZennoLab.Json.JsonConvert.SerializeObject(cookieList, Global.ZennoLab.Json.Formatting.Indented);
         if (string.IsNullOrEmpty(domainFilter)) _project.Variables["cookies"].Value = cookiesJson;
+		if (domainFilter == ".") _project.Variables["projectCookies"].Value = cookiesJson;
         return cookiesJson;
     }
 }
@@ -1839,6 +1841,7 @@ public class C00kies
 			dataInput.Width = form.ClientSize.Width - 20;
 			dataInput.Multiline = true;
 			dataInput.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+			dataInput.MaxLength = 1000000;
 			form.Controls.Add(dataInput);
 
 			System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
