@@ -4933,7 +4933,7 @@ namespace w3tools //by @w3bgrep
 			_log = log;
 		}
 
-		public string GetWallets(string mode = null)
+		public string GetWallets(string mode = null, string choose = null)
 		{
 			_instance.ActiveTab.Navigate("chrome-extension://mcohilncbfahbmgdjkbpemcciiolgcge/home.html#/wallet/management-home-page?fromHome=1", "");
 			var pKeys = new List<string>();
@@ -4946,6 +4946,16 @@ namespace w3tools //by @w3bgrep
 				if (he.InnerText.Contains("0x")) pKeys.Add((he.InnerText.Split('\n')[0]) + ": " + he.InnerText.Split('\n')[1]) ;
 				if (he.InnerText.Contains("Account")) sKeys.Add((he.InnerText.Split('\n')[0]) + ": " + he.InnerText.Split('\n')[1]) ;
 				if (he.InnerHtml.Contains("okd-checkbox-circle"))   active =((he.InnerText.Split('\n')[0]) + ": " + he.InnerText.Split('\n')[1]) ;
+				if (choose != null) 
+				{
+					if (he.InnerText.Contains(choose)) 
+					{
+						_instance.UseFullMouseEmulation = true;
+						_instance.WaitClick(() => he);
+						return "";
+					}
+					
+				}
 			}
 
 			if (_log) _project.SendInfoToLog(string.Join("\n", pKeys));
@@ -4955,15 +4965,47 @@ namespace w3tools //by @w3bgrep
 			if (mode == "sKeys") return string.Join("\n", sKeys);
 			return active;
 		}
+		public void OkxImport(string sourse = "pkey", string chainMode = "EVM") //seed|pkey //EVM|Aptos
+		{
 
+			var password = SAFU.HWPass(_project);
+			_instance.ActiveTab.Navigate("chrome-extension://mcohilncbfahbmgdjkbpemcciiolgcge/home.html#/wallet-add/import-with-seed-phrase-and-private-key", "");
+			try{
+			_instance.LMB(("button", "innertext", "Import\\ wallet", "regexp", 0), delay:3);
+			_instance.LMB(("i", "class", "icon\\ iconfont\\ okx-wallet-plugin-futures-grid-20\\ _wallet-icon__icon__core_", "regexp", 0), thr0w:false);
+			}
+			catch{}
+			if( sourse== "pkey")
+			{
+				_instance.LMB(("div", "class", "okui-tabs-pane\\ okui-tabs-pane-sm\\ okui-tabs-pane-grey\\ okui-tabs-pane-segmented", "regexp", 1));
+				
+				var key = Db.KeyEVM(_project); 
+				_instance.SetHe(("textarea", "class", "okui-input-input\\ input-textarea", "regexp", 0),key);
+				_instance.LMB(("button", "data-testid", "okd-button", "regexp", 0));
+				if (chainMode == "Aptos") _instance.LMB(("span", "innertext", "Aptos\\ network", "regexp", 0));
+				_instance.LMB(("button", "class", "okui-btn\\ btn-lg\\ btn-fill-highlight\\ block\\ chains-choose-network-modal__confirm-button", "regexp", 0));
+			}
+			if( sourse== "seed")
+			{
+				string seedPhrase = Db.Seed(_project);
+				int index = 0;	
+				foreach(string word in seedPhrase.Split(' ')) 
+					{ 
+						_instance.ActiveTab.FindElementByAttribute("input", "class", "mnemonic-words-inputs__container__input", "regexp", index).SetValue(word, "Full", false);
+						index++;
+					}
+				_instance.LMB(("button", "type", "submit", "regexp", 0));
 
-
-
-
-
-
-
-
+			}
+			try{
+			_instance.LMB(("button", "data-testid", "okd-button", "regexp", 0));
+			_instance.WaitSetValue(() => 	_instance.ActiveTab.GetDocumentByAddress("0").FindElementByTag("form", 0).FindChildByAttribute("input:password", "data-testid", "okd-input", "regexp", 0),password);
+			_instance.WaitSetValue(() => 	_instance.ActiveTab.GetDocumentByAddress("0").FindElementByTag("form", 0).FindChildByAttribute("input:password", "data-testid", "okd-input", "regexp", 1),password);
+			_instance.LMB(("button", "data-testid", "okd-button", "regexp", 0));
+			_instance.LMB(("button", "data-testid", "okd-button", "regexp", 0));
+			}
+			catch{}
+		}
 
 	}
 
