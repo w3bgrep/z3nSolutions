@@ -1339,6 +1339,54 @@ namespace w3tools //by @w3bgrep
         
 		
 	}
+
+	public class C00kies
+	{
+		private readonly Instance _instance;
+		private readonly IZennoPosterProjectModel _project;
+		public C00kies(IZennoPosterProjectModel project, Instance instance)
+		{
+			_project = project;
+			_instance = instance;
+		}
+		public string c00kies()
+		{
+			var cookieContainer = _project.Profile.CookieContainer;
+			var cookieList = new List<object>();
+
+			foreach (var domain in cookieContainer.Domains)
+			{
+				var cookies = cookieContainer.Get(domain);
+				cookieList.AddRange(cookies.Select(cookie => new
+				{
+					domain = cookie.Host,
+					expirationDate = cookie.Expiry == DateTime.MinValue ? (double?)null : new DateTimeOffset(cookie.Expiry).ToUnixTimeSeconds(),
+					hostOnly = !cookie.IsDomain,
+					httpOnly = cookie.IsHttpOnly,
+					name = cookie.Name,
+					path = cookie.Path,
+					sameSite = cookie.SameSite.ToString(),
+					secure = cookie.IsSecure,
+					session = cookie.IsSession,
+					storeId = (string)null,
+					value = cookie.Value,
+					id = cookie.GetHashCode()
+				}));
+			}
+
+			string cookiesJson = Global.ZennoLab.Json.JsonConvert.SerializeObject(cookieList, Global.ZennoLab.Json.Formatting.Indented);
+			_project.Variables["cookies"].Value = cookiesJson;
+			return cookiesJson;
+		}
+
+
+
+	}
+
+
+
+
+
 	public class DataImporter
 	{
 		private readonly IZennoPosterProjectModel _project;
