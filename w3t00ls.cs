@@ -1340,55 +1340,53 @@ namespace w3tools //by @w3bgrep
 		
 	}
 
-public class C00kies
-{
-    private readonly Instance _instance;
-    private readonly IZennoPosterProjectModel _project;
+	public class C00kies
+	{
+		private readonly Instance _instance;
+		private readonly IZennoPosterProjectModel _project;
 
-    public C00kies(IZennoPosterProjectModel project, Instance instance)
-    {
-        _project = project;
-        _instance = instance;
-    }
+		public C00kies(IZennoPosterProjectModel project, Instance instance)
+		{
+			_project = project;
+			_instance = instance;
+		}
 
-    public string c00kies(string domainFilter = "")
-    {
-        if (domainFilter == ".") domainFilter = _instance.ActiveTab.MainDomain;
-		var cookieContainer = _project.Profile.CookieContainer;
-        var cookieList = new List<object>();
+		public string c00kies(string domainFilter = "")
+		{
+			if (domainFilter == ".") domainFilter = _instance.ActiveTab.MainDomain;
+			var cookieContainer = _project.Profile.CookieContainer;
+			var cookieList = new List<object>();
 
-        foreach (var domain in cookieContainer.Domains)
-        {
-            // Если domainFilter не пустой, проверяем, содержит ли domain подстроку domainFilter
-            if (string.IsNullOrEmpty(domainFilter) || domain.Contains(domainFilter))
-            {
-                var cookies = cookieContainer.Get(domain);
-                cookieList.AddRange(cookies.Select(cookie => new
-                {
-                    domain = cookie.Host,
-                    expirationDate = cookie.Expiry == DateTime.MinValue ? (double?)null : new DateTimeOffset(cookie.Expiry).ToUnixTimeSeconds(),
-                    hostOnly = !cookie.IsDomain,
-                    httpOnly = cookie.IsHttpOnly,
-                    name = cookie.Name,
-                    path = cookie.Path,
-                    sameSite = cookie.SameSite.ToString(),
-                    secure = cookie.IsSecure,
-                    session = cookie.IsSession,
-                    storeId = (string)null,
-                    value = cookie.Value,
-                    id = cookie.GetHashCode()
-                }));
-            }
-        }
+			foreach (var domain in cookieContainer.Domains)
+			{
+				// Если domainFilter не пустой, проверяем, содержит ли domain подстроку domainFilter
+				if (string.IsNullOrEmpty(domainFilter) || domain.Contains(domainFilter))
+				{
+					var cookies = cookieContainer.Get(domain);
+					cookieList.AddRange(cookies.Select(cookie => new
+					{
+						domain = cookie.Host,
+						expirationDate = cookie.Expiry == DateTime.MinValue ? (double?)null : new DateTimeOffset(cookie.Expiry).ToUnixTimeSeconds(),
+						hostOnly = !cookie.IsDomain,
+						httpOnly = cookie.IsHttpOnly,
+						name = cookie.Name,
+						path = cookie.Path,
+						sameSite = cookie.SameSite.ToString(),
+						secure = cookie.IsSecure,
+						session = cookie.IsSession,
+						storeId = (string)null,
+						value = cookie.Value,
+						id = cookie.GetHashCode()
+					}));
+				}
+			}
 
-        string cookiesJson = Global.ZennoLab.Json.JsonConvert.SerializeObject(cookieList, Global.ZennoLab.Json.Formatting.Indented);
-        if (string.IsNullOrEmpty(domainFilter)) _project.Variables["cookies"].Value = cookiesJson;
-		if (domainFilter == ".") _project.Variables["projectCookies"].Value = cookiesJson;
-        return cookiesJson;
-    }
-}
-
-
+			string cookiesJson = Global.ZennoLab.Json.JsonConvert.SerializeObject(cookieList, Global.ZennoLab.Json.Formatting.Indented);
+			if (string.IsNullOrEmpty(domainFilter)) _project.Variables["cookies"].Value = cookiesJson;
+			if (domainFilter == ".") _project.Variables["projectCookies"].Value = cookiesJson;
+			return cookiesJson;
+		}
+	}
 
 
 	public class DataImporter
@@ -4922,7 +4920,52 @@ public class C00kies
 		}	
 	}
 
+	public class OKX
+	{
+		private readonly IZennoPosterProjectModel _project;
+		private readonly Instance _instance;
+		private readonly bool _log;
 
+		public OKX(IZennoPosterProjectModel project, Instance instance, bool log = false)
+		{
+			_project = project;
+			_instance = instance;
+			_log = log;
+		}
+
+		public string GetWallets(string mode = null)
+		{
+			_instance.ActiveTab.Navigate("chrome-extension://mcohilncbfahbmgdjkbpemcciiolgcge/home.html#/wallet/management-home-page?fromHome=1", "");
+			var pKeys = new List<string>();
+			var sKeys = new List<string>();
+			string active = null;
+			var wList = _instance.ActiveTab.FindElementByAttribute("div", "class", "okui-virtual-list-holder-inner", "regexp", 0).GetChildren(false).ToList();
+			foreach(HtmlElement he in wList)
+			{
+				
+				if (he.InnerText.Contains("0x")) pKeys.Add((he.InnerText.Split('\n')[0]) + ": " + he.InnerText.Split('\n')[1]) ;
+				if (he.InnerText.Contains("Account")) sKeys.Add((he.InnerText.Split('\n')[0]) + ": " + he.InnerText.Split('\n')[1]) ;
+				if (he.InnerHtml.Contains("okd-checkbox-circle"))   active =((he.InnerText.Split('\n')[0]) + ": " + he.InnerText.Split('\n')[1]) ;
+			}
+
+			if (_log) _project.SendInfoToLog(string.Join("\n", pKeys));
+			if (_log) _project.SendInfoToLog(string.Join("\n", sKeys));
+			if (_log) _project.SendInfoToLog(active);
+			if (mode == "pKeys") return string.Join("\n", pKeys);
+			if (mode == "sKeys") return string.Join("\n", sKeys);
+			return active;
+		}
+
+
+
+
+
+
+
+
+
+
+	}
 
 
 
