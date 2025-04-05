@@ -2378,6 +2378,12 @@ namespace w3tools //by @w3bgrep
             var resp = SQL.W3Query(project,$"SELECT evm FROM {table} WHERE acc0 = {project.Variables["acc0"].Value}");
             project.Variables["addressEvm"].Value = resp;  return resp;
         }   
+        public static string AdrSol(IZennoPosterProjectModel project, string tableName ="blockchain_public", string schemaName = "accounts")
+        {
+            string table = (project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;	
+            var resp = SQL.W3Query(project,$"SELECT sol FROM {table} WHERE acc0 = {project.Variables["acc0"].Value}");
+            project.Variables["addressSol"].Value = resp;  return resp;
+        }  		
         public static string Proxy(IZennoPosterProjectModel project, string tableName ="profile", string schemaName = "accounts")
         {
             string table = (project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
@@ -4940,6 +4946,7 @@ namespace w3tools //by @w3bgrep
 			var sKeys = new List<string>();
 			string active = null;
 			var wList = _instance.ActiveTab.FindElementByAttribute("div", "class", "okui-virtual-list-holder-inner", "regexp", 0).GetChildren(false).ToList();
+			bool set = false;
 			foreach(HtmlElement he in wList)
 			{
 				
@@ -4952,12 +4959,17 @@ namespace w3tools //by @w3bgrep
 					{
 						_instance.UseFullMouseEmulation = true;
 						_instance.WaitClick(() => he);
-						return "";
+						set = true;
+						//return "";
 					}
 					
 				}
 			}
-
+			if (choose != null)
+			{
+				if(!set)throw new Exception("no key");
+				return active;
+			} 
 			if (_log) _project.SendInfoToLog(string.Join("\n", pKeys));
 			if (_log) _project.SendInfoToLog(string.Join("\n", sKeys));
 			if (_log) _project.SendInfoToLog(active);
@@ -4971,7 +4983,7 @@ namespace w3tools //by @w3bgrep
 			var password = SAFU.HWPass(_project);
 			_instance.ActiveTab.Navigate("chrome-extension://mcohilncbfahbmgdjkbpemcciiolgcge/home.html#/wallet-add/import-with-seed-phrase-and-private-key", "");
 			try{
-			_instance.LMB(("button", "innertext", "Import\\ wallet", "regexp", 0), delay:3);
+			_instance.LMB(("button", "innertext", "Import\\ wallet", "regexp", 0), deadline:3);
 			_instance.LMB(("i", "class", "icon\\ iconfont\\ okx-wallet-plugin-futures-grid-20\\ _wallet-icon__icon__core_", "regexp", 0), thr0w:false);
 			}
 			catch{}
@@ -4981,7 +4993,8 @@ namespace w3tools //by @w3bgrep
 				
 				var key = Db.KeyEVM(_project); 
 				_instance.SetHe(("textarea", "class", "okui-input-input\\ input-textarea", "regexp", 0),key);
-				_instance.LMB(("button", "data-testid", "okd-button", "regexp", 0));
+
+				_instance.LMB(("button", "innertext", "Confirm", "regexp", 0),deadline:20);
 				if (chainMode == "Aptos") _instance.LMB(("span", "innertext", "Aptos\\ network", "regexp", 0));
 				_instance.LMB(("button", "class", "okui-btn\\ btn-lg\\ btn-fill-highlight\\ block\\ chains-choose-network-modal__confirm-button", "regexp", 0));
 			}
@@ -5500,16 +5513,16 @@ namespace w3tools //by @w3bgrep
                 Thread.Sleep(500);
             }
         }
-		public static void SetHe(this Instance instance, object obj, string value, string method = "id", int maxWaitSeconds = 10, int delay = 1, string comment = "", bool Throw = true)
+		public static void SetHe(this Instance instance, object obj, string value, string method = "id", int deadline = 10, int delay = 1, string comment = "", bool thr0w = true)
 		{
 			DateTime functionStart = DateTime.Now;
 			string lastExceptionMessage = "";
 
 			while (true)
 			{
-				if ((DateTime.Now - functionStart).TotalSeconds > maxWaitSeconds)
+				if ((DateTime.Now - functionStart).TotalSeconds > deadline)
 				{
-					if (Throw) throw new TimeoutException($"{comment} not found in {maxWaitSeconds}s: {lastExceptionMessage}");
+					if (thr0w) throw new TimeoutException($"{comment} not found in {deadline}s: {lastExceptionMessage}");
 					else return;
 				}
 
