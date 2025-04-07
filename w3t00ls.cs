@@ -1680,9 +1680,8 @@ namespace w3tools //by @w3bgrep
 					_project.SendWarningToLog($"Line {acc0} is empty", false);
 					continue;
 				}
-				if (tableName == "profile")
+				if (formTitle.Contains("proxy"))
 				{
-					// Для таблицы proxy записываем строку целиком в колонку proxy
 					try
 					{
 						string dbQuery = $@"UPDATE {table} SET proxy = '{line.Replace("'", "''")}' WHERE acc0 = {acc0};";
@@ -1805,7 +1804,7 @@ namespace w3tools //by @w3bgrep
 			{
 				{ "PROXY", "proxy" },
 			};
-			return ImportData("profile", "Import Proxy ", fields, mapping, message:"Proxy format: http://login1:pass1@111.111.111.111:1111" );
+			return ImportData("profile", "Import proxy ", fields, mapping, message:"Proxy format: http://login1:pass1@111.111.111.111:1111" );
 		}
 		private string ImportKeys(string keyType)
 		{
@@ -5022,7 +5021,22 @@ namespace w3tools //by @w3bgrep
 
 	}
 
+public class Zerion
+	{
+		private readonly IZennoPosterProjectModel _project;
+		private readonly Instance _instance;
+		private readonly bool _log;
 
+		public Zerion(IZennoPosterProjectModel project, Instance instance, bool log = false)
+		{
+			_project = project;
+			_instance = instance;
+			_log = log;
+		}
+
+		public void GetWallets(string mode = null, string choose = null)
+		{}
+	}
 
 	#endregion	
 	#region Tools&Vars
