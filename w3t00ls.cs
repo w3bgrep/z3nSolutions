@@ -1359,7 +1359,6 @@ namespace w3tools //by @w3bgrep
 
 			foreach (var domain in cookieContainer.Domains)
 			{
-				// Если domainFilter не пустой, проверяем, содержит ли domain подстроку domainFilter
 				if (string.IsNullOrEmpty(domainFilter) || domain.Contains(domainFilter))
 				{
 					var cookies = cookieContainer.Get(domain);
@@ -1380,8 +1379,10 @@ namespace w3tools //by @w3bgrep
 					}));
 				}
 			}
-
 			string cookiesJson = Global.ZennoLab.Json.JsonConvert.SerializeObject(cookieList, Global.ZennoLab.Json.Formatting.Indented);
+
+			cookiesJson = cookiesJson.Replace("\r\n", "").Replace("\n", "").Replace("\r", "").Replace(" ", "");
+
 			if (string.IsNullOrEmpty(domainFilter)) _project.Variables["cookies"].Value = cookiesJson;
 			if (domainFilter == ".") _project.Variables["projectCookies"].Value = cookiesJson;
 			return cookiesJson;
@@ -2121,7 +2122,7 @@ namespace w3tools //by @w3bgrep
 			while (tempList.Count < targetCount)
 			{
 				_project.SendToLog($"Parsing {webGLvendor} WebGL. {tempList.Count}/{_project.Variables["rangeEnd"].Value} strings parsed", LogType.Info, true, LogColor.Default);
-				try { _instance.Launch(ZennoLab.InterfacesLibrary.Enums.Browser.BrowserType.WithoutBrowser, false); } catch { }
+				try { _instance.Launch(ZennoLab.InterfacesLibrary.Enums.Browser.BrowserType.Firefox45, false); } catch { }
 				_instance.Launch(ZennoLab.InterfacesLibrary.Enums.Browser.BrowserType.Chromium, false);
 				string webglData = _instance.WebGLPreferences.Save();
 				_project.SendInfoToLog(webglData);
@@ -2520,17 +2521,16 @@ namespace w3tools //by @w3bgrep
 				request.IgnoreProtocolErrors = true;
 				request.ConnectTimeout = 5000;
 
+				proxy = project.Variables["proxyLeaf"].Value;
 				if (!string.IsNullOrEmpty(proxy))
 				{
-					try
-					{
-						request.Proxy = ProxyClient.Parse(proxy.Contains("@") ? proxy : $"HTTP://{proxy}");
-					}
-					catch (Exception ex)
-					{
-						project.SendErrorToLog($"Ошибка парсинга прокси '{proxy}': {ex.Message}");
-						return null;
-					}
+					string[] proxyArray = proxy.Split(':');
+					string username = proxyArray[1];
+					string password = proxyArray[2];
+					string host = proxyArray[3];
+					int port = int.Parse(proxyArray[4]);		
+					
+					request.Proxy = new HttpProxyClient(host, port, username, password);
 				}
 				try
 				{
@@ -2630,7 +2630,7 @@ namespace w3tools //by @w3bgrep
 						}
 
 						request.Proxy = ProxyClient.Parse(proxyType, formattedProxyString);
-						if (log) project.SendInfoToLog($"proxy '{proxy}' set as {proxyType}");
+						//if (log) Loggers.l0g(project,$"proxy '{proxy}' set as {proxyType}");
 					}
 					catch (Exception ex)
 					{
@@ -2641,8 +2641,13 @@ namespace w3tools //by @w3bgrep
 
 				try
 				{
+					//if (log) Loggers.l0g(project,body);
+					
 					HttpResponse httpResponse = request.Post(url, body, "application/json");
+					
 					response = httpResponse.ToString();
+					
+					if (log) Loggers.l0g(project,$"jBody:[{body}] Resp:[{response}]");
 				}
 				catch (HttpException ex)
 				{
