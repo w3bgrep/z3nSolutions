@@ -441,7 +441,7 @@ namespace w3tools //by @w3bgrep
 			if (toLog == "") toLog = project.Variables[$"{varName}"].Value;
 			else project.Variables[$"{varName}"].Value = toLog;
 			
-			toLog = Regex.Replace(toLog, @"\s+", " ").Trim();
+			//toLog = Regex.Replace(toLog, @"\s+", " ").Trim();
 			var acc0 = project.Variables["acc0"].Value;
 			var port = project.Variables["instancePort"].Value;
 			var lastAction = project.LastExecutedActionId;
@@ -1344,13 +1344,11 @@ namespace w3tools //by @w3bgrep
 	{
 		private readonly Instance _instance;
 		private readonly IZennoPosterProjectModel _project;
-
 		public C00kies(IZennoPosterProjectModel project, Instance instance)
 		{
 			_project = project;
 			_instance = instance;
 		}
-
 		public string c00kies(string domainFilter = "")
 		{
 			if (domainFilter == ".") domainFilter = _instance.ActiveTab.MainDomain;
@@ -1386,6 +1384,92 @@ namespace w3tools //by @w3bgrep
 			if (string.IsNullOrEmpty(domainFilter)) _project.Variables["cookies"].Value = cookiesJson;
 			if (domainFilter == ".") _project.Variables["projectCookies"].Value = cookiesJson;
 			return cookiesJson;
+		}
+		public string c00kiesJGet(bool log = false)
+		{
+			string jsCode = @"
+			var cookies = document.cookie.split('; ').map(function(cookie) {
+				var parts = cookie.split('=');
+				var name = parts[0];
+				var value = parts.slice(1).join('=');
+				return {
+					'domain': window.location.hostname,
+					'name': name,
+					'value': value,
+					'path': '/', 
+					'expirationDate': null, 
+					'hostOnly': true,
+					'httpOnly': false,
+					'secure': window.location.protocol === 'https:',
+					'session': false,
+					'sameSite': 'Unspecified',
+					'storeId': null,
+					'id': 1
+				};
+			});
+			return JSON.stringify(cookies);
+			";
+
+			string jsonResult = _instance.ActiveTab.MainDocument.EvaluateScript(jsCode).ToString();
+			if (log) Loggers.l0g(_project,jsonResult);
+			JArray cookiesArray = JArray.Parse(jsonResult);
+			var escapedJson = jsonResult.Replace("\r\n", "").Replace("\n", "").Replace("\r", "").Replace(" ", "").Replace("'", "''").Trim();
+			return escapedJson;
+		}
+		public void c00kiesJSet(string cookiesJson, bool log = false){
+			try
+			{
+				JArray cookies = JArray.Parse(cookiesJson);
+
+				var uniqueCookies = cookies
+					.GroupBy(c => new { Domain = c["domain"].ToString(), Name = c["name"].ToString() })
+					.Select(g => g.Last())
+					.ToList();
+
+				string currentDomain = _instance.ActiveTab.Domain;
+				long currentUnixTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+				long weekFromNowUnixTime = currentUnixTime + (7 * 24 * 60 * 60);
+				string weekFromNow = DateTimeOffset.FromUnixTimeSeconds(weekFromNowUnixTime).ToString("R");
+
+
+				string jsCode = "";
+				int cookieCount = 0;
+				foreach (JObject cookie in uniqueCookies)
+				{
+					string domain = cookie["domain"].ToString();
+					string name = cookie["name"].ToString();
+					string value = cookie["value"].ToString();
+
+					if (domain == currentDomain || domain == "." + currentDomain)
+					{
+						string path = cookie["path"]?.ToString() ?? "/";
+						string expires;
+
+						if (cookie["expirationDate"] != null && cookie["expirationDate"].Type != JTokenType.Null)
+						{
+							double expValue = double.Parse(cookie["expirationDate"].ToString());
+							if (expValue < currentUnixTime) expires = weekFromNow;
+							else expires = DateTimeOffset.FromUnixTimeSeconds((long)expValue).ToString("R");
+						}
+						else 
+							expires = weekFromNow;
+
+						jsCode += $"document.cookie = '{name}={value}; path={path}; expires={expires}';\n";
+						cookieCount++;
+					}
+				}
+				if (log) Loggers.l0g(_project,$"Found cookies for {currentDomain}: [{cookieCount}] runingJs...\n + {jsCode}");
+
+				if (!string.IsNullOrEmpty(jsCode))
+				{
+					_instance.ActiveTab.MainDocument.EvaluateScript(jsCode);
+				}
+				else     Loggers.l0g(_project,$"!W No cookies Found for {currentDomain}");
+			}
+			catch (Exception ex)
+			{
+				Loggers.l0g(_project,$"!W cant't parse JSON: [{cookiesJson}]  {ex.Message}");
+			}
 		}
 	}
 
