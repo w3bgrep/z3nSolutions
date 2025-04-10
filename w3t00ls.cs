@@ -3511,12 +3511,13 @@ namespace w3tools //by @w3bgrep
 			_instance = instance;
 			_log = log;
 		}
-        public void XcredsFromDb(string tableName ="twitter", string schemaName = "accounts", bool log = false)
+        private void XcredsFromDb(string tableName ="twitter", string schemaName = "accounts", bool log = false)
         {
-            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+            
+			log = _project.Variables["debug"].Value == "True";
+			string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
 			var q = $@"SELECT status, token, login, password, code2fa, emailLogin, emailPass FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value};";
 			var resp = SQL.W3Query(_project,q,log);
-			//if (log) Loggers.l0g(_project,q);
 			   
             string[] twitterData = resp.Split('|');
             _project.Variables["twitterSTATUS"].Value = twitterData[0].Trim();
@@ -3526,11 +3527,118 @@ namespace w3tools //by @w3bgrep
             _project.Variables["twitterCODE2FA"].Value = twitterData[4].Trim();
             _project.Variables["twitterEMAIL"].Value = twitterData[5].Trim();
             _project.Variables["twitterEMAIL_PASSWORD"].Value = twitterData[6].Trim();			
-            //return project.Variables["twitterSTATUS"].Value;
-        }  
+        } 
 
+		private string  XcheckState(bool log = false)
+		{
+			log = _project.Variables["debug"].Value == "True";
+			DateTime start = DateTime.Now;
+			DateTime deadline = DateTime.Now.AddSeconds(60);
+			string login = _project.Variables["twitterLOGIN"].Value; 
+			_instance.ActiveTab.Navigate($"https://x.com/{login}", "");
+			var status = "";
 
+			while (string.IsNullOrEmpty(status))
+			{
+				if (log) Loggers.l0g(_project,$"{DateTime.Now- start}s chrcking... URLNow:[{_instance.ActiveTab.URL}]" );
+				if (DateTime.Now > deadline) Loggers.l0g(_project,"!W TwitterGetStatus timeout",thr0w:true);
+				
+				else if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Something\\ went\\ wrong.\\ Try\\ reloading.", "regexp", 0).IsVoid)
+				{	
+					_instance.ActiveTab.MainDocument.EvaluateScript("location.reload(true)");
+					Thread.Sleep(5000);
+					continue;}
+				
+				else if (!_instance.ActiveTab.FindElementByAttribute("*", "innertext", @"Caution:\s+This\s+account\s+is\s+temporarily\s+restricted", "regexp", 0).IsVoid) 
+					status = "restricted";
+				else if (!_instance.ActiveTab.FindElementByAttribute("*", "innertext", @"Account\s+suspended\s+X\s+suspends\s+accounts\s+which\s+violate\s+the\s+X\s+Rules", "regexp", 0).IsVoid)
+					status = "suspended";
+				else if (!_instance.ActiveTab.FindElementByAttribute("*", "innertext", @"Log\ in", "regexp", 0).IsVoid || !_instance.ActiveTab.FindElementByAttribute("a", "data-testid", "loginButton", "regexp", 0).IsVoid)
+					status = "login";
 
+				else if (!_instance.ActiveTab.FindElementByAttribute("*", "innertext", "erify\\ your\\ email\\ address", "regexp", 0).IsVoid || 
+					!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "We\\ sent\\ your\\ verification\\ code.", "regexp", 0).IsVoid)
+						status = "emailCapcha";
+				else if (!_instance.ActiveTab.FindElementByAttribute("button", "data-testid", "SideNav_AccountSwitcher_Button", "regexp", 0).IsVoid)
+				{
+					var check = _instance.ActiveTab.FindElementByAttribute("button", "data-testid", "SideNav_AccountSwitcher_Button", "regexp", 0).FirstChild.FirstChild.GetAttribute("data-testid");
+					if (check == $"UserAvatar-Container-{login}") status = "ok";
+				}
+			}
+			if (log) Loggers.l0g(_project,$"{status} {DateTime.Now- start}" );
+			return status;
+		}
+
+		private void XsetToken()
+		{
+			var token = _project.Variables["twitterTOKEN"].Value; 
+			string jsCode = _project.ExecuteMacro($"document.cookie = \"auth_token={token}; domain=.x.com; path=/; expires=${DateTimeOffset.UtcNow.AddYears(1).ToString("R")}; Secure\";\r\nwindow.location.replace(\"https://x.com\")");
+			_instance.ActiveTab.MainDocument.EvaluateScript(jsCode);
+		}
+
+		private string Xlogin()
+		{
+			DateTime deadline = DateTime.Now.AddSeconds(60);
+			var status = "";
+			var login = _project.Variables["twitterLOGIN"].Value;
+			
+			_instance.ActiveTab.Navigate("https://x.com/", "");Thread.Sleep(2000);
+			_instance.LMB(("button", "innertext", "Accept\\ all\\ cookies", "regexp", 0),deadline:1,thr0w:false);
+			_instance.LMB(("button", "data-testid", "xMigrationBottomBar", "regexp", 0),deadline:0,thr0w:false);
+			_instance.LMB(("a", "data-testid", "login", "regexp", 0));
+			_instance.SetHe(("input:text", "autocomplete", "username", "text", 0),login,deadline:30);
+			_instance.LMB(("span", "innertext", "Next", "regexp", 1),"clickOut");
+			
+			if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Sorry, we could not find your account')]", 0).IsVoid) return "NotFound"; 
+
+			_instance.WaitSetValue(() => 
+				_instance.ActiveTab.GetDocumentByAddress("0").FindElementByName("password"),_project.Variables["twitterPASSWORD"].Value);
+			
+			_instance.LMB(("button", "data-testid", "LoginForm_Login_Button", "regexp", 0),"clickOut");
+
+			if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Wrong password!')]", 0).IsVoid) return "WrongPass";
+
+			var codeOTP = OTP.Offline(_project.Variables["twitterCODE2FA"].Value); 
+			_instance.WaitSetValue(() => 
+				_instance.ActiveTab.GetDocumentByAddress("0").FindElementByName("text"),codeOTP);
+			
+			_instance.LMB(("span", "innertext", "Next", "regexp", 1),"clickOut");
+			
+			if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Your account is suspended')]", 0).IsVoid) return "Suspended";
+			if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Oops,\\ something\\ went\\ wrong.\\ Please\\ try\\ again\\ later.", "regexp", 0).IsVoid) return "SomethingWentWrong";
+			if (! _instance.ActiveTab.FindElementByAttribute("*", "innertext", "Suspicious\\ login\\ prevented", "regexp", 0).IsVoid)return "SuspiciousLogin";
+			
+			_instance.LMB(("button", "innertext", "Accept\\ all\\ cookies", "regexp", 0),deadline:1,thr0w:false);
+			_instance.LMB(("button", "data-testid", "xMigrationBottomBar", "regexp", 0),deadline:0,thr0w:false);
+			
+			return "ok";
+		}
+
+		public string Xload()
+		{
+			XcredsFromDb(log:true);
+			bool tokenUsed = false;
+
+			check:
+			var status = XcheckState(log:true);
+
+			if (status == "ok") return status;
+
+			else if (status == "login" && !tokenUsed) 
+			{
+				XsetToken();
+				tokenUsed = true;
+				Thread.Sleep(3000);
+			}
+			else if (status == "login" && tokenUsed) 
+			{
+				var login = Xlogin();
+				_project.SendInfoToLog(login);
+				Thread.Sleep(3000);
+			}
+			_project.SendInfoToLog(status);
+			goto check;	
+		}
 
 	}
 
