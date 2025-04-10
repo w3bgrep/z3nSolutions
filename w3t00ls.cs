@@ -455,7 +455,7 @@ namespace w3tools //by @w3bgrep
 			if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = project.Variables["projectName"].Value;
 
 			
-			string formated = $"⛑  [{acc0}] ⚙  [{port}] ⏱  [{elapsed}] ⛏ [{callerName}]. LastAction [{lastAction}] took {inSec}]\n        {toLog}";
+			string formated = $"⛑  [{acc0}] ⚙  [{port}] ⏱  [{elapsed}] ⛏ [{callerName}]. LastAction [{lastAction}] took {inSec}]\n        {toLog.Trim()}";
 			
 			if (logType == LogType.Info && logColor == LogColor.Default)
 			{
@@ -1414,6 +1414,7 @@ namespace w3tools //by @w3bgrep
 			if (log) Loggers.l0g(_project,jsonResult);
 			JArray cookiesArray = JArray.Parse(jsonResult);
 			var escapedJson = jsonResult.Replace("\r\n", "").Replace("\n", "").Replace("\r", "").Replace(" ", "").Replace("'", "''").Trim();
+			_project.Json.FromString(jsonResult);
 			return escapedJson;
 		}
 		public void c00kiesJSet(string cookiesJson, bool log = false){
@@ -1427,9 +1428,12 @@ namespace w3tools //by @w3bgrep
 					.ToList();
 
 				string currentDomain = _instance.ActiveTab.Domain;
-				long currentUnixTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-				long weekFromNowUnixTime = currentUnixTime + (7 * 24 * 60 * 60);
-				string weekFromNow = DateTimeOffset.FromUnixTimeSeconds(weekFromNowUnixTime).ToString("R");
+				//long currentUnixTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+				//long weekFromNowUnixTime = currentUnixTime + (7 * 24 * 60 * 60);
+				//string weekFromNow = DateTimeOffset.UtcNow.AddYears(1).ToString("R");
+
+				string[] domainParts = currentDomain.Split('.');
+        		string parentDomain = "." + string.Join(".", domainParts.Skip(domainParts.Length - 2));
 
 
 				string jsCode = "";
@@ -1448,13 +1452,13 @@ namespace w3tools //by @w3bgrep
 						if (cookie["expirationDate"] != null && cookie["expirationDate"].Type != JTokenType.Null)
 						{
 							double expValue = double.Parse(cookie["expirationDate"].ToString());
-							if (expValue < currentUnixTime) expires = weekFromNow;
+							if (expValue < DateTimeOffset.UtcNow.ToUnixTimeSeconds()) expires = DateTimeOffset.UtcNow.AddYears(1).ToString("R");
 							else expires = DateTimeOffset.FromUnixTimeSeconds((long)expValue).ToString("R");
 						}
 						else 
-							expires = weekFromNow;
+							expires = DateTimeOffset.UtcNow.AddYears(1).ToString("R");
 
-						jsCode += $"document.cookie = '{name}={value}; path={path}; expires={expires}';\n";
+						jsCode += $"document.cookie = '{name}={value}; domain={parentDomain}; path={path}; expires={expires}'; Secure';\n";
 						cookieCount++;
 					}
 				}
@@ -2570,10 +2574,9 @@ namespace w3tools //by @w3bgrep
 		public static void Upd(IZennoPosterProjectModel project, string toUpd, string tableName = "", bool log = false)
 		{
 			if (tableName == "")tableName = project.Variables["projectTable"].Value;		
-			var Q = $@"UPDATE {tableName} SET
-				{toUpd.Trim().TrimEnd(',')},
-				last = '{Time.Now("short")}' WHERE acc0 = {project.Variables["acc0"].Value};";
-			SQL.W3Query(project,Q,log); 
+			if (log) Loggers.l0g(project,toUpd);
+			var Q = $@"UPDATE {tableName} SET {toUpd.Trim().TrimEnd(',')}, last = '{Time.Now("short")}' WHERE acc0 = {project.Variables["acc0"].Value};";
+			SQL.W3Query(project,Q); 
 		}
 	}    
 
@@ -3495,6 +3498,45 @@ namespace w3tools //by @w3bgrep
 	}
 	#endregion
 	#region Socials
+
+	public class X
+	{
+		private readonly IZennoPosterProjectModel _project;
+		private readonly Instance _instance;
+		private readonly bool _log;
+
+		public X(IZennoPosterProjectModel project, Instance instance, bool log = false)
+		{
+			_project = project;
+			_instance = instance;
+			_log = log;
+		}
+        public void XcredsFromDb(string tableName ="twitter", string schemaName = "accounts", bool log = false)
+        {
+            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+			var q = $@"SELECT status, token, login, password, code2fa, emailLogin, emailPass FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value};";
+			var resp = SQL.W3Query(_project,q,log);
+			//if (log) Loggers.l0g(_project,q);
+			   
+            string[] twitterData = resp.Split('|');
+            _project.Variables["twitterSTATUS"].Value = twitterData[0].Trim();
+            _project.Variables["twitterTOKEN"].Value = twitterData[1].Trim();
+            _project.Variables["twitterLOGIN"].Value = twitterData[2].Trim();
+            _project.Variables["twitterPASSWORD"].Value = twitterData[3].Trim();
+            _project.Variables["twitterCODE2FA"].Value = twitterData[4].Trim();
+            _project.Variables["twitterEMAIL"].Value = twitterData[5].Trim();
+            _project.Variables["twitterEMAIL_PASSWORD"].Value = twitterData[6].Trim();			
+            //return project.Variables["twitterSTATUS"].Value;
+        }  
+
+
+
+
+	}
+
+
+
+
 	public static class Twitter
 	{
 		public static void TwitterSetToken(this Instance instance, IZennoPosterProjectModel project, string authToken = "", bool log = false, [CallerMemberName] string caller = "")
