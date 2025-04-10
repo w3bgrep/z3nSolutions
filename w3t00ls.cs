@@ -1381,8 +1381,8 @@ namespace w3tools //by @w3bgrep
 
 			cookiesJson = cookiesJson.Replace("\r\n", "").Replace("\n", "").Replace("\r", "").Replace(" ", "");
 
-			if (string.IsNullOrEmpty(domainFilter)) _project.Variables["cookies"].Value = cookiesJson;
-			if (domainFilter == ".") _project.Variables["projectCookies"].Value = cookiesJson;
+			//if (string.IsNullOrEmpty(domainFilter)) _project.Variables["cookies"].Value = cookiesJson;
+			//if (domainFilter == ".") _project.Variables["projectCookies"].Value = cookiesJson;
 			return cookiesJson;
 		}
 		public string c00kiesJGet(bool log = false)
@@ -3527,6 +3527,16 @@ namespace w3tools //by @w3bgrep
             _project.Variables["twitterEMAIL"].Value = twitterData[5].Trim();
             _project.Variables["twitterEMAIL_PASSWORD"].Value = twitterData[6].Trim();			
         } 
+        private void XupdateDb(string toUpd, bool log = false)
+		{
+			string tableName ="twitter"; string schemaName = "accounts";
+			log = _project.Variables["debug"].Value == "True";
+			string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+			if (log) Loggers.l0g(_project,toUpd);
+			var Q = $@"UPDATE {table} SET {toUpd.Trim().TrimEnd(',')}, last = '{Time.Now("short")}' WHERE acc0 = {_project.Variables["acc0"].Value};";
+			SQL.W3Query(_project,Q,log); 
+		}
+
 		private string XcheckState(bool log = false)
 		{
 			log = _project.Variables["debug"].Value == "True";
@@ -3538,15 +3548,10 @@ namespace w3tools //by @w3bgrep
 
 			while (string.IsNullOrEmpty(status))
 			{
-				if (log) Loggers.l0g(_project,$"{DateTime.Now- start}s chrcking... URLNow:[{_instance.ActiveTab.URL}]" );
+				Thread.Sleep(5000);
+				if (log) Loggers.l0g(_project,$"{DateTime.Now- start}s check... URLNow:[{_instance.ActiveTab.URL}]" );
 				if (DateTime.Now > deadline) Loggers.l0g(_project,"!W TwitterGetStatus timeout",thr0w:true);
-				
-				else if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Something\\ went\\ wrong.\\ Try\\ reloading.", "regexp", 0).IsVoid)
-				{	
-					_instance.ActiveTab.MainDocument.EvaluateScript("location.reload(true)");
-					Thread.Sleep(5000);
-					continue;}
-				
+
 				else if (!_instance.ActiveTab.FindElementByAttribute("*", "innertext", @"Caution:\s+This\s+account\s+is\s+temporarily\s+restricted", "regexp", 0).IsVoid) 
 					status = "restricted";
 				else if (!_instance.ActiveTab.FindElementByAttribute("*", "innertext", @"Account\s+suspended\s+X\s+suspends\s+accounts\s+which\s+violate\s+the\s+X\s+Rules", "regexp", 0).IsVoid)
@@ -3561,6 +3566,16 @@ namespace w3tools //by @w3bgrep
 				{
 					var check = _instance.ActiveTab.FindElementByAttribute("button", "data-testid", "SideNav_AccountSwitcher_Button", "regexp", 0).FirstChild.FirstChild.GetAttribute("data-testid");
 					if (check == $"UserAvatar-Container-{login}") status = "ok";
+					else {
+						status = "mixed";
+						Loggers.l0g(_project,$"!W {status}. Detected  [{check}] instead [UserAvatar-Container-{login}] {DateTime.Now- start}" );
+					}
+				}
+				else if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Something\\ went\\ wrong.\\ Try\\ reloading.", "regexp", 0).IsVoid)
+				{	
+					_instance.ActiveTab.MainDocument.EvaluateScript("location.reload(true)");
+					//Thread.Sleep(5000);
+					continue;
 				}
 			}
 			if (log) Loggers.l0g(_project,$"{status} {DateTime.Now- start}" );
@@ -3572,7 +3587,7 @@ namespace w3tools //by @w3bgrep
 			string jsCode = _project.ExecuteMacro($"document.cookie = \"auth_token={token}; domain=.x.com; path=/; expires=${DateTimeOffset.UtcNow.AddYears(1).ToString("R")}; Secure\";\r\nwindow.location.replace(\"https://x.com\")");
 			_instance.ActiveTab.MainDocument.EvaluateScript(jsCode);
 		}
-		public string XgetToken()
+		private string XgetToken()
 		{
 			var cook = new C00kies(_project, _instance); 
 			var cookJson= cook.c00kies(".");
@@ -3634,8 +3649,8 @@ namespace w3tools //by @w3bgrep
 			if (DateTime.Now > deadline) Loggers.l0g(_project,"!W Xload timeout",thr0w:true);
 			var status = XcheckState(log:true);
 
-			if (status == "ok") return status;
-			else if (status == "login" && !tokenUsed) 
+			//if (status == "ok") return status;
+			if (status == "login" && !tokenUsed) 
 			{
 				XsetToken();
 				tokenUsed = true;
@@ -3646,6 +3661,11 @@ namespace w3tools //by @w3bgrep
 				var login = Xlogin();
 				if (log) Loggers.l0g(_project,login);
 				Thread.Sleep(3000);
+			}
+			if (status == "restricted" || status == "suspended" || status == "emailCapcha" || status == "mixed" || status == "ok")
+			{
+			  XupdateDb($"status = '{status}'");
+			  return status;
 			}
 			if (log) Loggers.l0g(_project,status);
 			goto check;	
