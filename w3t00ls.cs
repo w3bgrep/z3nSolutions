@@ -3504,7 +3504,6 @@ namespace w3tools //by @w3bgrep
 		private readonly IZennoPosterProjectModel _project;
 		private readonly Instance _instance;
 		private readonly bool _log;
-
 		public X(IZennoPosterProjectModel project, Instance instance, bool log = false)
 		{
 			_project = project;
@@ -3528,8 +3527,7 @@ namespace w3tools //by @w3bgrep
             _project.Variables["twitterEMAIL"].Value = twitterData[5].Trim();
             _project.Variables["twitterEMAIL_PASSWORD"].Value = twitterData[6].Trim();			
         } 
-
-		private string  XcheckState(bool log = false)
+		private string XcheckState(bool log = false)
 		{
 			log = _project.Variables["debug"].Value == "True";
 			DateTime start = DateTime.Now;
@@ -3568,14 +3566,27 @@ namespace w3tools //by @w3bgrep
 			if (log) Loggers.l0g(_project,$"{status} {DateTime.Now- start}" );
 			return status;
 		}
-
 		private void XsetToken()
 		{
 			var token = _project.Variables["twitterTOKEN"].Value; 
 			string jsCode = _project.ExecuteMacro($"document.cookie = \"auth_token={token}; domain=.x.com; path=/; expires=${DateTimeOffset.UtcNow.AddYears(1).ToString("R")}; Secure\";\r\nwindow.location.replace(\"https://x.com\")");
 			_instance.ActiveTab.MainDocument.EvaluateScript(jsCode);
 		}
-
+		public string XgetToken()
+		{
+			var cook = new C00kies(_project, _instance); 
+			var cookJson= cook.c00kies(".");
+			JArray toParse = JArray.Parse(cookJson);
+			int i = 0; var token = "";
+			while (token == "")
+			{
+				if (toParse[i]["name"].ToString() == "auth_token") token = toParse[i]["value"].ToString();
+				i++;
+			}
+			_project.Variables["twitterTOKEN"].Value = token;
+			Db.TwitterTokenUpdate(_project);
+			return token;
+		}
 		private string Xlogin()
 		{
 			DateTime deadline = DateTime.Now.AddSeconds(60);
@@ -3610,20 +3621,20 @@ namespace w3tools //by @w3bgrep
 			
 			_instance.LMB(("button", "innertext", "Accept\\ all\\ cookies", "regexp", 0),deadline:1,thr0w:false);
 			_instance.LMB(("button", "data-testid", "xMigrationBottomBar", "regexp", 0),deadline:0,thr0w:false);
-			
+			XgetToken();
 			return "ok";
 		}
-
-		public string Xload()
+		public string Xload(bool log = false)
 		{
-			XcredsFromDb(log:true);
+			XcredsFromDb(log:log);
 			bool tokenUsed = false;
-
+			DateTime deadline = DateTime.Now.AddSeconds(60);
 			check:
+
+			if (DateTime.Now > deadline) Loggers.l0g(_project,"!W Xload timeout",thr0w:true);
 			var status = XcheckState(log:true);
 
 			if (status == "ok") return status;
-
 			else if (status == "login" && !tokenUsed) 
 			{
 				XsetToken();
@@ -3633,16 +3644,14 @@ namespace w3tools //by @w3bgrep
 			else if (status == "login" && tokenUsed) 
 			{
 				var login = Xlogin();
-				_project.SendInfoToLog(login);
+				if (log) Loggers.l0g(_project,login);
 				Thread.Sleep(3000);
 			}
-			_project.SendInfoToLog(status);
+			if (log) Loggers.l0g(_project,status);
 			goto check;	
 		}
 
 	}
-
-
 
 
 	public static class Twitter
