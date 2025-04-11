@@ -1028,7 +1028,7 @@ namespace w3tools //by @w3bgrep
 	            return result?.ToString() ?? string.Empty;
 	        }
 	    }
-		public static string pSQL(IZennoPosterProjectModel project, string query, bool log = false, bool ignoreErrors = false, string host ="localhost:5432", string dbName = "", string dbUser = "", string dbPswd = "", [CallerMemberName] string callerName = "")
+		public static string pSQL(IZennoPosterProjectModel project, string query, bool log = false, bool throwOnEx = false, string host ="localhost:5432", string dbName = "", string dbUser = "", string dbPswd = "", [CallerMemberName] string callerName = "")
 		{
 
 			if (string.IsNullOrEmpty(dbName)) dbName = project.Variables["DBpstgrName"].Value;
@@ -1047,8 +1047,7 @@ namespace w3tools //by @w3bgrep
             }
             catch (Exception ex)
             {
-                if (!ignoreErrors) project.SendToLog($"Ошибка при открытии соединения: {ex.Message}", LogType.Warning);
-                throw; 
+                Loggers.l0g(project,$"!W {ex.Message}", thr0w:throwOnEx);
             }
             try 
 			{	
@@ -1069,12 +1068,12 @@ namespace w3tools //by @w3bgrep
 			}
 			catch (Exception ex)
 			{
-				if (!ignoreErrors) project.SendToLog($"{ex.Message}", LogType.Warning);
+				Loggers.l0g(project,$"!W {ex.Message}", thr0w:throwOnEx);
 				return string.Empty;
 			}
             finally
             {
-                db.close(); 
+				db.close(); 
             }
 		}
 		public DataTable GetTableStructure(string tableName)
@@ -1316,12 +1315,12 @@ namespace w3tools //by @w3bgrep
     }   
     public static class SQL
 	{
-        public static string W3Query(IZennoPosterProjectModel project, string query, bool log = false, bool ignoreErrors = false, string host = "localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "")
+        public static string W3Query(IZennoPosterProjectModel project, string query, bool log = false, bool throwOnEx = false, string host = "localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "")
         {
             string dbMode = project.Variables["DBmode"].Value;
             if (project.Variables["debug"].Value == "True") log = true;        
             if (dbMode == "SQLite") return SQLite.lSQL(project, query, log);
-            else if (dbMode == "PostgreSQL") return PostgresDB.pSQL(project, query, log, ignoreErrors, host, dbName, dbUser, dbPswd);
+            else if (dbMode == "PostgreSQL") return PostgresDB.pSQL(project, query, log, throwOnEx, host, dbName, dbUser, dbPswd);
             else return $"unknown DBmode: {dbMode}";
         }
         public static void W3MakeTable(IZennoPosterProjectModel project, Dictionary<string, string> tableStructure, string tableName = "", bool strictMode = false, bool insertData = false, string host = "localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "", string schemaName = "projects", bool log = false)
@@ -1380,9 +1379,7 @@ namespace w3tools //by @w3bgrep
 			string cookiesJson = Global.ZennoLab.Json.JsonConvert.SerializeObject(cookieList, Global.ZennoLab.Json.Formatting.Indented);
 
 			cookiesJson = cookiesJson.Replace("\r\n", "").Replace("\n", "").Replace("\r", "").Replace(" ", "");
-
-			//if (string.IsNullOrEmpty(domainFilter)) _project.Variables["cookies"].Value = cookiesJson;
-			//if (domainFilter == ".") _project.Variables["projectCookies"].Value = cookiesJson;
+			_project.Json.FromString(cookiesJson);
 			return cookiesJson;
 		}
 		public string c00kiesJGet(bool log = false)
@@ -2571,12 +2568,12 @@ namespace w3tools //by @w3bgrep
             string table = (project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
 			return SQL.W3Query(project,$"SELECT value FROM {tableName} WHERE var = 'settingsApiBinance';");
 		}
-		public static void Upd(IZennoPosterProjectModel project, string toUpd, string tableName = "", bool log = false)
+		public static void Upd(IZennoPosterProjectModel project, string toUpd, string tableName = "", bool log = false, bool throwOnEx = false)
 		{
 			if (tableName == "")tableName = project.Variables["projectTable"].Value;		
 			if (log) Loggers.l0g(project,toUpd);
 			var Q = $@"UPDATE {tableName} SET {toUpd.Trim().TrimEnd(',')}, last = '{Time.Now("short")}' WHERE acc0 = {project.Variables["acc0"].Value};";
-			SQL.W3Query(project,Q); 
+			SQL.W3Query(project,Q,throwOnEx:throwOnEx); 
 		}
 	}    
 
