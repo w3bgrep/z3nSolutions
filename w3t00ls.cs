@@ -449,7 +449,7 @@ namespace w3tools //by @w3bgrep
 			var elapsed = Time.TotalTime(project);
 			var stackFrame = new System.Diagnostics.StackFrame(1); 
 			var callingMethod = stackFrame.GetMethod();
-			var TotalSeconds = Time.TimeElapsed(project);
+			
 
 
 			if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = project.Variables["projectName"].Value;
@@ -459,7 +459,7 @@ namespace w3tools //by @w3bgrep
 			
 			if (logType == LogType.Info && logColor == LogColor.Default)
 			{
-				if (formated.Contains("!W") || TotalSeconds > 60 * 30) 
+				if (formated.Contains("!W")) 
 				{
 					logType = LogType.Warning;
 					logColor = LogColor.Orange;
@@ -474,6 +474,13 @@ namespace w3tools //by @w3bgrep
 					logType = LogType.Info;
 					logColor = LogColor.LightBlue;
 				}
+				else if (Time.TimeElapsed(project) > 60 * 30)
+				{
+					logType = LogType.Info;
+					logColor = LogColor.Yellow;
+				}
+
+
 			}
 			
 			project.SendToLog(formated, logType, show, logColor);
@@ -2594,6 +2601,63 @@ namespace w3tools //by @w3bgrep
 		}
 
 	}
+
+	public class onChain
+	{
+		private readonly IZennoPosterProjectModel _project;
+		public onChain(IZennoPosterProjectModel project)
+		{
+			_project = project;
+		}
+		public T nativeSOL<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
+		{
+			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+			if (string.IsNullOrEmpty(address)) address = Db.AdrSol(_project);
+			if (string.IsNullOrEmpty(rpc)) rpc = "https://api.mainnet-beta.solana.com";
+
+			string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""getBalance"", ""params"": [""{address}""], ""id"": 1 }}";
+			string response;
+
+			using (var request = new HttpRequest())
+			{
+				request.UserAgent = "Mozilla/5.0";
+				request.IgnoreProtocolErrors = true;
+				request.ConnectTimeout = 5000;
+
+				if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
+				if (!string.IsNullOrEmpty(proxy))
+				{
+					string[] proxyArray = proxy.Split(':');
+					string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);		
+					request.Proxy = new HttpProxyClient(host, port, username, password);
+				}
+
+				try
+				{
+					HttpResponse httpResponse = request.Post(rpc, jsonBody, "application/json");
+					response = httpResponse.ToString();
+				}
+				catch (HttpException ex)
+				{
+					_project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
+					throw;
+				}
+			}
+
+			var match = Regex.Match(response, @"""value""\s*:\s*(\d+)");
+			string lamports = match.Success ? match.Groups[1].Value : "0";
+			decimal balanceSol = decimal.Parse(lamports) / 1000000000m;
+			if (log) Loggers.l0g(_project,$"{address}: {balanceSol} SOL");
+
+			if (typeof(T) == typeof(string))
+				return (T)Convert.ChangeType(balanceSol.ToString("0.##################"), typeof(T));
+			return (T)Convert.ChangeType(balanceSol, typeof(T));
+		}
+
+	}
+
+
+
 	public static class Leaf
 	{
 		public static string GET(IZennoPosterProjectModel project, string url, string proxy = "")
