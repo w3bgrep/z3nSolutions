@@ -2644,8 +2644,11 @@ namespace w3tools //by @w3bgrep
 				}
 			}
 
-			var match = Regex.Match(response, @"""value""\s*:\s*(\d+)");
-			string lamports = match.Success ? match.Groups[1].Value : "0";
+			var json = JObject.Parse(response);
+			string lamports = json["result"]?["value"]?.ToString() ?? "0";			
+
+			//var match = Regex.Match(response, @"""value""\s*:\s*(\d+)");
+			//string lamports = match.Success ? match.Groups[1].Value : "0";
 			decimal balanceSol = decimal.Parse(lamports) / 1000000000m;
 			if (log) Loggers.l0g(_project,$"{address}: {balanceSol} SOL");
 
@@ -2654,6 +2657,187 @@ namespace w3tools //by @w3bgrep
 			return (T)Convert.ChangeType(balanceSol, typeof(T));
 		}
 
+		public T splTokenBalance<T>(string tokenMint, string address = null, string rpc = null, string proxy = null, bool log = false)
+		{
+			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+			if (string.IsNullOrEmpty(address)) address = Db.AdrSol(_project);
+			if (string.IsNullOrEmpty(rpc)) rpc = "https://api.mainnet-beta.solana.com";
+
+			string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""getTokenAccountsByOwner"", ""params"": [""{address}"", {{""mint"": ""{tokenMint}""}}, {{""encoding"": ""jsonParsed""}}], ""id"": 1 }}";
+			string response;
+
+			using (var request = new HttpRequest())
+			{
+				request.UserAgent = "Mozilla/5.0";
+				request.IgnoreProtocolErrors = true;
+				request.ConnectTimeout = 5000;
+
+				if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
+				if (!string.IsNullOrEmpty(proxy))
+				{
+					string[] proxyArray = proxy.Split(':');
+					string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);        
+					request.Proxy = new HttpProxyClient(host, port, username, password);
+				}
+
+				try
+				{
+					HttpResponse httpResponse = request.Post(rpc, jsonBody, "application/json");
+					response = httpResponse.ToString();
+				}
+				catch (HttpException ex)
+				{
+					_project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
+					throw;
+				}
+			}
+
+			var json = JObject.Parse(response);
+			var tokenAccounts = json["result"]?["value"] as JArray;
+			string lamports = tokenAccounts != null && tokenAccounts.Count > 0 
+				? tokenAccounts[0]?["account"]?["data"]?["parsed"]?["info"]?["tokenAmount"]?["amount"]?.ToString() ?? "0"
+				: "0";
+			var decimals = tokenAccounts != null && tokenAccounts.Count > 0 
+				? int.Parse(tokenAccounts[0]?["account"]?["data"]?["parsed"]?["info"]?["tokenAmount"]?["decimals"]?.ToString() ?? "0")
+				: 0;
+			decimal balanceToken = decimal.Parse(lamports) / (decimal)Math.Pow(10, decimals);
+			if (log) Loggers.l0g(_project, $"{address}: {balanceToken} TOKEN ({tokenMint})");
+
+			if (typeof(T) == typeof(string))
+				return (T)Convert.ChangeType(balanceToken.ToString("0.##################"), typeof(T));
+			return (T)Convert.ChangeType(balanceToken, typeof(T));
+		}
+
+		public string getRecentBlockHashSol(string rpc = null, string proxy = null, bool log = false)
+		{
+			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+			if (string.IsNullOrEmpty(rpc)) rpc = "https://api.mainnet-beta.solana.com";
+
+			string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""getLatestBlockhash"", ""params"": [], ""id"": 1 }}";
+			string response;
+
+			using (var request = new HttpRequest())
+			{
+				request.UserAgent = "Mozilla/5.0";
+				request.IgnoreProtocolErrors = true;
+				request.ConnectTimeout = 5000;
+
+				if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
+				if (!string.IsNullOrEmpty(proxy))
+				{
+					string[] proxyArray = proxy.Split(':');
+					string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);        
+					request.Proxy = new HttpProxyClient(host, port, username, password);
+				}
+
+				try
+				{
+					HttpResponse httpResponse = request.Post(rpc, jsonBody, "application/json");
+					response = httpResponse.ToString();
+				}
+				catch (HttpException ex)
+				{
+					_project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
+					throw;
+				}
+			}
+
+			var json = JObject.Parse(response);
+			string blockhash = json["result"]?["value"]?["blockhash"]?.ToString() ?? "";
+			if (log) Loggers.l0g(_project, $"Blockhash: {blockhash}");
+
+			return blockhash;
+		}
+
+public T nativeSUI<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
+{
+    Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+    if (string.IsNullOrEmpty(address)) address = Db.AdrSol(_project);
+    if (string.IsNullOrEmpty(rpc)) rpc = "https://fullnode.mainnet.sui.io";
+
+    string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""suix_getBalance"", ""params"": [""{address}"", ""0x2::sui::SUI""], ""id"": 1 }}";
+    string response;
+
+    using (var request = new HttpRequest())
+    {
+        request.UserAgent = "Mozilla/5.0";
+        request.IgnoreProtocolErrors = true;
+        request.ConnectTimeout = 5000;
+
+        if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
+        if (!string.IsNullOrEmpty(proxy))
+        {
+            string[] proxyArray = proxy.Split(':');
+            string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);        
+            request.Proxy = new HttpProxyClient(host, port, username, password);
+        }
+
+        try
+        {
+            HttpResponse httpResponse = request.Post(rpc, jsonBody, "application/json");
+            response = httpResponse.ToString();
+        }
+        catch (HttpException ex)
+        {
+            _project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
+            throw;
+        }
+    }
+
+    var json = JObject.Parse(response);
+    string mist = json["result"]?["totalBalance"]?.ToString() ?? "0";
+    decimal balanceSui = decimal.Parse(mist) / 1000000000m;
+    if (log) Loggers.l0g(_project, $"{address}: {balanceSui} SUI");
+
+    if (typeof(T) == typeof(string))
+        return (T)Convert.ChangeType(balanceSui.ToString("0.##################"), typeof(T));
+    return (T)Convert.ChangeType(balanceSui, typeof(T));
+}
+
+public T tokenBalanceSUI<T>(string coinType, string address = null, string rpc = null, string proxy = null, bool log = false)
+{
+    Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+    if (string.IsNullOrEmpty(address)) address = Db.AdrSol(_project);
+    if (string.IsNullOrEmpty(rpc)) rpc = "https://fullnode.mainnet.sui.io";
+
+    string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""suix_getBalance"", ""params"": [""{address}"", ""{coinType}""], ""id"": 1 }}";
+    string response;
+
+    using (var request = new HttpRequest())
+    {
+        request.UserAgent = "Mozilla/5.0";
+        request.IgnoreProtocolErrors = true;
+        request.ConnectTimeout = 5000;
+
+        if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
+        if (!string.IsNullOrEmpty(proxy))
+        {
+            string[] proxyArray = proxy.Split(':');
+            string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);        
+            request.Proxy = new HttpProxyClient(host, port, username, password);
+        }
+
+        try
+        {
+            HttpResponse httpResponse = request.Post(rpc, jsonBody, "application/json");
+            response = httpResponse.ToString();
+        }
+        catch (HttpException ex)
+        {
+            _project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
+            throw;
+        }
+    }
+	_project.SendInfoToLog(response);
+    var json = JObject.Parse(response);
+    string mist = json["result"]?["totalBalance"]?.ToString() ?? "0";
+    decimal balanceToken = decimal.Parse(mist) / 1000000m;
+    if (log) Loggers.l0g(_project, $"{address}: {balanceToken} TOKEN ({coinType})");
+
+    if (typeof(T) == typeof(string))
+        return (T)Convert.ChangeType(balanceToken.ToString("0.##################"), typeof(T));
+    return (T)Convert.ChangeType(balanceToken, typeof(T));
+}
 	}
 
 
