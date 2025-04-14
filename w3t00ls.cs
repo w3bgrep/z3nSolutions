@@ -1277,8 +1277,8 @@ namespace w3tools //by @w3bgrep
 					if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase)) project.SendToLog($"[SQLite ▼ ]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]\nRESULT: [{response.Replace('\n','|')}]", LogType.Info, true, LogColor.Gray);
 					else 
 					{
-						if (response != "0") project.SendToLog($"[SQLite ▲ ]: [{Regex.Replace(query.Trim(), @"\s+", " ")}] RESULT: [{response}]", LogType.Info, true, LogColor.Gray);
-						else project.SendToLog($"[SQLite ▲ ]: [{Regex.Replace(query.Trim(), @"\s+", " ")}] RESULT: [{response}]", LogType.Info, true, LogColor.Default);
+						if (response != "0") project.SendToLog($"[SQLite ▲ ]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]", LogType.Info, true, LogColor.Gray);
+						else project.SendToLog($"[SQLite ▲ ]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]", LogType.Info, true, LogColor.Default);
 					}
 				} 
 				return response;
@@ -1529,7 +1529,7 @@ namespace w3tools //by @w3bgrep
 			return true;
 		}
 
-		private void CreateSchema(bool log = false)
+		public void CreateSchema(bool log = false)
 		{
 			string defaultColumn = "TEXT DEFAULT ''";
 			string schemaName = _project.Variables["DBmode"].Value == "PostgreSQL" ? $"{_schema}." : "";
@@ -2022,6 +2022,124 @@ namespace w3tools //by @w3bgrep
 
 			return lines.Length.ToString();
 		}
+
+		public string ImportAddresses()
+		{
+			var acc0 = _project.Variables["acc0"];
+			int rangeEnd = int.Parse(_project.Variables["rangeEnd"].Value);
+
+			string schemaName = _project.Variables["DBmode"].Value == "PostgreSQL" ? $"{_schema}." : "";
+			string tableName = schemaName + "blockchain_public";
+
+			acc0.Value = "1";
+
+			// Создание формы
+			System.Windows.Forms.Form form = new System.Windows.Forms.Form();
+			form.Text = "chose type and input keys devided by new line, than ckick OK. Close window to continue";
+			
+			form.Width = 1008;
+			form.Height = 1008;
+			form.TopMost = true;
+			form.Location = new System.Drawing.Point(108, 108);
+
+			System.Windows.Forms.Label typeLabel = new System.Windows.Forms.Label();
+			typeLabel.Text = "Select address type:";
+			typeLabel.AutoSize = true;
+			typeLabel.Left = 10;
+			typeLabel.Top = 10;
+			form.Controls.Add(typeLabel);
+
+			System.Windows.Forms.ComboBox typeComboBox = new System.Windows.Forms.ComboBox();
+			typeComboBox.Left = 10;
+			typeComboBox.Top = 30;
+			typeComboBox.Width = form.ClientSize.Width - 20;
+			typeComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+			var addressTypes = new[] { "evm", "sol", "apt", "sui" };
+			typeComboBox.Items.AddRange(addressTypes);
+			typeComboBox.SelectedIndex = 0;
+			form.Controls.Add(typeComboBox);
+
+			System.Windows.Forms.Label dataLabel = new System.Windows.Forms.Label();
+			dataLabel.Text = "Input addresses (one per line):";
+			dataLabel.AutoSize = true;
+			dataLabel.Left = 10;
+			dataLabel.Top = 60;
+			form.Controls.Add(dataLabel);
+
+			System.Windows.Forms.TextBox dataInput = new System.Windows.Forms.TextBox();
+			dataInput.Left = 10;
+			dataInput.Top = 80;
+			dataInput.Width = form.ClientSize.Width - 20;
+			dataInput.Multiline = true;
+			dataInput.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+			dataInput.MaxLength = 1000000;
+			form.Controls.Add(dataInput);
+
+			System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
+			okButton.Text = "OK";
+			okButton.Width = form.ClientSize.Width - 20;
+			okButton.Height = 25;
+			okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
+			okButton.Top = form.ClientSize.Height - okButton.Height - 5;
+			okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
+			form.Controls.Add(okButton);
+			dataInput.Height = okButton.Top - dataInput.Top - 5;
+
+			string placeholder = "Chose type and input keys devided by new line, than ckick OK. Close window to continue\r\nВыбери тип адреса и вставь адсеса в форму каждый с новой строки. Нажми ОК. Повтори для нужных типов адресов и закрой окно";
+			// Установка плейсхолдера
+			if (string.IsNullOrEmpty(dataInput.Text)) // Если поле пустое, показываем плейсхолдер
+			{
+				dataInput.Text = placeholder;
+				dataInput.ForeColor = System.Drawing.Color.Gray;
+				//dataInput.Font = new System.Drawing.Font("Lucida Console", 10, System.Drawing.FontStyle.Bold);
+			}
+			dataInput.Enter += (s, e) => { if (dataInput.Text == placeholder) { dataInput.Text = ""; dataInput.ForeColor = System.Drawing.Color.Black; } };
+			dataInput.Leave += (s, e) => { if (string.IsNullOrEmpty(dataInput.Text)) { dataInput.Text = placeholder; dataInput.ForeColor = System.Drawing.Color.Gray; } };			
+
+			form.Load += (s, e) => { form.Location = new System.Drawing.Point(108, 108); };
+
+			form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
+
+			show:
+			form.ShowDialog();
+
+			if (form.DialogResult != System.Windows.Forms.DialogResult.OK)
+			{
+				_project.SendInfoToLog("Import cancelled by user", true);
+				return "0";
+			}
+
+			if (string.IsNullOrEmpty(dataInput.Text))
+			{
+				_project.SendWarningToLog("Input could not be empty");
+				goto show;
+			}
+
+			string selectedType = typeComboBox.SelectedItem.ToString();
+			string[] lines = dataInput.Text.Trim().Split('\n');
+			_project.SendInfoToLog($"Parsing [{lines.Length}] addresses for {selectedType}", false);
+
+			for (int i = 0; i < lines.Length && int.Parse(acc0.Value) <= rangeEnd; i++)
+			{
+				string address = lines[i].Trim();
+				// Пустые строки записываются как '' без пропуска
+				try
+				{
+					_project.SendInfoToLog($"Processing acc0 = {acc0.Value}, address = '{address}'", false);
+					SQL.W3Query(_project, $@"UPDATE {tableName} SET {selectedType} = '{address}' WHERE acc0 = {acc0.Value};", true);
+					acc0.Value = (int.Parse(acc0.Value) + 1).ToString();
+				}
+				catch (Exception ex)
+				{
+					_project.SendWarningToLog($"Error processing record {acc0.Value} for {selectedType}: {ex.Message}", false);
+					acc0.Value = (int.Parse(acc0.Value) + 1).ToString();
+				}
+			}
+			_project.SendInfoToLog($"Imported {lines.Length} strings", true);
+			goto show;
+		}
+
+
 		private string ImportDepositAddresses()
 		{
 			string tableName = "cex_deps"; // Обновил имя таблицы для консистентности
@@ -2233,115 +2351,370 @@ namespace w3tools //by @w3bgrep
 			try { _instance.Launch(ZennoLab.InterfacesLibrary.Enums.Browser.BrowserType.WithoutBrowser, false); } catch { }
 		}
 
-	private void ImportSettings(string message = "input data please", int width = 600, int height = 400)
-	{
-		_project.SendInfoToLog($"Opening variables input dialog: {message}", true);
-
-		System.Windows.Forms.Form form = new System.Windows.Forms.Form();
-		form.Text = message;
-		form.Width = width;
-		form.Height = height;
-		form.TopMost = true;
-		form.Location = new System.Drawing.Point(108, 108);
-
-		// Массив с именами переменных и плейсхолдерами
-		(string varName, string placeholder)[] variableNames = new (string, string)[]
+		private void ImportSettings(string message = "input data please", int width = 600, int height = 400)
 		{
-			("settingsApiFirstMail", "API First Mail для доступа к переадресованной почте"),
-			("settingsApiPerplexity", "API perplexity для запросов к AI (например прогрева твиттера)"),
-			("settingsDsInviteOwn", "Инвайт на свой сервер"),
-			("settingsDsOwnServer", "ID канала с инвайтами на вашем сервере"),
-			("settingsFmailLogin", "Логин от общего ящика для форвардов на FirstMail"),
-			("settingsFmailPass", "Пароль от общего ящика для форвардов на FirstMail"),
-			("settingsTgLogGroup", "Id группы для логов в Telegram. Формат {-1002000000009}"),
-			("settingsTgLogToken", "Токен Telegram логгера"),
-			("settingsTgLogTopic", "Id топика в группе для логов. 0 - если нет топиков"),
-			("settingsTgMailGroup", "Id группы с переадресованной почтой в Telegram. Формат {-1002000000009}"),
-			("settingsZenFolder", "Путь к папке с профилями и причастным данным. Формат: {F:\\farm\\}"),
-			("settingsApiBinance", "Данные для вывода с Binance. Формат: {API_KEY;SECRET_KEY;PROXY}")
-		};
+			_project.SendInfoToLog($"Opening variables input dialog: {message}", true);
 
-		var textBoxes = new Dictionary<string, System.Windows.Forms.TextBox>();
+			System.Windows.Forms.Form form = new System.Windows.Forms.Form();
+			form.Text = message;
+			form.Width = width;
+			form.Height = height;
+			form.TopMost = true;
+			form.Location = new System.Drawing.Point(108, 108);
 
-		int currentTop = 5;
-		int labelWidth = 150;
-		int textBoxWidth = 400;
-		int spacing = 5;
-
-		foreach (var (varName, placeholder) in variableNames)
-		{
-			System.Windows.Forms.Label label = new System.Windows.Forms.Label();
-			label.Text = varName + ":";
-			label.AutoSize = true;
-			label.Left = 5;
-			label.Top = currentTop;
-			form.Controls.Add(label);
-
-			System.Windows.Forms.TextBox textBox = new System.Windows.Forms.TextBox();
-			textBox.Left = label.Left + labelWidth + spacing;
-			textBox.Top = currentTop;
-			textBox.Width = textBoxWidth;
-			textBox.Text = _project.Variables[varName].Value;
-
-			// Установка плейсхолдера
-			if (string.IsNullOrEmpty(textBox.Text)) // Если поле пустое, показываем плейсхолдер
+			// Массив с именами переменных и плейсхолдерами
+			(string varName, string placeholder)[] variableNames = new (string, string)[]
 			{
-				textBox.Text = placeholder;
-				textBox.ForeColor = System.Drawing.Color.Gray;
-			}
-			textBox.Enter += (s, e) => { if (textBox.Text == placeholder) { textBox.Text = ""; textBox.ForeColor = System.Drawing.Color.Black; } };
-			textBox.Leave += (s, e) => { if (string.IsNullOrEmpty(textBox.Text)) { textBox.Text = placeholder; textBox.ForeColor = System.Drawing.Color.Gray; } };
+				("settingsApiFirstMail", "API First Mail для доступа к переадресованной почте"),
+				("settingsApiPerplexity", "API perplexity для запросов к AI (например прогрева твиттера)"),
+				("settingsDsInviteOwn", "Инвайт на свой сервер"),
+				("settingsDsOwnServer", "ID канала с инвайтами на вашем сервере"),
+				("settingsFmailLogin", "Логин от общего ящика для форвардов на FirstMail"),
+				("settingsFmailPass", "Пароль от общего ящика для форвардов на FirstMail"),
+				("settingsTgLogGroup", "Id группы для логов в Telegram. Формат {-1002000000009}"),
+				("settingsTgLogToken", "Токен Telegram логгера"),
+				("settingsTgLogTopic", "Id топика в группе для логов. 0 - если нет топиков"),
+				("settingsTgMailGroup", "Id группы с переадресованной почтой в Telegram. Формат {-1002000000009}"),
+				("settingsZenFolder", "Путь к папке с профилями и причастным данным. Формат: {F:\\farm\\}"),
+				("settingsApiBinance", "Данные для вывода с Binance. Формат: {API_KEY;SECRET_KEY;PROXY}")
+			};
 
-			form.Controls.Add(textBox);
+			var textBoxes = new Dictionary<string, System.Windows.Forms.TextBox>();
 
-			textBoxes[varName] = textBox;
-			currentTop += textBox.Height + spacing;
-		}
+			int currentTop = 5;
+			int labelWidth = 150;
+			int textBoxWidth = 400;
+			int spacing = 5;
 
-		System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
-		okButton.Text = "OK";
-		okButton.Width = 50;
-		okButton.Height = 25;
-		okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
-		okButton.Top = currentTop + 10;
-		okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
-		form.Controls.Add(okButton);
-
-		int requiredHeight = okButton.Top + okButton.Height + 40;
-		if (form.Height < requiredHeight)
-		{
-			form.Height = requiredHeight;
-		}
-		form.Load += (s, e) => { form.Location = new System.Drawing.Point(108, 108); };
-
-		form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
-
-		form.ShowDialog();
-
-		if (form.DialogResult != System.Windows.Forms.DialogResult.OK)
-		{
-			_project.SendInfoToLog("Import cancelled by user", true);
-			return;
-		}
-
-		string tableName = "settings";
-		foreach (var (varName, placeholder) in variableNames)
-		{
-			string newValue = textBoxes[varName].Text;
-			if (newValue == placeholder) newValue = ""; // Если текст — это плейсхолдер, считаем поле пустым
-			_project.Variables[varName].Value = newValue;
-			_project.SendInfoToLog($"Updated variable {varName}: {newValue}", true);
-
-			if (!string.IsNullOrEmpty(newValue))
+			foreach (var (varName, placeholder) in variableNames)
 			{
-				string escapedValue = newValue.Replace("'", "''");
-				SQL.W3Query(_project, $"INSERT OR REPLACE INTO {tableName} (var, value) VALUES ('{varName}', '{escapedValue}');");
-				_project.SendInfoToLog($"Inserted into {tableName}: {varName} = {newValue}", true);
+				System.Windows.Forms.Label label = new System.Windows.Forms.Label();
+				label.Text = varName + ":";
+				label.AutoSize = true;
+				label.Left = 5;
+				label.Top = currentTop;
+				form.Controls.Add(label);
+
+				System.Windows.Forms.TextBox textBox = new System.Windows.Forms.TextBox();
+				textBox.Left = label.Left + labelWidth + spacing;
+				textBox.Top = currentTop;
+				textBox.Width = textBoxWidth;
+				textBox.Text = _project.Variables[varName].Value;
+
+				// Установка плейсхолдера
+				if (string.IsNullOrEmpty(textBox.Text)) // Если поле пустое, показываем плейсхолдер
+				{
+					textBox.Text = placeholder;
+					textBox.ForeColor = System.Drawing.Color.Gray;
+				}
+				textBox.Enter += (s, e) => { if (textBox.Text == placeholder) { textBox.Text = ""; textBox.ForeColor = System.Drawing.Color.Black; } };
+				textBox.Leave += (s, e) => { if (string.IsNullOrEmpty(textBox.Text)) { textBox.Text = placeholder; textBox.ForeColor = System.Drawing.Color.Gray; } };
+
+				form.Controls.Add(textBox);
+
+				textBoxes[varName] = textBox;
+				currentTop += textBox.Height + spacing;
+			}
+
+			System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
+			okButton.Text = "OK";
+			okButton.Width = 50;
+			okButton.Height = 25;
+			okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
+			okButton.Top = currentTop + 10;
+			okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
+			form.Controls.Add(okButton);
+
+			int requiredHeight = okButton.Top + okButton.Height + 40;
+			if (form.Height < requiredHeight)
+			{
+				form.Height = requiredHeight;
+			}
+			form.Load += (s, e) => { form.Location = new System.Drawing.Point(108, 108); };
+
+			form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
+
+			form.ShowDialog();
+
+			if (form.DialogResult != System.Windows.Forms.DialogResult.OK)
+			{
+				_project.SendInfoToLog("Import cancelled by user", true);
+				return;
+			}
+
+			string tableName = "settings";
+			foreach (var (varName, placeholder) in variableNames)
+			{
+				string newValue = textBoxes[varName].Text;
+				if (newValue == placeholder) newValue = ""; // Если текст — это плейсхолдер, считаем поле пустым
+				_project.Variables[varName].Value = newValue;
+				_project.SendInfoToLog($"Updated variable {varName}: {newValue}", true);
+
+				if (!string.IsNullOrEmpty(newValue))
+				{
+					string escapedValue = newValue.Replace("'", "''");
+					SQL.W3Query(_project, $"INSERT OR REPLACE INTO {tableName} (var, value) VALUES ('{varName}', '{escapedValue}');");
+					_project.SendInfoToLog($"Inserted into {tableName}: {varName} = {newValue}", true);
+				}
 			}
 		}
-	}
 
+		public void ShowBalanceTable(string chains = null)
+		{
+			string schemaName = _project.Variables["DBmode"].Value == "PostgreSQL" ? "accounts." : "";
+			string tableName = schemaName + "native";
+			var columns = new List<string>();
+			
+			if (string.IsNullOrEmpty(chains)) 
+			{
+				if (_project.Variables["DBmode"].Value == "PostgreSQL") chains = SQL.W3Query(_project,$@"SELECT column_name FROM information_schema.columns WHERE table_schema = 'accounts' AND table_name = 'native'");
+				else chains = SQL.W3Query(_project,$@"SELECT name FROM pragma_table_info('native')");
+				columns = chains.Split('\n').ToList();
+			}
+			else 
+				columns = chains.Split(',').ToList();
 
+			// Пагинация
+			int pageSize = 100;
+			int offset = 0;
+			int totalRows = 0;
+			bool isFirstLoad = true; // Флаг для первой загрузки
+
+			// Подсчёт общего количества строк
+			string countQuery = $@"SELECT COUNT(*) FROM {tableName} WHERE acc0 <= {_project.Variables["rangeEnd"].Value}";
+			string countResult = SQL.W3Query(_project, countQuery, true);
+			if (!string.IsNullOrEmpty(countResult) && int.TryParse(countResult, out int count))
+			{
+				totalRows = count;
+			}
+
+			// Создание формы
+			var form = new System.Windows.Forms.Form
+			{
+				Text = "Balance Table",
+				Width = 1008,
+				Height = 1008,
+				StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen,
+				//BackColor = System.Drawing.Color.White
+			};
+			form.BackColor = System.Drawing.Color.White;
+			form.TopMost = true; // Форма поверх всех окон
+
+			// Панель для пагинации
+			var panel = new System.Windows.Forms.Panel
+			{
+				Dock = System.Windows.Forms.DockStyle.Bottom,
+				Height = 40
+			};
+			form.Controls.Add(panel);
+
+			// Кнопки пагинации
+			var prevButton = new System.Windows.Forms.Button
+			{
+				Text = "Previous",
+				Width = 100,
+				Height = 30,
+				Left = 10,
+				Top = 5,
+				Enabled = false
+			};
+			var nextButton = new System.Windows.Forms.Button
+			{
+				Text = "Next",
+				Width = 100,
+				Height = 30,
+				Left = 120,
+				Top = 5
+			};
+			panel.Controls.Add(prevButton);
+			panel.Controls.Add(nextButton);
+
+			// DataGridView
+			var grid = new System.Windows.Forms.DataGridView
+			{
+				Dock = System.Windows.Forms.DockStyle.Fill,
+				AllowUserToResizeColumns = true,
+				AllowUserToResizeRows = true,
+				ScrollBars = System.Windows.Forms.ScrollBars.Both,
+				AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.AllCells,
+				ReadOnly = true,
+				BackgroundColor = System.Drawing.Color.White
+			};
+			form.Controls.Add(grid);
+
+			// Убедимся, что панель не перекрывает таблицу
+			grid.BringToFront();
+
+			// Метод загрузки данных
+			Action loadData = () =>
+			{
+				string query = $@"SELECT {string.Join(",", columns)} FROM {tableName} 
+								WHERE acc0 <= {_project.Variables["rangeEnd"].Value} 
+								ORDER BY acc0 LIMIT {pageSize} OFFSET {offset}";
+				string result = SQL.W3Query(_project, query, true);
+
+				if (string.IsNullOrEmpty(result))
+				{
+					_project.SendWarningToLog("No data found in balance table");
+					grid.Rows.Clear();
+					return;
+				}
+
+				var rows = result.Trim().Split('\n');
+				_project.SendInfoToLog($"Loaded {rows.Length} rows from {tableName}, offset {offset}", false);
+
+				// Очистка таблицы
+				grid.Columns.Clear();
+				grid.Rows.Clear();
+
+				// Настройка колонок
+				foreach (var col in columns)
+				{
+					var column = new System.Windows.Forms.DataGridViewColumn
+					{
+						Name = col.Trim(),
+						HeaderText = col.Trim(),
+						CellTemplate = new System.Windows.Forms.DataGridViewTextBoxCell(),
+						SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable // Отключаем сортировку
+					};
+					grid.Columns.Add(column);
+				}
+
+				// Заполнение данными
+				foreach (var row in rows)
+				{
+					var values = row.Split('|');
+					if (values.Length != columns.Count)
+					{
+						_project.SendWarningToLog($"Invalid row format: {row}. Expected {columns.Count} columns, got {values.Length}", false);
+						continue;
+					}
+
+					// Форматирование значений (кроме acc0)
+					var formattedValues = new string[values.Length];
+					formattedValues[0] = values[0]; // acc0 без изменений
+					for (int i = 1; i < values.Length; i++)
+					{
+						if (string.IsNullOrWhiteSpace(values[i]))
+						{
+							formattedValues[i] = "0.0000000";
+							continue;
+						}
+						try
+						{
+							string val = values[i].Replace(",", ".");
+							if (decimal.TryParse(val, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out decimal balance))
+							{
+								formattedValues[i] = balance.ToString("0.0000000", System.Globalization.CultureInfo.InvariantCulture);
+							}
+							else
+							{
+								formattedValues[i] = "0.0000000";
+								_project.SendWarningToLog($"Invalid format in {columns[i]}, row {grid.Rows.Count + 1}: '{values[i]}'", false);
+							}
+						}
+						catch (Exception ex)
+						{
+							formattedValues[i] = "0.0000000";
+							_project.SendWarningToLog($"Error formatting in {columns[i]}, row {grid.Rows.Count + 1}: {ex.Message}", false);
+						}
+					}
+					grid.Rows.Add(formattedValues);
+
+				}
+
+				// Обновление кнопок
+				prevButton.Enabled = offset > 0;
+				nextButton.Enabled = offset + pageSize < totalRows;
+
+				// Установка ширины формы только при первой загрузке
+				// if (isFirstLoad)
+				// {
+				// 	int totalWidth = grid.Columns.Cast<System.Windows.Forms.DataGridViewColumn>().Sum(col => col.Width);
+				// 	form.Width = Math.Min(totalWidth + 0, System.Windows.Forms.Screen.PrimaryScreen.WorkingArea.Width);
+				// 	_project.SendInfoToLog($"Set form width: {form.Width}, total columns width: {totalWidth}", false);
+				// 	isFirstLoad = false;
+				// }
+				int totalWidth = grid.Columns.Cast<System.Windows.Forms.DataGridViewColumn>().Sum(col => col.Width);
+				grid.Width = totalWidth; // Устанавливаем ширину таблицы
+				form.Width = Math.Min(totalWidth - 100, System.Windows.Forms.Screen.PrimaryScreen.WorkingArea.Width); // Учитываем скроллбар (~20px)
+			};
+
+			// Загрузка первой страницы
+			loadData();
+
+			// Обработчики кнопок
+			prevButton.Click += (s, e) =>
+			{
+				if (offset >= pageSize)
+				{
+					offset -= pageSize;
+					loadData();
+				}
+			};
+			nextButton.Click += (s, e) =>
+			{
+				if (offset + pageSize < totalRows)
+				{
+					offset += pageSize;
+					loadData();
+				}
+			};
+
+			// Настройка цветов
+			grid.CellFormatting += (s, e) =>
+			{
+				if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
+				if (grid.Columns[e.ColumnIndex].Name == "acc0")
+					{
+						// Здесь задаём стиль для acc0
+						e.CellStyle.Font = new System.Drawing.Font("Lucida Console", 9, System.Drawing.FontStyle.Bold);
+						e.CellStyle.BackColor = System.Drawing.Color.Black; // Пример фона
+						e.CellStyle.ForeColor = System.Drawing.Color.White; // Пример цвета текста
+						return;
+					}
+
+				string value = grid[e.ColumnIndex, e.RowIndex].Value?.ToString();
+				if (string.IsNullOrWhiteSpace(value)) return;
+
+				try
+				{
+					// Парсинг уже отформатированного значения
+					if (decimal.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out decimal balance))
+					{
+						e.CellStyle.Font = new System.Drawing.Font("Lucida Console", 9);
+						if (balance >= 0.1m)
+							e.CellStyle.BackColor = System.Drawing.Color.SteelBlue;
+						else if (balance >= 0.01m)
+							e.CellStyle.BackColor = System.Drawing.Color.Green;
+						else if (balance >= 0.001m)
+							e.CellStyle.BackColor = System.Drawing.Color.YellowGreen;
+						else if (balance >= 0.0001m)
+							e.CellStyle.BackColor = System.Drawing.Color.Khaki;							
+						else if (balance >= 0.00001m)
+							e.CellStyle.BackColor = System.Drawing.Color.LightSalmon;
+						else if (balance > 0)
+							e.CellStyle.BackColor = System.Drawing.Color.IndianRed;							
+						else if (balance == 0)
+							{e.CellStyle.BackColor = System.Drawing.Color.White;											
+							e.CellStyle.ForeColor = System.Drawing.Color.White;}									
+						else
+							e.CellStyle.BackColor = System.Drawing.Color.White;
+					}
+					else
+					{
+						_project.SendWarningToLog($"Invalid balance format in {grid.Columns[e.ColumnIndex].Name}, row {e.RowIndex + 1}: '{value}'", false);
+					}
+				}
+				catch (Exception ex)
+				{
+					_project.SendWarningToLog($"Error parsing balance in {grid.Columns[e.ColumnIndex].Name}, row {e.RowIndex + 1}: {ex.Message}", false);
+				}
+			};
+
+			// Показ формы
+			form.ShowDialog();
+		}
 		private bool ImportStart()
 		{
 			System.Windows.Forms.Form form = new System.Windows.Forms.Form();
@@ -2609,10 +2982,70 @@ namespace w3tools //by @w3bgrep
 		{
 			_project = project;
 		}
+
+
+		public T nativeEVM<T>(string chainRPC = null, string address = null, string proxy = null, bool log = false)
+		{
+			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+			if (string.IsNullOrEmpty(address)) 
+			{
+				string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : "") + "blockchain_public";	
+				address = SQL.W3Query(_project,$"SELECT evm FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
+			}
+			if (string.IsNullOrEmpty(chainRPC)) chainRPC = _project.Variables["blockchainRPC"].Value;
+
+			string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_getBalance"", ""params"": [""{address}"", ""latest""], ""id"": 1 }}";
+			string response;
+
+			using (var request = new HttpRequest())
+			{
+				request.UserAgent = "Mozilla/5.0";
+				request.IgnoreProtocolErrors = true;
+				request.ConnectTimeout = 5000;
+
+				if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
+				if (!string.IsNullOrEmpty(proxy))
+				{
+					string[] proxyArray = proxy.Split(':');
+					string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);
+					request.Proxy = new HttpProxyClient(host, port, username, password);
+				}
+
+				try
+				{
+					HttpResponse httpResponse = request.Post(chainRPC, jsonBody, "application/json");
+					response = httpResponse.ToString();
+				}
+				catch (HttpException ex)
+				{
+					_project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
+					throw;
+				}
+			}
+
+			var json = JObject.Parse(response);
+			string hexBalance = json["result"]?.ToString()?.TrimStart('0', 'x') ?? "0";
+			BigInteger balanceWei = BigInteger.Parse("0" + hexBalance, NumberStyles.AllowHexSpecifier);
+			decimal balanceNative = (decimal)balanceWei / 1000000000000000000m;
+			if (log) Loggers.l0g(_project, $"{address}: {balanceNative} ETH");
+
+			if (typeof(T) == typeof(string))
+				return (T)Convert.ChangeType(balanceNative.ToString("0.##################"), typeof(T));
+			return (T)Convert.ChangeType(balanceNative, typeof(T));
+		}
+
+
+
+
+
 		public T nativeSOL<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-			if (string.IsNullOrEmpty(address)) address = Db.AdrSol(_project);
+			if (string.IsNullOrEmpty(address)) 
+			{
+				string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : "") + "blockchain_public";	
+				address = SQL.W3Query(_project,$"SELECT sol FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
+			}
 			if (string.IsNullOrEmpty(rpc)) rpc = "https://api.mainnet-beta.solana.com";
 
 			string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""getBalance"", ""params"": [""{address}""], ""id"": 1 }}";
@@ -2660,7 +3093,11 @@ namespace w3tools //by @w3bgrep
 		public T splTokenBalance<T>(string tokenMint, string address = null, string rpc = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-			if (string.IsNullOrEmpty(address)) address = Db.AdrSol(_project);
+			if (string.IsNullOrEmpty(address)) 
+			{
+				string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : "") + "blockchain_public";	
+				address = SQL.W3Query(_project,$"SELECT sol FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
+			}
 			if (string.IsNullOrEmpty(rpc)) rpc = "https://api.mainnet-beta.solana.com";
 
 			string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""getTokenAccountsByOwner"", ""params"": [""{address}"", {{""mint"": ""{tokenMint}""}}, {{""encoding"": ""jsonParsed""}}], ""id"": 1 }}";
@@ -2752,7 +3189,11 @@ namespace w3tools //by @w3bgrep
 		public T nativeSUI<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-			if (string.IsNullOrEmpty(address)) address = Db.AdrSol(_project);
+			if (string.IsNullOrEmpty(address)) 
+			{
+				string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : "") + "blockchain_public";	
+				address = SQL.W3Query(_project,$"SELECT sui FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
+			}
 			if (string.IsNullOrEmpty(rpc)) rpc = "https://fullnode.mainnet.sui.io";
 
 			string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""suix_getBalance"", ""params"": [""{address}"", ""0x2::sui::SUI""], ""id"": 1 }}";
@@ -2797,7 +3238,11 @@ namespace w3tools //by @w3bgrep
 		public T tokenBalanceSUI<T>(string coinType, string address = null, string rpc = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-			if (string.IsNullOrEmpty(address)) address = Db.AdrSol(_project);
+			if (string.IsNullOrEmpty(address)) 
+			{
+				string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : "") + "blockchain_public";	
+				address = SQL.W3Query(_project,$"SELECT sui FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
+			}
 			if (string.IsNullOrEmpty(rpc)) rpc = "https://fullnode.mainnet.sui.io";
 
 			string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""suix_getBalance"", ""params"": [""{address}"", ""{coinType}""], ""id"": 1 }}";
@@ -2842,7 +3287,11 @@ namespace w3tools //by @w3bgrep
 		public T nativeAPT<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-			if (string.IsNullOrEmpty(address)) address = Db.AdrSol(_project); // Предполагаю, что адрес Aptos там же
+			if (string.IsNullOrEmpty(address)) 
+			{
+				string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : "") + "blockchain_public";	
+				address = SQL.W3Query(_project,$"SELECT apt FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
+			}
 			if (string.IsNullOrEmpty(rpc)) rpc = "https://fullnode.mainnet.aptoslabs.com/v1";
 
 			string url = $"{rpc}/accounts/{address}/resource/0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>";
@@ -2887,7 +3336,11 @@ namespace w3tools //by @w3bgrep
 		public T tokenBalanceAPT<T>(string coinType, string address = null, string rpc = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-			if (string.IsNullOrEmpty(address)) address = Db.AdrSol(_project);
+			if (string.IsNullOrEmpty(address)) 
+			{
+				string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : "") + "blockchain_public";	
+				address = SQL.W3Query(_project,$"SELECT evm FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
+			}
 			if (string.IsNullOrEmpty(rpc)) rpc = "https://fullnode.mainnet.aptoslabs.com/v1";
 
 			string url = $"{rpc}/accounts/{address}/resource/0x1::coin::CoinStore<{coinType}>";
