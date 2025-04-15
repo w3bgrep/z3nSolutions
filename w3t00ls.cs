@@ -5983,7 +5983,6 @@ namespace w3tools //by @w3bgrep
 			return $"Keplr set from {source}";
 		}	
 	}
-
 	public class OKX
 	{
 		private readonly IZennoPosterProjectModel _project;
@@ -6079,8 +6078,7 @@ namespace w3tools //by @w3bgrep
 		}
 
 	}
-
-public class Zerion
+	public class Zerion
 	{
 		private readonly IZennoPosterProjectModel _project;
 		private readonly Instance _instance;
@@ -6099,6 +6097,32 @@ public class Zerion
 
 	#endregion	
 	#region Tools&Vars
+	public class Easy
+	{
+		private readonly IZennoPosterProjectModel _project;
+		private readonly Instance _instance;
+		private readonly bool _log;
+
+		public Easy(IZennoPosterProjectModel project, bool log = false)
+		{
+			_project = project;
+			_log = log;
+		}
+
+		public string Ref(string refCode = null, bool log = false)
+		{
+			if (string.IsNullOrEmpty(refCode)) refCode = _project.Variables["cfgRefCode"].Value;
+			if (string.IsNullOrEmpty(refCode)||refCode == "_" ) refCode = SQL.W3Query(_project,$@"SELECT refcode FROM {_project.Variables["projectTable"].Value}
+			WHERE refcode != '_' 
+			AND TRIM(refcode) != ''
+			ORDER BY RANDOM()
+			LIMIT 1;",log);
+			return refCode;
+		}
+	}
+
+
+
 	public static class OTP
 	{
 		public static string Offline(string keyString, int waitIfTimeLess = 5)
@@ -6771,14 +6795,14 @@ public class Zerion
 		        Thread.Sleep(500);
 		    }
 		}
-		public static string WaitGetValue(this Instance instance, Func<ZennoLab.CommandCenter.HtmlElement> elementSearch, int maxWaitSeconds = 10, string atr = "innertext", int delayBeforeGetSeconds = 1, string comment = "")
+		public static string WaitGetValue(this Instance instance, Func<ZennoLab.CommandCenter.HtmlElement> elementSearch, int deadline = 10, string atr = "innertext", int delayBeforeGetSeconds = 1, string comment = "")
 		{
 		    DateTime functionStart = DateTime.Now;
 		    
 		    while (true)
 		    {
-		        if ((DateTime.Now - functionStart).TotalSeconds > maxWaitSeconds)
-		            throw new TimeoutException($"{comment} not found in {maxWaitSeconds}s");
+		        if ((DateTime.Now - functionStart).TotalSeconds > deadline)
+		            throw new TimeoutException($"{comment} not found in {deadline}s");
 		            
 		        var element = elementSearch();
 		        
