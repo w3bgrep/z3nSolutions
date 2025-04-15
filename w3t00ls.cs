@@ -3033,7 +3033,56 @@ namespace w3tools //by @w3bgrep
 				return (T)Convert.ChangeType(balanceNative.ToString("0.##################"), typeof(T));
 			return (T)Convert.ChangeType(balanceNative, typeof(T));
 		}
+		public T nonceEVM<T>(string chainRPC = null, string address = null, string proxy = null, bool log = false)
+		{
+			if (string.IsNullOrEmpty(address)) 
+			{
+				string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : "") + "blockchain_public";	
+				address = SQL.W3Query(_project,$"SELECT evm FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
+			}
+			if (string.IsNullOrEmpty(chainRPC)) chainRPC = _project.Variables["blockchainRPC"].Value;
 
+			string jsonBody = $@"{{""jsonrpc"": ""2.0"",""method"": ""eth_getTransactionCount"",""params"": [""{address}"", ""latest""],""id"": 1}}";
+			string response;
+
+			using (var request = new HttpRequest())
+			{
+				request.UserAgent = "Mozilla/5.0";
+				request.IgnoreProtocolErrors = true;
+				request.ConnectTimeout = 5000;
+
+				if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
+				if (!string.IsNullOrEmpty(proxy))
+				{
+					string[] proxyArray = proxy.Split(':');
+					string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);
+					request.Proxy = new HttpProxyClient(host, port, username, password);
+				}
+
+				try
+				{
+					HttpResponse httpResponse = request.Post(chainRPC, jsonBody, "application/json");
+					response = httpResponse.ToString();
+				}
+				catch (HttpException ex)
+				{
+					_project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
+					throw;
+				}
+			}
+
+			var match = Regex.Match(response, @"""result""\s*:\s*""([^""]+)""");
+			string hexResultNonce = match.Success ? match.Groups[1].Value : "0x0";
+			
+			if (hexResultNonce == "0x0") 
+				return (T)Convert.ChangeType("0", typeof(T));
+			
+			int transactionCount = Convert.ToInt32(hexResultNonce.TrimStart('0', 'x'), 16);
+			if (log) Loggers.l0g(_project, $"{address} nonce now {transactionCount}");
+			if (typeof(T) == typeof(string))
+				return (T)Convert.ChangeType(transactionCount.ToString(), typeof(T));			
+			return (T)Convert.ChangeType(transactionCount, typeof(T));
+		}
 
 
 
@@ -3089,8 +3138,7 @@ namespace w3tools //by @w3bgrep
 				return (T)Convert.ChangeType(balanceSol.ToString("0.##################"), typeof(T));
 			return (T)Convert.ChangeType(balanceSol, typeof(T));
 		}
-
-		public T splTokenBalance<T>(string tokenMint, string address = null, string rpc = null, string proxy = null, bool log = false)
+		public T tokenSPL<T>(string tokenMint, string address = null, string rpc = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 			if (string.IsNullOrEmpty(address)) 
@@ -3144,48 +3192,6 @@ namespace w3tools //by @w3bgrep
 				return (T)Convert.ChangeType(balanceToken.ToString("0.##################"), typeof(T));
 			return (T)Convert.ChangeType(balanceToken, typeof(T));
 		}
-
-		public string getRecentBlockHashSol(string rpc = null, string proxy = null, bool log = false)
-		{
-			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-			if (string.IsNullOrEmpty(rpc)) rpc = "https://api.mainnet-beta.solana.com";
-
-			string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""getLatestBlockhash"", ""params"": [], ""id"": 1 }}";
-			string response;
-
-			using (var request = new HttpRequest())
-			{
-				request.UserAgent = "Mozilla/5.0";
-				request.IgnoreProtocolErrors = true;
-				request.ConnectTimeout = 5000;
-
-				if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
-				if (!string.IsNullOrEmpty(proxy))
-				{
-					string[] proxyArray = proxy.Split(':');
-					string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);        
-					request.Proxy = new HttpProxyClient(host, port, username, password);
-				}
-
-				try
-				{
-					HttpResponse httpResponse = request.Post(rpc, jsonBody, "application/json");
-					response = httpResponse.ToString();
-				}
-				catch (HttpException ex)
-				{
-					_project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
-					throw;
-				}
-			}
-
-			var json = JObject.Parse(response);
-			string blockhash = json["result"]?["value"]?["blockhash"]?.ToString() ?? "";
-			if (log) Loggers.l0g(_project, $"Blockhash: {blockhash}");
-
-			return blockhash;
-		}
-
 		public T nativeSUI<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -3234,8 +3240,7 @@ namespace w3tools //by @w3bgrep
 				return (T)Convert.ChangeType(balanceSui.ToString("0.##################"), typeof(T));
 			return (T)Convert.ChangeType(balanceSui, typeof(T));
 		}
-
-		public T tokenBalanceSUI<T>(string coinType, string address = null, string rpc = null, string proxy = null, bool log = false)
+		public T tokenSUI<T>(string coinType, string address = null, string rpc = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 			if (string.IsNullOrEmpty(address)) 
@@ -3283,7 +3288,6 @@ namespace w3tools //by @w3bgrep
 				return (T)Convert.ChangeType(balanceToken.ToString("0.##################"), typeof(T));
 			return (T)Convert.ChangeType(balanceToken, typeof(T));
 		}
-
 		public T nativeAPT<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -3332,8 +3336,7 @@ namespace w3tools //by @w3bgrep
 				return (T)Convert.ChangeType(balanceApt.ToString("0.##################"), typeof(T));
 			return (T)Convert.ChangeType(balanceApt, typeof(T));
 		}
-
-		public T tokenBalanceAPT<T>(string coinType, string address = null, string rpc = null, string proxy = null, bool log = false)
+		public T tokenAPT<T>(string coinType, string address = null, string rpc = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 			if (string.IsNullOrEmpty(address)) 
@@ -3561,7 +3564,6 @@ namespace w3tools //by @w3bgrep
 
 				try
 				{
-					// Исправление: Передаём jsonBodyGetNonce как строку
 					HttpResponse httpResponse = request.Post(chainRPC, jsonBodyGetNonce, "application/json");
 					response = httpResponse.ToString();
 				}
@@ -5211,7 +5213,7 @@ namespace w3tools //by @w3bgrep
 		
 		{
 			
-			// 0x010066 Sepolia | 0x01019e Soneum
+			// 0x010066 Sepolia | 0x01019e Soneum | 0x01000e BNB
 			
 			
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture; 
@@ -5223,7 +5225,7 @@ namespace w3tools //by @w3bgrep
 				string chainList = @"https://mainnet.era.zksync.io,
 				https://linea-rpc.publicnode.com,
 				https://arb1.arbitrum.io/rpc,
-				https://optimism.llamarpc.com,
+				https://optimism-rpc.publicnode.com,
 				https://scroll.blockpi.network/v1/rpc/public,
 				https://rpc.taiko.xyz,
 				https://base.blockpi.network/v1/rpc/public,
@@ -5269,7 +5271,7 @@ namespace w3tools //by @w3bgrep
 			
 			try
 			{
-			    string dataEncoded = chainTo;//0x010066 for Sepolia//0x01019e Soneum
+			    string dataEncoded = chainTo;//0x010066 for Sepolia | 0x01019e Soneum | 0x01000e BNB
 			    string txHash = SendTx1559(
 			        chainRPC,
 			        "0x391E7C679d29bD940d63be94AD22A25d25b5A604",//gazZip
@@ -6745,6 +6747,8 @@ public class Zerion
 		public static void WaitSetValue(this Instance instance, Func<ZennoLab.CommandCenter.HtmlElement> elementSearch, string value, int maxWaitSeconds = 10, int delay = 1, string comment = "",bool Throw = true)
 		{
 		    DateTime functionStart = DateTime.Now;
+			HtmlElement directElement = TryGetDirectElement(elementSearch);
+			bool isDirectElement = directElement != null;
 		    
 		    while (true)
 		    {
@@ -6752,7 +6756,9 @@ public class Zerion
 					if (Throw) throw new TimeoutException($"{comment} not found in {maxWaitSeconds}s");
 					else return;
 		            
-		        var element = elementSearch();
+				HtmlElement element;
+				if (isDirectElement) element = directElement;
+				else element = elementSearch();
 		        
 		        if (!element.IsVoid)
 		        {
