@@ -4327,7 +4327,6 @@ namespace w3tools //by @w3bgrep
 			var Q = $@"UPDATE {table} SET {toUpd.Trim().TrimEnd(',')}, last = '{Time.Now("short")}' WHERE acc0 = {_project.Variables["acc0"].Value};";
 			SQL.W3Query(_project,Q,log); 
 		}
-
 		private string XcheckState(bool log = false)
 		{
 			log = _project.Variables["debug"].Value == "True";
@@ -4618,11 +4617,6 @@ namespace w3tools //by @w3bgrep
 				return result;
 			}
 		}
-
-
-
-
-
 
 	public static class Twitter
 	{
@@ -5721,6 +5715,134 @@ namespace w3tools //by @w3bgrep
 	}
 	#endregion
 	#region Wallets
+
+	public class MetaMask
+	{
+		private readonly IZennoPosterProjectModel _project;
+		private readonly Instance _instance;
+		private readonly bool _log;
+
+		public MetaMask(IZennoPosterProjectModel project, Instance instance, bool log = false)
+		{
+			_project = project;
+			_instance = instance;
+			_log = log;
+		}
+		public string MMLaunch (string key = null)
+		{
+			var em = _instance.UseFullMouseEmulation;
+			_instance.UseFullMouseEmulation = false;
+			string address = "";
+			bool skipCheck = false;
+			var extId = "nkbihfbeogaeaoehlefnkodbefgpgknn";
+			string path = $"{_project.Path}.crx\\MetaMask 11.16.0.crx";
+			string sourse = "pkey"; //pkey | seed
+			var password = SAFU.HWPass(_project);
+			DateTime deadline = DateTime.Now.AddSeconds(60);
+
+			install:
+			var extListString = string.Join("\n", _instance.GetAllExtensions().Select(x => $"{x.Name}:{x.Id}"));
+			if (!extListString.Contains(extId)) 
+			{
+				_instance.InstallCrxExtension(path);
+				_instance.CloseExtraTabs();
+			}
+			_instance.ActiveTab.Navigate("chrome-extension://nkbihfbeogaeaoehlefnkodbefgpgknn/home.html", "");
+			check:
+			string state = null; 
+
+			while (string.IsNullOrEmpty(state))
+			{
+
+				if (!_instance.ActiveTab.FindElementByAttribute("button", "data-testid", "account-options-menu-button", "regexp", 0).IsVoid) state = "mainPage";
+				else if (!_instance.ActiveTab.FindElementByAttribute("h2", "innertext", "Let\'s\\ get\\ started", "regexp", 0).IsVoid) state = "initPage";
+				else if (!_instance.ActiveTab.FindElementByAttribute("button", "data-testid", "unlock-submit", "regexp", 0).IsVoid) state = "passwordPage";
+
+			}
+
+			Loggers.l0g(_project,state);
+
+			if (state == "initPage") 
+			{
+				string welcomeURL = $"chrome-extension://nkbihfbeogaeaoehlefnkodbefgpgknn/home.html#onboarding/welcome"; 
+				while (!_instance.ActiveTab.URL.Contains("#onboarding/welcome"))
+				{
+					if (DateTime.Now > deadline ) throw new Exception("timeout");
+					_instance.CloseExtraTabs();
+					_instance.ActiveTab.Navigate("chrome-extension://nkbihfbeogaeaoehlefnkodbefgpgknn/home.html", "");
+					Thread.Sleep(1000);
+				}
+				if (string.IsNullOrEmpty(key)) key = Db.KeyEVM(_project);
+				else skipCheck = true;
+				
+				_instance.LMB(("h2", "innertext", "Let\'s\\ get\\ started", "regexp", 0));
+				_instance.LMB(("span", "innertext", "I\\ agree\\ to\\ MetaMask\'s\\ Terms\\ of\\ use", "regexp", 1));
+				_instance.LMB(("button", "aria-label", "Close", "regexp", 0));
+				_instance.LMB(("button", "data-testid", "onboarding-create-wallet", "regexp", 0));
+				_instance.LMB(("button", "data-testid", "metametrics-no-thanks", "regexp", 0));
+				_instance.SetHe(("input:password", "data-testid", "create-password-new", "regexp", 0),password);
+				_instance.SetHe(("input:password", "data-testid", "create-password-confirm", "regexp", 0),password);
+				_instance.LMB(("span", "innertext", "I\\ understand\\ that\\ MetaMask\\ cannot\\ recover\\ this\\ password\\ for\\ me.\\ Learn\\ more", "regexp", 0));
+				_instance.LMB(("button", "data-testid", "create-password-wallet", "regexp", 0));
+				_instance.LMB(("button", "data-testid", "secure-wallet-later", "regexp", 0));
+				_instance.LMB(("label", "class", "skip-srp-backup-popover__label", "regexp", 0));
+				_instance.LMB(("button", "data-testid", "skip-srp-backup", "regexp", 0));
+				_instance.LMB(("button", "data-testid", "onboarding-complete-done", "regexp", 0));
+				_instance.LMB(("button", "data-testid", "pin-extension-next", "regexp", 0));
+				_instance.LMB(("button", "data-testid", "pin-extension-done", "regexp", 0));
+				Thread.Sleep(1000); 
+				while (!_instance.ActiveTab.FindElementByAttribute("button", "innertext", "Got\\ it", "regexp", 0).IsVoid) _instance.LMB(("button", "data-testid", "popover-close", "regexp", 0));
+					
+				_instance.LMB(("button", "data-testid", "account-menu-icon", "regexp", 0));
+				_instance.LMB(("button", "data-testid", "multichain-account-menu-popover-action-button", "regexp", 0));
+				_instance.LMB(("span", "style", "mask-image:\\ url\\(\"./images/icons/import.svg\"\\);", "regexp", 0));
+				_instance.WaitSetValue(() => _instance.ActiveTab.FindElementById("private-key-box"), key);
+				_instance.LMB(("button", "data-testid", "import-account-confirm-button", "regexp", 0));
+				Thread.Sleep(1000); 
+				goto check;
+			}
+
+
+			if (state == "passwordPage") 
+			{
+				_instance.WaitSetValue(() => _instance.ActiveTab.FindElementById("password"),password);
+				_instance.LMB(("button", "data-testid", "unlock-submit", "regexp", 0));
+				if (!_instance.ActiveTab.FindElementByAttribute("p", "innertext", "Incorrect password", "text", 0).IsVoid) 
+				{
+					_instance.CloseAllTabs(); 
+					_instance.UninstallExtension(extId); 
+					Loggers.l0g(_project,"! WrongPassword");
+					goto install;
+				}
+				goto check;
+			}
+
+
+			if ( state == "mainPage") 
+			{
+				while (!_instance.ActiveTab.FindElementByAttribute("button", "innertext", "Got\\ it", "regexp", 0).IsVoid) _instance.LMB(("button", "data-testid", "popover-close", "regexp", 0));
+				_instance.LMB(("button", "data-testid", "account-options-menu-button", "regexp", 0));
+				_instance.LMB(("button", "data-testid", "account-list-menu-details", "regexp", 0));
+				address = _instance.ReadHe(("button", "data-testid", "address-copy-button-text", "regexp", 0));
+				
+				if (!skipCheck)
+				if(!String.Equals(address,_project.Variables["addressEvm"].Value,StringComparison.OrdinalIgnoreCase))
+				{
+					_instance.CloseAllTabs(); 
+					_instance.UninstallExtension(extId); 
+					Loggers.l0g(_project,$"!WrongWallet expected: {_project.Variables["addressEvm"].Value}. InWallet {address}"); 
+					goto install;
+				}
+
+			}
+			_instance.UseFullMouseEmulation = em;
+			return address;
+
+
+
+		}
+		
+	}
 	
 	public static class MM
 	{
