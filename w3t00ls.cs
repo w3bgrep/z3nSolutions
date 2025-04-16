@@ -5716,13 +5716,13 @@ namespace w3tools //by @w3bgrep
 	#endregion
 	#region Wallets
 
-	public class MetaMask
+	public class Wall3t
 	{
 		private readonly IZennoPosterProjectModel _project;
 		private readonly Instance _instance;
 		private readonly bool _log;
 
-		public MetaMask(IZennoPosterProjectModel project, Instance instance, bool log = false)
+		public Wall3t(IZennoPosterProjectModel project, Instance instance, bool log = false)
 		{
 			_project = project;
 			_instance = instance;
@@ -5764,57 +5764,32 @@ namespace w3tools //by @w3bgrep
 
 			if (state == "initPage") 
 			{
-				string welcomeURL = $"chrome-extension://nkbihfbeogaeaoehlefnkodbefgpgknn/home.html#onboarding/welcome"; 
-				while (!_instance.ActiveTab.URL.Contains("#onboarding/welcome"))
-				{
-					if (DateTime.Now > deadline ) throw new Exception("timeout");
-					_instance.CloseExtraTabs();
-					_instance.ActiveTab.Navigate("chrome-extension://nkbihfbeogaeaoehlefnkodbefgpgknn/home.html", "");
-					Thread.Sleep(1000);
-				}
-				if (string.IsNullOrEmpty(key)) key = Db.KeyEVM(_project);
-				else skipCheck = true;
-				
-				_instance.LMB(("h2", "innertext", "Let\'s\\ get\\ started", "regexp", 0));
-				_instance.LMB(("span", "innertext", "I\\ agree\\ to\\ MetaMask\'s\\ Terms\\ of\\ use", "regexp", 1));
-				_instance.LMB(("button", "aria-label", "Close", "regexp", 0));
-				_instance.LMB(("button", "data-testid", "onboarding-create-wallet", "regexp", 0));
-				_instance.LMB(("button", "data-testid", "metametrics-no-thanks", "regexp", 0));
-				_instance.SetHe(("input:password", "data-testid", "create-password-new", "regexp", 0),password);
-				_instance.SetHe(("input:password", "data-testid", "create-password-confirm", "regexp", 0),password);
-				_instance.LMB(("span", "innertext", "I\\ understand\\ that\\ MetaMask\\ cannot\\ recover\\ this\\ password\\ for\\ me.\\ Learn\\ more", "regexp", 0));
-				_instance.LMB(("button", "data-testid", "create-password-wallet", "regexp", 0));
-				_instance.LMB(("button", "data-testid", "secure-wallet-later", "regexp", 0));
-				_instance.LMB(("label", "class", "skip-srp-backup-popover__label", "regexp", 0));
-				_instance.LMB(("button", "data-testid", "skip-srp-backup", "regexp", 0));
-				_instance.LMB(("button", "data-testid", "onboarding-complete-done", "regexp", 0));
-				_instance.LMB(("button", "data-testid", "pin-extension-next", "regexp", 0));
-				_instance.LMB(("button", "data-testid", "pin-extension-done", "regexp", 0));
-				Thread.Sleep(1000); 
-				while (!_instance.ActiveTab.FindElementByAttribute("button", "innertext", "Got\\ it", "regexp", 0).IsVoid) _instance.LMB(("button", "data-testid", "popover-close", "regexp", 0));
-					
-				_instance.LMB(("button", "data-testid", "account-menu-icon", "regexp", 0));
-				_instance.LMB(("button", "data-testid", "multichain-account-menu-popover-action-button", "regexp", 0));
-				_instance.LMB(("span", "style", "mask-image:\\ url\\(\"./images/icons/import.svg\"\\);", "regexp", 0));
-				_instance.WaitSetValue(() => _instance.ActiveTab.FindElementById("private-key-box"), key);
-				_instance.LMB(("button", "data-testid", "import-account-confirm-button", "regexp", 0));
-				Thread.Sleep(1000); 
+				MMimport();
 				goto check;
 			}
 
-
 			if (state == "passwordPage") 
 			{
-				_instance.WaitSetValue(() => _instance.ActiveTab.FindElementById("password"),password);
-				_instance.LMB(("button", "data-testid", "unlock-submit", "regexp", 0));
-				if (!_instance.ActiveTab.FindElementByAttribute("p", "innertext", "Incorrect password", "text", 0).IsVoid) 
-				{
-					_instance.CloseAllTabs(); 
-					_instance.UninstallExtension(extId); 
-					Loggers.l0g(_project,"! WrongPassword");
+
+				try {
+					MMUnlock();
+					goto check;
+				}
+				catch{
 					goto install;
 				}
-				goto check;
+
+
+				// _instance.WaitSetValue(() => _instance.ActiveTab.FindElementById("password"),password);
+				// _instance.LMB(("button", "data-testid", "unlock-submit", "regexp", 0));
+				// if (!_instance.ActiveTab.FindElementByAttribute("p", "innertext", "Incorrect password", "text", 0).IsVoid) 
+				// {
+				// 	_instance.CloseAllTabs(); 
+				// 	_instance.UninstallExtension(extId); 
+				// 	Loggers.l0g(_project,"! WrongPassword");
+				// 	goto install;
+				// }
+				// goto check;
 			}
 
 
@@ -5829,7 +5804,7 @@ namespace w3tools //by @w3bgrep
 				if(!String.Equals(address,_project.Variables["addressEvm"].Value,StringComparison.OrdinalIgnoreCase))
 				{
 					_instance.CloseAllTabs(); 
-					_instance.UninstallExtension(extId); 
+					_instance.UninstallExtension("nkbihfbeogaeaoehlefnkodbefgpgknn"); 
 					Loggers.l0g(_project,$"!WrongWallet expected: {_project.Variables["addressEvm"].Value}. InWallet {address}"); 
 					goto install;
 				}
@@ -5841,7 +5816,63 @@ namespace w3tools //by @w3bgrep
 
 
 		}
-		
+		public void MMimport (string key = null)
+		{
+			var password = SAFU.HWPass(_project);
+			DateTime deadline = DateTime.Now.AddSeconds(60);
+			
+			string welcomeURL = $"chrome-extension://nkbihfbeogaeaoehlefnkodbefgpgknn/home.html#onboarding/welcome"; 
+			while (!_instance.ActiveTab.URL.Contains("#onboarding/welcome"))
+			{
+				if (DateTime.Now > deadline ) throw new Exception("timeout");
+				_instance.CloseExtraTabs();
+				_instance.ActiveTab.Navigate("chrome-extension://nkbihfbeogaeaoehlefnkodbefgpgknn/home.html", "");
+				Thread.Sleep(1000);
+			}
+			if (string.IsNullOrEmpty(key)) key = Db.KeyEVM(_project);
+			
+			
+			_instance.LMB(("h2", "innertext", "Let\'s\\ get\\ started", "regexp", 0));
+			_instance.LMB(("span", "innertext", "I\\ agree\\ to\\ MetaMask\'s\\ Terms\\ of\\ use", "regexp", 1));
+			_instance.LMB(("button", "aria-label", "Close", "regexp", 0));
+			_instance.LMB(("button", "data-testid", "onboarding-create-wallet", "regexp", 0));
+			_instance.LMB(("button", "data-testid", "metametrics-no-thanks", "regexp", 0));
+			_instance.SetHe(("input:password", "data-testid", "create-password-new", "regexp", 0),password);
+			_instance.SetHe(("input:password", "data-testid", "create-password-confirm", "regexp", 0),password);
+			_instance.LMB(("span", "innertext", "I\\ understand\\ that\\ MetaMask\\ cannot\\ recover\\ this\\ password\\ for\\ me.\\ Learn\\ more", "regexp", 0));
+			_instance.LMB(("button", "data-testid", "create-password-wallet", "regexp", 0));
+			_instance.LMB(("button", "data-testid", "secure-wallet-later", "regexp", 0));
+			_instance.LMB(("label", "class", "skip-srp-backup-popover__label", "regexp", 0));
+			_instance.LMB(("button", "data-testid", "skip-srp-backup", "regexp", 0));
+			_instance.LMB(("button", "data-testid", "onboarding-complete-done", "regexp", 0));
+			_instance.LMB(("button", "data-testid", "pin-extension-next", "regexp", 0));
+			_instance.LMB(("button", "data-testid", "pin-extension-done", "regexp", 0));
+			Thread.Sleep(1000); 
+			while (!_instance.ActiveTab.FindElementByAttribute("button", "innertext", "Got\\ it", "regexp", 0).IsVoid) 
+			try{_instance.LMB(("button", "data-testid", "popover-close", "regexp", 0));}
+			catch{_instance.LMB(("button", "innertext", "Got\\ it", "regexp", 0));}
+				
+			_instance.LMB(("button", "data-testid", "account-menu-icon", "regexp", 0));
+			_instance.LMB(("button", "data-testid", "multichain-account-menu-popover-action-button", "regexp", 0));
+			_instance.LMB(("span", "style", "mask-image:\\ url\\(\"./images/icons/import.svg\"\\);", "regexp", 0));
+			_instance.WaitSetValue(() => _instance.ActiveTab.FindElementById("private-key-box"), key);
+			_instance.LMB(("button", "data-testid", "import-account-confirm-button", "regexp", 0));
+			Thread.Sleep(1000); 
+		}
+		public void MMUnlock ()
+		{
+				var password = SAFU.HWPass(_project);
+				_instance.WaitSetValue(() => _instance.ActiveTab.FindElementById("password"),password);
+				_instance.LMB(("button", "data-testid", "unlock-submit", "regexp", 0));
+				if (!_instance.ActiveTab.FindElementByAttribute("p", "innertext", "Incorrect password", "text", 0).IsVoid) 
+				{
+					_instance.CloseAllTabs(); 
+					_instance.UninstallExtension("nkbihfbeogaeaoehlefnkodbefgpgknn"); 
+					Loggers.l0g(_project,"! WrongPassword",thr0w:true);
+					//goto install;
+				}
+				//goto check;
+		}
 	}
 	
 	public static class MM
