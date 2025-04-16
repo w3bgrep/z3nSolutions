@@ -4464,6 +4464,70 @@ namespace w3tools //by @w3bgrep
 
 	}
 
+	public class Discord
+		{
+			private readonly IZennoPosterProjectModel _project;
+			private readonly Instance _instance;
+			private readonly bool _log;
+			public Discord(IZennoPosterProjectModel project, Instance instance, bool log = false)
+			{
+				_project = project;
+				_instance = instance;
+				_log = log;
+			}
+			private void DScredsFromDb(string tableName ="discord", string schemaName = "accounts", bool log = false)
+			{
+				
+				log = _project.Variables["debug"].Value == "True";
+				string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+				var resp = SQL.W3Query(_project,$@"SELECT status, token, login, password, code2FA, username, servers FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value};");
+				string[] discordData = resp.Split('|');
+				_project.Variables["discordSTATUS"].Value = discordData[0].Trim();
+				_project.Variables["discordTOKEN"].Value = discordData[1].Trim();
+				_project.Variables["discordLOGIN"].Value = discordData[2].Trim();
+				_project.Variables["discordPASSWORD"].Value = discordData[3].Trim();
+				_project.Variables["discord2FACODE"].Value = discordData[4].Trim();
+				_project.Variables["discordUSERNAME"].Value = discordData[5].Trim();
+				_project.Variables["discordSERVERS"].Value = discordData[6].Trim();
+			} 
+			private void DSupdateDb(string toUpd, bool log = false)
+			{
+				string tableName ="daiscord"; string schemaName = "accounts";
+				log = _project.Variables["debug"].Value == "True";
+				string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+				if (log) Loggers.l0g(_project,toUpd);
+				var Q = $@"UPDATE {table} SET {toUpd.Trim().TrimEnd(',')}, last = '{Time.Now("short")}' WHERE acc0 = {_project.Variables["acc0"].Value};";
+				SQL.W3Query(_project,Q,log); 
+			}
+
+			private string DScheckState(bool log = false)
+			{
+				return null;
+			}
+			private void DSsetToken()
+			{
+
+			}
+			private string DSgetToken()
+			{
+				return null;
+			}
+			private string DSlogin()
+			{
+				DateTime deadline = DateTime.Now.AddSeconds(60);
+				return null;
+			}
+			public string DSload(bool log = false)
+			{
+				return null;
+			}
+
+		}
+
+
+
+
+
 
 	public static class Twitter
 	{
