@@ -4475,7 +4475,7 @@ namespace w3tools //by @w3bgrep
 				_instance = instance;
 				_log = log;
 			}
-			private void DScredsFromDb(string tableName ="discord", string schemaName = "accounts", bool log = false)
+			public void DScredsFromDb(string tableName ="discord", string schemaName = "accounts", bool log = false)
 			{
 				
 				log = _project.Variables["debug"].Value == "True";
@@ -4490,9 +4490,9 @@ namespace w3tools //by @w3bgrep
 				_project.Variables["discordUSERNAME"].Value = discordData[5].Trim();
 				_project.Variables["discordSERVERS"].Value = discordData[6].Trim();
 			} 
-			private void DSupdateDb(string toUpd, bool log = false)
+			public void DSupdateDb(string toUpd, bool log = false)
 			{
-				string tableName ="daiscord"; string schemaName = "accounts";
+				string tableName ="discord"; string schemaName = "accounts";
 				log = _project.Variables["debug"].Value == "True";
 				string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
 				if (log) Loggers.l0g(_project,toUpd);
@@ -4500,26 +4500,90 @@ namespace w3tools //by @w3bgrep
 				SQL.W3Query(_project,Q,log); 
 			}
 
-			private string DScheckState(bool log = false)
+			public string DScheckState(bool log = false)
 			{
 				return null;
 			}
-			private void DSsetToken()
+			public void DSsetToken()
 			{
-
+				var jsCode = "function login(token) {\r\n    setInterval(() => {\r\n        document.body.appendChild(document.createElement `iframe`).contentWindow.localStorage.token = `\"${token}\"`\r\n    }, 50);\r\n    setTimeout(() => {\r\n        location.reload();\r\n    }, 1000);\r\n}\r\n    login(\'discordTOKEN\');\r\n".Replace("discordTOKEN",_project.Variables["discordTOKEN"].Value);
+				_instance.ActiveTab.MainDocument.EvaluateScript(jsCode);
 			}
-			private string DSgetToken()
+			public string DSgetToken()
 			{
-				return null;
+				var token = _instance.ActiveTab.MainDocument.EvaluateScript("return (webpackChunkdiscord_app.push([[\'\'],{},e=>{m=[];for(let c in e.c)m.push(e.c[c])}]),m).find(m=>m?.exports?.default?.getToken!== void 0).exports.default.getToken();\r\n");
+				return token;
 			}
-			private string DSlogin()
+			public string DSlogin()
 			{
 				DateTime deadline = DateTime.Now.AddSeconds(60);
-				return null;
+				_instance.CloseExtraTabs();
+				_instance.SetHe(("input:text", "aria-label", "Email or Phone Number", "text", 0),_project.Variables["discordLOGIN"].Value);
+				_instance.SetHe(("input:password", "aria-label", "Password", "text", 0),_project.Variables["discordPASSWORD"].Value);
+				_instance.LMB(("button", "type", "submit", "regexp", 0));
+
+				try{_instance.SetHe(("input:text", "autocomplete", "one-time-code", "regexp", 0),OTP.Offline(_project.Variables["discord2FACODE"].Value));
+				_instance.LMB(("button", "type", "submit", "regexp", 0));
+				Thread.Sleep(3000);	
+				}
+				catch{}
+
+				if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Are\\ you\\ human\\?", "regexp", 0).IsVoid){
+					return "capcha";
+				}
+				else return "ok";
 			}
 			public string DSload(bool log = false)
 			{
-				return null;
+				DScredsFromDb();
+
+				string state = null;
+				var emu = _instance.UseFullMouseEmulation;
+				_instance.UseFullMouseEmulation = false;
+				bool tokenUsed = false;
+				_instance.ActiveTab.Navigate("https://discord.com/channels/@me", "");
+
+				start:
+				state = null;
+				while (string.IsNullOrEmpty(state))
+				{
+					_instance.LMB(("button", "innertext", "Continue\\ in\\ Browser", "regexp", 0),thr0w:false);
+					if (!_instance.ActiveTab.FindElementByAttribute("input:text", "aria-label", "Email or Phone Number", "text", 0).IsVoid)state = "login";	
+					if (!_instance.ActiveTab.FindElementByAttribute("section", "aria-label", "User\\ area", "regexp", 0).IsVoid)state = "logged";	
+				}
+
+				Loggers.l0g(_project,state);
+
+
+				if (state == "login" && !tokenUsed){
+					DSsetToken();
+					tokenUsed = true;
+					Thread.Sleep(5000);
+					
+					goto start;
+				}
+
+				else if (state == "login" && tokenUsed){
+					var login = DSlogin();
+					if (login == "ok"){
+						Thread.Sleep(5000);
+						goto start;		
+					}
+					else if (login == "capcha") 
+						Loggers.l0g(_project,"!W capcha");
+						_instance.UseFullMouseEmulation = emu;	
+						state = "capcha";
+				}
+
+				else if (state == "logged"){
+					state = _instance.ActiveTab.FindElementByAttribute("div", "class", "avatarWrapper__", "regexp", 0).FirstChild.GetAttribute("aria-label");
+					Loggers.l0g(_project,state);
+					var token = DSgetToken();
+					DSupdateDb ($"token = '{token}', status = 'ok'");
+					_instance.UseFullMouseEmulation = emu;
+				}
+				return state;
+
 			}
 
 		}
