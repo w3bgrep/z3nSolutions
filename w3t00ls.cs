@@ -4475,7 +4475,7 @@ namespace w3tools //by @w3bgrep
 				_instance = instance;
 				_log = log;
 			}
-			public void DScredsFromDb(string tableName ="discord", string schemaName = "accounts", bool log = false)
+			private void DScredsFromDb(string tableName ="discord", string schemaName = "accounts", bool log = false)
 			{
 				
 				log = _project.Variables["debug"].Value == "True";
@@ -4500,21 +4500,17 @@ namespace w3tools //by @w3bgrep
 				SQL.W3Query(_project,Q,log); 
 			}
 
-			public string DScheckState(bool log = false)
-			{
-				return null;
-			}
-			public void DSsetToken()
+			private void DSsetToken()
 			{
 				var jsCode = "function login(token) {\r\n    setInterval(() => {\r\n        document.body.appendChild(document.createElement `iframe`).contentWindow.localStorage.token = `\"${token}\"`\r\n    }, 50);\r\n    setTimeout(() => {\r\n        location.reload();\r\n    }, 1000);\r\n}\r\n    login(\'discordTOKEN\');\r\n".Replace("discordTOKEN",_project.Variables["discordTOKEN"].Value);
 				_instance.ActiveTab.MainDocument.EvaluateScript(jsCode);
 			}
-			public string DSgetToken()
+			private string DSgetToken()
 			{
 				var token = _instance.ActiveTab.MainDocument.EvaluateScript("return (webpackChunkdiscord_app.push([[\'\'],{},e=>{m=[];for(let c in e.c)m.push(e.c[c])}]),m).find(m=>m?.exports?.default?.getToken!== void 0).exports.default.getToken();\r\n");
 				return token;
 			}
-			public string DSlogin()
+			private string DSlogin()
 			{
 				DateTime deadline = DateTime.Now.AddSeconds(60);
 				_instance.CloseExtraTabs();
@@ -4586,6 +4582,41 @@ namespace w3tools //by @w3bgrep
 
 			}
 
+			public string DSservers()
+			{
+				_instance.UseFullMouseEmulation = true;
+				var folders = new List<HtmlElement>();
+				var servers = new List<string>();
+				var list = _instance.ActiveTab.FindElementByAttribute("div", "aria-label", "Servers", "regexp", 0).GetChildren(false).ToList();
+				foreach (HtmlElement item in list)
+				{
+					
+					if (item.GetAttribute("class").Contains("listItem")) 
+					{
+						var server = item.FindChildByTag("div",1).FirstChild.GetAttribute("data-dnd-name");
+						servers.Add(server);
+					}
+					
+					if (item.GetAttribute("class").Contains("wrapper")) 
+					{
+						_instance.WaitClick(() => item);
+						var FolderServer = item.FindChildByTag("ul",0).GetChildren(false).ToList();
+						//_project.SendInfoToLog(FolderServer.Count.ToString());
+						foreach(HtmlElement itemInFolder in FolderServer)
+						{
+							var server = itemInFolder.FindChildByTag("div",1).FirstChild.GetAttribute("data-dnd-name");
+							servers.Add(server);
+						}
+					}
+
+				}
+
+				string result = string.Join(" | ",servers);
+				DSupdateDb ($"servers = '{result}'");
+				//_project.SendInfoToLog(servers.Count.ToString());
+				//_project.SendInfoToLog(string.Join(" | ",servers));
+				return result;
+			}
 		}
 
 
