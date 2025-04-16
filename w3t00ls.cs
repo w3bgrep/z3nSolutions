@@ -5770,7 +5770,6 @@ namespace w3tools //by @w3bgrep
 
 			if (state == "passwordPage") 
 			{
-
 				try {
 					MMUnlock();
 					goto check;
@@ -5778,43 +5777,19 @@ namespace w3tools //by @w3bgrep
 				catch{
 					goto install;
 				}
-
-
-				// _instance.WaitSetValue(() => _instance.ActiveTab.FindElementById("password"),password);
-				// _instance.LMB(("button", "data-testid", "unlock-submit", "regexp", 0));
-				// if (!_instance.ActiveTab.FindElementByAttribute("p", "innertext", "Incorrect password", "text", 0).IsVoid) 
-				// {
-				// 	_instance.CloseAllTabs(); 
-				// 	_instance.UninstallExtension(extId); 
-				// 	Loggers.l0g(_project,"! WrongPassword");
-				// 	goto install;
-				// }
-				// goto check;
 			}
-
 
 			if ( state == "mainPage") 
 			{
-				while (!_instance.ActiveTab.FindElementByAttribute("button", "innertext", "Got\\ it", "regexp", 0).IsVoid) _instance.LMB(("button", "data-testid", "popover-close", "regexp", 0));
-				_instance.LMB(("button", "data-testid", "account-options-menu-button", "regexp", 0));
-				_instance.LMB(("button", "data-testid", "account-list-menu-details", "regexp", 0));
-				address = _instance.ReadHe(("button", "data-testid", "address-copy-button-text", "regexp", 0));
-				
-				if (!skipCheck)
-				if(!String.Equals(address,_project.Variables["addressEvm"].Value,StringComparison.OrdinalIgnoreCase))
-				{
-					_instance.CloseAllTabs(); 
-					_instance.UninstallExtension("nkbihfbeogaeaoehlefnkodbefgpgknn"); 
-					Loggers.l0g(_project,$"!WrongWallet expected: {_project.Variables["addressEvm"].Value}. InWallet {address}"); 
+				try {
+					address = MMChkAddress();
+				}
+				catch{
 					goto install;
 				}
-
 			}
 			_instance.UseFullMouseEmulation = em;
 			return address;
-
-
-
 		}
 		public void MMimport (string key = null)
 		{
@@ -5861,17 +5836,34 @@ namespace w3tools //by @w3bgrep
 		}
 		public void MMUnlock ()
 		{
-				var password = SAFU.HWPass(_project);
-				_instance.WaitSetValue(() => _instance.ActiveTab.FindElementById("password"),password);
-				_instance.LMB(("button", "data-testid", "unlock-submit", "regexp", 0));
-				if (!_instance.ActiveTab.FindElementByAttribute("p", "innertext", "Incorrect password", "text", 0).IsVoid) 
+			var password = SAFU.HWPass(_project);
+			_instance.WaitSetValue(() => _instance.ActiveTab.FindElementById("password"),password);
+			_instance.LMB(("button", "data-testid", "unlock-submit", "regexp", 0));
+			if (!_instance.ActiveTab.FindElementByAttribute("p", "innertext", "Incorrect password", "text", 0).IsVoid) 
+			{
+				_instance.CloseAllTabs(); 
+				_instance.UninstallExtension("nkbihfbeogaeaoehlefnkodbefgpgknn"); 
+				Loggers.l0g(_project,"! WrongPassword",thr0w:true);
+			}
+
+		}
+		public string MMChkAddress (bool skipCheck = false)
+		{
+			while (!_instance.ActiveTab.FindElementByAttribute("button", "innertext", "Got\\ it", "regexp", 0).IsVoid) 
+			try{_instance.LMB(("button", "data-testid", "popover-close", "regexp", 0));}
+			catch{_instance.LMB(("button", "innertext", "Got\\ it", "regexp", 0));}
+			_instance.LMB(("button", "data-testid", "account-options-menu-button", "regexp", 0));
+			_instance.LMB(("button", "data-testid", "account-list-menu-details", "regexp", 0));
+			string address = _instance.ReadHe(("button", "data-testid", "address-copy-button-text", "regexp", 0));
+			
+			if (!skipCheck)
+				if(!String.Equals(address,_project.Variables["addressEvm"].Value,StringComparison.OrdinalIgnoreCase))
 				{
 					_instance.CloseAllTabs(); 
 					_instance.UninstallExtension("nkbihfbeogaeaoehlefnkodbefgpgknn"); 
-					Loggers.l0g(_project,"! WrongPassword",thr0w:true);
-					//goto install;
+					Loggers.l0g(_project,"! WrongAddress",thr0w:true);
 				}
-				//goto check;
+			return address;
 		}
 	}
 	
