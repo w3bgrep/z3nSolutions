@@ -3083,10 +3083,6 @@ namespace w3tools //by @w3bgrep
 				return (T)Convert.ChangeType(transactionCount.ToString(), typeof(T));			
 			return (T)Convert.ChangeType(transactionCount, typeof(T));
 		}
-
-
-
-
 		public T nativeSOL<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -3384,6 +3380,143 @@ namespace w3tools //by @w3bgrep
 				return (T)Convert.ChangeType(balanceToken.ToString("0.##################"), typeof(T));
 			return (T)Convert.ChangeType(balanceToken, typeof(T));
 		}
+
+		public string send1559(string chainRpc, string contractAddress, string encodedData, decimal value, string walletKey, int speedup = 1)
+		{
+			var web3 = new Nethereum.Web3.Web3(chainRpc);
+			var chainIdTask = web3.Eth.ChainId.SendRequestAsync(); chainIdTask.Wait();
+			int chainId = (int)chainIdTask.Result.Value;
+			string fromAddress = new Nethereum.Signer.EthECKey(walletKey).GetPublicAddress();
+			//
+			BigInteger _value = (BigInteger)(value * 1000000000000000000m);
+			//
+			BigInteger gasLimit = 0;  BigInteger priorityFee = 0;  BigInteger maxFeePerGas = 0;  BigInteger baseGasPrice = 0;
+			try 
+		    {   var gasPriceTask = web3.Eth.GasPrice.SendRequestAsync();gasPriceTask.Wait();
+		        baseGasPrice = gasPriceTask.Result.Value / 100 + gasPriceTask.Result.Value;
+		        priorityFee =  baseGasPrice / 100 * speedup + gasPriceTask.Result.Value;
+		        maxFeePerGas =  baseGasPrice / 100 * speedup + gasPriceTask.Result.Value;}
+		     catch (Exception ex)  {throw new Exception($"failedEstimateGas: {ex.Message}");}
+		       
+			try 
+		    {   var transactionInput = new Nethereum.RPC.Eth.DTOs.TransactionInput
+		        {
+		            To = contractAddress,
+		            From = fromAddress,
+		            Data = encodedData,
+		            //Value = new Nethereum.Hex.HexTypes.HexBigInteger((BigInteger)value),
+					Value = new Nethereum.Hex.HexTypes.HexBigInteger((BigInteger)_value),
+		            MaxPriorityFeePerGas = new Nethereum.Hex.HexTypes.HexBigInteger(priorityFee),
+		            MaxFeePerGas = new Nethereum.Hex.HexTypes.HexBigInteger(maxFeePerGas),
+		            Type = new Nethereum.Hex.HexTypes.HexBigInteger(2) 
+		        };
+		        
+		        var gasEstimateTask = web3.Eth.Transactions.EstimateGas.SendRequestAsync(transactionInput);
+		        gasEstimateTask.Wait();
+		        var gasEstimate = gasEstimateTask.Result;
+		        gasLimit = gasEstimate.Value + (gasEstimate.Value / 2);
+			}
+		    catch (AggregateException ae)
+			{
+			    if (ae.InnerException is Nethereum.JsonRpc.Client.RpcResponseException rpcEx)
+			    {
+			        var error = $"Code: {rpcEx.RpcError.Code}, Message: {rpcEx.RpcError.Message}, Data: {rpcEx.RpcError.Data}";
+			        throw new Exception($"FailedSimulate RPC Error: {error}");
+			    }
+			    throw;
+			}
+			try 
+		    {	
+		        var blockchain = new Blockchain(walletKey, chainId, chainRpc);
+				string hash = blockchain.SendTransactionEIP1559(contractAddress, value, encodedData, gasLimit, maxFeePerGas, priorityFee).Result;
+		        return hash;
+		    }
+		    catch (Exception ex)
+		    {
+		        throw new Exception($"FailedSend: {ex.Message}");
+		    }
+		}
+
+		public string GZ(string chainTo, decimal value, string chainRPC = null) //refuel GazZip
+		
+		{
+			
+			// 0x010066 Sepolia | 0x01019e Soneum | 0x01000e BNB | 0x0100f0 Gravity
+			string txHash = null;
+			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture; 
+			Random rnd = new Random();
+			var accountAddress = Db.AdrEvm(_project); 
+			
+			if (string.IsNullOrEmpty(chainRPC))
+			{
+				string chainList = @"https://mainnet.era.zksync.io,
+				https://linea-rpc.publicnode.com,
+				https://arb1.arbitrum.io/rpc,
+				https://optimism-rpc.publicnode.com,
+				https://scroll.blockpi.network/v1/rpc/public,
+				https://rpc.taiko.xyz,
+				https://base.blockpi.network/v1/rpc/public,
+				https://rpc.zora.energy";
+				
+				
+				bool found = false; 
+				foreach (string RPC in chainList.Split(','))
+				{
+				    chainRPC = RPC.Trim();
+					var native = nativeEVM<decimal>(chainRPC);
+					var required = value + 0.00015m;
+				    if (native > required)
+				    {
+				        Loggers.l0g(_project,$"CHOSEN: rpc:[{chainRPC}] native:[{native}]");
+						found = true; break;
+				    }
+					Loggers.l0g(_project,$"rpc:[{chainRPC}] native:[{native}] lower than [{required}]");
+				    Thread.Sleep(1000);
+				}
+				
+				
+				if (!found)
+				{
+				    return $"fail: no balance over {value}ETH found by all Chains";
+				}
+			}
+			
+			else 
+			{
+				var native = nativeEVM<decimal>(chainRPC);
+				Loggers.l0g(_project,$"rpc:[{chainRPC}] native:[{native}]");
+				if (native < value + 0.0002m)
+				{
+					return $"fail: no balance over {value}ETH found on {chainRPC}";
+				}
+			}
+			
+			string functionName = "transfer";// withdraw
+			
+			string[] types = { };
+			object[] values = { };
+			
+
+			try
+			{
+			    string dataEncoded = chainTo;//0x010066 for Sepolia | 0x01019e Soneum | 0x01000e BNB
+			    txHash = send1559(
+			        chainRPC,
+			        "0x391E7C679d29bD940d63be94AD22A25d25b5A604",//gazZip
+			        dataEncoded,
+			        value,  // value в ETH
+			        Db.KeyEVM(_project),
+			        3          // speedup %
+			    );
+			    Thread.Sleep(1000);
+			    _project.Variables["blockchainHash"].Value = txHash;
+			}
+			catch (Exception ex){_project.SendWarningToLog($"{ex.Message}",true);throw;}
+			
+			Loggers.l0g(_project,txHash);
+			return txHash;
+		}
+
 
 	}
 
@@ -4516,6 +4649,11 @@ namespace w3tools //by @w3bgrep
 				_instance.SetHe(("input:text", "aria-label", "Email or Phone Number", "text", 0),_project.Variables["discordLOGIN"].Value);
 				_instance.SetHe(("input:password", "aria-label", "Password", "text", 0),_project.Variables["discordPASSWORD"].Value);
 				_instance.LMB(("button", "type", "submit", "regexp", 0));
+
+				if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Are\\ you\\ human\\?", "regexp", 0).IsVoid){
+					return "capcha";
+				}
+
 
 				try{_instance.SetHe(("input:text", "autocomplete", "one-time-code", "regexp", 0),OTP.Offline(_project.Variables["discord2FACODE"].Value));
 				_instance.LMB(("button", "type", "submit", "regexp", 0));
@@ -5728,7 +5866,7 @@ namespace w3tools //by @w3bgrep
 			_instance = instance;
 			_log = log;
 		}
-		public string MMLaunch (string key = null)
+		public void MMLaunch (string key = null)
 		{
 			var em = _instance.UseFullMouseEmulation;
 			_instance.UseFullMouseEmulation = false;
@@ -5789,7 +5927,7 @@ namespace w3tools //by @w3bgrep
 				}
 			}
 			_instance.UseFullMouseEmulation = em;
-			return address;
+			//return address;
 		}
 		public void MMimport (string key = null)
 		{
@@ -6402,6 +6540,7 @@ namespace w3tools //by @w3bgrep
 	#endregion	
 	#region Tools&Vars
 	public class Easy
+
 	{
 		private readonly IZennoPosterProjectModel _project;
 		private readonly Instance _instance;
@@ -8581,4 +8720,87 @@ namespace w3tools //by @w3bgrep
 		}
 	}
 	#endregion
+
+	public class Galxe
+
+	{
+		private readonly IZennoPosterProjectModel _project;
+		private readonly Instance _instance;
+		private readonly bool _log;
+
+		public Galxe(IZennoPosterProjectModel project, Instance instance, bool log = false)
+		{
+			_project = project;
+			_instance = instance;
+			_log = log;
+		}
+
+		public List<HtmlElement> ParseTasks(string type = "tasksUnComplete", bool log = false) //tasksComplete|tasksUnComplete|reqComplete|reqUnComplete|refComplete|refUnComplete
+		{
+			string sectionName = null;
+			var reqComplete = new List<HtmlElement>();
+			var reqUnComplete = new List<HtmlElement>();
+
+			var tasksComplete = new List<HtmlElement>();
+			var tasksUnComplete = new List<HtmlElement>();
+
+			var refComplete = new List<HtmlElement>();
+			var refUnComplete = new List<HtmlElement>();
+
+			var dDone = "M10 19a9 9 0 1 0 0-18 9 9 0 0 0 0 18m3.924-10.576a.6.6 0 0 0-.848-.848L9 11.652 6.924 9.575a.6.6 0 0 0-.848.848l2.5 2.5a.6.6 0 0 0 .848 0z";
+
+			var sectionList = _instance.ActiveTab.FindElementByAttribute("div", "class", "mb-20", "regexp", 0).GetChildren(false).ToList();
+
+			foreach( HtmlElement section in sectionList)
+			{
+				sectionName = null;
+				var taskList = section.GetChildren(false).ToList();
+				foreach (HtmlElement taskTile in taskList)
+				{
+					if (taskTile.GetAttribute("class") == "flex justify-between") {
+						sectionName = taskTile.InnerText.Replace("\n"," ");
+						_project.SendInfoToLog(sectionName);
+						continue;
+					}
+					if (sectionName.Contains("Requirements"))
+					{
+						var taskText = taskTile.InnerText.Replace("View Detail","").Replace("\n",";");
+						if (taskTile.InnerHtml.Contains(dDone)) reqComplete.Add(taskTile); 
+						else reqUnComplete.Add(taskTile); 	
+					}
+					else if (sectionName.Contains("Get") && !sectionName.Contains("Referral") )
+					{
+						var taskText = taskTile.InnerText.Replace("View Detail","").Replace("\n",";");
+						if (taskTile.InnerHtml.Contains(dDone)) tasksComplete.Add(taskTile); 
+						else tasksUnComplete.Add(taskTile); 	
+					}
+					else if (sectionName.Contains("Referral") )
+					{
+						var taskText = taskTile.InnerText.Replace("View Detail","").Replace("\n",";");
+						if (taskTile.InnerHtml.Contains(dDone)) refComplete.Add(taskTile); 
+						else refUnComplete.Add(taskTile); 	
+					}
+					
+				}	
+			}
+
+			_project.SendInfoToLog($"requirements done/!done {reqComplete.Count}/{reqUnComplete.Count}");
+			_project.SendInfoToLog($"tasks done/!done {tasksComplete.Count}/{tasksUnComplete.Count}");
+			_project.SendInfoToLog($"refs counted {refComplete.Count}");
+
+			switch (type) //tasksComplete|tasksUnComplete|reqComplete|reqUnComplete|refComplete|refUnComplete
+            {
+                case "tasksComplete": return tasksComplete; 
+                case "tasksUnComplete": return tasksUnComplete; 
+                case "reqComplete": return reqComplete; 
+                case "reqUnComplete": return reqUnComplete; 
+				case "refComplete": return refComplete; 
+                case "refUnComplete": return refUnComplete; 
+                default: return tasksUnComplete; 
+            }
+            return null; 
+
+		}
+	}
+
 }
