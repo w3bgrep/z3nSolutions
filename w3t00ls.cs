@@ -4775,27 +4775,24 @@ namespace w3tools //by @w3bgrep
 			}
 			private string DSlogin()
 			{
+				_project.SendInfoToLog("DLogin");
 				DateTime deadline = DateTime.Now.AddSeconds(60);
 				_instance.CloseExtraTabs();
 				_instance.SetHe(("input:text", "aria-label", "Email or Phone Number", "text", 0),_project.Variables["discordLOGIN"].Value);
 				_instance.SetHe(("input:password", "aria-label", "Password", "text", 0),_project.Variables["discordPASSWORD"].Value);
 				_instance.LMB(("button", "type", "submit", "regexp", 0));
 
+				while (_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Are\\ you\\ human\\?", "regexp", 0).IsVoid && 
+					_instance.ActiveTab.FindElementByAttribute("input:text", "autocomplete", "one-time-code", "regexp", 0).IsVoid) Thread.Sleep(1000);
+
 				if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Are\\ you\\ human\\?", "regexp", 0).IsVoid){
-					return "capcha";
+					if ((_project.Variables["humanNear"].Value) != "True") return "capcha";
+					else _instance.WaitForUserAction(100, "dsCap");
 				}
-
-
-				try{_instance.SetHe(("input:text", "autocomplete", "one-time-code", "regexp", 0),OTP.Offline(_project.Variables["discord2FACODE"].Value));
+				_instance.SetHe(("input:text", "autocomplete", "one-time-code", "regexp", 0),OTP.Offline(_project.Variables["discord2FACODE"].Value));
 				_instance.LMB(("button", "type", "submit", "regexp", 0));
 				Thread.Sleep(3000);	
-				}
-				catch{}
-
-				if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Are\\ you\\ human\\?", "regexp", 0).IsVoid){
-					return "capcha";
-				}
-				else return "ok";
+				return "ok";
 			}
 			public string DSload(bool log = false)
 			{
@@ -4822,8 +4819,7 @@ namespace w3tools //by @w3bgrep
 				if (state == "login" && !tokenUsed){
 					DSsetToken();
 					tokenUsed = true;
-					Thread.Sleep(5000);
-					
+					//Thread.Sleep(5000);					
 					goto start;
 				}
 
@@ -6141,9 +6137,10 @@ namespace w3tools //by @w3bgrep
 			_instance.UseFullMouseEmulation = true;
 			if (RBInstall ()) RBImport ();
 			else RBUnlock();
+			_instance.CloseExtraTabs();
 
 		}
-		public bool RBInstall ()
+		private bool RBInstall ()
 		{
 			string path = $"{_project.Path}.crx\\Rabby0.93.24.crx";
 			var extId = "acmacodkjbdgmoleebolmdjonilkdbch";
@@ -6155,7 +6152,7 @@ namespace w3tools //by @w3bgrep
 			}
 			return false;
 		}
-		public void RBImport ()
+		private void RBImport ()
 		{
 			var password = SAFU.HWPass(_project);
 			var key = Db.KeyEVM(_project);
@@ -6168,7 +6165,7 @@ namespace w3tools //by @w3bgrep
 			_instance.LMB(("button", "innertext", "Confirm", "regexp", 0));
 			_instance.LMB(("button", "innertext", "Get\\ Started", "regexp", 0));
 		}
-		public void RBUnlock ()
+		private void RBUnlock ()
 		{
 			_instance.ActiveTab.Navigate("chrome-extension://acmacodkjbdgmoleebolmdjonilkdbch/index.html#/unlock", "");
 			var password = SAFU.HWPass(_project);
