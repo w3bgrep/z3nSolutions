@@ -4762,7 +4762,6 @@ namespace w3tools //by @w3bgrep
 				var Q = $@"UPDATE {table} SET {toUpd.Trim().TrimEnd(',')}, last = '{Time.Now("short")}' WHERE acc0 = {_project.Variables["acc0"].Value};";
 				SQL.W3Query(_project,Q,log); 
 			}
-
 			private void DSsetToken()
 			{
 				var jsCode = "function login(token) {\r\n    setInterval(() => {\r\n        document.body.appendChild(document.createElement `iframe`).contentWindow.localStorage.token = `\"${token}\"`\r\n    }, 50);\r\n    setTimeout(() => {\r\n        location.reload();\r\n    }, 1000);\r\n}\r\n    login(\'discordTOKEN\');\r\n".Replace("discordTOKEN",_project.Variables["discordTOKEN"].Value);
@@ -4845,7 +4844,6 @@ namespace w3tools //by @w3bgrep
 				return state;
 
 			}
-
 			public string DSservers()
 			{
 				_instance.UseFullMouseEmulation = true;
@@ -5508,8 +5506,7 @@ namespace w3tools //by @w3bgrep
 		    {
 		        return "0";
 		    }
-		}	
-		
+		}			
 		public static string SendLegacy(string chainRpc, string contractAddress, string encodedData, decimal value, string walletKey, int speedup = 1)
 		{
 			try 
@@ -5626,7 +5623,6 @@ namespace w3tools //by @w3bgrep
 		        throw new Exception($"FailedSend: {ex.Message}");
 		    }
 		}	
-	
 		public static string GazZip(IZennoPosterProjectModel project, string chainTo, decimal value, string chainRPC = "") //refuel GazZip
 		
 		{
