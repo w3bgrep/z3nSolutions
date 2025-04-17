@@ -3380,7 +3380,6 @@ namespace w3tools //by @w3bgrep
 				return (T)Convert.ChangeType(balanceToken.ToString("0.##################"), typeof(T));
 			return (T)Convert.ChangeType(balanceToken, typeof(T));
 		}
-
 		public string send1559(string chainRpc, string contractAddress, string encodedData, decimal value, string walletKey, int speedup = 1)
 		{
 			var web3 = new Nethereum.Web3.Web3(chainRpc);
@@ -3436,7 +3435,6 @@ namespace w3tools //by @w3bgrep
 		        throw new Exception($"FailedSend: {ex.Message}");
 		    }
 		}
-
 		public string GZ(string chainTo, decimal value, string chainRPC = null) //refuel GazZip
 		
 		{
@@ -3514,9 +3512,142 @@ namespace w3tools //by @w3bgrep
 			catch (Exception ex){_project.SendWarningToLog($"{ex.Message}",true);throw;}
 			
 			Loggers.l0g(_project,txHash);
+			WaitTransaction(chainRPC,txHash);
 			return txHash;
 		}
+		public string WaitTransaction(string chainRPC = null, string hash = null, int deadline = 60, string proxy = "", bool log = false)
+			{
+				// Установка значений по умолчанию из переменных проекта, если параметры пустые
+				if (string.IsNullOrEmpty(hash)) hash = _project.Variables["blockchainHash"].Value;
+				if (string.IsNullOrEmpty(chainRPC)) chainRPC = _project.Variables["blockchainRPC"].Value;
 
+				// JSON-запросы для получения receipt и raw транзакции
+				string jsonReceipt = $@"{{""jsonrpc"":""2.0"",""method"":""eth_getTransactionReceipt"",""params"":[""{hash}""],""id"":1}}";
+				string jsonRaw = $@"{{""jsonrpc"":""2.0"",""method"":""eth_getTransactionByHash"",""params"":[""{hash}""],""id"":1}}";
+
+				// Инициализация HTTP-запроса
+				string response;
+				using (var request = new HttpRequest())
+				{
+					request.UserAgent = "Mozilla/5.0";
+					request.IgnoreProtocolErrors = true;
+					request.ConnectTimeout = 5000;
+
+					if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
+					if (!string.IsNullOrEmpty(proxy))
+					{
+						string[] proxyArray = proxy.Split(':');
+						string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);
+						request.Proxy = new HttpProxyClient(host, port, username, password);
+					}
+
+					// Таймер для отслеживания дедлайна
+					DateTime startTime = DateTime.Now;
+					TimeSpan timeout = TimeSpan.FromSeconds(deadline);
+					
+
+					// Основной цикл ожидания транзакции
+					while (true)
+					{
+						if (DateTime.Now - startTime > timeout)
+							throw new Exception($"timeout {deadline}s");
+
+						string logString = "";
+
+						// Проверка receipt транзакции
+						try
+						{
+							HttpResponse httpResponse = request.Post(chainRPC, jsonReceipt, "application/json");
+							response = httpResponse.ToString();
+
+							if (httpResponse.StatusCode != HttpStatusCode.OK)
+							{
+								_project.SendErrorToLog($"Ошибка сервера (receipt): {httpResponse.StatusCode}");
+								Thread.Sleep(2000);
+								continue;
+							}
+
+							if (string.IsNullOrWhiteSpace(response) || response.Contains("\"result\":null"))
+							{
+								_project.Variables["txStatus"].Value = "noStatus";
+							}
+							else
+							{
+								_project.Json.FromString(response);
+								try
+								{
+									string gasUsed = Onchain.HexToString(_project.Json.result.gasUsed, "gwei");
+									string gasPrice = Onchain.HexToString(_project.Json.result.effectiveGasPrice, "gwei");
+									string status = Onchain.HexToString(_project.Json.result.status);
+
+									_project.Variables["txStatus"].Value = status == "1" ? "SUCCSESS" : "!W FAIL";
+									string result = $"{chainRPC} {hash} [{_project.Variables["txStatus"].Value}] gasUsed: {gasUsed}";
+									Loggers.W3Debug(_project, result);
+									return result;
+								}
+								catch
+								{
+									_project.Variables["txStatus"].Value = "noStatus";
+								}
+							}
+						}
+						catch (HttpException ex)
+						{
+							_project.SendErrorToLog($"Ошибка запроса (receipt): {ex.Message}");
+							Thread.Sleep(2000);
+							continue;
+						}
+
+						// Проверка raw транзакции
+						try
+						{
+							HttpResponse httpResponse = request.Post(chainRPC, jsonRaw, "application/json");
+							response = httpResponse.ToString();
+
+							if (httpResponse.StatusCode != HttpStatusCode.OK)
+							{
+								_project.SendErrorToLog($"Ошибка сервера (raw): {httpResponse.StatusCode}");
+								Thread.Sleep(2000);
+								continue;
+							}
+
+							if (string.IsNullOrWhiteSpace(response) || response.Contains("\"result\":null"))
+							{
+								_project.Variables["txStatus"].Value = "";
+								logString = $"[{chainRPC} {hash}] not found";
+							}
+							else
+							{
+								_project.Json.FromString(response);
+								try
+								{
+									string gas = Onchain.HexToString(_project.Json.result.maxFeePerGas, "gwei");
+									string gasPrice = Onchain.HexToString(_project.Json.result.gasPrice, "gwei");
+									string nonce = Onchain.HexToString(_project.Json.result.nonce);
+									string value = Onchain.HexToString(_project.Json.result.value, "eth");
+									_project.Variables["txStatus"].Value = "PENDING";
+
+									logString = $"[{chainRPC} {hash}] pending  gasLimit:[{gas}] gasNow:[{gasPrice}] nonce:[{nonce}] value:[{value}]";
+								}
+								catch
+								{
+									_project.Variables["txStatus"].Value = "";
+									logString = $"[{chainRPC} {hash}] not found";
+								}
+							}
+						}
+						catch (HttpException ex)
+						{
+							_project.SendErrorToLog($"Ошибка запроса (raw): {ex.Message}");
+							Thread.Sleep(2000);
+							continue;
+						}
+
+						Loggers.W3Debug(_project, logString);
+						Thread.Sleep(3000); // Задержка перед следующей итерацией
+					}
+				}
+			}
 
 	}
 
@@ -6003,6 +6134,59 @@ namespace w3tools //by @w3bgrep
 				}
 			return address;
 		}
+
+		public void RBLaunch ()
+		{
+			var em = _instance.UseFullMouseEmulation;
+			_instance.UseFullMouseEmulation = true;
+			if (RBInstall ()) RBImport ();
+			else RBUnlock();
+
+		}
+		public bool RBInstall ()
+		{
+			string path = $"{_project.Path}.crx\\Rabby0.93.24.crx";
+			var extId = "acmacodkjbdgmoleebolmdjonilkdbch";
+			var extListString = string.Join("\n", _instance.GetAllExtensions().Select(x => $"{x.Name}:{x.Id}"));
+			if (!extListString.Contains(extId)) 
+			{
+				_instance.InstallCrxExtension(path);
+				return true;
+			}
+			return false;
+		}
+		public void RBImport ()
+		{
+			var password = SAFU.HWPass(_project);
+			var key = Db.KeyEVM(_project);
+			_instance.LMB(("button", "innertext", "I\\ already\\ have\\ an\\ address", "regexp", 0));
+			_instance.LMB(("img", "src", "chrome-extension://acmacodkjbdgmoleebolmdjonilkdbch/generated/svgs/d5409491e847b490e71191a99ddade8b.svg", "regexp", 0));
+			_instance.WaitSetValue(() => _instance.ActiveTab.FindElementById("privateKey"),key);
+			_instance.LMB(("button", "innertext", "Confirm", "regexp", 0));
+			_instance.WaitSetValue(() => _instance.ActiveTab.FindElementById("password"),password);
+			_instance.WaitSetValue(() => _instance.ActiveTab.FindElementById("confirmPassword"),password);
+			_instance.LMB(("button", "innertext", "Confirm", "regexp", 0));
+			_instance.LMB(("button", "innertext", "Get\\ Started", "regexp", 0));
+		}
+		public void RBUnlock ()
+		{
+			_instance.ActiveTab.Navigate("chrome-extension://acmacodkjbdgmoleebolmdjonilkdbch/index.html#/unlock", "");
+			var password = SAFU.HWPass(_project);
+			_instance.UseFullMouseEmulation = true;
+			unlock:
+			if( _instance.ActiveTab.URL == "chrome-extension://acmacodkjbdgmoleebolmdjonilkdbch/offscreen.html") {
+				_instance.ActiveTab.Close();
+				_instance.ActiveTab.Navigate("chrome-extension://acmacodkjbdgmoleebolmdjonilkdbch/index.html#/unlock", "");
+				goto unlock;
+			}
+			else
+			{
+				_instance.WaitSetValue(() => 	_instance.ActiveTab.FindElementById("password"),password);
+				_instance.LMB(("button", "innertext", "Unlock", "regexp", 0));
+			}
+		}
+
+
 	}
 	
 	public static class MM
