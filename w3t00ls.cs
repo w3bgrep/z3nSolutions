@@ -3650,9 +3650,6 @@ namespace w3tools //by @w3bgrep
 			}
 
 	}
-
-
-
 	public static class Leaf
 	{
 		public static string GET(IZennoPosterProjectModel project, string url, string proxy = "")
@@ -5989,6 +5986,7 @@ namespace w3tools //by @w3bgrep
 			_instance = instance;
 			_log = log;
 		}
+		//MetaMask
 		public void MMLaunch (string key = null)
 		{
 			var em = _instance.UseFullMouseEmulation;
@@ -6095,7 +6093,7 @@ namespace w3tools //by @w3bgrep
 			_instance.LMB(("button", "data-testid", "import-account-confirm-button", "regexp", 0));
 			Thread.Sleep(1000); 
 		}
-		public void MMUnlock ()
+		public void MMUnlock (bool log = false)
 		{
 			var password = SAFU.HWPass(_project);
 			_instance.WaitSetValue(() => _instance.ActiveTab.FindElementById("password"),password);
@@ -6126,43 +6124,48 @@ namespace w3tools //by @w3bgrep
 				}
 			return address;
 		}
-
-		public void RBLaunch ()
+		//Rabby
+		public void RBLaunch (bool log = false)
 		{
+			if (log)Loggers.l0g(_project,"RBInstall");
 			var em = _instance.UseFullMouseEmulation;
 			_instance.UseFullMouseEmulation = true;
-			if (RBInstall ()) RBImport ();
+			if (RBInstall ()) RBImport();
 			else RBUnlock();
 			_instance.CloseExtraTabs();
 
 		}
-		private bool RBInstall ()
+		private bool RBInstall (bool log = false)
 		{
+			
 			string path = $"{_project.Path}.crx\\Rabby0.93.24.crx";
 			var extId = "acmacodkjbdgmoleebolmdjonilkdbch";
 			var extListString = string.Join("\n", _instance.GetAllExtensions().Select(x => $"{x.Name}:{x.Id}"));
 			if (!extListString.Contains(extId)) 
 			{
+				if (log)Loggers.l0g(_project,"RBInstall");
 				_instance.InstallCrxExtension(path);
 				return true;
 			}
 			return false;
 		}
-		private void RBImport ()
+		private void RBImport (bool log = false)
 		{
-			var password = SAFU.HWPass(_project);
-			var key = Db.KeyEVM(_project);
+			if (log)Loggers.l0g(_project,"RBImport");
 			_instance.LMB(("button", "innertext", "I\\ already\\ have\\ an\\ address", "regexp", 0));
 			_instance.LMB(("img", "src", "chrome-extension://acmacodkjbdgmoleebolmdjonilkdbch/generated/svgs/d5409491e847b490e71191a99ddade8b.svg", "regexp", 0));
+			var key = Db.KeyEVM(_project);
 			_instance.WaitSetValue(() => _instance.ActiveTab.FindElementById("privateKey"),key);
 			_instance.LMB(("button", "innertext", "Confirm", "regexp", 0));
+			var password = SAFU.HWPass(_project);
 			_instance.WaitSetValue(() => _instance.ActiveTab.FindElementById("password"),password);
 			_instance.WaitSetValue(() => _instance.ActiveTab.FindElementById("confirmPassword"),password);
 			_instance.LMB(("button", "innertext", "Confirm", "regexp", 0));
 			_instance.LMB(("button", "innertext", "Get\\ Started", "regexp", 0));
 		}
-		private void RBUnlock ()
+		private void RBUnlock (bool log = false)
 		{
+			if (log)Loggers.l0g(_project,"RBUnlock");
 			_instance.ActiveTab.Navigate("chrome-extension://acmacodkjbdgmoleebolmdjonilkdbch/index.html#/unlock", "");
 			var password = SAFU.HWPass(_project);
 			_instance.UseFullMouseEmulation = true;
@@ -6177,6 +6180,90 @@ namespace w3tools //by @w3bgrep
 				_instance.WaitSetValue(() => 	_instance.ActiveTab.FindElementById("password"),password);
 				_instance.LMB(("button", "innertext", "Unlock", "regexp", 0));
 			}
+		}
+		//BagPack
+		public void BPLaunch (bool log = false)
+		{
+			if (log)Loggers.l0g(_project,"RBInstall");
+			var em = _instance.UseFullMouseEmulation;
+			_instance.UseFullMouseEmulation = false;
+			if (BPInstall (log)) BPImport(log);
+			else BPUnlock(log);
+			BPCheck(log);
+			_instance.CloseExtraTabs();
+			_instance.UseFullMouseEmulation = em;
+		}
+		public bool BPInstall (bool log = false)
+		{
+			string path = $"{_project.Path}.crx\\Backpack0.10.94.crx";
+			var extId = "aflkmfhebedbjioipglgcbcmnbpgliof";
+			var extListString = string.Join("\n", _instance.GetAllExtensions().Select(x => $"{x.Name}:{x.Id}"));
+			if (!extListString.Contains(extId)) 
+			{
+				if (log)Loggers.l0g(_project,"BPInstall");
+				_instance.InstallCrxExtension(path);
+				return true;
+			}
+			return false;
+		}
+		public bool BPImport (bool log = false)
+		{
+			if (log)Loggers.l0g(_project,"BPImport");
+			var key = Db.KeySOL(_project);
+			var password = SAFU.HWPass(_project);
+			_instance.CloseExtraTabs();
+			_instance.ActiveTab.Navigate("chrome-extension://aflkmfhebedbjioipglgcbcmnbpgliof/options.html?onboarding=true", "");
+			
+			waitEl:
+			if (!_instance.ActiveTab.FindElementByAttribute("p", "innertext", "Already\\ setup", "regexp", 0).IsVoid) return false;
+			else if (!_instance.ActiveTab.FindElementByAttribute("button", "innertext", "Import\\ Wallet", "regexp", 0).IsVoid)
+			{ 
+				_instance.LMB(("button", "innertext", "Import\\ Wallet", "regexp", 0));
+				_instance.LMB(("div", "class", "_dsp-flex\\ _ai-stretch\\ _fd-row\\ _fb-auto\\ _bxs-border-box\\ _pos-relative\\ _mih-0px\\ _miw-0px\\ _fs-0\\ _btc-889733467\\ _brc-889733467\\ _bbc-889733467\\ _blc-889733467\\ _w-10037\\ _pt-1316333121\\ _pr-1316333121\\ _pb-1316333121\\ _pl-1316333121\\ _gap-1316333121", "regexp", 0));
+				_instance.LMB(("button", "innertext", "Import\\ private\\ key", "regexp", 0));
+				_instance.SetHe(("textarea", "fulltagname", "textarea", "regexp", 0),key);
+				_instance.LMB(("button", "innertext", "Import", "regexp", 0));
+				_instance.SetHe(("input:password", "placeholder", "Password", "regexp", 0),password);
+				_instance.SetHe(("input:password", "placeholder", "Confirm\\ Password", "regexp", 0),password);
+				_instance.LMB(("input:checkbox", "class", "PrivateSwitchBase-input\\ ", "regexp", 0));
+				_instance.LMB(("button", "innertext", "Next", "regexp", 0));
+				_instance.LMB(("button", "innertext", "Open\\ Backpack", "regexp", 0));
+				return true;
+			}
+			else goto waitEl;
+
+		}
+		public void BPUnlock (bool log = false)
+		{
+			if (log)Loggers.l0g(_project,$"[BackPack] unlocking");
+			var password = SAFU.HWPass(_project);			
+			if (_instance.ActiveTab.URL != "chrome-extension://aflkmfhebedbjioipglgcbcmnbpgliof/popout.html")
+			 _instance.ActiveTab.Navigate("chrome-extension://aflkmfhebedbjioipglgcbcmnbpgliof/popout.html", "");
+			_instance.CloseExtraTabs();
+			try {
+				_instance.SetHe(("input:password", "fulltagname", "input:password", "regexp", 0),password);
+				_instance.LMB(("button", "innertext", "Unlock", "regexp", 0));			
+			}
+			catch{
+				if (!_instance.ActiveTab.FindElementByAttribute("path", "d", "M12 5v14", "text", 0).IsVoid)	return;
+				else throw;
+			}
+
+		}
+		public void BPCheck (bool log = false){
+			if (log) Loggers.l0g(_project,$"[BackPack] getting address...");
+			getA:
+
+			_instance.CloseExtraTabs();
+			try{
+			while (_instance.ActiveTab.FindElementByAttribute("button", "class", "is_Button\\ ", "regexp", 0).IsVoid) 
+				_instance.LMB(("path", "d", "M12 5v14", "text", 0),deadline:2);
+			var publicSOL =	 _instance.ReadHe(("p", "class", "MuiTypography-root\\ MuiTypography-body1", "regexp", 0 ),"last");
+			_instance.LMB(("button", "aria-label", "TabsNavigator,\\ back", "regexp", 0));
+			_project.Variables["addressSol"].Value = publicSOL;
+			Db.UpdAddressSol(_project);
+			}
+			catch{goto getA;}
 		}
 
 
@@ -7844,8 +7931,7 @@ namespace w3tools //by @w3bgrep
 	        string pascal = ToPascalCase(text);
 	        return char.ToLower(pascal[0]) + pascal.Substring(1);
 	    }
-	}
-	
+	}	
 	#region AES
 	public static class Crypto
     {
@@ -8905,6 +8991,8 @@ namespace w3tools //by @w3bgrep
 		private readonly Instance _instance;
 		private readonly bool _log;
 
+		private readonly string GRAPHQL_URL = "https://graphigo.prd.galaxy.eco/query";
+
 		public Galxe(IZennoPosterProjectModel project, Instance instance, bool log = false)
 		{
 			_project = project;
@@ -8978,6 +9066,210 @@ namespace w3tools //by @w3bgrep
             return null; 
 
 		}
+
+		public string BasicUserInfo(string token, string address)
+			{
+				// GraphQL-запрос с исправленным полем injectiveAddress
+				string query = @"
+					query BasicUserInfo($address: String!) {
+						addressInfo(address: $address) {
+							id
+							username
+							address
+							evmAddressSecondary {
+								address
+								__typename
+							}
+							userLevel {
+								level {
+									name
+									logo
+									minExp
+									maxExp
+									__typename
+								}
+								exp
+								gold
+								__typename
+							}
+							ggInviteeInfo {
+								questCount
+								ggCount
+								__typename
+							}
+							ggInviteCode
+							ggInviter {
+								id
+								username
+								__typename
+							}
+							isBot
+							solanaAddress
+							aptosAddress
+							starknetAddress
+							bitcoinAddress
+							suiAddress
+							xrplAddress
+							tonAddress
+							displayNamePref
+							email
+							twitterUserID
+							twitterUserName
+							githubUserID
+							githubUserName
+							discordUserID
+							discordUserName
+							telegramUserID
+							telegramUserName
+							enableEmailSubs
+							subscriptions
+							isWhitelisted
+							isInvited
+							isAdmin
+							accessToken
+							humanityType
+							participatedCampaigns {
+								totalCount
+								__typename
+							}
+							__typename
+						}
+					}";
+
+				// Переменные для запроса с динамическим адресом
+				string variables = $"{{\"address\": \"EVM:{address}\"}}";
+
+				// Проверка токена
+				if (string.IsNullOrEmpty(token))
+				{
+					_project.SendErrorToLog("Token is empty or null");
+					return null;
+				}
+				//token = null;
+				// Формируем заголовки (только необходимые)
+				string[] headers = new string[]
+				{
+					"Content-Type: application/json",
+					$"Authorization: {token}"
+				};
+
+				// Форматируем запрос (удаляем лишние пробелы и переносы строк)
+				query = query.Replace("\t", "").Replace("\n", " ").Replace("\r", "").Trim();
+
+				// Формируем тело запроса
+				string jsonBody = JsonConvert.SerializeObject(new
+				{
+					operationName = "BasicUserInfo",
+					query = query,
+					variables = JsonConvert.DeserializeObject(variables)
+				});
+
+				_project.SendInfoToLog($"Request headers: {string.Join(", ", headers)}");
+				_project.SendInfoToLog($"Request body: {jsonBody}");
+
+				try
+				{
+					string response = ZennoPoster.HttpPost(
+						GRAPHQL_URL,
+						Encoding.UTF8.GetBytes(jsonBody),
+						"application/json",
+						_project.Variables["proxy"].Value,
+						"UTF-8",
+						ZennoLab.InterfacesLibrary.Enums.Http.ResponceType.BodyOnly,
+						30000,
+						"",
+						"Galaxy/v1",
+						true,
+						5,
+						headers,
+						"",
+						true
+					);
+
+					_project.SendInfoToLog($"Response received: {response.Substring(0, Math.Min(100, response.Length))}...");
+					_project.Json.FromString(response);
+					return response;
+				}
+				catch (Exception ex)
+				{
+					_project.SendErrorToLog($"GraphQL request failed: {ex.Message}");
+					return null;
+				}
+			}
+
+		public string GetLoyaltyPoints(string alias, string address)
+		{
+			// GraphQL-запрос SpaceAccessQuery
+			string query = @"
+				query SpaceAccessQuery($id: Int, $alias: String, $address: String!) {
+					space(id: $id, alias: $alias) {
+						id
+						addressLoyaltyPoints(address: $address) {
+							points
+							rank
+							__typename
+						}
+						__typename
+					}
+				}";
+
+			// Переменные для запроса
+			string variables = $"{{\"alias\": \"{alias}\", \"address\": \"{address.ToLower()}\"}}";
+
+			// Формируем заголовки (аналогично Google Apps Script)
+			string[] headers = new string[]
+			{
+				"Content-Type: application/json",
+				"Accept: */*",
+				"Authority: graphigo.prd.galaxy.eco",
+				"Origin: https://galxe.com",
+				"User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
+			};
+
+			// Форматируем запрос (удаляем лишние пробелы и переносы строк)
+			query = query.Replace("\t", "").Replace("\n", " ").Replace("\r", "").Trim();
+
+			// Формируем тело запроса
+			string jsonBody = JsonConvert.SerializeObject(new
+			{
+				operationName = "SpaceAccessQuery",
+				query = query,
+				variables = JsonConvert.DeserializeObject(variables)
+			});
+
+			_project.SendInfoToLog($"Request headers: {string.Join(", ", headers)}");
+			_project.SendInfoToLog($"Request body: {jsonBody}");
+
+			try
+			{
+				string response = ZennoPoster.HttpPost(
+					"https://graphigo.prd.galaxy.eco/query", // URL эндпоинта
+					Encoding.UTF8.GetBytes(jsonBody),
+					"application/json",
+					_project.Variables["proxy"].Value,
+					"UTF-8",
+					ZennoLab.InterfacesLibrary.Enums.Http.ResponceType.BodyOnly,
+					30000,
+					"",
+					"Galaxy/v1",
+					true,
+					5,
+					headers,
+					"",
+					true
+				);
+
+				_project.SendInfoToLog($"Response received: {response.Substring(0, Math.Min(100, response.Length))}...");
+				_project.Json.FromString(response);
+				return response;
+			}
+			catch (Exception ex)
+			{
+				_project.SendErrorToLog($"GraphQL request failed: {ex.Message}");
+				return null;
+			}
+		}
+
 	}
 
 }
