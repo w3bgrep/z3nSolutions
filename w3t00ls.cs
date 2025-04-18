@@ -5986,6 +5986,51 @@ namespace w3tools //by @w3bgrep
 			_instance = instance;
 			_log = log;
 		}
+		public void Switch(string toUse = "", bool log = false)
+		{
+			if (log)Loggers.l0g(_project,$"switching extentions  {toUse}");
+			var em = _instance.UseFullMouseEmulation;
+
+			int i = 0;string extName = "";string outerHtml = "";string extId = "";string extStatus = "enabled";
+			string path = $"{_project.Path}.crx\\One-Click-Extensions-Manager.crx";
+			var managerId = "pbgjpgbpljobkekbhnnmlikbbfhbhmem";
+			
+			
+			var extListString = string.Join("\n", _instance.GetAllExtensions().Select(x => $"{x.Name}:{x.Id}"));
+			if (!extListString.Contains(managerId)) 
+			{
+				if (log)Loggers.l0g(_project,"Ext Manager Install");
+				_instance.InstallCrxExtension(path);
+				
+			}
+			
+			while (_instance.ActiveTab.URL != "chrome-extension://pbgjpgbpljobkekbhnnmlikbbfhbhmem/index.html"){
+				_instance.ActiveTab.Navigate("chrome-extension://pbgjpgbpljobkekbhnnmlikbbfhbhmem/index.html", "");
+				_instance.CloseExtraTabs();
+				if (log)Loggers.l0g(_project,$"URL is correct {_instance.ActiveTab.URL}");
+			}
+
+			while (!_instance.ActiveTab.FindElementByAttribute("button", "class", "ext-name", "regexp", i).IsVoid)
+			{
+				if (log)Loggers.l0g(_project,$"Cheking ext no {i}");
+				extName = Regex.Replace(_instance.ActiveTab.FindElementByAttribute("button", "class", "ext-name", "regexp", i).GetAttribute("innertext"), @" Wallet", "");
+			    outerHtml = _instance.ActiveTab.FindElementByAttribute("li", "class", "ext\\ type-normal", "regexp", i).GetAttribute("outerhtml");
+			    extId = Regex.Match(outerHtml, @"extension-icon/([a-z0-9]+)").Groups[1].Value;
+			    if (outerHtml.Contains("disabled")) extStatus = "disabled";
+				if (toUse.Contains(extName) && extStatus == "disabled" || toUse.Contains(extId) && extStatus == "disabled" || !toUse.Contains(extName) && !toUse.Contains(extId) && extStatus == "enabled") 
+					_instance.LMB(("button", "class", "ext-name", "regexp", i));
+					//_instance.ActiveTab.FindElementByAttribute("button", "class", "ext-name", "regexp", i).RiseEvent("click", _instance.EmulationLevel);
+				//_instance.CloseExtraTabs();
+				i++;
+			}
+			
+			_instance.CloseExtraTabs();
+			_instance.UseFullMouseEmulation = em;
+			if (log)Loggers.l0g(_project,$"Enabled  {toUse}");
+
+		}
+
+
 		//MetaMask
 		public void MMLaunch (string key = null)
 		{
@@ -6133,11 +6178,11 @@ namespace w3tools //by @w3bgrep
 			if (RBInstall ()) RBImport();
 			else RBUnlock();
 			_instance.CloseExtraTabs();
+			_instance.UseFullMouseEmulation = em;
 
 		}
 		private bool RBInstall (bool log = false)
 		{
-			
 			string path = $"{_project.Path}.crx\\Rabby0.93.24.crx";
 			var extId = "acmacodkjbdgmoleebolmdjonilkdbch";
 			var extListString = string.Join("\n", _instance.GetAllExtensions().Select(x => $"{x.Name}:{x.Id}"));
@@ -6250,7 +6295,8 @@ namespace w3tools //by @w3bgrep
 			}
 
 		}
-		public void BPCheck (bool log = false){
+		public void BPCheck (bool log = false)
+		{
 			if (log) Loggers.l0g(_project,$"[BackPack] getting address...");
 			getA:
 
