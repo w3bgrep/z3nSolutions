@@ -6228,7 +6228,7 @@ namespace w3tools //by @w3bgrep
 			return result;
 		}
 
-		public string OKXPost(string url, string body, string proxy = null, bool log = false)
+		public string OKXPost(string url, object body, string proxy = null, bool log = false)
 		{
 
 			var ApiKeys = okxKeys();
@@ -6275,7 +6275,7 @@ namespace w3tools //by @w3bgrep
 			return result;			
 		}
 
-		public string OKXGet(string url,string proxy = null, bool log = false)
+		public string OKXGet(string url, string proxy = null, bool log = false)
 		{
 			var ApiKeys = okxKeys();
 			string apiKey = ApiKeys[0];
@@ -6336,6 +6336,26 @@ namespace w3tools //by @w3bgrep
 
 		}
 
+		public void OKXGetSubMax(string accName, string proxy = null,bool log = false)
+		{
+			var jsonResponse = OKXGet($"/api/v5/account/subaccount/max-withdrawal?subAcct={accName}",log:log);
+			
+			var response = JsonConvert.DeserializeObject<dynamic>(jsonResponse);
+			string msg = response.msg;
+			string code = response.code;
+
+			if (code != "0")
+			{
+				if (log) Loggers.l0g(_project, "Err [" + code + "]; Сообщение [" + msg + "]");
+				throw new Exception("OKXGetSubMax: " + msg);
+			}
+			else
+			{
+				if (log) Loggers.l0g(_project, msg);
+			}
+			
+
+		}
 		public void OKXWithdraw( string toAddress, string currency, string chain, double amount, double fee, string proxy, bool log)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
