@@ -24,6 +24,7 @@ using ZennoLab.InterfacesLibrary;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using ZennoLab.InterfacesLibrary.ProjectModel.Collections;
 using ZennoLab.InterfacesLibrary.ProjectModel.Enums;
+using ZennoLab.InterfacesLibrary.Enums.Http;
 using ZennoLab.Macros;
 using ZennoLab.Emulation;
 using ZennoLab.CommandCenter.TouchEvents;
@@ -1264,6 +1265,103 @@ namespace w3tools //by @w3bgrep
 			}
 		}
 	}
+
+	public class DbP0st : IDisposable
+	{
+	    private NpgsqlConnection _conn;
+		private readonly IZennoPosterProjectModel _project;
+		public void Dispose()
+		{
+			_conn?.Close();
+			_conn?.Dispose();
+		}
+		
+	    private DbP0st(string host, string database, string user, string password) 
+	    {
+	        var (hostname, port) = ParseHostPort(host, 5432);
+	        var cs = $"Host={hostname};Port={port};Database={database};Username={user};Password={password};";
+	        _conn = new NpgsqlConnection(cs);
+			//_project = project;
+	    }	
+		
+	    private (string host, int port) ParseHostPort(string input, int defaultPort) 
+	    {
+	        var parts = input.Split(':');
+	        return parts.Length == 2 
+	            ? (parts[0], int.Parse(parts[1])) 
+	            : (input, defaultPort);
+	    }
+        public void open()
+        {
+            if (_conn.State == System.Data.ConnectionState.Closed)
+            {
+                _conn.Open();
+            }
+        }	
+        public void close()
+        {
+            if (_conn.State == System.Data.ConnectionState.Open)
+            {
+                _conn.Close();
+            }
+        }
+        private void EnsureConnection()
+        {
+            if (_conn.State != System.Data.ConnectionState.Open)
+                throw new InvalidOperationException("Connection is not opened");
+        }	
+
+		public string pSQL(IZennoPosterProjectModel project, string query, bool log = false, bool throwOnEx = false, string host ="localhost:5432", string dbName = "", string dbUser = "", string dbPswd = "", [CallerMemberName] string callerName = "")
+		{
+
+			if (string.IsNullOrEmpty(dbName)) dbName = project.Variables["DBpstgrName"].Value;
+			if (string.IsNullOrEmpty(dbUser)) dbUser = project.Variables["DBpstgrUser"].Value;
+			
+			if (string.IsNullOrEmpty(dbPswd)) 
+            {
+                dbPswd = project.Variables["DBpstgrPass"].Value;
+                if (string.IsNullOrEmpty(dbPswd)) throw new Exception("PostgreSQL password isNull");
+            }
+
+            var db = new PostgresDB(host, dbName, dbUser, dbPswd);
+            try 
+            {
+                db.open();
+            }
+            catch (Exception ex)
+            {
+                Loggers.l0g(project,$"!W {ex.Message}", thr0w:throwOnEx);
+            }
+            try 
+			{	
+                var response = "";
+				if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
+                    response = string.Join("\r\n", db.getAll(query)); 
+                else 
+                    response = db.Query(query).ToString(); 
+				if (log) 
+				{
+					if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase)) project.SendToLog($"[PstgSQL ▼ ]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]\nRESULT: [{response.Replace('\n','|')}]", LogType.Info, true, LogColor.Gray);
+					else 
+					{
+						if (response != "0") project.SendToLog($"[PstgSQL ▲ ]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]", LogType.Info, true, LogColor.Gray);
+					}
+				}  
+				return response;				
+			}
+			catch (Exception ex)
+			{
+				Loggers.l0g(project,$"!W {ex.Message}", thr0w:throwOnEx);
+				return string.Empty;
+			}
+            finally
+            {
+				db.close(); 
+            }
+		}
+	
+	}
+
     public static class SQLite
     {
 		public static string lSQL(IZennoPosterProjectModel project, string query, bool log = false, bool ignoreErrors = false)
@@ -1325,7 +1423,7 @@ namespace w3tools //by @w3bgrep
         public static string W3Query(IZennoPosterProjectModel project, string query, bool log = false, bool throwOnEx = false, string host = "localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "")
         {
             string dbMode = project.Variables["DBmode"].Value;
-            if (project.Variables["debug"].Value == "True") log = true;        
+            if (project.Variables["debug"].Value == "True") log = true;
             if (dbMode == "SQLite") return SQLite.lSQL(project, query, log);
             else if (dbMode == "PostgreSQL") return PostgresDB.pSQL(project, query, log, throwOnEx, host, dbName, dbUser, dbPswd);
             else return $"unknown DBmode: {dbMode}";
@@ -2954,6 +3052,15 @@ namespace w3tools //by @w3bgrep
 			if (log) Loggers.l0g(project,toUpd);
 			var Q = $@"UPDATE {tableName} SET {toUpd.Trim().TrimEnd(',')}, last = '{Time.Now("short")}' WHERE acc0 = {project.Variables["acc0"].Value};";
 			SQL.W3Query(project,Q,throwOnEx:throwOnEx); 
+		}
+		public static string[] okxKeys(IZennoPosterProjectModel project, string tableName ="settings", string schemaName = "accounts")  
+		{
+            string table = (project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+			var key = SQL.W3Query(project,$"SELECT value FROM {table} WHERE var = 'okx_apikey';",true);
+			var secret = SQL.W3Query(project,$"SELECT value FROM {table} WHERE var = 'okx_secret';");
+			var passphrase = SQL.W3Query(project,$"SELECT value FROM {table} WHERE var = 'okx_passphrase';");
+			string[] result = new string[] {key,secret,passphrase};
+			return result;
 		}
 	}    
 
@@ -5971,6 +6078,184 @@ namespace w3tools //by @w3bgrep
             return $"{foundAmount}:{foundCoin}:{foundStatus}";
         }
 	}
+
+
+
+
+
+	public class OKXWithdrawal
+{
+    private readonly IZennoPosterProjectModel _project;
+    private readonly Random _rnd;
+
+    public OKXWithdrawal(IZennoPosterProjectModel project)
+    {
+        if (project == null) throw new ArgumentNullException("project");
+        _project = project;
+        _rnd = new Random();
+    }
+	public string[] okxKeys()  
+	{
+		string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : null) + "settings";
+		var key = SQL.W3Query(_project,$"SELECT value FROM {table} WHERE var = 'okx_apikey';",true);
+		var secret = SQL.W3Query(_project,$"SELECT value FROM {table} WHERE var = 'okx_secret';");
+		var passphrase = SQL.W3Query(_project,$"SELECT value FROM {table} WHERE var = 'okx_passphrase';");
+		string[] result = new string[] {key,secret,passphrase};
+		return result;
+	}
+
+    public void ExecuteWithdrawal(
+        string toAddress, string currency, 
+        string chain, double amount, double fee, string proxy, bool log)
+    {
+        if (log) Loggers.l0g(_project, "Starting OKX Withdrawal");
+
+		var ApiKeys = okxKeys();
+		string apiKey = ApiKeys[0];
+		string secretKey = ApiKeys[1];
+		string passphrase = ApiKeys[2];
+        // Validate inputs
+        if (string.IsNullOrEmpty(apiKey) ||
+		string.IsNullOrEmpty(secretKey) || 
+		string.IsNullOrEmpty(passphrase) || 
+		string.IsNullOrEmpty(toAddress))
+			throw new ArgumentException("Invalid input parameters");
+        // Prepare and send request
+        var requestData = PrepareRequestData(amount, fee, currency, chain, toAddress, log);
+        var response = SendWithdrawalRequest(apiKey, secretKey, passphrase, requestData, proxy, log);
+        ProcessResponse(response, toAddress, amount, currency);
+
+        if (log) Loggers.l0g(_project, "Withdrawal completed");
+
+    }
+
+    private double GenerateRandomAmount()
+    {
+        double min = Convert.ToDouble(_project.Variables["suma_okx_ot"].Value.Replace('.', ','));
+        double max = Convert.ToDouble(_project.Variables["suma_okx_do"].Value.Replace('.', ','));
+        return _rnd.NextDouble() * (max - min) + min;
+    }
+
+    private string MapNetwork(string chain, bool log)
+    {
+        if (log) Loggers.l0g(_project, "Mapping network: " + chain);
+        switch (chain)
+        {
+            case "Arbitrum One": return "Arbitrum One";
+            case "Ethereum": return "ERC20";
+            case "Binance Smart Chain": return "BSC";
+            case "Avalanche C-Chain": return "Avalanche C-Chain";
+            case "Polygon": return "Polygon";
+            case "Optimism": return "Optimism";
+            case "TRC-20": return "TRC20";
+            case "zkSync Era": return "zkSync Era";
+            case "Aptos": return "Aptos";
+            default:
+                if (log) Loggers.l0g(_project, "Unsupported network: " + chain);
+                throw new ArgumentException("Unsupported network: " + chain);
+        }
+    }
+
+    private object PrepareRequestData(double amount, double fee, string currency, string chain, string toAddress, bool log)
+    {
+        string network = MapNetwork(chain, log);
+        string formattedAmount = amount.ToString("F4").Replace(',', '.');
+        return new
+        {
+            amt = formattedAmount,
+            fee = fee.ToString().Replace(',', '.'),
+            dest = "4",
+            ccy = currency,
+            chain = currency + "-" + network,
+            toAddr = toAddress
+        };
+    }
+
+    private string CalculateHmacSha256ToBaseSignature(string message, string key)
+    {
+        var keyBytes = Encoding.UTF8.GetBytes(key);
+        var messageBytes = Encoding.UTF8.GetBytes(message);
+        using (var hmacSha256 = new HMACSHA256(keyBytes))
+        {
+            var hashBytes = hmacSha256.ComputeHash(messageBytes);
+            return Convert.ToBase64String(hashBytes);
+        }
+    }
+
+    private string SendWithdrawalRequest(string apiKey, string secretKey, string passphrase, object requestData, string proxy, bool log)
+    {
+        if (log) Loggers.l0g(_project, "Preparing and sending withdrawal request");
+
+        // Serialize request data
+        var json = JsonConvert.SerializeObject(requestData);
+
+        // Generate timestamp
+        DateTime currentTime = DateTime.UtcNow;
+        string timestamp = currentTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+
+        // Prepare signature
+        string url = "/api/v5/asset/withdrawal";
+        string message = timestamp + "POST" + url + json;
+        string signature = CalculateHmacSha256ToBaseSignature(message, secretKey);
+
+        // Send HTTP request
+		var result = ZennoPoster.HTTP.Request(
+			ZennoLab.InterfacesLibrary.Enums.Http.HttpMethod.POST,
+			"https://www.okx.com/api/v5/asset/withdrawal",
+			json,
+			"application/json",
+			proxy,
+			"UTF-8",
+			ZennoLab.InterfacesLibrary.Enums.Http.ResponceType.BodyOnly,
+			10000,
+			"",
+			_project.Profile.UserAgent,
+			true,
+			5,
+			new string[]
+			{
+				"Content-Type: application/json",
+				"OK-ACCESS-KEY: " + apiKey,
+				"OK-ACCESS-SIGN: " + signature,
+				"OK-ACCESS-TIMESTAMP: " + timestamp,
+				"OK-ACCESS-PASSPHRASE: " + passphrase
+			},
+			"",
+			false,
+			false,
+			_project.Profile.CookieContainer
+		);
+
+        if (log) Loggers.l0g(_project, "Received response: " + result);
+        return result;
+    }
+
+    private void ProcessResponse(string jsonResponse, string toAddress, double amount, string currency, bool log = false)
+    {
+        if (log) Loggers.l0g(_project, $"processing response {jsonResponse} ");
+
+        var response = JsonConvert.DeserializeObject<dynamic>(jsonResponse);
+        string msg = response.msg;
+        string code = response.code;
+
+        if (code != "0")
+        {
+            if (log) Loggers.l0g(_project, "Err [" + code + "]; Сообщение [" + msg + "]");
+            throw new Exception("Withdrawal failed: " + msg);
+        }
+        else
+        {
+            if (log) Loggers.l0g(_project, $"Refueled {toAddress} for {amount}");
+        }
+    }
+}
+
+
+
+
+
+
+
 	#endregion
 	#region Wallets
 
@@ -6018,9 +6303,7 @@ namespace w3tools //by @w3bgrep
 			    extId = Regex.Match(outerHtml, @"extension-icon/([a-z0-9]+)").Groups[1].Value;
 			    if (outerHtml.Contains("disabled")) extStatus = "disabled";
 				if (toUse.Contains(extName) && extStatus == "disabled" || toUse.Contains(extId) && extStatus == "disabled" || !toUse.Contains(extName) && !toUse.Contains(extId) && extStatus == "enabled") 
-					_instance.LMB(("button", "class", "ext-name", "regexp", i));
-					//_instance.ActiveTab.FindElementByAttribute("button", "class", "ext-name", "regexp", i).RiseEvent("click", _instance.EmulationLevel);
-				//_instance.CloseExtraTabs();
+				_instance.LMB(("button", "class", "ext-name", "regexp", i));
 				i++;
 			}
 			
@@ -6029,8 +6312,6 @@ namespace w3tools //by @w3bgrep
 			if (log)Loggers.l0g(_project,$"Enabled  {toUse}");
 
 		}
-
-
 		//MetaMask
 		public void MMLaunch (string key = null)
 		{
