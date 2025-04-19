@@ -6080,19 +6080,12 @@ namespace w3tools //by @w3bgrep
 	}
 
 
-
-
-
 	public class OKXWithdrawal
 	{
 		private readonly IZennoPosterProjectModel _project;
-		private readonly Random _rnd;
-
 		public OKXWithdrawal(IZennoPosterProjectModel project)
 		{
-			if (project == null) throw new ArgumentNullException("project");
 			_project = project;
-			_rnd = new Random();
 		}
 		public string[] okxKeys()  
 		{
@@ -6103,33 +6096,6 @@ namespace w3tools //by @w3bgrep
 			string[] result = new string[] {key,secret,passphrase};
 			return result;
 		}
-
-		public void ExecuteWithdrawal( string toAddress, string currency, string chain, double amount, double fee, string proxy, bool log)
-		{
-			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-			if (log) Loggers.l0g(_project, "Starting OKX Withdrawal");
-
-			var requestData = PrepareRequestData(amount, fee, currency, chain, toAddress, log);
-			var jsonResponse = SendWithdrawalRequest(requestData, proxy, log);
-
-			if (log) Loggers.l0g(_project, $"processing response {jsonResponse} ");
-
-			var response = JsonConvert.DeserializeObject<dynamic>(jsonResponse);
-			string msg = response.msg;
-			string code = response.code;
-
-			if (code != "0")
-			{
-				if (log) Loggers.l0g(_project, "Err [" + code + "]; Сообщение [" + msg + "]");
-				throw new Exception("Withdrawal failed: " + msg);
-			}
-			else
-			{
-				if (log) Loggers.l0g(_project, $"Refueled {toAddress} for {amount}");
-			}
-			_project.Json.FromString(jsonResponse);
-		}
-
 		private string MapNetwork(string chain, bool log)
 		{
 			if (log) Loggers.l0g(_project, "Mapping network: " + chain);
@@ -6149,22 +6115,6 @@ namespace w3tools //by @w3bgrep
 					throw new ArgumentException("Unsupported network: " + chain);
 			}
 		}
-
-		private object PrepareRequestData(double amount, double fee, string currency, string chain, string toAddress, bool log)
-		{
-			string network = MapNetwork(chain, log);
-			string formattedAmount = amount.ToString("F4").Replace(',', '.');
-			return new
-			{
-				amt = formattedAmount,
-				fee = fee.ToString().Replace(',', '.'),
-				dest = "4",
-				ccy = currency,
-				chain = currency + "-" + network,
-				toAddr = toAddress
-			};
-		}
-
 		private string CalculateHmacSha256ToBaseSignature(string message, string key)
 		{
 			var keyBytes = Encoding.UTF8.GetBytes(key);
@@ -6175,7 +6125,6 @@ namespace w3tools //by @w3bgrep
 				return Convert.ToBase64String(hashBytes);
 			}
 		}
-
 		private string SendWithdrawalRequest(object requestData, string proxy, bool log)
 		{
 			if (log) Loggers.l0g(_project, "Preparing and sending withdrawal request");
@@ -6227,8 +6176,7 @@ namespace w3tools //by @w3bgrep
 			if (log) Loggers.l0g(_project, "Received response: " + result);
 			return result;
 		}
-
-		public string OKXPost(string url, object body, string proxy = null, bool log = false)
+		private string OKXPost(string url, object body, string proxy = null, bool log = false)
 		{
 
 			var ApiKeys = okxKeys();
@@ -6274,8 +6222,7 @@ namespace w3tools //by @w3bgrep
 			if (log) Loggers.l0g(_project, "Received response: " + result);
 			return result;			
 		}
-
-		public string OKXGet(string url, string proxy = null, bool log = false)
+		private string OKXGet(string url, string proxy = null, bool log = false)
 		{
 			var ApiKeys = okxKeys();
 			string apiKey = ApiKeys[0];
@@ -6314,8 +6261,7 @@ namespace w3tools //by @w3bgrep
 			_project.Json.FromString(jsonResponse);
 			return jsonResponse;
 		}
-
-		public List<string> OKXGetSubAccs(string proxy = null, bool log = false)
+		private List<string> OKXGetSubAccs(string proxy = null, bool log = false)
 		{
 			var jsonResponse = OKXGet("/api/v5/users/subaccount/list",log:log);
 			
@@ -6342,8 +6288,7 @@ namespace w3tools //by @w3bgrep
 			}
 			return subsList;
 		}
-
-		public List<string> OKXGetSubMax(string accName, string proxy = null, bool log = false)
+		private List<string> OKXGetSubMax(string accName, string proxy = null, bool log = false)
 		{
 			var jsonResponse = OKXGet($"/api/v5/account/subaccount/max-withdrawal?subAcct={accName}",log:log);
 			
@@ -6369,7 +6314,7 @@ namespace w3tools //by @w3bgrep
 			}
 			return balanceList;
 		}
-		public List<string> OKXGetSubTrading(string accName, string proxy = null, bool log = false)
+		private List<string> OKXGetSubTrading(string accName, string proxy = null, bool log = false)
 		{
 			var jsonResponse = OKXGet($"/api/v5/account/subaccount/balances?subAcct={accName}",log:log);
 			
@@ -6395,7 +6340,7 @@ namespace w3tools //by @w3bgrep
 			}
 			return balanceList;
 		}
-		public List<string> OKXGetSubFunding(string accName, string proxy = null, bool log = false)
+		private List<string> OKXGetSubFunding(string accName, string proxy = null, bool log = false)
 		{
 			var jsonResponse = OKXGet($"/api/v5/asset/subaccount/balances?subAcct={accName}",log:log);
 			
@@ -6421,9 +6366,6 @@ namespace w3tools //by @w3bgrep
 			}
 			return balanceList;
 		}
-
-
-
 		public void OKXWithdraw( string toAddress, string currency, string chain, double amount, double fee, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -6452,7 +6394,7 @@ namespace w3tools //by @w3bgrep
 			}
 			_project.Json.FromString(jsonResponse);
 		}
-		public void OKXSubToMain( string fromSubName, string currency, double amount, string accountType = "6", string proxy = null, bool log = false)
+		private void OKXSubToMain( string fromSubName, string currency, double amount, string accountType = "6", string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 			
@@ -6482,8 +6424,57 @@ namespace w3tools //by @w3bgrep
 			}
 			
 		}
+		public void OKXDrainSubs()
+		{
+			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+			var subs = OKXGetSubAccs();
+			_project.SendInfoToLog(subs.Count.ToString());
+
+			foreach(string sub in subs){
+				
+				var balsFunding = OKXGetSubFunding(sub,log:true);
+				foreach (string bal in balsFunding)
+				{
+					if(string.IsNullOrEmpty(bal)) continue;
+					_project.SendInfoToLog($"balsFunding [{bal}]");	
+					string ccy = bal.Split(':')[0]?.ToString();
+					string maxWd = bal.Split(':')[1]?.ToString();
+					if(!string.IsNullOrEmpty(maxWd))
+						try{
+							if(double.Parse(maxWd) > 0.0001)	{
+								double amount = double.Parse(maxWd);
+								_project.SendInfoToLog($"sending {maxWd}${ccy} from {sub} to main");		
+								OKXSubToMain(sub,ccy,amount,"6",log:true);
+								Thread.Sleep(500);
+							}
+						}
+						catch{
+							_project.SendInfoToLog($"failed to send [{maxWd}]$[{ccy}] from [{sub}] to main");
+						}		
+				}
+				
+				var balsTrading = OKXGetSubMax(sub,log:true);
+				foreach (string bal in balsTrading)
+				{
+					_project.SendInfoToLog($"balsTrading [{bal}]");	
+					string ccy = bal.Split(':')[0]?.ToString();
+					string maxWd = bal.Split(':')[1]?.ToString();
+					if(!string.IsNullOrEmpty(maxWd))
+						try{
+							if(double.Parse(maxWd) > 0.0001)	{
+								double amount = double.Parse(maxWd);
+								_project.SendInfoToLog($"sending {maxWd}${ccy} from {sub} to main");		
+								OKXSubToMain(sub,ccy,amount,"18",log:true);
+							}
+						}
+						catch{
+							_project.SendInfoToLog($"failed to send [{maxWd}]$[{ccy}] from [{sub}] to main");
+						}		
+				}	
+			}
 
 
+		}
 
 	}
 
