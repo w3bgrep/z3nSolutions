@@ -6270,7 +6270,7 @@ namespace w3tools //by @w3bgrep
 				//false,
 				//_project.Profile.CookieContainer
 			);
-
+			_project.Json.FromString(result);
 			if (log) Loggers.l0g(_project, "Received response: " + result);
 			return result;			
 		}
@@ -6315,53 +6315,128 @@ namespace w3tools //by @w3bgrep
 			return jsonResponse;
 		}
 
-		public void OKXGetSubAccs(string proxy = null,bool log = false)
+		public List<string> OKXGetSubAccs(string proxy = null, bool log = false)
 		{
 			var jsonResponse = OKXGet("/api/v5/users/subaccount/list",log:log);
 			
 			var response = JsonConvert.DeserializeObject<dynamic>(jsonResponse);
 			string msg = response.msg;
 			string code = response.code;
+			var subsList = new List<string>();
 
-			if (code != "0")
-			{
-				if (log) Loggers.l0g(_project, "Err [" + code + "]; Сообщение [" + msg + "]");
-				throw new Exception("ExecuteSubAccs: " + msg);
-			}
+			if (code != "0") throw new Exception("OKXGetSubMax: Err [{code}]; Сообщение [{msg}]");
 			else
-			{
-				if (log) Loggers.l0g(_project, msg);
-			}
-			
+			{	
+				var dataArray = response.data;
+				if (dataArray != null)
+				{
+					foreach (var item in dataArray)
+					{
+						string subAcct = item.subAcct;                   // "subName"
+						string label = item.label;             
+						subsList.Add($"{subAcct}");
+						if (log) Loggers.l0g(_project, $"found: {subAcct}:{label}");
+					}
+				}
 
+			}
+			return subsList;
 		}
 
-		public void OKXGetSubMax(string accName, string proxy = null,bool log = false)
+		public List<string> OKXGetSubMax(string accName, string proxy = null, bool log = false)
 		{
 			var jsonResponse = OKXGet($"/api/v5/account/subaccount/max-withdrawal?subAcct={accName}",log:log);
 			
 			var response = JsonConvert.DeserializeObject<dynamic>(jsonResponse);
 			string msg = response.msg;
 			string code = response.code;
-
-			if (code != "0")
-			{
-				if (log) Loggers.l0g(_project, "Err [" + code + "]; Сообщение [" + msg + "]");
-				throw new Exception("OKXGetSubMax: " + msg);
-			}
+			var balanceList = new List<string>();
+			
+			if (code != "0") throw new Exception("OKXGetSubMax: Err [{code}]; Сообщение [{msg}]");
 			else
 			{
-				if (log) Loggers.l0g(_project, msg);
+				var dataArray = response.data;
+				if (dataArray != null)
+				{
+					foreach (var item in dataArray)
+					{
+						string ccy = item.ccy;                   // "EGLD"
+						string maxWd = item.maxWd;               // "0.22193226"
+						balanceList.Add($"{ccy}:{maxWd}");
+						Loggers.l0g(_project, $"Currency: {ccy}, Max Withdrawal: {maxWd}");
+					}
+				}
 			}
-			
-
+			return balanceList;
 		}
-		public void OKXWithdraw( string toAddress, string currency, string chain, double amount, double fee, string proxy, bool log)
+		public List<string> OKXGetSubTrading(string accName, string proxy = null, bool log = false)
+		{
+			var jsonResponse = OKXGet($"/api/v5/account/subaccount/balances?subAcct={accName}",log:log);
+			
+			var response = JsonConvert.DeserializeObject<dynamic>(jsonResponse);
+			string msg = response.msg;
+			string code = response.code;
+			var balanceList = new List<string>();
+			
+			if (code != "0") throw new Exception("OKXGetSubMax: Err [{code}]; Сообщение [{msg}]");
+			else
+			{
+				var dataArray = response.data;
+				if (dataArray != null)
+				{
+					foreach (var item in dataArray)
+					{
+						string adjEq = item.adjEq;                   // "EGLD"
+
+						balanceList.Add($"{adjEq}");
+						Loggers.l0g(_project, $"adjEq: {adjEq}");
+					}
+				}
+			}
+			return balanceList;
+		}
+		public List<string> OKXGetSubFunding(string accName, string proxy = null, bool log = false)
+		{
+			var jsonResponse = OKXGet($"/api/v5/asset/subaccount/balances?subAcct={accName}",log:log);
+			
+			var response = JsonConvert.DeserializeObject<dynamic>(jsonResponse);
+			string msg = response.msg;
+			string code = response.code;
+			var balanceList = new List<string>();
+			
+			if (code != "0") throw new Exception("Err [{code}]; Сообщение [{msg}]");
+			else
+			{
+				var dataArray = response.data;
+				if (dataArray != null)
+				{
+					foreach (var item in dataArray)
+					{
+						string ccy = item.ccy;
+						string availBal = item.availBal;                    // "EGLD"
+						balanceList.Add($"{ccy}:{availBal}");
+						Loggers.l0g(_project, $"{ccy}:{availBal}");
+					}
+				}
+			}
+			return balanceList;
+		}
+
+
+
+		public void OKXWithdraw( string toAddress, string currency, string chain, double amount, double fee, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-
-
-			var body = PrepareRequestData(amount, fee, currency, chain, toAddress, log);
+			string network = MapNetwork(chain, log);
+			var body = new
+			{
+				amt = amount.ToString("F4").Replace(',', '.'),
+				fee = fee.ToString().Replace(',', '.'),
+				dest = "4",
+				ccy = currency,
+				chain = currency + "-" + network,
+				toAddr = toAddress
+			};
 			var jsonResponse = OKXPost("/api/v5/asset/withdrawal",body, proxy, log);
 
 			if (log) Loggers.l0g(_project, $"processing response {jsonResponse} ");
@@ -6370,18 +6445,43 @@ namespace w3tools //by @w3bgrep
 			string msg = response.msg;
 			string code = response.code;
 
-			if (code != "0")
-			{
-				if (log) Loggers.l0g(_project, "Err [" + code + "]; Сообщение [" + msg + "]");
-				throw new Exception("Withdrawal failed: " + msg);
-			}
+			if (code != "0") throw new Exception("Err [{code}]; Сообщение [{msg}]");
 			else
 			{
 				if (log) Loggers.l0g(_project, $"Refueled {toAddress} for {amount}");
 			}
 			_project.Json.FromString(jsonResponse);
 		}
+		public void OKXSubToMain( string fromSubName, string currency, double amount, string accountType = "6", string proxy = null, bool log = false)
+		{
+			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+			
+			string strAmount = amount.ToString("F4").Replace(',', '.');
+			
+			var body = new
+			{
+				ccy = currency,
+				type = "2",
+				amt = strAmount,
+				from = accountType, //18 tradinng |6 funding
+				to = "6",
+				subAcct = fromSubName
+			};
+			var jsonResponse = OKXPost("/api/v5/asset/transfer",body, proxy, log);
 
+			if (log) Loggers.l0g(_project, $"processing response {jsonResponse} ");
+
+			var response = JsonConvert.DeserializeObject<dynamic>(jsonResponse);
+			string msg = response.msg;
+			string code = response.code;
+
+			if (code != "0") throw new Exception("Err [{code}]; Сообщение [{msg}] amt:[{strAmount}] ccy:[{currency}]");
+			else
+			{
+				if (log) Loggers.l0g(_project, jsonResponse);
+			}
+			
+		}
 
 
 
