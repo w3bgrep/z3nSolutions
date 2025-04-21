@@ -91,18 +91,6 @@ namespace w3tools //by @w3bgrep
 		{
 			return Http.W3Get(project, url, proxy);
 		}
-		public static string getTx(IZennoPosterProjectModel project, string chainRPC = "", string hash = "", int deadline = 60,bool log = false)
-		{
-			return Leaf.waitTx(project,chainRPC,hash,deadline,log);
-		}
-		public static T getNative<T>(IZennoPosterProjectModel project, string chainRPC = "", string address = "", string proxy = "",bool log = false)
-		{
-			return Leaf.balNative<T>(project,chainRPC,address);
-		}
-		public static T getNonce<T>(IZennoPosterProjectModel project, string chainRPC = "", string address = "", string proxy = "",bool log = false)
-		{
-			return Leaf.nonce<T>(project,chainRPC,address);
-		}		
 		public static T getERC20<T>(IZennoPosterProjectModel project, string tokenContract, string chainRPC = "", string address = "", string tokenDecimal = "18", string proxy = "",bool log = false)
 		{
 			return Leaf.balERC20<T>(project,tokenContract);
@@ -3045,6 +3033,13 @@ namespace w3tools //by @w3bgrep
 			var Q = $@"UPDATE {tableName} SET {toUpd.Trim().TrimEnd(',')}, last = '{Time.Now("short")}' WHERE acc0 = {project.Variables["acc0"].Value};";
 			SQL.W3Query(project,Q,throwOnEx:throwOnEx); 
 		}
+        public static string Get(IZennoPosterProjectModel project, string toGet, string tableName = "", bool log = false, bool throwOnEx = false)
+		{
+			if (tableName == "")tableName = project.Variables["projectTable"].Value;		
+			if (log) Loggers.l0g(project,toGet);
+			var Q = $@"SELECT {toGet.Trim().TrimEnd(',')} from {tableName} WHERE acc0 = {project.Variables["acc0"].Value};";
+			return SQL.W3Query(project,Q,throwOnEx:throwOnEx); 
+		}
 		public static string[] okxKeys(IZennoPosterProjectModel project, string tableName ="settings", string schemaName = "accounts")  
 		{
             string table = (project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
@@ -3074,13 +3069,54 @@ namespace w3tools //by @w3bgrep
 
 	}
 
-	public class onChain
+	public class OnChain
 	{
 		private readonly IZennoPosterProjectModel _project;
-		public onChain(IZennoPosterProjectModel project)
+		public OnChain(IZennoPosterProjectModel project)
 		{
 			_project = project;
 		}
+
+		public string Rpc(string chain)
+		{
+            chain = chain.ToLower();
+			switch (chain)
+			{
+				//ethNative
+                case "ethereum": return "https://ethereum-rpc.publicnode.com";
+				case "arbitrum": return "https://arbitrum-one.publicnode.com";
+                case "base": return "https://base-rpc.publicnode.com";
+ 				case "blast": return "https://rpc.blast.io";
+ 				case "linea": return "https://rpc.linea.build"; 
+          		case "manta": return "https://pacific-rpc.manta.network/http";                    
+				case "optimism": return "https://optimism-rpc.publicnode.com";
+				case "scroll": return "https://rpc.scroll.io";
+				case "soneum": return "https://rpc.soneium.org";
+				case "taiko": return "https://rpc.mainnet.taiko.xyz";
+				case "zksync": return "https://mainnet.era.zksync.io";
+ 				case "zora": return "https://rpc.zora.energy";               
+                //nonEthEvm
+				case "avalanche": return "https://avalanche-c-chain.publicnode.com";
+				case "bsc": return "https://bsc-rpc.publicnode.com";
+ 				case "gravity": return "https://rpc.gravity.xyz";
+				case "fantom": return "https://rpc.fantom.network";                               
+				case "opbnb": return "https://opbnb-mainnet-rpc.bnbchain.org";
+				case "polygon": return "https://polygon-rpc.com";
+                //Testnets
+				case "sepolia": return "https://ethereum-sepolia-rpc.publicnode.com";
+
+				default:
+					throw new ArgumentException("No RPC for: " + chain);
+			}
+		}
+		public string[] RpcArr(string chains)
+        {
+            string rpcs = null;
+            string[] toAdd = chains.Split(',');
+            foreach (string chain in toAdd) rpcs += Rpc(chain.Trim())+"\n";
+            return rpcs.Trim().Split('\n');
+        }
+
 		public T GasPrice<T>(string chainRPC = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -3139,7 +3175,8 @@ namespace w3tools //by @w3bgrep
 			return (T)Convert.ChangeType(gasGwei, typeof(T));
 		}
 
-		public T nativeEVM<T>(string chainRPC = null, string address = null, string proxy = null, bool log = false)
+
+		public T NativeEVM<T>(string chainRPC = null, string address = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 			if (string.IsNullOrEmpty(address)) 
@@ -3182,13 +3219,13 @@ namespace w3tools //by @w3bgrep
 			string hexBalance = json["result"]?.ToString()?.TrimStart('0', 'x') ?? "0";
 			BigInteger balanceWei = BigInteger.Parse("0" + hexBalance, NumberStyles.AllowHexSpecifier);
 			decimal balanceNative = (decimal)balanceWei / 1000000000000000000m;
-			if (log) Loggers.l0g(_project, $"{address}: {balanceNative} ETH");
+			if (log) Loggers.l0g(_project, $"{address}: {balanceNative} ETH [{chainRPC}]");
 
 			if (typeof(T) == typeof(string))
 				return (T)Convert.ChangeType(balanceNative.ToString("0.##################"), typeof(T));
 			return (T)Convert.ChangeType(balanceNative, typeof(T));
 		}
-		public T nonceEVM<T>(string chainRPC = null, string address = null, string proxy = null, bool log = false)
+		public T NonceEVM<T>(string chainRPC = null, string address = null, string proxy = null, bool log = false)
 		{
 			if (string.IsNullOrEmpty(address)) 
 			{
@@ -3238,7 +3275,7 @@ namespace w3tools //by @w3bgrep
 				return (T)Convert.ChangeType(transactionCount.ToString(), typeof(T));			
 			return (T)Convert.ChangeType(transactionCount, typeof(T));
 		}
-		public T nativeSOL<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
+		public T NativeSOL<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 			if (string.IsNullOrEmpty(address)) 
@@ -3289,7 +3326,7 @@ namespace w3tools //by @w3bgrep
 				return (T)Convert.ChangeType(balanceSol.ToString("0.##################"), typeof(T));
 			return (T)Convert.ChangeType(balanceSol, typeof(T));
 		}
-		public T tokenSPL<T>(string tokenMint, string address = null, string rpc = null, string proxy = null, bool log = false)
+		public T TokenSPL<T>(string tokenMint, string address = null, string rpc = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 			if (string.IsNullOrEmpty(address)) 
@@ -3343,7 +3380,7 @@ namespace w3tools //by @w3bgrep
 				return (T)Convert.ChangeType(balanceToken.ToString("0.##################"), typeof(T));
 			return (T)Convert.ChangeType(balanceToken, typeof(T));
 		}
-		public T nativeSUI<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
+		public T NativeSUI<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 			if (string.IsNullOrEmpty(address)) 
@@ -3391,7 +3428,7 @@ namespace w3tools //by @w3bgrep
 				return (T)Convert.ChangeType(balanceSui.ToString("0.##################"), typeof(T));
 			return (T)Convert.ChangeType(balanceSui, typeof(T));
 		}
-		public T tokenSUI<T>(string coinType, string address = null, string rpc = null, string proxy = null, bool log = false)
+		public T TokenSUI<T>(string coinType, string address = null, string rpc = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 			if (string.IsNullOrEmpty(address)) 
@@ -3439,7 +3476,7 @@ namespace w3tools //by @w3bgrep
 				return (T)Convert.ChangeType(balanceToken.ToString("0.##################"), typeof(T));
 			return (T)Convert.ChangeType(balanceToken, typeof(T));
 		}
-		public T nativeAPT<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
+		public T NativeAPT<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 			if (string.IsNullOrEmpty(address)) 
@@ -3487,7 +3524,7 @@ namespace w3tools //by @w3bgrep
 				return (T)Convert.ChangeType(balanceApt.ToString("0.##################"), typeof(T));
 			return (T)Convert.ChangeType(balanceApt, typeof(T));
 		}
-		public T tokenAPT<T>(string coinType, string address = null, string rpc = null, string proxy = null, bool log = false)
+		public T TokenAPT<T>(string coinType, string address = null, string rpc = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 			if (string.IsNullOrEmpty(address)) 
@@ -3535,7 +3572,7 @@ namespace w3tools //by @w3bgrep
 				return (T)Convert.ChangeType(balanceToken.ToString("0.##################"), typeof(T));
 			return (T)Convert.ChangeType(balanceToken, typeof(T));
 		}
-		public string send1559(string chainRpc, string contractAddress, string encodedData, decimal value, string walletKey, int speedup = 1)
+		public string Send1559(string chainRpc, string contractAddress, string encodedData, decimal value, string walletKey, int speedup = 1)
 		{
 			var web3 = new Nethereum.Web3.Web3(chainRpc);
 			var chainIdTask = web3.Eth.ChainId.SendRequestAsync(); chainIdTask.Wait();
@@ -3594,7 +3631,7 @@ namespace w3tools //by @w3bgrep
 		
 		{
 			
-			// 0x010066 Sepolia | 0x01019e Soneum | 0x01000e BNB | 0x0100f0 Gravity
+			// 0x010066 Sepolia | 0x01019e Soneum | 0x01000e BNB | 0x0100f0 Gravity | 0x010169 Zero
 			string txHash = null;
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture; 
 			Random rnd = new Random();
@@ -3616,7 +3653,7 @@ namespace w3tools //by @w3bgrep
 				foreach (string RPC in chainList.Split(','))
 				{
 				    chainRPC = RPC.Trim();
-					var native = nativeEVM<decimal>(chainRPC);
+					var native = NativeEVM<decimal>(chainRPC);
 					var required = value + 0.00015m;
 				    if (native > required)
 				    {
@@ -3636,7 +3673,7 @@ namespace w3tools //by @w3bgrep
 			
 			else 
 			{
-				var native = nativeEVM<decimal>(chainRPC);
+				var native = NativeEVM<decimal>(chainRPC);
 				Loggers.l0g(_project,$"rpc:[{chainRPC}] native:[{native}]");
 				if (native < value + 0.0002m)
 				{
@@ -3653,7 +3690,7 @@ namespace w3tools //by @w3bgrep
 			try
 			{
 			    string dataEncoded = chainTo;//0x010066 for Sepolia | 0x01019e Soneum | 0x01000e BNB
-			    txHash = send1559(
+			    txHash = Send1559(
 			        chainRPC,
 			        "0x391E7C679d29bD940d63be94AD22A25d25b5A604",//gazZip
 			        dataEncoded,
@@ -3807,246 +3844,9 @@ namespace w3tools //by @w3bgrep
 	}
 	public static class Leaf
 	{
-		public static string GET(IZennoPosterProjectModel project, string url, string proxy = "")
-		{
-			string response;
-			using (var request = new HttpRequest())
-			{
-				request.UserAgent = "Mozilla/5.0";
-				request.IgnoreProtocolErrors = true;
-				request.ConnectTimeout = 5000;
 
-				proxy = project.Variables["proxyLeaf"].Value;
-				if (!string.IsNullOrEmpty(proxy))
-				{
-					string[] proxyArray = proxy.Split(':');
-					string username = proxyArray[1];
-					string password = proxyArray[2];
-					string host = proxyArray[3];
-					int port = int.Parse(proxyArray[4]);		
-					
-					request.Proxy = new HttpProxyClient(host, port, username, password);
-				}
-				try
-				{
-					HttpResponse httpResponse = request.Get(url);
-					response = httpResponse.ToString();
-				}
-				catch (HttpException ex)
-				{
-					project.SendErrorToLog($"Ошибка запроса: {ex.Message}");
-					return null;
-				}
-			}
 
-			return response;
-		}
-		public static string POST(IZennoPosterProjectModel project, string url, string body, string proxy = "", bool log = false)
-		{
-			string response;
-			using (var request = new HttpRequest())
-			{
-				request.UserAgent = "Mozilla/5.0";
-				request.IgnoreProtocolErrors = true;
-				request.ConnectTimeout = 5000;
 
-				if (!string.IsNullOrEmpty(proxy))
-				{
-					try
-					{
-						if (proxy == "+") proxy = project.Variables["proxy"].Value;
-						string proxyString = proxy;
-						ProxyType proxyType = ProxyType.HTTP; 
-						int separatorIndex = proxy.IndexOf("://");
-						if (separatorIndex != -1)
-						{
-							string protocol = proxy.Substring(0, separatorIndex).ToLower();
-							proxyString = proxy.Substring(separatorIndex + 3);
-							if (protocol == "socks5") proxyType = ProxyType.Socks5;
-							else if (protocol == "socks4") proxyType = ProxyType.Socks4;
-							else if (protocol != "http" && protocol != "https")
-							{
-								project.SendErrorToLog($"unsupported protocol:{protocol}");
-								return null;
-							}
-						}
-
-						string formattedProxyString;
-						int atIndex = proxyString.IndexOf('@');
-						if (atIndex != -1)
-						{
-							string credentials = proxyString.Substring(0, atIndex);
-							string hostPort = proxyString.Substring(atIndex + 1);
-
-							int colonIndex = credentials.IndexOf(':');
-							if (colonIndex == -1)
-							{
-								project.SendErrorToLog($"Incorrect proxy string: '{proxy}'. Expected 'login:pass@ip:port'.");
-								return null;
-							}
-
-							string username = credentials.Substring(0, colonIndex);
-							string password = credentials.Substring(colonIndex + 1);
-
-							int hostPortColonIndex = hostPort.LastIndexOf(':');
-							if (hostPortColonIndex == -1)
-							{
-								project.SendErrorToLog($"Incorrect proxy string: '{proxy}'. Expected 'ip:port'.");
-								return null;
-							}
-
-							string host = hostPort.Substring(0, hostPortColonIndex);
-							string port = hostPort.Substring(hostPortColonIndex + 1);
-
-							if (!int.TryParse(port, out int portNumber) || portNumber < 1 || portNumber > 65535)
-							{
-								project.SendErrorToLog($"Incorrect port: '{port}'. must be int in (1, 65535)");
-								return null;
-							}
-							formattedProxyString = $"{host}:{port}:{username}:{password}";
-						}
-						else
-						{
-							formattedProxyString = proxyString;
-
-							int lastColonIndex = formattedProxyString.LastIndexOf(':');
-							if (lastColonIndex == -1)
-							{
-								project.SendErrorToLog($"Incorrect proxy string: '{proxy}'. Expected 'ip:port'.");
-								return null;
-							}
-
-							string port = formattedProxyString.Substring(lastColonIndex + 1);
-							if (!int.TryParse(port, out int portNumber) || portNumber < 1 || portNumber > 65535)
-							{
-								project.SendErrorToLog($"Incorrect port: '{port}'. must be int in (1, 65535)");
-								return null;
-							}
-						}
-
-						request.Proxy = ProxyClient.Parse(proxyType, formattedProxyString);
-						//if (log) Loggers.l0g(project,$"proxy '{proxy}' set as {proxyType}");
-					}
-					catch (Exception ex)
-					{
-						project.SendErrorToLog($"proxy parse Err '{proxy}': {ex.Message}");
-						return null;
-					}
-				}
-
-				try
-				{
-					//if (log) Loggers.l0g(project,body);
-					
-					HttpResponse httpResponse = request.Post(url, body, "application/json");
-					
-					response = httpResponse.ToString();
-					
-					if (log) Loggers.l0g(project,$"jBody:[{body}] Resp:[{response}]");
-				}
-				catch (HttpException ex)
-				{
-					project.SendErrorToLog($"request Err: {ex.Message}");
-					return null;
-				}
-			}
-
-			return response;
-		}
-		public static T nonce<T>(IZennoPosterProjectModel project, string chainRPC = "", string address = "", string proxy = "")
-		{
-			if (address == "") address = project.Variables["addressEvm"].Value;
-			if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
-			string jsonBodyGetNonce = $@"{{""jsonrpc"": ""2.0"",""method"": ""eth_getTransactionCount"",""params"": [""{address}"", ""latest""],""id"": 1}}";
-
-			string response;
-			using (var request = new HttpRequest())
-			{
-				request.UserAgent = "Mozilla/5.0";
-				request.IgnoreProtocolErrors = true;
-				request.ConnectTimeout = 5000;
-				if (!string.IsNullOrEmpty(proxy))
-				{
-					try
-					{
-						request.Proxy = ProxyClient.Parse(proxy.Contains("@") ? proxy : $"HTTP://{proxy}");
-					}
-					catch (Exception ex)
-					{
-						project.SendErrorToLog($"Ошибка парсинга прокси '{proxy}': {ex.Message}");
-						throw;
-					}
-				}
-
-				try
-				{
-					HttpResponse httpResponse = request.Post(chainRPC, jsonBodyGetNonce, "application/json");
-					response = httpResponse.ToString();
-				}
-				catch (HttpException ex)
-				{
-					project.SendErrorToLog($"Ошибка HTTP-запроса: {ex.Message}, Status: {ex.Status}");
-					throw;
-				}
-			}
-
-			var match = Regex.Match(response, @"""result""\s*:\s*""([^""]+)""");
-			string hexResultNonce = match.Success ? match.Groups[1].Value : "0x0";
-			
-			if (hexResultNonce == "0x0") 
-				return (T)Convert.ChangeType("0", typeof(T));
-			
-			int transactionCount = Convert.ToInt32(hexResultNonce.TrimStart('0', 'x'), 16);
-			
-			if (typeof(T) == typeof(string))
-				return (T)Convert.ChangeType(transactionCount.ToString(), typeof(T));
-			
-			return (T)Convert.ChangeType(transactionCount, typeof(T));
-		}	
-		public static T balNative<T>(IZennoPosterProjectModel project, string chainRPC = "", string address = "", string proxy = "",bool log = false)
-		{
-			if (address == "") address = project.Variables["addressEvm"].Value;
-			if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
-			string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_getBalance"", ""params"": [""{address}"", ""latest""], ""id"": 1 }}";
-			string response;
-			using (var request = new HttpRequest())
-			{
-				request.UserAgent = "Mozilla/5.0";
-				request.IgnoreProtocolErrors = true;
-				request.ConnectTimeout = 5000;
-
-				if (!string.IsNullOrEmpty(proxy))
-				{
-					try
-					{
-						request.Proxy = ProxyClient.Parse(proxy.Contains("@") ? proxy : $"HTTP://{proxy}");
-					}
-					catch (Exception ex)
-					{
-						project.SendErrorToLog($"can't parse proxy '{proxy}': {ex.Message}");
-						throw;
-					}
-				}
-
-				try
-				{
-					HttpResponse httpResponse = request.Post(chainRPC, jsonBody, "application/json");
-					response = httpResponse.ToString();
-				}
-				catch (HttpException ex)
-				{
-					project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
-					throw;
-				}
-			}
-			var match = Regex.Match(response, @"""result""\s*:\s*""([^""]+)""");
-			string hexResultBalance = match.Success ? match.Groups[1].Value.TrimStart('0', 'x') : "0";
-			BigInteger balanceWei = BigInteger.Parse("0" + hexResultBalance, NumberStyles.AllowHexSpecifier);
-			decimal balanceNative = (decimal)balanceWei / 1000000000000000000m;
-			project.SendInfoToLog($"[Leaf.xNet] {address}: {balanceNative}");
-			if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(balanceNative.ToString("0.##################", CultureInfo.InvariantCulture), typeof(T));
-			return (T)Convert.ChangeType(balanceNative, typeof(T));
-		}
 		public static T gasNow<T>(IZennoPosterProjectModel project, string chainRPC = "", string proxy = "",bool log = false)
 		{
 			if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
@@ -4332,187 +4132,8 @@ namespace w3tools //by @w3bgrep
 			
 			return (T)Convert.ChangeType(chainId, typeof(T));
 		}			
-		public static string txReceipt(IZennoPosterProjectModel project, string chainRPC, string txHash, string proxy = "",bool log = false)
-		{
-			string jsonBody = $@"{{""jsonrpc"":""2.0"",""method"":""eth_getTransactionReceipt"",""params"":[""{txHash}""],""id"":1}}";
+		
 
-			string response;
-			using (var request = new HttpRequest())
-			{
-				request.UserAgent = "Mozilla/5.0";
-				request.IgnoreProtocolErrors = true;
-				request.ConnectTimeout = 5000;
-
-				if (!string.IsNullOrEmpty(proxy))
-				{
-					try
-					{
-						request.Proxy = ProxyClient.Parse(proxy.Contains("@") ? proxy : $"HTTP://{proxy}");
-					}
-					catch (Exception ex)
-					{
-						project.SendErrorToLog($"Ошибка парсинга прокси '{proxy}': {ex.Message}");
-						return null;
-					}
-				}
-
-				try
-				{
-					HttpResponse httpResponse = request.Post(chainRPC, jsonBody, "application/json");
-					response = httpResponse.ToString();
-					if (httpResponse.StatusCode != HttpStatusCode.OK)
-					{
-						project.SendErrorToLog($"Ошибка сервера: {httpResponse.StatusCode}");
-						return null;
-					}
-				}
-				catch (HttpException ex)
-				{
-					project.SendErrorToLog($"Ошибка запроса: {ex.Message}");
-					return null;
-				}
-			}
-
-			// Проверяем наличие результата
-			if (string.IsNullOrWhiteSpace(response) || response.Contains("\"result\":null"))
-				return null;
-
-			return response;
-		}	
-		public static string txRaw(IZennoPosterProjectModel project, string chainRPC, string txHash, string proxy = "",bool log = false)
-		{
-			string jsonBody = $@"{{""jsonrpc"":""2.0"",""method"":""eth_getTransactionByHash"",""params"":[""{txHash}""],""id"":1}}";
-
-			string response;
-			using (var request = new HttpRequest())
-			{
-				request.UserAgent = "Mozilla/5.0";
-				request.IgnoreProtocolErrors = true;
-				request.ConnectTimeout = 5000;
-
-				if (!string.IsNullOrEmpty(proxy))
-				{
-					try
-					{
-						request.Proxy = ProxyClient.Parse(proxy.Contains("@") ? proxy : $"HTTP://{proxy}");
-					}
-					catch (Exception ex)
-					{
-						project.SendErrorToLog($"Ошибка парсинга прокси '{proxy}': {ex.Message}");
-						return null;
-					}
-				}
-
-				try
-				{
-					HttpResponse httpResponse = request.Post(chainRPC, jsonBody, "application/json");
-					response = httpResponse.ToString();
-					if (httpResponse.StatusCode != HttpStatusCode.OK)
-					{
-						project.SendErrorToLog($"Ошибка сервера: {httpResponse.StatusCode}");
-						return null;
-					}
-				}
-				catch (HttpException ex)
-				{
-					project.SendErrorToLog($"Ошибка запроса: {ex.Message}");
-					return null;
-				}
-			}
-
-			// Проверяем наличие результата
-			if (string.IsNullOrWhiteSpace(response) || response.Contains("\"result\":null"))
-				return null;
-
-			return response;
-		}						
-		public static string waitTx(IZennoPosterProjectModel project, string chainRPC = "", string hash = "", int deadline = 60,bool log = false)
-		{
-			if (string.IsNullOrEmpty(hash))  hash = project.Variables["blockchainHash"].Value;
-			if (string.IsNullOrEmpty(chainRPC)) chainRPC = project.Variables["blockchainRPC"].Value;
-			string jsonRecept = $@"{{""jsonrpc"":""2.0"",""method"":""eth_getTransactionReceipt"",""params"":[""{hash}""],""id"":1}}";
-			string jsonRaw = $@"{{""jsonrpc"":""2.0"",""method"":""eth_getTransactionByHash"",""params"":[""{hash}""],""id"":1}}";
-			string response = "";
-			project.Variables["a0debug"].Value = "";
-			Thread.Sleep(2000);
-
-			DateTime startTime = DateTime.Now;
-			TimeSpan timeout = TimeSpan.FromSeconds(deadline);
-
-			while (true)
-			{
-				if (DateTime.Now - startTime > timeout) throw new Exception($"timeout {deadline}s");
-				var logString = "";
-
-				// Проверяем receipt
-				try
-				{
-					response = LeafHttpPost(project, chainRPC, jsonRecept);
-					if (!string.IsNullOrEmpty(response))
-					{
-						project.Json.FromString(response);
-					}
-				}
-				catch
-				{
-					Thread.Sleep(2000);
-					continue;
-				}
-
-				try
-				{
-					string gasUsed = Onchain.HexToString(project.Json.result.gasUsed, "gwei");
-					string gasPrice = Onchain.HexToString(project.Json.result.effectiveGasPrice, "gwei");
-					string status = Onchain.HexToString(project.Json.result.status);
-
-					if (status == "1") project.Variables["txStatus"].Value = "SUCCSESS";
-					else project.Variables["txStatus"].Value = "!W FAIL";
-					string result = $"{chainRPC} {hash} [{project.Variables["txStatus"].Value}] gasUsed: {gasUsed}";
-					Loggers.W3Debug(project, result);
-					return result;
-				}
-				catch
-				{
-					project.Variables["txStatus"].Value = "noStatus";
-				}
-
-				Thread.Sleep(1000);
-
-				// Проверяем raw транзакцию
-				try
-				{
-					response = LeafHttpPost(project, chainRPC, jsonRaw);
-					if (!string.IsNullOrEmpty(response))
-					{
-						project.Json.FromString(response);
-					}
-				}
-				catch
-				{
-					Thread.Sleep(2000);
-					continue;
-				}
-
-				try
-				{
-					string gas = Onchain.HexToString(project.Json.result.maxFeePerGas, "gwei");
-					string gasPrice = Onchain.HexToString(project.Json.result.gasPrice, "gwei");
-					string nonce = Onchain.HexToString(project.Json.result.nonce);
-					string value = Onchain.HexToString(project.Json.result.value, "eth");
-					project.Variables["txStatus"].Value = "PENDING";
-
-					logString = $"[{chainRPC} {hash}] pending  gasLimit:[{gas}] gasNow:[{gasPrice}] nonce:[{nonce}] value:[{value}]";
-				}
-				catch
-				{
-					project.Variables["txStatus"].Value = "";
-					logString = $"[{chainRPC} {hash}] not found";
-				}
-
-				Loggers.W3Debug(project, logString);
-				Thread.Sleep(2000);
-			}
-		}
 		private static string LeafHttpPost(IZennoPosterProjectModel project, string url, string jsonBody, string proxy = "",bool log = false)
 		{
 			using (var request = new HttpRequest())
@@ -5719,140 +5340,7 @@ namespace w3tools //by @w3bgrep
 				throw new Exception($"Ошибка отправки транзакции: {ex.Message}");
 			}
 		}
-		public static string SendTx1559(string chainRpc, string contractAddress, string encodedData, decimal value, string walletKey, int speedup = 1)
-		{
-		    
-			var web3 = new Nethereum.Web3.Web3(chainRpc);
-			var chainIdTask = web3.Eth.ChainId.SendRequestAsync(); chainIdTask.Wait();
-			int chainId = (int)chainIdTask.Result.Value;
-			string fromAddress = new Nethereum.Signer.EthECKey(walletKey).GetPublicAddress();
-			//
-			BigInteger _value = (BigInteger)(value * 1000000000000000000m);
-			//
-			BigInteger gasLimit = 0;  BigInteger priorityFee = 0;  BigInteger maxFeePerGas = 0;  BigInteger baseGasPrice = 0;
-			try 
-		    {   var gasPriceTask = web3.Eth.GasPrice.SendRequestAsync();gasPriceTask.Wait();
-		        baseGasPrice = gasPriceTask.Result.Value / 100 + gasPriceTask.Result.Value;
-		        priorityFee =  baseGasPrice / 100 * speedup + gasPriceTask.Result.Value;
-		        maxFeePerGas =  baseGasPrice / 100 * speedup + gasPriceTask.Result.Value;}
-		     catch (Exception ex)  {throw new Exception($"failedEstimateGas: {ex.Message}");}
-		       
-			try 
-		    {   var transactionInput = new Nethereum.RPC.Eth.DTOs.TransactionInput
-		        {
-		            To = contractAddress,
-		            From = fromAddress,
-		            Data = encodedData,
-		            //Value = new Nethereum.Hex.HexTypes.HexBigInteger((BigInteger)value),
-					Value = new Nethereum.Hex.HexTypes.HexBigInteger((BigInteger)_value),
-		            MaxPriorityFeePerGas = new Nethereum.Hex.HexTypes.HexBigInteger(priorityFee),
-		            MaxFeePerGas = new Nethereum.Hex.HexTypes.HexBigInteger(maxFeePerGas),
-		            Type = new Nethereum.Hex.HexTypes.HexBigInteger(2) 
-		        };
-		        
-		        var gasEstimateTask = web3.Eth.Transactions.EstimateGas.SendRequestAsync(transactionInput);
-		        gasEstimateTask.Wait();
-		        var gasEstimate = gasEstimateTask.Result;
-		        gasLimit = gasEstimate.Value + (gasEstimate.Value / 2);
-			}
-		    catch (AggregateException ae)
-			{
-			    if (ae.InnerException is Nethereum.JsonRpc.Client.RpcResponseException rpcEx)
-			    {
-			        var error = $"Code: {rpcEx.RpcError.Code}, Message: {rpcEx.RpcError.Message}, Data: {rpcEx.RpcError.Data}";
-			        throw new Exception($"FailedSimulate RPC Error: {error}");
-			    }
-			    throw;
-			}
-			try 
-		    {	
-		        var blockchain = new Blockchain(walletKey, chainId, chainRpc);
-				string hash = blockchain.SendTransactionEIP1559(contractAddress, value, encodedData, gasLimit, maxFeePerGas, priorityFee).Result;
-		        return hash;
-		    }
-		    catch (Exception ex)
-		    {
-		        throw new Exception($"FailedSend: {ex.Message}");
-		    }
-		}	
-		public static string GazZip(IZennoPosterProjectModel project, string chainTo, decimal value, string chainRPC = "") //refuel GazZip
-		
-		{
-			
-			// 0x010066 Sepolia | 0x01019e Soneum | 0x01000e BNB
-			
-			
-			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture; 
-			Random rnd = new Random();
-			var accountAddress = Db.AdrEvm(project); 
-			
-			if ( chainRPC == "")
-			{
-				string chainList = @"https://mainnet.era.zksync.io,
-				https://linea-rpc.publicnode.com,
-				https://arb1.arbitrum.io/rpc,
-				https://optimism-rpc.publicnode.com,
-				https://scroll.blockpi.network/v1/rpc/public,
-				https://rpc.taiko.xyz,
-				https://base.blockpi.network/v1/rpc/public,
-				https://rpc.zora.energy";
-				
-				
-				bool found = false; 
-				foreach (string RPC in chainList.Split(','))
-				{
-				    chainRPC = RPC.Trim();
-					var native = Leaf.balNative<decimal>(project, RPC, accountAddress);
-					var required = value + 0.00015m;
-				    if (native > required)
-				    {
-				        project.SendInfoToLog($"CHOSEN: rpc:[{chainRPC}] native:[{native}]", true);
-						found = true; break;
-				    }
-					project.SendInfoToLog($"rpc:[{chainRPC}] native:[{native}] lower than [{required}]");
-				    Thread.Sleep(1000);
-				}
-				
-				
-				if (!found)
-				{
-				    return $"fail: no balance over {value}ETH found by all Chains";
-				}
-			}
-			
-			else 
-			{
-				var native = Leaf.balNative<decimal>(project, chainRPC, accountAddress);
-				Loggers.W3Debug(project,$"rpc:[{chainRPC}] native:[{native}]");
-				if (native < value + 0.0002m)
-				{
-					return $"fail: no balance over {value}ETH found on {chainRPC}";
-				}
-			}
-			
-			string functionName = "transfer";// withdraw
-			
-			string[] types = { };
-			object[] values = { };
-			
-			try
-			{
-			    string dataEncoded = chainTo;//0x010066 for Sepolia | 0x01019e Soneum | 0x01000e BNB
-			    string txHash = SendTx1559(
-			        chainRPC,
-			        "0x391E7C679d29bD940d63be94AD22A25d25b5A604",//gazZip
-			        dataEncoded,
-			        value,  // value в ETH
-			        Db.KeyEVM(project),
-			        3          // speedup %
-			    );
-			    Thread.Sleep(1000);
-			    project.Variables["blockchainHash"].Value = txHash;
-			}
-			catch (Exception ex){project.SendWarningToLog($"{ex.Message}",true);throw;}
-			string result = Leaf.waitTx(project,chainRPC);
-			return result;
-		}
+	
 		public static string ApproveMax(IZennoPosterProjectModel project, string contract, string spender, string chainRPC = "")
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -5880,7 +5368,8 @@ namespace w3tools //by @w3bgrep
 			catch (Exception ex){Loggers.l0g(project,$"!W:{ex.Message}",thr0w:true);}
 
 			Loggers.l0g(project,$"[APPROVE] {contract} for spender {spender}...");
-			return Leaf.waitTx(project);
+            return project.Variables["blockchainHash"].Value;
+
 		}
 		public static string ApproveCancel(IZennoPosterProjectModel project, string contract, string spender, string chainRPC = "")
 		{
@@ -5910,7 +5399,7 @@ namespace w3tools //by @w3bgrep
 
 
 			Loggers.l0g(project,$"[APPROVE] {contract} for spender {spender}...");
-			return Leaf.waitTx(project);
+            return project.Variables["blockchainHash"].Value;
 		}
 		public static string WrapNative(IZennoPosterProjectModel project, string contract, decimal value, string chainRPC = "")
 		{
@@ -5939,8 +5428,9 @@ namespace w3tools //by @w3bgrep
 			catch (Exception ex){Loggers.l0g(project,$"!W:{ex.Message}",thr0w:true);}
 		    
 		    Loggers.l0g(project,$"[WRAP] {value} native to {contract}...");
-			return Leaf.waitTx(project);
+           return project.Variables["blockchainHash"].Value;
 		}
+        
 	}
 	#endregion
 	#region CEX
@@ -6127,10 +5617,10 @@ namespace w3tools //by @w3bgrep
         }
 	}
 
-
 	public class OKXApi
 	{
 		private readonly IZennoPosterProjectModel _project;
+
 		public OKXApi(IZennoPosterProjectModel project)
 		{
 			_project = project;
@@ -6149,8 +5639,9 @@ namespace w3tools //by @w3bgrep
 			if (log) Loggers.l0g(_project, "Mapping network: " + chain);
 			switch (chain)
 			{
-				case "Arbitrum One": return "Arbitrum One";
+				case "Arbitrum": return "Arbitrum One";
 				case "Ethereum": return "ERC20";
+                case "Base": return "Base";
 				case "Binance Smart Chain": return "BSC";
 				case "Avalanche C-Chain": return "Avalanche C-Chain";
 				case "Polygon": return "Polygon";
@@ -6173,57 +5664,7 @@ namespace w3tools //by @w3bgrep
 				return Convert.ToBase64String(hashBytes);
 			}
 		}
-		private string SendWithdrawalRequest(object requestData, string proxy, bool log)
-		{
-			if (log) Loggers.l0g(_project, "Preparing and sending withdrawal request");
-
-			var ApiKeys = okxKeys();
-			string apiKey = ApiKeys[0];
-			string secretKey = ApiKeys[1];
-			string passphrase = ApiKeys[2];
-
-			var json = JsonConvert.SerializeObject(requestData);
-
-			// Generate timestamp
-			DateTime currentTime = DateTime.UtcNow;
-			string timestamp = currentTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
-
-			// Prepare signature
-			string url = "/api/v5/asset/withdrawal";
-			string message = timestamp + "POST" + url + json;
-			string signature = CalculateHmacSha256ToBaseSignature(message, secretKey);
-
-			// Send HTTP request
-			var result = ZennoPoster.HTTP.Request(
-				ZennoLab.InterfacesLibrary.Enums.Http.HttpMethod.POST,
-				"https://www.okx.com/api/v5/asset/withdrawal",
-				json,
-				"application/json",
-				proxy,
-				"UTF-8",
-				ZennoLab.InterfacesLibrary.Enums.Http.ResponceType.BodyOnly,
-				10000,
-				"",
-				_project.Profile.UserAgent,
-				true,
-				5,
-				new string[]
-				{
-					"Content-Type: application/json",
-					"OK-ACCESS-KEY: " + apiKey,
-					"OK-ACCESS-SIGN: " + signature,
-					"OK-ACCESS-TIMESTAMP: " + timestamp,
-					"OK-ACCESS-PASSPHRASE: " + passphrase
-				},
-				"",
-				false,
-				false,
-				_project.Profile.CookieContainer
-			);
-
-			if (log) Loggers.l0g(_project, "Received response: " + result);
-			return result;
-		}
+		
 		private string OKXPost(string url, object body, string proxy = null, bool log = false)
 		{
 
@@ -6309,6 +5750,7 @@ namespace w3tools //by @w3bgrep
 			_project.Json.FromString(jsonResponse);
 			return jsonResponse;
 		}
+
 		private List<string> OKXGetSubAccs(string proxy = null, bool log = false)
 		{
 			var jsonResponse = OKXGet("/api/v5/users/subaccount/list",log:log);
@@ -6414,7 +5856,6 @@ namespace w3tools //by @w3bgrep
 			}
 			return balanceList;
 		}
-
 		public List<string> OKXGetAddresses(string currency, string proxy = null, bool log = false)
 			{
 				var jsonResponse = OKXGet($"/api/v5/asset/deposit-address?ccy={currency}",log:log);
@@ -6441,7 +5882,6 @@ namespace w3tools //by @w3bgrep
 				}
 				return adrList;
 			}
-
 
 		public void OKXWithdraw( string toAddress, string currency, string chain, double amount, double fee, string proxy = null, bool log = false)
 		{
@@ -6523,6 +5963,7 @@ namespace w3tools //by @w3bgrep
 			}
 			
 		}
+
 		public void OKXDrainSubs()
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -6591,7 +6032,37 @@ namespace w3tools //by @w3bgrep
 				}
 			}
 		}
+        public T OKXPrice<T>(string pair, string proxy = null, bool log = false)
+        {
+   				var jsonResponse = OKXGet($"/api/v5/market/ticker?instId={pair}",log:log);
+	            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;			
+				var response = JsonConvert.DeserializeObject<dynamic>(jsonResponse);
+				string msg = response.msg;
+				string code = response.code;
+				string last = null;
 
+                if (code != "0") throw new Exception("Err [{code}]; Сообщение [{msg}]");
+                else
+                {
+                    var dataArray = response.data;
+                    if (dataArray != null)
+                    {
+                        foreach (var item in dataArray)
+                        {
+                            string lastPrice = item.last;
+                            if (!string.IsNullOrEmpty(lastPrice)){
+                                last = lastPrice;
+                                Loggers.l0g(_project, $"{pair}:{lastPrice}");
+                                break;
+                            }
+                        }
+                    }
+                }
+                decimal price = decimal.Parse(last);
+                if (typeof(T) == typeof(string))
+                    return (T)Convert.ChangeType(price.ToString("0.##################"), typeof(T));
+                return (T)Convert.ChangeType(price, typeof(T));      
+        }
 	}
 
 	#endregion
@@ -6602,12 +6073,15 @@ namespace w3tools //by @w3bgrep
 		private readonly IZennoPosterProjectModel _project;
 		private readonly Instance _instance;
 		private readonly bool _log;
+        private readonly string _pass;
+
 
 		public Wall3t(IZennoPosterProjectModel project, Instance instance, bool log = false)
 		{
 			_project = project;
 			_instance = instance;
 			_log = log;
+            _pass = SAFU.HWPass(project);
 		}
 		public void Switch(string toUse = "", bool log = false)
 		{
@@ -6650,7 +6124,8 @@ namespace w3tools //by @w3bgrep
 			if (log)Loggers.l0g(_project,$"Enabled  {toUse}");
 
 		}
-		//MetaMask
+		
+        //MetaMask
 		public void MMLaunch (string key = null)
 		{
 			var em = _instance.UseFullMouseEmulation;
@@ -6788,6 +6263,70 @@ namespace w3tools //by @w3bgrep
 				}
 			return address;
 		}
+		public string MMConfirm(bool log = false)
+		{
+			var me = _instance.UseFullMouseEmulation;
+            _instance.UseFullMouseEmulation = false;
+			DateTime urlChangeDeadline = DateTime.Now.AddSeconds(60);
+			int attemptCount = 0;
+
+			if (log)_project.SendInfoToLog("Waiting for MetaMask URL to appear...");
+			while (!_instance.ActiveTab.URL.Contains("nkbihfbeogaeaoehlefnkodbefgpgknn"))
+			{
+				Thread.Sleep(1000); attemptCount++;
+				if (log)_project.SendInfoToLog($"Attempt {attemptCount}: Current URL is {_instance.ActiveTab.URL}");
+				if (attemptCount > 5)
+				{
+					if (log)_project.SendErrorToLog("Failed to load MetaMask URL within 6 seconds");
+					throw new Exception("Timeout waiting for MetaMask URL");
+				}
+			}
+
+			if (log)_project.SendInfoToLog($"{_instance.ActiveTab.URL} detected, pausing for 2 seconds...");
+			Thread.Sleep(2000); 
+
+			HtmlElement allert = _instance.ActiveTab.FindElementByAttribute("div", "class", "mm-box\\ mm-banner-base\\ mm-banner-alert\\ mm-banner-alert--severity-danger", "regexp", 0);
+			HtmlElement simulation = _instance.ActiveTab.FindElementByAttribute("div", "data-testid", "simulation-details-layout", "regexp", 0);
+			HtmlElement detail = _instance.ActiveTab.FindElementByAttribute("div", "class", "transaction-detail", "regexp", 0);
+
+			if (log)_project.SendInfoToLog($"{Regex.Replace(simulation.GetAttribute("innertext").Trim(), @"\s+", " ")}");
+			if (log)_project.SendInfoToLog($"{Regex.Replace(detail.GetAttribute("innertext").Trim(), @"\s+", " ")}");
+			if (!allert.IsVoid) 
+			{
+						var error = Regex.Replace(allert.GetAttribute("innertext").Trim(), @"\s+", " ");
+						while (!_instance.ActiveTab.FindElementByAttribute("button", "data-testid", "page-container-footer-cancel", "regexp", 0).IsVoid)
+						{
+							_instance.ActiveTab.Touch.SwipeBetween(600, 400, 600, 300);
+							_instance.WaitClick(() =>  _instance.ActiveTab.FindElementByAttribute("button", "data-testid", "page-container-footer-cancel", "regexp", 0));
+						}
+                        
+						Loggers.l0g(_project,error,thr0w:true);
+			}
+			if (log)_project.SendInfoToLog("Starting button click loop on MetaMask page...");
+			while (_instance.ActiveTab.URL.Contains("nkbihfbeogaeaoehlefnkodbefgpgknn"))
+			{
+				if (DateTime.Now > urlChangeDeadline)
+				{
+					if (log)_project.SendErrorToLog("Operation timed out after 60 seconds");
+					throw new Exception("Timeout exceeded while interacting with MetaMask");
+				}
+				try
+				{
+					if (log)_project.SendInfoToLog("Attempting to find and click the confirm button...");
+					_instance.WaitClick(() => _instance.ActiveTab.FindElementByAttribute("button", "class", "button btn--rounded btn-primary", "regexp", 0), 3);
+					if (log)_project.SendInfoToLog("Button clicked successfully");
+					Thread.Sleep(2000);
+				}
+				catch (Exception ex)
+				{
+					if (log)_project.SendWarningToLog($"Failed to click button: {ex.Message}");
+				}
+			}
+			if (log)_project.SendInfoToLog("MetaMask interaction completed, URL has changed");
+			_instance.UseFullMouseEmulation = me;
+			return "done";
+		}
+
 		//Rabby
 		public void RBLaunch (bool log = false)
 		{
@@ -6845,7 +6384,8 @@ namespace w3tools //by @w3bgrep
 				_instance.LMB(("button", "innertext", "Unlock", "regexp", 0));
 			}
 		}
-		//BagPack
+		
+        //BagPack
 		public void BPLaunch (bool log = false)
 		{
 			if (log)Loggers.l0g(_project,"RBInstall");
@@ -6930,190 +6470,185 @@ namespace w3tools //by @w3bgrep
 			}
 			catch{goto getA;}
 		}
+ 		public void BPApprove (bool log = false)
+		{
+			if (log) Loggers.l0g(_project,$"[BackPack] Approve...");
+            try{
+            _instance.SetHe(("input:password", "fulltagname", "input:password", "regexp", 0),_pass,deadline:1);
+            _instance.LMB(("button", "innertext", "Unlock", "regexp", 0));
+            }
+            catch{}
+            _instance.LMB(("div", "innertext", "Approve", "regexp", 0),"last");
+            _instance.CloseExtraTabs();
+		}
+       
+        //Razor
+		public void RZRLaunch (bool log = false)
+		{
+			if (log)Loggers.l0g(_project,"RZRLaunch");
+			var em = _instance.UseFullMouseEmulation;
+			_instance.UseFullMouseEmulation = false;
+			if (RZRInstall (log)) RZRImport(log);
+			else RZRUnlock(log);
+			_instance.CloseExtraTabs();
+			_instance.UseFullMouseEmulation = em;
+		}
+		public bool RZRInstall (bool log = false)
+		{
+			string path = $"{_project.Path}.crx\\Razor2.0.9.crx";
+			var extId = "fdcnegogpncmfejlfnffnofpngdiejii";
+			var extListString = string.Join("\n", _instance.GetAllExtensions().Select(x => $"{x.Name}:{x.Id}"));
+			if (!extListString.Contains(extId)) 
+			{
+				if (log)Loggers.l0g(_project,"RZRInstall");
+				_instance.InstallCrxExtension(path);
+				return true;
+			}
+			return false;
+		}
+		public bool RZRImport (bool log = false)
+		{
+			if (log)Loggers.l0g(_project,"RZRImport");
+			var key = Db.KeySOL(_project);
+			var password = SAFU.HWPass(_project);
+			_instance.CloseExtraTabs();
+            Tab walTab = _instance.NewTab("wal");
+            walTab.SetActive();
+            walTab.Navigate("chrome-extension://fdcnegogpncmfejlfnffnofpngdiejii/index.html#/account/initialize/import/private-key", "");
+            
+            try{
+                RZRUnlock();
+                return true;
+            }
+            catch{}
 
+            _instance.WaitSetValue(() => 	_instance.ActiveTab.FindElementByName("name"),"pkey");
+            _instance.WaitSetValue(() => 	_instance.ActiveTab.FindElementByName("privateKey"),key);
+            _instance.LMB(("button", "innertext", "Proceed", "regexp", 0));
+
+            _instance.WaitSetValue(() => 	_instance.ActiveTab.FindElementByName("password"),password);
+            _instance.WaitSetValue(() => 	_instance.ActiveTab.FindElementByName("repeatPassword"),password);
+            _instance.LMB(("button", "innertext", "Proceed", "regexp", 0));
+
+            _instance.LMB(("button", "innertext", "Done", "regexp", 0));
+            
+            return true;
+		}
+		public void RZRUnlock (bool log = false)
+		{
+			if (log)Loggers.l0g(_project,$"[RZRUnlock]");
+			var password = SAFU.HWPass(_project);			
+			try 
+            {
+                _instance.WaitSetValue(() => _instance.ActiveTab.FindElementByName("password"),password,deadline:3);
+				_instance.LMB(("button", "innertext", "Unlock", "regexp", 0));
+                return;
+			}
+			catch
+            {
+                try{
+                    Tab walTab = _instance.NewTab("wal");
+                    walTab.SetActive();
+                    walTab.Navigate("chrome-extension://fdcnegogpncmfejlfnffnofpngdiejii/index.html", "");
+                    _instance.WaitSetValue(() => _instance.ActiveTab.FindElementByName("password"),password,deadline:3);
+				    _instance.LMB(("button", "innertext", "Unlock", "regexp", 0));	
+                    return;
+
+                }
+                catch{
+                    throw;
+                }
+            }
+
+		}
+		public void RZRCheck (bool log = false)
+		{
+
+		}
+        //OKX
+		public string OKXGetWallets(string mode = null, string choose = null)
+		{
+			_instance.ActiveTab.Navigate("chrome-extension://mcohilncbfahbmgdjkbpemcciiolgcge/home.html#/wallet/management-home-page?fromHome=1", "");
+			var pKeys = new List<string>();
+			var sKeys = new List<string>();
+			string active = null;
+			var wList = _instance.ActiveTab.FindElementByAttribute("div", "class", "okui-virtual-list-holder-inner", "regexp", 0).GetChildren(false).ToList();
+			bool set = false;
+			foreach(HtmlElement he in wList)
+			{
+				
+				if (he.InnerText.Contains("0x")) pKeys.Add((he.InnerText.Split('\n')[0]) + ": " + he.InnerText.Split('\n')[1]) ;
+				if (he.InnerText.Contains("Account")) sKeys.Add((he.InnerText.Split('\n')[0]) + ": " + he.InnerText.Split('\n')[1]) ;
+				if (he.InnerHtml.Contains("okd-checkbox-circle"))   active =((he.InnerText.Split('\n')[0]) + ": " + he.InnerText.Split('\n')[1]) ;
+				if (choose != null) 
+				{
+					if (he.InnerText.Contains(choose)) 
+					{
+						_instance.UseFullMouseEmulation = true;
+						_instance.WaitClick(() => he);
+						set = true;
+						//return "";
+					}
+					
+				}
+			}
+			if (choose != null)
+			{
+				if(!set)throw new Exception("no key");
+				return active;
+			} 
+			if (_log) _project.SendInfoToLog(string.Join("\n", pKeys));
+			if (_log) _project.SendInfoToLog(string.Join("\n", sKeys));
+			if (_log) _project.SendInfoToLog(active);
+			if (mode == "pKeys") return string.Join("\n", pKeys);
+			if (mode == "sKeys") return string.Join("\n", sKeys);
+			return active;
+		}
+		public void OKXImport(string sourse = "pkey", string chainMode = "EVM") //seed|pkey //EVM|Aptos
+		{
+
+			var password = SAFU.HWPass(_project);
+			_instance.ActiveTab.Navigate("chrome-extension://mcohilncbfahbmgdjkbpemcciiolgcge/home.html#/wallet-add/import-with-seed-phrase-and-private-key", "");
+			try{
+			_instance.LMB(("button", "innertext", "Import\\ wallet", "regexp", 0), deadline:3);
+			_instance.LMB(("i", "class", "icon\\ iconfont\\ okx-wallet-plugin-futures-grid-20\\ _wallet-icon__icon__core_", "regexp", 0), thr0w:false);
+			}
+			catch{}
+			if( sourse== "pkey")
+			{
+				_instance.LMB(("div", "class", "okui-tabs-pane\\ okui-tabs-pane-sm\\ okui-tabs-pane-grey\\ okui-tabs-pane-segmented", "regexp", 1));
+				
+				var key = Db.KeyEVM(_project); 
+				_instance.SetHe(("textarea", "class", "okui-input-input\\ input-textarea", "regexp", 0),key);
+
+				_instance.LMB(("button", "innertext", "Confirm", "regexp", 0),deadline:20);
+				if (chainMode == "Aptos") _instance.LMB(("span", "innertext", "Aptos\\ network", "regexp", 0));
+				_instance.LMB(("button", "class", "okui-btn\\ btn-lg\\ btn-fill-highlight\\ block\\ chains-choose-network-modal__confirm-button", "regexp", 0));
+			}
+			if( sourse== "seed")
+			{
+				string seedPhrase = Db.Seed(_project);
+				int index = 0;	
+				foreach(string word in seedPhrase.Split(' ')) 
+					{ 
+						_instance.ActiveTab.FindElementByAttribute("input", "class", "mnemonic-words-inputs__container__input", "regexp", index).SetValue(word, "Full", false);
+						index++;
+					}
+				_instance.LMB(("button", "type", "submit", "regexp", 0));
+
+			}
+			try{
+			_instance.LMB(("button", "data-testid", "okd-button", "regexp", 0));
+			_instance.WaitSetValue(() => 	_instance.ActiveTab.GetDocumentByAddress("0").FindElementByTag("form", 0).FindChildByAttribute("input:password", "data-testid", "okd-input", "regexp", 0),password);
+			_instance.WaitSetValue(() => 	_instance.ActiveTab.GetDocumentByAddress("0").FindElementByTag("form", 0).FindChildByAttribute("input:password", "data-testid", "okd-input", "regexp", 1),password);
+			_instance.LMB(("button", "data-testid", "okd-button", "regexp", 0));
+			_instance.LMB(("button", "data-testid", "okd-button", "regexp", 0));
+			}
+			catch{}
+		}
 
 	}
 	
-	public static class MM
-	{
-		public static string MMConfirm(this Instance instance,IZennoPosterProjectModel project, bool log = false )
-		{
-			instance.UseFullMouseEmulation = false;
-			DateTime urlChangeDeadline = DateTime.Now.AddSeconds(60);
-			int attemptCount = 0;
-
-			if (log)project.SendInfoToLog("Waiting for MetaMask URL to appear...");
-			while (!instance.ActiveTab.URL.Contains("nkbihfbeogaeaoehlefnkodbefgpgknn"))
-			{
-				Thread.Sleep(1000); attemptCount++;
-				if (log)project.SendInfoToLog($"Attempt {attemptCount}: Current URL is {instance.ActiveTab.URL}");
-				if (attemptCount > 5)
-				{
-					if (log)project.SendErrorToLog("Failed to load MetaMask URL within 6 seconds");
-					throw new Exception("Timeout waiting for MetaMask URL");
-				}
-			}
-
-			if (log)project.SendInfoToLog($"{instance.ActiveTab.URL} detected, pausing for 2 seconds...");
-			Thread.Sleep(2000); 
-
-			HtmlElement allert = instance.ActiveTab.FindElementByAttribute("div", "class", "mm-box\\ mm-banner-base\\ mm-banner-alert\\ mm-banner-alert--severity-danger", "regexp", 0);
-			HtmlElement simulation = instance.ActiveTab.FindElementByAttribute("div", "data-testid", "simulation-details-layout", "regexp", 0);
-			HtmlElement detail = instance.ActiveTab.FindElementByAttribute("div", "class", "transaction-detail", "regexp", 0);
-
-			if (log)project.SendInfoToLog($"{Regex.Replace(simulation.GetAttribute("innertext").Trim(), @"\s+", " ")}");
-			if (log)project.SendInfoToLog($"{Regex.Replace(detail.GetAttribute("innertext").Trim(), @"\s+", " ")}");
-			if (!allert.IsVoid) 
-			{
-						var error = Regex.Replace(allert.GetAttribute("innertext").Trim(), @"\s+", " ");
-						while (!instance.ActiveTab.FindElementByAttribute("button", "data-testid", "page-container-footer-cancel", "regexp", 0).IsVoid)
-						{
-							instance.ActiveTab.Touch.SwipeBetween(600, 400, 600, 300);
-							instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("button", "data-testid", "page-container-footer-cancel", "regexp", 0));
-						}
-                        
-						Loggers.l0g(project,error,thr0w:true);
-			}
-			if (log)project.SendInfoToLog("Starting button click loop on MetaMask page...");
-			while (instance.ActiveTab.URL.Contains("nkbihfbeogaeaoehlefnkodbefgpgknn"))
-			{
-				if (DateTime.Now > urlChangeDeadline)
-				{
-					if (log)project.SendErrorToLog("Operation timed out after 60 seconds");
-					throw new Exception("Timeout exceeded while interacting with MetaMask");
-				}
-				try
-				{
-					if (log)project.SendInfoToLog("Attempting to find and click the confirm button...");
-					instance.WaitClick(() => instance.ActiveTab.FindElementByAttribute("button", "class", "button btn--rounded btn-primary", "regexp", 0), 3);
-					if (log)project.SendInfoToLog("Button clicked successfully");
-					Thread.Sleep(2000);
-				}
-				catch (Exception ex)
-				{
-					if (log)project.SendWarningToLog($"Failed to click button: {ex.Message}");
-				}
-			}
-			if (log)project.SendInfoToLog("MetaMask interaction completed, URL has changed");
-			instance.UseFullMouseEmulation = true;
-			return "done";
-		}
-		public static string MMRun(this Instance instance,IZennoPosterProjectModel project,string key = "", bool skipCheck = false)
-		{
-			instance.UseFullMouseEmulation = false;
-            string address = "";
-			while (true)
-			{
-				instance.CloseExtraTabs();
-				instance.ActiveTab.Navigate("chrome-extension://nkbihfbeogaeaoehlefnkodbefgpgknn/home.html", "");
-				instance.CloseExtraTabs(); var toDo = ""; Thread.Sleep(3000);
-				DateTime deadline = DateTime.Now.AddSeconds(60);//if (DateTime.Now < deadline ) Thread.Sleep(1000);
-				var password = SAFU.HWPass(project);
-				
-				while (true)
-				{Thread.Sleep(3000);
-				if (!instance.ActiveTab.FindElementByAttribute("div", "class", "error-code", "regexp", 0).IsVoid) 
-					{toDo = "install,import";break;}
-				else if (!instance.ActiveTab.FindElementByAttribute("button", "data-testid", "account-options-menu-button", "regexp", 0).IsVoid) 
-					{toDo = "checkAddress";break;}
-				else if (!instance.ActiveTab.FindElementByAttribute("h2", "innertext", "Let\'s\\ get\\ started", "regexp", 0).IsVoid) 
-					{toDo = "import";break;}
-				else if (!instance.ActiveTab.FindElementByAttribute("button", "data-testid", "unlock-submit", "regexp", 0).IsVoid) 
-					{toDo = "unlock";break;}
-				}
-				Loggers.l0g(project,toDo);
-				
-				if ( toDo.Contains("install")) 
-				{
-					string path = $"{project.Path}.crx\\MetaMask 11.16.0.crx"; 
-					instance.InstallCrxExtension(path);
-					Loggers.l0g(project,$"installing {path}"); 
-				}
-				if (toDo.Contains("import")) 
-				{
-					string welcomeURL = $"chrome-extension://nkbihfbeogaeaoehlefnkodbefgpgknn/home.html#onboarding/welcome"; 
-					while (true)
-					{
-						if (instance.ActiveTab.URL == welcomeURL) break;
-						if (DateTime.Now < deadline ) Thread.Sleep(1000);
-						else
-						{
-							instance.CloseExtraTabs();
-							instance.ActiveTab.Navigate("chrome-extension://nkbihfbeogaeaoehlefnkodbefgpgknn/home.html", "");
-							break;
-						}
-					}
-                    if (key == "") key = Db.KeyEVM(project);
-                    else skipCheck = true;
-					
-					instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("h2", "innertext", "Let\'s\\ get\\ started", "regexp", 0));
-					instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("span", "innertext", "I\\ agree\\ to\\ MetaMask\'s\\ Terms\\ of\\ use", "regexp", 1),10,0);
-					instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("button", "aria-label", "Close", "regexp", 0));
-					instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("button", "data-testid", "onboarding-create-wallet", "regexp", 0),10,0);
-					instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("button", "data-testid", "metametrics-no-thanks", "regexp", 0),10,0);
-					instance.WaitSetValue(() => instance.ActiveTab.FindElementByAttribute("input:password", "data-testid", "create-password-new", "regexp", 0),password);
-					instance.WaitSetValue(() => instance.ActiveTab.FindElementByAttribute("input:password", "data-testid", "create-password-confirm", "regexp", 0),password);
-					instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("span", "innertext", "I\\ understand\\ that\\ MetaMask\\ cannot\\ recover\\ this\\ password\\ for\\ me.\\ Learn\\ more", "regexp", 0),5,0);
-					instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("button", "data-testid", "create-password-wallet", "regexp", 0),5,0);
-					instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("button", "data-testid", "secure-wallet-later", "regexp", 0),5,0);
-					instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("label", "class", "skip-srp-backup-popover__label", "regexp", 0),5,0);
-					instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("button", "data-testid", "skip-srp-backup", "regexp", 0),5,0);
-					instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("button", "data-testid", "onboarding-complete-done", "regexp", 0),5,0);
-					instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("button", "data-testid", "pin-extension-next", "regexp", 0),5,0);
-					instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("button", "data-testid", "pin-extension-done", "regexp", 0),5,0);
-					Thread.Sleep(1000); while (!instance.ActiveTab.FindElementByAttribute("button", "innertext", "Got\\ it", "regexp", 0).IsVoid)
-					{instance.WaitClick(() => instance.ActiveTab.FindElementByAttribute("button", "data-testid", "popover-close", "regexp", 0));}
-					instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("button", "data-testid", "account-menu-icon", "regexp", 0),5,0);
-					instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("button", "data-testid", "multichain-account-menu-popover-action-button", "regexp", 0),5,0);
-					instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("span", "style", "mask-image:\\ url\\(\"./images/icons/import.svg\"\\);", "regexp", 0),5,0);
-					instance.WaitSetValue(() => instance.ActiveTab.FindElementById("private-key-box"), key);
-					instance.WaitClick(() => instance.ActiveTab.FindElementByAttribute("button", "data-testid", "import-account-confirm-button", "regexp", 0),5,0);
-					toDo = "checkAddress";
-				}
-				if ( toDo == "unlock") 
-				{
-					//pass
-					instance.WaitSetValue(() => instance.ActiveTab.FindElementById("password"),password,3,0);
-					instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("button", "data-testid", "unlock-submit", "regexp", 0));
-					if (!instance.ActiveTab.FindElementByAttribute("p", "innertext", "Incorrect password", "text", 0).IsVoid) 
-					{
-					    instance.CloseAllTabs(); instance.UninstallExtension("nkbihfbeogaeaoehlefnkodbefgpgknn"); 
-					    project.Variables["a0debug"].Value = $"wallet fuckup";  Loggers.l0g(project,"wrongPassword",thr0w:true);
-					}	
-					toDo = "checkAddress";
-				}
-				
-				if ( toDo == "checkAddress") 
-				{
-						while (!instance.ActiveTab.FindElementByAttribute("button", "innertext", "Got\\ it", "regexp", 0).IsVoid)
-						{
-							try	{instance.WaitClick(() => instance.ActiveTab.FindElementByAttribute("button", "data-testid", "popover-close", "regexp", 0),2,0);}
-							catch{instance.ActiveTab.FindElementByAttribute("button", "innertext", "Got\\ it", "regexp", 0).RiseEvent("click", instance.EmulationLevel);};
-						}
-						
-						//addres
-						try{
-						instance.WaitSetValue(() => instance.ActiveTab.FindElementById("password"),password,3,0);
-					    instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("button", "data-testid", "unlock-submit", "regexp", 0));}
-						catch{}
-						
-						instance.WaitClick(() => instance.ActiveTab.FindElementByAttribute("button", "data-testid", "account-options-menu-button", "regexp", 0),5,0);
-						instance.WaitClick(() => instance.ActiveTab.FindElementByAttribute("button", "data-testid", "account-list-menu-details", "regexp", 0),5,0);
-						address = instance.WaitGetValue(() =>    instance.ActiveTab.FindElementByAttribute("button", "data-testid", "address-copy-button-text", "regexp", 0));
-						
-                        if (!skipCheck)
-						if(!String.Equals(address,project.Variables["addressEvm"].Value,StringComparison.OrdinalIgnoreCase))
-						{
-						    instance.CloseAllTabs(); instance.UninstallExtension("nkbihfbeogaeaoehlefnkodbefgpgknn"); 
-						    Loggers.l0g(project,$"!WrongWallet expected: {project.Variables["addressEvm"].Value}. InWallet {address}"); continue;//throw new Exception("!WrongWallet");
-						}	
-				}
-				instance.UseFullMouseEmulation = true;
-				return address;
-			}
-		}
-
-	}
 	public static class Keplr
 	{
 		public static string KeplrApprove(this Instance instance,IZennoPosterProjectModel project)
@@ -7354,118 +6889,6 @@ namespace w3tools //by @w3bgrep
 			return $"Keplr set from {source}";
 		}	
 	}
-	public class OKX
-	{
-		private readonly IZennoPosterProjectModel _project;
-		private readonly Instance _instance;
-		private readonly bool _log;
-
-		public OKX(IZennoPosterProjectModel project, Instance instance, bool log = false)
-		{
-			_project = project;
-			_instance = instance;
-			_log = log;
-		}
-
-		public string GetWallets(string mode = null, string choose = null)
-		{
-			_instance.ActiveTab.Navigate("chrome-extension://mcohilncbfahbmgdjkbpemcciiolgcge/home.html#/wallet/management-home-page?fromHome=1", "");
-			var pKeys = new List<string>();
-			var sKeys = new List<string>();
-			string active = null;
-			var wList = _instance.ActiveTab.FindElementByAttribute("div", "class", "okui-virtual-list-holder-inner", "regexp", 0).GetChildren(false).ToList();
-			bool set = false;
-			foreach(HtmlElement he in wList)
-			{
-				
-				if (he.InnerText.Contains("0x")) pKeys.Add((he.InnerText.Split('\n')[0]) + ": " + he.InnerText.Split('\n')[1]) ;
-				if (he.InnerText.Contains("Account")) sKeys.Add((he.InnerText.Split('\n')[0]) + ": " + he.InnerText.Split('\n')[1]) ;
-				if (he.InnerHtml.Contains("okd-checkbox-circle"))   active =((he.InnerText.Split('\n')[0]) + ": " + he.InnerText.Split('\n')[1]) ;
-				if (choose != null) 
-				{
-					if (he.InnerText.Contains(choose)) 
-					{
-						_instance.UseFullMouseEmulation = true;
-						_instance.WaitClick(() => he);
-						set = true;
-						//return "";
-					}
-					
-				}
-			}
-			if (choose != null)
-			{
-				if(!set)throw new Exception("no key");
-				return active;
-			} 
-			if (_log) _project.SendInfoToLog(string.Join("\n", pKeys));
-			if (_log) _project.SendInfoToLog(string.Join("\n", sKeys));
-			if (_log) _project.SendInfoToLog(active);
-			if (mode == "pKeys") return string.Join("\n", pKeys);
-			if (mode == "sKeys") return string.Join("\n", sKeys);
-			return active;
-		}
-		public void OkxImport(string sourse = "pkey", string chainMode = "EVM") //seed|pkey //EVM|Aptos
-		{
-
-			var password = SAFU.HWPass(_project);
-			_instance.ActiveTab.Navigate("chrome-extension://mcohilncbfahbmgdjkbpemcciiolgcge/home.html#/wallet-add/import-with-seed-phrase-and-private-key", "");
-			try{
-			_instance.LMB(("button", "innertext", "Import\\ wallet", "regexp", 0), deadline:3);
-			_instance.LMB(("i", "class", "icon\\ iconfont\\ okx-wallet-plugin-futures-grid-20\\ _wallet-icon__icon__core_", "regexp", 0), thr0w:false);
-			}
-			catch{}
-			if( sourse== "pkey")
-			{
-				_instance.LMB(("div", "class", "okui-tabs-pane\\ okui-tabs-pane-sm\\ okui-tabs-pane-grey\\ okui-tabs-pane-segmented", "regexp", 1));
-				
-				var key = Db.KeyEVM(_project); 
-				_instance.SetHe(("textarea", "class", "okui-input-input\\ input-textarea", "regexp", 0),key);
-
-				_instance.LMB(("button", "innertext", "Confirm", "regexp", 0),deadline:20);
-				if (chainMode == "Aptos") _instance.LMB(("span", "innertext", "Aptos\\ network", "regexp", 0));
-				_instance.LMB(("button", "class", "okui-btn\\ btn-lg\\ btn-fill-highlight\\ block\\ chains-choose-network-modal__confirm-button", "regexp", 0));
-			}
-			if( sourse== "seed")
-			{
-				string seedPhrase = Db.Seed(_project);
-				int index = 0;	
-				foreach(string word in seedPhrase.Split(' ')) 
-					{ 
-						_instance.ActiveTab.FindElementByAttribute("input", "class", "mnemonic-words-inputs__container__input", "regexp", index).SetValue(word, "Full", false);
-						index++;
-					}
-				_instance.LMB(("button", "type", "submit", "regexp", 0));
-
-			}
-			try{
-			_instance.LMB(("button", "data-testid", "okd-button", "regexp", 0));
-			_instance.WaitSetValue(() => 	_instance.ActiveTab.GetDocumentByAddress("0").FindElementByTag("form", 0).FindChildByAttribute("input:password", "data-testid", "okd-input", "regexp", 0),password);
-			_instance.WaitSetValue(() => 	_instance.ActiveTab.GetDocumentByAddress("0").FindElementByTag("form", 0).FindChildByAttribute("input:password", "data-testid", "okd-input", "regexp", 1),password);
-			_instance.LMB(("button", "data-testid", "okd-button", "regexp", 0));
-			_instance.LMB(("button", "data-testid", "okd-button", "regexp", 0));
-			}
-			catch{}
-		}
-
-	}
-	public class Zerion
-	{
-		private readonly IZennoPosterProjectModel _project;
-		private readonly Instance _instance;
-		private readonly bool _log;
-
-		public Zerion(IZennoPosterProjectModel project, Instance instance, bool log = false)
-		{
-			_project = project;
-			_instance = instance;
-			_log = log;
-		}
-
-		public void GetWallets(string mode = null, string choose = null)
-		{}
-	}
-
 	#endregion	
 	#region Tools&Vars
 	public class Easy
@@ -7474,6 +6897,7 @@ namespace w3tools //by @w3bgrep
 		private readonly IZennoPosterProjectModel _project;
 		private readonly Instance _instance;
 		private readonly bool _log;
+        private readonly Random _random = new Random();
 
 		public Easy(IZennoPosterProjectModel project, bool log = false)
 		{
@@ -7491,6 +6915,51 @@ namespace w3tools //by @w3bgrep
 			LIMIT 1;",log);
 			return refCode;
 		}
+
+
+        public T EasyRandomise<T>(object value, decimal percent = 1m, int decimalPlaces = 5)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+            if (percent < 0)
+                throw new ArgumentException("Percent must be non-negative", nameof(percent));
+            if (decimalPlaces < 0)
+                throw new ArgumentException("Decimal places must be non-negative", nameof(decimalPlaces));
+
+            decimal number;
+            if (value is int intValue)
+                number = intValue;
+            else if (value is double doubleValue)
+                number = (decimal)doubleValue;
+            else if (value is decimal decimalValue)
+                number = decimalValue;
+            else
+                throw new ArgumentException("Value must be int, double, or decimal", nameof(value));
+
+            // Вычисляем диапазон рандомизации (±percent)
+            decimal range = number * (percent / 100m);
+            decimal randomAdjustment = (decimal)(_random.NextDouble() * (double)(range * 2) - (double)range);
+            decimal result = number + randomAdjustment;
+
+            // Округляем до указанного числа знаков
+            result = Math.Round(result, decimalPlaces, MidpointRounding.AwayFromZero);
+
+            // Форматируем результат
+            if (typeof(T) == typeof(string))
+            {
+                string format = "0." + new string('#', decimalPlaces);
+                return (T)Convert.ChangeType(result.ToString(format, CultureInfo.InvariantCulture), typeof(T));
+            }
+            if (typeof(T) == typeof(int))
+                return (T)Convert.ChangeType((int)result, typeof(T));
+            if (typeof(T) == typeof(double))
+                return (T)Convert.ChangeType((double)result, typeof(T));
+            return (T)Convert.ChangeType(result, typeof(T));
+        }
+
+
 	}
 
 
@@ -8153,7 +7622,7 @@ namespace w3tools //by @w3bgrep
 			HtmlElement he = elementSearch();
 			HtmlElement heParent = he.ParentElement;heParent.RemoveChild(he);
 		}
-		public static void WaitSetValue(this Instance instance, Func<ZennoLab.CommandCenter.HtmlElement> elementSearch, string value, int maxWaitSeconds = 10, int delay = 1, string comment = "",bool Throw = true)
+		public static void WaitSetValue(this Instance instance, Func<ZennoLab.CommandCenter.HtmlElement> elementSearch, string value, int deadline = 10, int delay = 1, string comment = "",bool Throw = true)
 		{
 		    DateTime functionStart = DateTime.Now;
 			HtmlElement directElement = TryGetDirectElement(elementSearch);
@@ -8161,8 +7630,8 @@ namespace w3tools //by @w3bgrep
 		    
 		    while (true)
 		    {
-				if ((DateTime.Now - functionStart).TotalSeconds > maxWaitSeconds)
-					if (Throw) throw new TimeoutException($"{comment} not found in {maxWaitSeconds}s");
+				if ((DateTime.Now - functionStart).TotalSeconds > deadline)
+					if (Throw) throw new TimeoutException($"{comment} not found in {deadline}s");
 					else return;
 		            
 				HtmlElement element;
