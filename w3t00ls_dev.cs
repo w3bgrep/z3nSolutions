@@ -3051,6 +3051,169 @@ namespace w3tools //by @w3bgrep
 		}
 	}    
 
+    public class Sql
+    {  
+        private readonly IZennoPosterProjectModel _project;
+        private readonly bool _log;
+        public Sql(IZennoPosterProjectModel project, bool log = false)
+		{
+			_project = project;
+			_log = log;
+		}
+        public string KeyEVM(string tableName ="blockchain_private", string schemaName = "accounts")
+        {
+			string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+            var resp = SQL.W3Query(_project,$"SELECT secp256k1 FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
+            return SAFU.Decode(_project,resp);
+        }
+        public  string KeySOL(string tableName ="blockchain_private", string schemaName = "accounts")
+        {
+            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;			
+            var  resp = SQL.W3Query(_project,$"SELECT base58 FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
+            return SAFU.Decode(_project,resp);
+        }
+        public  string Seed(string tableName ="blockchain_private", string schemaName = "accounts")
+        {
+            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;			
+            var resp = SQL.W3Query(_project,$"SELECT bip39 FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
+            return SAFU.Decode(_project,resp);
+        }   
+        public  string AdrEvm(string tableName ="blockchain_public", string schemaName = "accounts")
+        {
+            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;	
+            var resp = SQL.W3Query(_project,$"SELECT evm FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
+            _project.Variables["addressEvm"].Value = resp;  return resp;
+        }   
+        public  string AdrSol(string tableName ="blockchain_public", string schemaName = "accounts")
+        {
+            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;	
+            var resp = SQL.W3Query(_project,$"SELECT sol FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
+            _project.Variables["addressSol"].Value = resp;  return resp;
+        }  		
+        public  string Proxy(string tableName ="profile", string schemaName = "accounts")
+        {
+            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+            var resp = SQL.W3Query(_project,$"SELECT proxy FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
+            _project.Variables["proxy"].Value = resp;
+			try {_project.Variables["proxyLeaf"].Value = resp.Replace("//", "").Replace("@", ":");} catch{}
+			return resp;
+        }   
+        public  string Bio( string tableName ="profile", string schemaName = "accounts")
+        {
+
+			string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+            var resp = SQL.W3Query(_project,$@"SELECT nickname, bio FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value};");
+            string[] respData = resp.Split('|');
+            _project.Variables["accNICKNAME"].Value = respData[0].Trim();
+            _project.Variables["accBIO"].Value = respData[1].Trim();			
+            return resp;
+        }   
+        public  string Settings( string tableName ="settings", string schemaName = "accounts")
+        {
+			string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+			return SQL.W3Query(_project,$"SELECT var, value FROM {table}");
+        }   
+        public  string Email( string tableName ="google", string schemaName = "accounts")
+        {
+            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+			var emailMode = _project.Variables["cfgMail"].Value; 
+            var resp = SQL.W3Query(_project,$@"SELECT login, icloud FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value};");
+			
+            string[] emailData = resp.Split('|');
+            _project.Variables["emailGOOGLE"].Value = emailData[0].Trim();
+            _project.Variables["emailICLOUD"].Value = emailData[1].Trim();
+			
+			if (emailMode == "Google" ) resp = emailData[0].Trim();
+			if (emailMode == "Icloud" ) resp = emailData[1].Trim();
+            return resp;
+        }   
+        public  string Twitter( string tableName ="twitter", string schemaName = "accounts")
+        {
+            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+			var resp = SQL.W3Query(_project,$@"SELECT status, token, login, password, code2fa, emailLogin, emailPass FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value};");
+			   
+            string[] twitterData = resp.Split('|');
+            _project.Variables["twitterSTATUS"].Value = twitterData[0].Trim();
+            _project.Variables["twitterTOKEN"].Value = twitterData[1].Trim();
+            _project.Variables["twitterLOGIN"].Value = twitterData[2].Trim();
+            _project.Variables["twitterPASSWORD"].Value = twitterData[3].Trim();
+            _project.Variables["twitterCODE2FA"].Value = twitterData[4].Trim();
+            _project.Variables["twitterEMAIL"].Value = twitterData[5].Trim();
+            _project.Variables["twitterEMAIL_PASSWORD"].Value = twitterData[6].Trim();			
+            return _project.Variables["twitterSTATUS"].Value;
+        }  
+        public  string Discord( string tableName ="discord", string schemaName = "accounts")
+        {
+            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+			var resp = SQL.W3Query(_project,$@"SELECT status, token, login, password, code2FA, username, servers FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value};");
+			string[] discordData = resp.Split('|');
+			_project.Variables["discordSTATUS"].Value = discordData[0].Trim();
+			_project.Variables["discordTOKEN"].Value = discordData[1].Trim();
+			_project.Variables["discordLOGIN"].Value = discordData[2].Trim();
+			_project.Variables["discordPASSWORD"].Value = discordData[3].Trim();
+			_project.Variables["discord2FACODE"].Value = discordData[4].Trim();
+			_project.Variables["discordUSERNAME"].Value = discordData[5].Trim();
+			_project.Variables["discordSERVERS"].Value = discordData[6].Trim();
+			return _project.Variables["discordSTATUS"].Value;
+        }  
+        public  string Google( string tableName ="google", string schemaName = "accounts")
+        {
+            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+			
+			var resp = SQL.W3Query(_project,$@"SELECT status, login, password, code2FA, recoveryEmail, recovery2FA FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value};");
+            
+            string[] googleData = resp.Split('|');
+            _project.Variables["googleSTATUS"].Value = googleData[0].Trim();
+            _project.Variables["googleLOGIN"].Value = googleData[1].Trim();
+            _project.Variables["googlePASSWORD"].Value = googleData[2].Trim();
+            _project.Variables["google2FACODE"].Value =googleData[3].Trim();
+            _project.Variables["googleSECURITY_MAIL"].Value = googleData[4].Trim();
+            _project.Variables["googleBACKUP_CODES"].Value = googleData[5].Trim();
+            return _project.Variables["googleSTATUS"].Value;
+        }  
+ 		public  void TwitterTokenUpdate( string tableName ="twitter", string schemaName = "accounts")  
+		{
+			string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+			var resp = SQL.W3Query(_project,$"UPDATE {table} SET token = '{_project.Variables["twitterTOKEN"].Value}' WHERE acc0 = {_project.Variables["acc0"].Value};");
+
+		}
+		public  void UpdAddressSol(string address = "", string tableName ="blockchain_public", string schemaName = "accounts")  
+		{
+			string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+			if (address == "") address = _project.Variables["addressSol"].Value;
+			SQL.W3Query(_project,$"UPDATE {table} SET sol = '{address}' WHERE acc0 = {_project.Variables["acc0"].Value};");
+
+		}
+		public  string BinanceApiKeys( string tableName ="settings", string schemaName = "accounts")  
+		{
+            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+			return SQL.W3Query(_project,$"SELECT value FROM {tableName} WHERE var = 'settingsApiBinance';");
+		}
+		public  void Upd( string toUpd, string tableName = "", bool log = false, bool throwOnEx = false)
+		{
+			if (tableName == "")tableName = _project.Variables["_projectTable"].Value;		
+			if (log) Loggers.l0g(_project,toUpd);
+			var Q = $@"UPDATE {tableName} SET {toUpd.Trim().TrimEnd(',')}, last = '{Time.Now("short")}' WHERE acc0 = {_project.Variables["acc0"].Value};";
+			SQL.W3Query(_project,Q,throwOnEx:throwOnEx); 
+		}
+        public  string Get( string toGet, string tableName = "", bool log = false, bool throwOnEx = false)
+		{
+			if (tableName == "")tableName = _project.Variables["_projectTable"].Value;		
+			if (log) Loggers.l0g(_project,toGet);
+			var Q = $@"SELECT {toGet.Trim().TrimEnd(',')} from {tableName} WHERE acc0 = {_project.Variables["acc0"].Value};";
+			return SQL.W3Query(_project,Q,throwOnEx:throwOnEx); 
+		}
+		public  string[] okxKeys( string tableName ="settings", string schemaName = "accounts")  
+		{
+            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+			var key = SQL.W3Query(_project,$"SELECT value FROM {table} WHERE var = 'okx_apikey';",true);
+			var secret = SQL.W3Query(_project,$"SELECT value FROM {table} WHERE var = 'okx_secret';");
+			var passphrase = SQL.W3Query(_project,$"SELECT value FROM {table} WHERE var = 'okx_passphrase';");
+			string[] result = new string[] {key,secret,passphrase};
+			return result;
+		}
+	}   
+
     #endregion
 	#region POST/GET
 	public static class Http
@@ -3091,7 +3254,7 @@ namespace w3tools //by @w3bgrep
           		case "manta": return "https://pacific-rpc.manta.network/http";                    
 				case "optimism": return "https://optimism-rpc.publicnode.com";
 				case "scroll": return "https://rpc.scroll.io";
-				case "soneum": return "https://rpc.soneium.org";
+				case "soneium": return "https://rpc.soneium.org";
 				case "taiko": return "https://rpc.mainnet.taiko.xyz";
 				case "zksync": return "https://mainnet.era.zksync.io";
  				case "zora": return "https://rpc.zora.energy";               
@@ -3174,7 +3337,6 @@ namespace w3tools //by @w3bgrep
 				return (T)Convert.ChangeType(gasGwei.ToString("0.######", CultureInfo.InvariantCulture), typeof(T));
 			return (T)Convert.ChangeType(gasGwei, typeof(T));
 		}
-
 
 		public T NativeEVM<T>(string chainRPC = null, string address = null, string proxy = null, bool log = false)
 		{
@@ -5751,7 +5913,7 @@ namespace w3tools //by @w3bgrep
 			return jsonResponse;
 		}
 
-		private List<string> OKXGetSubAccs(string proxy = null, bool log = false)
+		public List<string> OKXGetSubAccs(string proxy = null, bool log = false)
 		{
 			var jsonResponse = OKXGet("/api/v5/users/subaccount/list",log:log);
 			
@@ -5778,7 +5940,7 @@ namespace w3tools //by @w3bgrep
 			}
 			return subsList;
 		}
-		private List<string> OKXGetSubMax(string accName, string proxy = null, bool log = false)
+		public List<string> OKXGetSubMax(string accName, string proxy = null, bool log = false)
 		{
 			var jsonResponse = OKXGet($"/api/v5/account/subaccount/max-withdrawal?subAcct={accName}",log:log);
 			
@@ -5804,7 +5966,7 @@ namespace w3tools //by @w3bgrep
 			}
 			return balanceList;
 		}
-		private List<string> OKXGetSubTrading(string accName, string proxy = null, bool log = false)
+		public List<string> OKXGetSubTrading(string accName, string proxy = null, bool log = false)
 		{
 			var jsonResponse = OKXGet($"/api/v5/account/subaccount/balances?subAcct={accName}",log:log);
 			
@@ -5830,7 +5992,7 @@ namespace w3tools //by @w3bgrep
 			}
 			return balanceList;
 		}
-		private List<string> OKXGetSubFunding(string accName, string proxy = null, bool log = false)
+		public List<string> OKXGetSubFunding(string accName, string proxy = null, bool log = false)
 		{
 			var jsonResponse = OKXGet($"/api/v5/asset/subaccount/balances?subAcct={accName}",log:log);
 			
@@ -5856,32 +6018,55 @@ namespace w3tools //by @w3bgrep
 			}
 			return balanceList;
 		}
-		public List<string> OKXGetAddresses(string currency, string proxy = null, bool log = false)
-			{
-				var jsonResponse = OKXGet($"/api/v5/asset/deposit-address?ccy={currency}",log:log);
-				
-				var response = JsonConvert.DeserializeObject<dynamic>(jsonResponse);
-				string msg = response.msg;
-				string code = response.code;
-				var adrList = new List<string>();
-				
-				if (code != "0") throw new Exception("Err [{code}]; Сообщение [{msg}]");
-				else
-				{
-					var dataArray = response.data;
-					if (dataArray != null)
-					{
-						foreach (var item in dataArray)
-						{
-							string ccy = item.ccy;
-							string addr = item.addr;                  
-							adrList.Add($"{ccy}:{addr}");
-							Loggers.l0g(_project, $"{ccy}:{addr}");
-						}
-					}
-				}
-				return adrList;
-			}
+		public List<string> OKXGetSubsBal(string proxy = null, bool log = false)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            var subs = OKXGetSubAccs();
+            _project.SendInfoToLog(subs.Count.ToString());
+            
+            var balanceList = new List<string>();
+            
+            foreach(string sub in subs){
+                
+                var balsFunding = OKXGetSubFunding(sub,log:true);
+                foreach (string bal in balsFunding)
+                {
+                    if(string.IsNullOrEmpty(bal)) continue;
+                    _project.SendInfoToLog($"balsFunding [{bal}]");	
+                    string ccy = bal.Split(':')[0]?.ToString();
+                    string maxWd = bal.Split(':')[1]?.ToString();
+                    if(!string.IsNullOrEmpty(maxWd))
+                        try{
+                            if(double.Parse(maxWd) > 0)	{	
+                                balanceList.Add($"{sub}:{ccy}:{maxWd}");
+                                Thread.Sleep(1000);
+                            }
+                        }
+                        catch{
+                            _project.SendInfoToLog($"failed to add [{maxWd}]$[{ccy}] from [{sub}] to main");
+                        }		
+                }
+                
+                var balsTrading = OKXGetSubMax(sub,log:true);
+                foreach (string bal in balsTrading)
+                {
+                    _project.SendInfoToLog($"balsTrading [{bal}]");	
+                    string ccy = bal.Split(':')[0]?.ToString();
+                    string maxWd = bal.Split(':')[1]?.ToString();
+                    if(!string.IsNullOrEmpty(maxWd))
+                        try{
+                            if(double.Parse(maxWd) > 0)	{	
+                                balanceList.Add($"{sub}:{ccy}:{maxWd}");
+                                Thread.Sleep(1000);
+                            }
+                        }
+                        catch{
+                            _project.SendInfoToLog($"failed to add [{maxWd}]$[{ccy}] from [{sub}] to main");
+                        }		
+                }	
+            }
+            return balanceList;
+        }
 
 		public void OKXWithdraw( string toAddress, string currency, string chain, double amount, double fee, string proxy = null, bool log = false)
 		{
@@ -9418,5 +9603,23 @@ namespace w3tools //by @w3bgrep
 		}
 
 	}
+
+    public class Url
+    {
+        //private readonly string Url; 
+        public Url()
+		{
+
+             
+		}
+
+        public string Stargate (string srcChain, string dstChain, string srcToken = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", string dstToken = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE")
+        {
+            string baseUrl = "https://stargate.finance/bridge?";
+            string url = baseUrl + $"srcChain={srcChain}" + $"&srcToken={srcToken}" + $"&dstChain={dstChain}"+ $"&dstToken={dstToken}";
+            return url;
+        }
+
+    }
 
 }
