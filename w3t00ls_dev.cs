@@ -5837,7 +5837,7 @@ namespace w3tools //by @w3bgrep
 
 			var jsonBody = JsonConvert.SerializeObject(body);
 			string timestamp =  DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
-
+            _project.SendInfoToLog(jsonBody);
 			// Prepare signature
 			//string url = "/api/v5/asset/withdrawal";
 			string message = timestamp + "POST" + url + jsonBody;
@@ -6096,11 +6096,11 @@ namespace w3tools //by @w3bgrep
 			}
 			_project.Json.FromString(jsonResponse);
 		}
-		private void OKXSubToMain( string fromSubName, string currency, double amount, string accountType = "6", string proxy = null, bool log = false)
+		private void OKXSubToMain( string fromSubName, string currency, decimal amount, string accountType = "6", string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 			
-			string strAmount = amount.ToString("F4").Replace(',', '.');
+			string strAmount = amount.ToString("G", CultureInfo.InvariantCulture);
 			
 			var body = new
 			{
@@ -6166,8 +6166,8 @@ namespace w3tools //by @w3bgrep
 					string maxWd = bal.Split(':')[1]?.ToString();
 					if(!string.IsNullOrEmpty(maxWd))
 						try{
-							if(double.Parse(maxWd) > 0.0001)	{
-								double amount = double.Parse(maxWd);
+							if(decimal.Parse(maxWd) > 0)	{
+								decimal amount = decimal.Parse(maxWd);
 								_project.SendInfoToLog($"sending {maxWd}${ccy} from {sub} to main");		
 								OKXSubToMain(sub,ccy,amount,"6",log:true);
 								Thread.Sleep(500);
@@ -6186,8 +6186,8 @@ namespace w3tools //by @w3bgrep
 					string maxWd = bal.Split(':')[1]?.ToString();
 					if(!string.IsNullOrEmpty(maxWd))
 						try{
-							if(double.Parse(maxWd) > 0.0001)	{
-								double amount = double.Parse(maxWd);
+							if(decimal.Parse(maxWd) > 0)	{
+								decimal amount = decimal.Parse(maxWd);
 								_project.SendInfoToLog($"sending {maxWd}${ccy} from {sub} to main");		
 								OKXSubToMain(sub,ccy,amount,"18",log:true);
 							}
