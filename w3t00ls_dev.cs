@@ -3340,18 +3340,13 @@ namespace w3tools //by @w3bgrep
         {
             string dbMode = _project.Variables["DBmode"].Value; 
             string toLog = null;
-
-            if (dbMode == "SQLite") toLog += $"[SQLite ";
-            else if (dbMode == "PostgreSQL") toLog += $"[PstgSQL ";
-
+			
             if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase)) {
-                toLog += $"▼ ]: ";
-				toLog += $"[{Regex.Replace(query.Trim(), @"\s+", " ")}]";
+                toLog += $"[ ▼ {dbMode}]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]";
                 if (!string.IsNullOrEmpty(response)) toLog += $"\n          [{response.Replace('\n','|')}]";
                 }
             else  {
-				toLog += $"▲ ]: [";
-				toLog += $"[{Regex.Replace(query.Trim(), @"\s+", " ")}]";
+				toLog += $"[ ▲ {dbMode}]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]";
 			}
             return toLog;
 
@@ -3569,7 +3564,7 @@ namespace w3tools //by @w3bgrep
 			var stackFrame = new System.Diagnostics.StackFrame(1); 
 			var callingMethod = stackFrame.GetMethod();
 			if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
-			if (_logShow) _log.Send( $"[{callerName} ⛽ ] [{address}] balance {contract} is\n		  [{balance}] by [{rpc}]");
+			if (_logShow) _log.Send( $"[ ⛽  {callerName}] [{address}] balance {contract} is\n		  [{balance}] by [{rpc}]");
 		}
 
 		public string Rpc(string chain)
@@ -3599,6 +3594,9 @@ namespace w3tools //by @w3bgrep
 				case "polygon": return "https://polygon-rpc.com";
                 //Testnets
 				case "sepolia": return "https://ethereum-sepolia-rpc.publicnode.com";
+				//nonEvm
+				case "aptos": return "https://fullnode.mainnet.aptoslabs.com/v1";
+				case "movement": return "https://mainnet.movementnetwork.xyz/v1";
 
 				default:
 					throw new ArgumentException("No RPC for: " + chain);
@@ -4232,17 +4230,28 @@ namespace w3tools //by @w3bgrep
             return (T)Convert.ChangeType(balance, typeof(T));
 
 		}
+
 		public T NativeAPT<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-			if (string.IsNullOrEmpty(address)) 
-			{
-				string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : "") + "blockchain_public";	
-				address = SQL.W3Query(_project,$"SELECT apt FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
-			}
-			if (string.IsNullOrEmpty(rpc)) rpc = "https://fullnode.mainnet.aptoslabs.com/v1";
 
-			string url = $"{rpc}/accounts/{address}/resource/0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>";
+			if (string.IsNullOrEmpty(address))
+			{
+				string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : "") + "blockchain_public";
+				address = SQL.W3Query(_project, $"SELECT apt FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
+			}
+
+			if (string.IsNullOrEmpty(rpc))
+				rpc = "https://fullnode.mainnet.aptoslabs.com/v1";
+
+			string url = $"{rpc}/view";
+			string coinType = "0x1::aptos_coin::AptosCoin";
+			string requestBody = $@"{{
+				""function"": ""0x1::coin::balance"",
+				""type_arguments"": [""{coinType}""],
+				""arguments"": [""{address}""]
+			}}";
+
 			string response;
 
 			using (var request = new HttpRequest())
@@ -4250,37 +4259,64 @@ namespace w3tools //by @w3bgrep
 				request.UserAgent = "Mozilla/5.0";
 				request.IgnoreProtocolErrors = true;
 				request.ConnectTimeout = 5000;
+				request.AddHeader("Content-Type", "application/json");
 
+				// Настройка прокси, если указан
 				if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
 				if (!string.IsNullOrEmpty(proxy))
 				{
 					string[] proxyArray = proxy.Split(':');
-					string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);        
+					string username = proxyArray[1];
+					string password = proxyArray[2];
+					string host = proxyArray[3];
+					int port = int.Parse(proxyArray[4]);
 					request.Proxy = new HttpProxyClient(host, port, username, password);
 				}
 
 				try
 				{
-					HttpResponse httpResponse = request.Get(url);
+					HttpResponse httpResponse = request.Post(url, requestBody, "application/json");
 					response = httpResponse.ToString();
 				}
 				catch (HttpException ex)
 				{
-					_project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
+					_project.SendErrorToLog($"Err HTTpreq: {ex.Message}, Status: {ex.Status}");
 					throw;
 				}
 			}
 
-			var json = JObject.Parse(response);
-			string octas = json["data"]?["coin"]?["value"]?.ToString() ?? "0";
-			decimal balanceApt = decimal.Parse(octas) / 100000000m;
-			if (log) _log.Send( $"[{address}] native is\n		  [{balanceApt}] by [{rpc}]");
+			JArray json;
+			try
+			{
+				json = JArray.Parse(response);
+			}
+			catch (Exception ex)
+			{
+				_project.SendErrorToLog($"Failed to parse JSON response: {ex.Message}");
+				if (typeof(T) == typeof(string)) return (T)(object)"0";
+				return (T)(object)0m;
+			}
 
+			string octas = json[0]?.ToString() ?? "0";
+			decimal balance;
+			try
+			{
+				balance = decimal.Parse(octas) / 100000000m; // 8 decimals
+			}
+			catch (Exception ex)
+			{
+				_project.SendErrorToLog($"Failed to parse balance: {ex.Message}");
+				if (typeof(T) == typeof(string)) return (T)(object)"0";
+				return (T)(object)0m;
+			}
 
-			if (typeof(T) == typeof(string)) return FloorDecimal<T>(balanceApt, int.Parse(octas)); 
-            return (T)Convert.ChangeType(balanceApt, typeof(T));
+			string balanceString = FloorDecimal<string>(balance, 8);
+			if (log) BalLog(address, balanceString, rpc);
 
+			if (typeof(T) == typeof(string)) return (T)(object)balanceString;
+			return (T)Convert.ChangeType(balance, typeof(T));
 		}
+
 		public T TokenAPT<T>(string coinType, string address = null, string rpc = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -8212,69 +8248,7 @@ namespace w3tools //by @w3bgrep
 	}
 	
 	#endregion
-	public static class StyleConverter
-	{
-	    public static string ConvertStyle(string text, string inputStyle, string outputStyle)
-	    {
-	        string intermediate;
-	        switch (inputStyle)
-	        {
-	            case "PascalCase":
-	                intermediate = ToSnakeCase(text);
-	                break;
-	            case "UPPER_CASE":
-	                intermediate = text.ToLower();
-	                break;
-	            case "camelCase":
-	                intermediate = ToSnakeCase(text);
-	                break;
-	            case "kebab-case":
-	                intermediate = text.Replace('-', '_');
-	                break;
-	            case "Title Case":
-	                intermediate = text.Replace(' ', '_').ToLower();
-	                break;
-	            default:
-	                intermediate = text;
-	                break;
-	        }
-	        switch (outputStyle)
-	        {
-	            case "PascalCase":
-	                return ToPascalCase(intermediate);
-	            case "UPPER_CASE":
-	                return intermediate.ToUpper();
-	            case "camelCase":
-	                return ToCamelCase(intermediate);
-	            case "snake_case":
-	                return intermediate;
-	            case "kebab-case":
-	                return intermediate.Replace('_', '-');
-	            case "Title Case":
-	                return string.Join(" ", intermediate.Split('_')
-	                    .Select(word => char.ToUpper(word[0]) + word.Substring(1).ToLower()));
-	            default:
-	                throw new ArgumentException($"Неподдерживаемый стиль: {outputStyle}");
-	        }
-	    }
-	
-	    private static string ToSnakeCase(string text)
-	    {
-	        return Regex.Replace(text, "(?<!^)(?=[A-Z])", "_").ToLower();
-	    }
-	
-	    private static string ToPascalCase(string text)
-	    {
-	        return string.Join("", text.Split('_')
-	            .Select(word => char.ToUpper(word[0]) + word.Substring(1).ToLower()));
-	    }
-	
-	    private static string ToCamelCase(string text)
-	    {
-	        string pascal = ToPascalCase(text);
-	        return char.ToLower(pascal[0]) + pascal.Substring(1);
-	    }
-	}	
+
 	#region AES
 	public static class Crypto
     {
