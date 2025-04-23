@@ -3569,7 +3569,7 @@ namespace w3tools //by @w3bgrep
 			var stackFrame = new System.Diagnostics.StackFrame(1); 
 			var callingMethod = stackFrame.GetMethod();
 			if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
-			if (_logShow) _log.Send( $"[{callerName}][{address}] balance {contract} is\n		  [{balance}] by [{rpc}]");
+			if (_logShow) _log.Send( $"[{callerName} ⛽ ] [{address}] balance {contract} is\n		  [{balance}] by [{rpc}]");
 		}
 
 		public string Rpc(string chain)
@@ -3611,91 +3611,57 @@ namespace w3tools //by @w3bgrep
             foreach (string chain in toAdd) rpcs += Rpc(chain.Trim())+"\n";
             return rpcs.Trim().Split('\n');
         }
+		public T FloorDecimal<T>(decimal value, int? decimalPlaces = null)
+		{
+			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 
-public T FloorDecimal<T>(decimal value, int? decimalPlaces = null)
-{
-    Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+			int effectiveDecimalPlaces = decimalPlaces ?? 18; 
 
-    // Determine the effective decimal places
-    int effectiveDecimalPlaces = decimalPlaces ?? 18; // Default to 18 if not specified
-    _project.SendInfoToLog($"flooring {value} to {effectiveDecimalPlaces}");
+			if (effectiveDecimalPlaces < 0)
+				throw new ArgumentException("Decimal places must be non-negative", nameof(decimalPlaces));
 
-    if (effectiveDecimalPlaces < 0)
-        throw new ArgumentException("Decimal places must be non-negative", nameof(decimalPlaces));
+			try
+			{
+				string valueStr = value.ToString(CultureInfo.InvariantCulture);
+				int actualDecimalPlaces = 0;
+				if (valueStr.Contains("."))
+				{
+					actualDecimalPlaces = valueStr.Split('.')[1].Length;
+				}
 
-    try
-    {
-        // Adjust decimal places based on the input value's scale
-        string valueStr = value.ToString(CultureInfo.InvariantCulture);
-        int actualDecimalPlaces = 0;
-        if (valueStr.Contains("."))
-        {
-            actualDecimalPlaces = valueStr.Split('.')[1].Length;
-        }
+				effectiveDecimalPlaces = Math.Min(effectiveDecimalPlaces, actualDecimalPlaces);
 
-        // Use the smaller of the requested decimal places or the actual decimal places
-        effectiveDecimalPlaces = Math.Min(effectiveDecimalPlaces, actualDecimalPlaces);
+				if (effectiveDecimalPlaces > 28) // decimal type supports up to 28-29 digits
+				{
+					_project.SendWarningToLog($"Requested decimal places ({effectiveDecimalPlaces}) exceeds decimal type limit. Adjusting to 28.");
+					effectiveDecimalPlaces = 28;
+				}
 
-        // Avoid excessive multiplier for very small numbers
-        if (effectiveDecimalPlaces > 28) // decimal type supports up to 28-29 digits
-        {
-            _project.SendWarningToLog($"Requested decimal places ({effectiveDecimalPlaces}) exceeds decimal type limit. Adjusting to 28.");
-            effectiveDecimalPlaces = 28;
-        }
+				decimal multiplier = (decimal)Math.Pow(10, effectiveDecimalPlaces);
+				decimal flooredValue = Math.Floor(value * multiplier) / multiplier;
 
-        // Округление вниз до указанного количества знаков
-        decimal multiplier = (decimal)Math.Pow(10, effectiveDecimalPlaces);
-        decimal flooredValue = Math.Floor(value * multiplier) / multiplier;
-
-        // Форматирование результата
-        if (typeof(T) == typeof(string))
-        {
-            string format = "0." + new string('#', effectiveDecimalPlaces);
-            return (T)Convert.ChangeType(flooredValue.ToString(format, CultureInfo.InvariantCulture), typeof(T));
-        }
-        if (typeof(T) == typeof(int))
-            return (T)Convert.ChangeType((int)flooredValue, typeof(T));
-        if (typeof(T) == typeof(double))
-            return (T)Convert.ChangeType((double)flooredValue, typeof(T));
-        return (T)Convert.ChangeType(flooredValue, typeof(T));
-    }
-    catch (OverflowException ex)
-    {
-        _project.SendWarningToLog($"Overflow error while flooring {value} to {effectiveDecimalPlaces} decimal places: {ex.Message}");
-        // Return a fallback value or rethrow based on your needs
-        return (T)Convert.ChangeType(value, typeof(T)); // Return original value as fallback
-    }
-    catch (Exception ex)
-    {
-        _project.SendWarningToLog($"Error while flooring {value} to {effectiveDecimalPlaces} decimal places: {ex.Message}");
-        return (T)Convert.ChangeType(value, typeof(T)); // Return original value as fallback
-    }
-}
-
-
-        // public T FloorDecimal<T>(decimal value, int decimalPlaces = 18)
-        // {
-        //     Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-		// 	_project.SendInfoToLog($"flloring {value} to {18}");
-        //     if (decimalPlaces < 0)
-        //         throw new ArgumentException("Decimal places must be non-negative", nameof(decimalPlaces));
-
-        //     // Округление вниз до указанного количества знаков
-        //     decimal multiplier = (decimal)Math.Pow(10, decimalPlaces);
-        //     decimal flooredValue = Math.Floor(value * multiplier) / multiplier;
-
-        //     // Форматирование результата
-        //     if (typeof(T) == typeof(string))
-        //     {
-        //         string format = "0." + new string('#', decimalPlaces);
-        //         return (T)Convert.ChangeType(flooredValue.ToString(format, CultureInfo.InvariantCulture), typeof(T));
-        //     }
-        //     if (typeof(T) == typeof(int))
-        //         return (T)Convert.ChangeType((int)flooredValue, typeof(T));
-        //     if (typeof(T) == typeof(double))
-        //         return (T)Convert.ChangeType((double)flooredValue, typeof(T));
-        //     return (T)Convert.ChangeType(flooredValue, typeof(T));
-        // }
+				if (typeof(T) == typeof(string))
+				{
+					string format = "0." + new string('#', effectiveDecimalPlaces);
+					return (T)Convert.ChangeType(flooredValue.ToString(format, CultureInfo.InvariantCulture), typeof(T));
+				}
+				if (typeof(T) == typeof(int))
+					return (T)Convert.ChangeType((int)flooredValue, typeof(T));
+				if (typeof(T) == typeof(double))
+					return (T)Convert.ChangeType((double)flooredValue, typeof(T));
+				return (T)Convert.ChangeType(flooredValue, typeof(T));
+			}
+			catch (OverflowException ex)
+			{
+				_project.SendWarningToLog($"Overflow error while flooring {value} to {effectiveDecimalPlaces} decimal places: {ex.Message}");
+				return (T)Convert.ChangeType(value, typeof(T)); // Return original value as fallback
+			}
+			catch (Exception ex)
+			{
+				_project.SendWarningToLog($"Error while flooring {value} to {effectiveDecimalPlaces} decimal places: {ex.Message}");
+				return (T)Convert.ChangeType(value, typeof(T)); // Return original value as fallback
+			}
+		}
 		public T GasPrice<T>(string chainRPC = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -3847,8 +3813,6 @@ public T FloorDecimal<T>(decimal value, int? decimalPlaces = null)
             BigInteger balanceWei = BigInteger.Parse("0" + hexBalance, NumberStyles.AllowHexSpecifier);
             decimal decimals = (decimal)Math.Pow(10, double.Parse(tokenDecimal));
             decimal balance = (decimal)balanceWei / decimals;
-
-            //if (log) _log.Send($"[Leaf.xNet] Баланс ERC-20 токена ({tokenContract}) для адреса {address}: {balance}");
 
 			string balanceString = FloorDecimal<string>(balance, int.Parse(tokenDecimal)); 
 			BalLog( address,  balanceString,  chainRPC, tokenContract);
@@ -4107,21 +4071,12 @@ public T FloorDecimal<T>(decimal value, int? decimalPlaces = null)
 
 
 			decimal balance = decimal.Parse(tokenDecimal) / 1000000000m;
-			if (log) _log.Send($"{address}: {balance} SOL");
 
 			string balanceString = FloorDecimal<string>(balance, int.Parse(tokenDecimal));
+			BalLog( address,  balanceString,  chainRPC);
 
-
-			if (typeof(T) == typeof(string))
-				return (T)Convert.ChangeType(balance.ToString("0.##################"), typeof(T));
-			return (T)Convert.ChangeType(balance, typeof(T));
-
-
-			  
-			// BalLog( address,  balanceString,  chainRPC);
-
-			// if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(balanceString, typeof(T));
-            // return (T)Convert.ChangeType(balance, typeof(T));		
+			if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(balanceString, typeof(T));
+            return (T)Convert.ChangeType(balance, typeof(T));		
 
 		}
 		public T TokenSPL<T>(string tokenMint, string address = null, int floor = 0, string rpc = null, string proxy = null, bool log = false)
@@ -4167,14 +4122,18 @@ public T FloorDecimal<T>(decimal value, int? decimalPlaces = null)
 			string lamports = tokenAccounts != null && tokenAccounts.Count > 0 
 				? tokenAccounts[0]?["account"]?["data"]?["parsed"]?["info"]?["tokenAmount"]?["amount"]?.ToString() ?? "0"
 				: "0";
-			var decimals = tokenAccounts != null && tokenAccounts.Count > 0 
+				
+			int decimals = tokenAccounts != null && tokenAccounts.Count > 0 
 				? int.Parse(tokenAccounts[0]?["account"]?["data"]?["parsed"]?["info"]?["tokenAmount"]?["decimals"]?.ToString() ?? "0")
 				: 0;
-			decimal balanceToken = decimal.Parse(lamports) / (decimal)Math.Pow(10, decimals);
-			if (log) _log.Send( $"{address}: {balanceToken} TOKEN ({tokenMint})");
-            if (floor != 0 )decimals = floor;
-            if (typeof(T) == typeof(string)) return FloorDecimal<T>(balanceToken, decimals); 
-            return (T)Convert.ChangeType(balanceToken, typeof(T));
+			decimal balance = decimal.Parse(lamports) / (decimal)Math.Pow(10, decimals);
+		
+			string balanceString = FloorDecimal<string>(balance, decimals);
+			BalLog( address,  balanceString,  rpc, tokenMint);
+
+			if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(balanceString, typeof(T));
+            return (T)Convert.ChangeType(balance, typeof(T));
+
 		}
 		public T NativeSUI<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
 		{
@@ -5393,7 +5352,6 @@ public T FloorDecimal<T>(decimal value, int? decimalPlaces = null)
 		}		
 	}
     #endregion
-
 
 	#region Tx
 	public static class Onchain
