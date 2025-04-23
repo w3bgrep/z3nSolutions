@@ -91,10 +91,6 @@ namespace w3tools //by @w3bgrep
 		{
 			return Http.W3Get(project, url, proxy);
 		}
-		public static T getERC20<T>(IZennoPosterProjectModel project, string tokenContract, string chainRPC = "", string address = "", string tokenDecimal = "18", string proxy = "",bool log = false)
-		{
-			return Leaf.balERC20<T>(project,tokenContract);
-		}
 		public static string TelegramMailOTP(IZennoPosterProjectModel project, string email = "", string proxy = "")
 		{
 		    return OTP.Telegram(project,email,proxy);
@@ -291,6 +287,7 @@ namespace w3tools //by @w3bgrep
     {
         public static ConcurrentDictionary<string, object> Functions = new ConcurrentDictionary<string, object>();
     }
+
 	#region SAFU
 
     public interface ISAFU
@@ -383,8 +380,8 @@ namespace w3tools //by @w3bgrep
     }
 
     #endregion
-	#region Loggers
 
+	#region Loggers
 	public static class Loggers
 	{
 		public static void W3Debug(IZennoPosterProjectModel project, string log)
@@ -476,7 +473,6 @@ namespace w3tools //by @w3bgrep
             if (thr0w) throw new Exception($"{formated}");
 		}
 	}
-
     public class L0g
     {
         private readonly IZennoPosterProjectModel _project;
@@ -530,6 +526,7 @@ namespace w3tools //by @w3bgrep
 
     }
 	#endregion
+
 	#region OnStart
     public static class OnStart	{
 		public static void InitVariables(IZennoPosterProjectModel project, string author = "")
@@ -991,6 +988,7 @@ namespace w3tools //by @w3bgrep
         }
 		}
 	#endregion	
+
 	#region SQL 
 	public class PostgresDB : IDisposable
 	{
@@ -1106,14 +1104,14 @@ namespace w3tools //by @w3bgrep
                     response = string.Join("\r\n", db.getAll(query)); 
                 else 
                     response = db.Query(query).ToString(); 
-				if (log) 
-				{
-					if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase)) project.SendToLog($"[PstgSQL ▼ ]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]\nRESULT: [{response.Replace('\n','|')}]", LogType.Info, true, LogColor.Gray);
-					else 
-					{
-						if (response != "0") project.SendToLog($"[PstgSQL ▲ ]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]", LogType.Info, true, LogColor.Gray);
-					}
-				}  
+				// if (log) 
+				// {
+				// 	if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase)) project.SendToLog($"[PstgSQL ▼ ]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]\nRESULT: [{response.Replace('\n','|')}]", LogType.Info, true, LogColor.Gray);
+				// 	else 
+				// 	{
+				// 		if (response != "0") project.SendToLog($"[PstgSQL ▲ ]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]", LogType.Info, true, LogColor.Gray);
+				// 	}
+				// }  
 				return response;				
 			}
 			catch (Exception ex)
@@ -1501,7 +1499,6 @@ namespace w3tools //by @w3bgrep
         }
 	
 	}
-
     public static class SQLite
     {
 		public static string lSQL(IZennoPosterProjectModel project, string query, bool log = false, bool ignoreErrors = false)
@@ -1580,11 +1577,8 @@ namespace w3tools //by @w3bgrep
                 if (dbMode == "SQLite") SQLite.lSQLMakeTable(project, tableStructure, tableName, strictMode);
                 else if (dbMode == "PostgreSQL") PostgresDB.pSQLMakeTable(project, tableStructure, tableName, strictMode, insertData, host, dbName, dbUser, dbPswd, schemaName, log:log);
                 else throw new Exception($"Неподдерживаемый режим базы данных: {dbMode}");
-            }
-        
-		
+            }	
 	}
-
 	public class C00kies
 	{
 		private readonly Instance _instance;
@@ -1719,12 +1713,13 @@ namespace w3tools //by @w3bgrep
 			}
 		}
 	}
-
 	public class DataImporter
 	{
 		private readonly IZennoPosterProjectModel _project;
 		private readonly Instance _instance;
 		private readonly string _schema;
+
+
 
 		public DataImporter(IZennoPosterProjectModel project, Instance instance, string schema = "accounts")
 		{
@@ -2260,7 +2255,7 @@ namespace w3tools //by @w3bgrep
 
 			return lines.Length.ToString();
 		}
-		public string ImportAddresses()
+		public string ImportAddressesOld()
 		{
 			var acc0 = _project.Variables["acc0"];
 			int rangeEnd = int.Parse(_project.Variables["rangeEnd"].Value);
@@ -2375,6 +2370,128 @@ namespace w3tools //by @w3bgrep
 			_project.SendInfoToLog($"Imported {lines.Length} strings", true);
 			goto show;
 		}
+
+        public string ImportAddresses()
+        {
+            var acc0 = _project.Variables["acc0"];
+            int rangeEnd = int.Parse(_project.Variables["rangeEnd"].Value);
+            string schemaName = _project.Variables["DBmode"].Value == "PostgreSQL" ? $"{_schema}." : "";
+            string tableName = schemaName + "blockchain_public";
+
+            acc0.Value = "1";
+
+            // Создание формы
+            System.Windows.Forms.Form form = new System.Windows.Forms.Form();
+            form.Text = "Import Addresses";
+            form.Width = 420;
+            form.Height = 700;
+            form.TopMost = true;
+            form.Location = new System.Drawing.Point(108, 108);
+
+            // Поле для ввода имени столбца
+            System.Windows.Forms.Label columnLabel = new System.Windows.Forms.Label();
+            columnLabel.Text = "Column name (e.g., evm, sol):";
+            columnLabel.AutoSize = true;
+            columnLabel.Left = 10;
+            columnLabel.Top = 10;
+            form.Controls.Add(columnLabel);
+
+            System.Windows.Forms.TextBox columnInput = new System.Windows.Forms.TextBox();
+            columnInput.Left = 10;
+            columnInput.Top = 30;
+            columnInput.Width = form.ClientSize.Width - 20;
+            columnInput.Text = "input address label here ex: evm | apt |sol ";//_project.Variables["addressType"].Value; // Предполагаем, что переменная существует
+            form.Controls.Add(columnInput);
+
+            // Поле для ввода адресов
+            System.Windows.Forms.Label addressLabel = new System.Windows.Forms.Label();
+            addressLabel.Text = "Addresses (one per line):";
+            addressLabel.AutoSize = true;
+            addressLabel.Left = 10;
+            addressLabel.Top = 60;
+            form.Controls.Add(addressLabel);
+
+            System.Windows.Forms.TextBox addressInput = new System.Windows.Forms.TextBox();
+            addressInput.Left = 10;
+            addressInput.Top = 80;
+            addressInput.Width = form.ClientSize.Width - 20;
+            addressInput.Multiline = true;
+            addressInput.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+            addressInput.MaxLength = 1000000;
+            form.Controls.Add(addressInput);
+
+            // Кнопка "OK"
+            System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
+            okButton.Text = "OK";
+            okButton.Width = form.ClientSize.Width - 20;
+            okButton.Height = 25;
+            okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
+            okButton.Top = form.ClientSize.Height - okButton.Height - 5;
+            okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
+            form.Controls.Add(okButton);
+            addressInput.Height = okButton.Top - addressInput.Top - 5;
+
+            form.Load += (s, e) => { form.Location = new System.Drawing.Point(108, 108); };
+
+            form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
+
+            form.ShowDialog();
+
+            if (form.DialogResult != System.Windows.Forms.DialogResult.OK)
+            {
+                _project.SendInfoToLog("Import cancelled by user", true);
+                return "0";
+            }
+
+            // Проверка ввода
+            if (string.IsNullOrEmpty(columnInput.Text) || string.IsNullOrEmpty(addressInput.Text))
+            {
+                _project.SendWarningToLog("Column name or addresses cannot be empty");
+                return "0";
+            }
+
+            // Формирование имени столбца
+            string columnName = columnInput.Text.ToLower();
+
+            // Создание таблицы (если нужно)
+            var tableStructure = new Dictionary<string, string>
+            {
+                {"acc0", "INTEGER PRIMARY KEY"},
+                {columnName, "TEXT DEFAULT ''"}
+            };
+            SQL.W3MakeTable(_project, tableStructure, tableName);
+
+            // Обработка адресов
+            string[] lines = addressInput.Text.Trim().Split('\n');
+            int lineCount = 0;
+
+            for (int i = 0; i < lines.Length && int.Parse(acc0.Value) <= rangeEnd; i++)
+            {
+                string address = lines[i].Trim();
+                if (string.IsNullOrWhiteSpace(address))
+                {
+                    _project.SendWarningToLog($"Line {acc0.Value} is empty");
+                    acc0.Value = (int.Parse(acc0.Value) + 1).ToString();
+                    continue;
+                }
+
+                try
+                {
+                    _project.SendInfoToLog($"Processing acc0 = {acc0.Value}, address = '{address}'", false);
+                    SQL.W3Query(_project, $@"UPDATE {tableName} SET {columnName} = '{address}' WHERE acc0 = {acc0.Value};", true);
+                    acc0.Value = (int.Parse(acc0.Value) + 1).ToString();
+                    lineCount++;
+                }
+                catch (Exception ex)
+                {
+                    _project.SendWarningToLog($"Error processing record {acc0.Value} for {columnName}: {ex.Message}", false);
+                    acc0.Value = (int.Parse(acc0.Value) + 1).ToString();
+                }
+            }
+
+            _project.SendInfoToLog($"[{lineCount}] strings added to [{tableName}]", true);
+            return lineCount.ToString();
+        }
 		public string ImportDepositAddresses()
 		{
 			string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : null) + "cex_deps";
@@ -3202,7 +3319,6 @@ namespace w3tools //by @w3bgrep
 			return result;
 		}
 	}    
-
     public class Sql
     {  
         private readonly IZennoPosterProjectModel _project;
@@ -3230,14 +3346,13 @@ namespace w3tools //by @w3bgrep
 
             if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase)) {
                 toLog += $"▼ ]: ";
+				toLog += $"[{Regex.Replace(query.Trim(), @"\s+", " ")}]";
                 if (!string.IsNullOrEmpty(response)) toLog += $"\n          [{response.Replace('\n','|')}]";
                 }
-            else  toLog += $"▲ ]: [";
-
-            toLog += $"[{Regex.Replace(query.Trim(), @"\s+", " ")}]";
-
-            
-
+            else  {
+				toLog += $"▲ ]: [";
+				toLog += $"[{Regex.Replace(query.Trim(), @"\s+", " ")}]";
+			}
             return toLog;
 
         }
@@ -3419,8 +3534,8 @@ namespace w3tools //by @w3bgrep
 			return result;
 		}
 	}   
-
     #endregion
+
 	#region POST/GET
 	public static class Http
 	{
@@ -3437,15 +3552,24 @@ namespace w3tools //by @w3bgrep
 		}
 
 	}
-
 	public class OnChain
 	{
 		private readonly IZennoPosterProjectModel _project;
         private readonly L0g _log;
-		public OnChain(IZennoPosterProjectModel project)
+		private readonly bool _logShow;
+		public OnChain(IZennoPosterProjectModel project, bool log = false)
 		{
 			_project = project;
             _log = new L0g(_project);
+			_logShow = log;
+		}
+
+		public void BalLog(string address, string balance, string rpc, string contract = null, [CallerMemberName] string callerName = "", bool log = false)
+		{	
+			var stackFrame = new System.Diagnostics.StackFrame(1); 
+			var callingMethod = stackFrame.GetMethod();
+			if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
+			if (_logShow) _log.Send( $"[{callerName}][{address}] balance {contract} is\n		  [{balance}] by [{rpc}]");
 		}
 
 		public string Rpc(string chain)
@@ -3488,29 +3612,90 @@ namespace w3tools //by @w3bgrep
             return rpcs.Trim().Split('\n');
         }
 
-        public T FloorDecimal<T>(decimal value, int decimalPlaces = 18)
+public T FloorDecimal<T>(decimal value, int? decimalPlaces = null)
+{
+    Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+
+    // Determine the effective decimal places
+    int effectiveDecimalPlaces = decimalPlaces ?? 18; // Default to 18 if not specified
+    _project.SendInfoToLog($"flooring {value} to {effectiveDecimalPlaces}");
+
+    if (effectiveDecimalPlaces < 0)
+        throw new ArgumentException("Decimal places must be non-negative", nameof(decimalPlaces));
+
+    try
+    {
+        // Adjust decimal places based on the input value's scale
+        string valueStr = value.ToString(CultureInfo.InvariantCulture);
+        int actualDecimalPlaces = 0;
+        if (valueStr.Contains("."))
         {
-            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-
-            if (decimalPlaces < 0)
-                throw new ArgumentException("Decimal places must be non-negative", nameof(decimalPlaces));
-
-            // Округление вниз до указанного количества знаков
-            decimal multiplier = (decimal)Math.Pow(10, decimalPlaces);
-            decimal flooredValue = Math.Floor(value * multiplier) / multiplier;
-
-            // Форматирование результата
-            if (typeof(T) == typeof(string))
-            {
-                string format = "0." + new string('#', decimalPlaces);
-                return (T)Convert.ChangeType(flooredValue.ToString(format, CultureInfo.InvariantCulture), typeof(T));
-            }
-            if (typeof(T) == typeof(int))
-                return (T)Convert.ChangeType((int)flooredValue, typeof(T));
-            if (typeof(T) == typeof(double))
-                return (T)Convert.ChangeType((double)flooredValue, typeof(T));
-            return (T)Convert.ChangeType(flooredValue, typeof(T));
+            actualDecimalPlaces = valueStr.Split('.')[1].Length;
         }
+
+        // Use the smaller of the requested decimal places or the actual decimal places
+        effectiveDecimalPlaces = Math.Min(effectiveDecimalPlaces, actualDecimalPlaces);
+
+        // Avoid excessive multiplier for very small numbers
+        if (effectiveDecimalPlaces > 28) // decimal type supports up to 28-29 digits
+        {
+            _project.SendWarningToLog($"Requested decimal places ({effectiveDecimalPlaces}) exceeds decimal type limit. Adjusting to 28.");
+            effectiveDecimalPlaces = 28;
+        }
+
+        // Округление вниз до указанного количества знаков
+        decimal multiplier = (decimal)Math.Pow(10, effectiveDecimalPlaces);
+        decimal flooredValue = Math.Floor(value * multiplier) / multiplier;
+
+        // Форматирование результата
+        if (typeof(T) == typeof(string))
+        {
+            string format = "0." + new string('#', effectiveDecimalPlaces);
+            return (T)Convert.ChangeType(flooredValue.ToString(format, CultureInfo.InvariantCulture), typeof(T));
+        }
+        if (typeof(T) == typeof(int))
+            return (T)Convert.ChangeType((int)flooredValue, typeof(T));
+        if (typeof(T) == typeof(double))
+            return (T)Convert.ChangeType((double)flooredValue, typeof(T));
+        return (T)Convert.ChangeType(flooredValue, typeof(T));
+    }
+    catch (OverflowException ex)
+    {
+        _project.SendWarningToLog($"Overflow error while flooring {value} to {effectiveDecimalPlaces} decimal places: {ex.Message}");
+        // Return a fallback value or rethrow based on your needs
+        return (T)Convert.ChangeType(value, typeof(T)); // Return original value as fallback
+    }
+    catch (Exception ex)
+    {
+        _project.SendWarningToLog($"Error while flooring {value} to {effectiveDecimalPlaces} decimal places: {ex.Message}");
+        return (T)Convert.ChangeType(value, typeof(T)); // Return original value as fallback
+    }
+}
+
+
+        // public T FloorDecimal<T>(decimal value, int decimalPlaces = 18)
+        // {
+        //     Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+		// 	_project.SendInfoToLog($"flloring {value} to {18}");
+        //     if (decimalPlaces < 0)
+        //         throw new ArgumentException("Decimal places must be non-negative", nameof(decimalPlaces));
+
+        //     // Округление вниз до указанного количества знаков
+        //     decimal multiplier = (decimal)Math.Pow(10, decimalPlaces);
+        //     decimal flooredValue = Math.Floor(value * multiplier) / multiplier;
+
+        //     // Форматирование результата
+        //     if (typeof(T) == typeof(string))
+        //     {
+        //         string format = "0." + new string('#', decimalPlaces);
+        //         return (T)Convert.ChangeType(flooredValue.ToString(format, CultureInfo.InvariantCulture), typeof(T));
+        //     }
+        //     if (typeof(T) == typeof(int))
+        //         return (T)Convert.ChangeType((int)flooredValue, typeof(T));
+        //     if (typeof(T) == typeof(double))
+        //         return (T)Convert.ChangeType((double)flooredValue, typeof(T));
+        //     return (T)Convert.ChangeType(flooredValue, typeof(T));
+        // }
 		public T GasPrice<T>(string chainRPC = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -3610,14 +3795,12 @@ namespace w3tools //by @w3bgrep
 			var json = JObject.Parse(response);
 			string hexBalance = json["result"]?.ToString()?.TrimStart('0', 'x') ?? "0";
 			BigInteger balanceWei = BigInteger.Parse("0" + hexBalance, NumberStyles.AllowHexSpecifier);
-			decimal balanceNative = (decimal)balanceWei / 1000000000000000000m;
+			decimal balance = (decimal)balanceWei / 1000000000000000000m;
 
-
-			if (log) _log.Send($"{address}: {balanceNative} ETH [{chainRPC}]");
-
-			if (typeof(T) == typeof(string))
-				return (T)Convert.ChangeType(balanceNative.ToString("0.##################"), typeof(T));
-			return (T)Convert.ChangeType(balanceNative, typeof(T));
+			string balanceString = FloorDecimal<string>(balance, int.Parse("18")); 
+			BalLog( address,  balanceString,  chainRPC);
+			if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(balanceString, typeof(T));
+            return (T)Convert.ChangeType(balance, typeof(T));			
 		}
         public T BalERC20<T>(string tokenContract, string chainRPC = null, string address = null, string tokenDecimal = "18", string proxy = null, bool log = false)
         {
@@ -3665,12 +3848,14 @@ namespace w3tools //by @w3bgrep
             decimal decimals = (decimal)Math.Pow(10, double.Parse(tokenDecimal));
             decimal balance = (decimal)balanceWei / decimals;
 
-            if (log) _log.Send($"[Leaf.xNet] Баланс ERC-20 токена ({tokenContract}) для адреса {address}: {balance}");
+            //if (log) _log.Send($"[Leaf.xNet] Баланс ERC-20 токена ({tokenContract}) для адреса {address}: {balance}");
 
-            if (typeof(T) == typeof(string))
-                return (T)Convert.ChangeType(balance.ToString("0.##################", CultureInfo.InvariantCulture), typeof(T));
+			string balanceString = FloorDecimal<string>(balance, int.Parse(tokenDecimal)); 
+			BalLog( address,  balanceString,  chainRPC, tokenContract);
 
-            return (T)Convert.ChangeType(balance, typeof(T));
+			if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(balanceString, typeof(T));
+            return (T)Convert.ChangeType(balance, typeof(T));		
+
         }
         public T BalERC721<T>(string tokenContract, string chainRPC = null, string address = null, string proxy = null, bool log = false)
         {
@@ -3878,7 +4063,7 @@ namespace w3tools //by @w3bgrep
 				return (T)Convert.ChangeType(transactionCount.ToString(), typeof(T));			
 			return (T)Convert.ChangeType(transactionCount, typeof(T));
 		}
-		public T NativeSOL<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
+		public T NativeSOL<T>(string chainRPC = null, string address = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 			if (string.IsNullOrEmpty(address)) 
@@ -3886,7 +4071,7 @@ namespace w3tools //by @w3bgrep
 				string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : "") + "blockchain_public";	
 				address = SQL.W3Query(_project,$"SELECT sol FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
 			}
-			if (string.IsNullOrEmpty(rpc)) rpc = "https://api.mainnet-beta.solana.com";
+			if (string.IsNullOrEmpty(chainRPC)) chainRPC = "https://api.mainnet-beta.solana.com";
 
 			string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""getBalance"", ""params"": [""{address}""], ""id"": 1 }}";
 			string response;
@@ -3907,7 +4092,7 @@ namespace w3tools //by @w3bgrep
 
 				try
 				{
-					HttpResponse httpResponse = request.Post(rpc, jsonBody, "application/json");
+					HttpResponse httpResponse = request.Post(chainRPC, jsonBody, "application/json");
 					response = httpResponse.ToString();
 				}
 				catch (HttpException ex)
@@ -3918,15 +4103,26 @@ namespace w3tools //by @w3bgrep
 			}
 
 			var json = JObject.Parse(response);
-			string lamports = json["result"]?["value"]?.ToString() ?? "0";			
+			string tokenDecimal = json["result"]?["value"]?.ToString() ?? "0";			
 
 
-			decimal balanceSol = decimal.Parse(lamports) / 1000000000m;
-			if (log) _log.Send($"{address}: {balanceSol} SOL");
+			decimal balance = decimal.Parse(tokenDecimal) / 1000000000m;
+			if (log) _log.Send($"{address}: {balance} SOL");
+
+			string balanceString = FloorDecimal<string>(balance, int.Parse(tokenDecimal));
+
 
 			if (typeof(T) == typeof(string))
-				return (T)Convert.ChangeType(balanceSol.ToString("0.##################"), typeof(T));
-			return (T)Convert.ChangeType(balanceSol, typeof(T));
+				return (T)Convert.ChangeType(balance.ToString("0.##################"), typeof(T));
+			return (T)Convert.ChangeType(balance, typeof(T));
+
+
+			  
+			// BalLog( address,  balanceString,  chainRPC);
+
+			// if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(balanceString, typeof(T));
+            // return (T)Convert.ChangeType(balance, typeof(T));		
+
 		}
 		public T TokenSPL<T>(string tokenMint, string address = null, int floor = 0, string rpc = null, string proxy = null, bool log = false)
 		{
@@ -4066,15 +4262,16 @@ namespace w3tools //by @w3bgrep
 					throw;
 				}
 			}
-			_project.SendInfoToLog(response);
+
 			var json = JObject.Parse(response);
 			string mist = json["result"]?["totalBalance"]?.ToString() ?? "0";
-			decimal balanceToken = decimal.Parse(mist) / 1000000m;
-			if (log) _log.Send( $"{address}: {balanceToken} TOKEN ({coinType})");
+			decimal balance = decimal.Parse(mist) / 1000000m;
+			if (log) _log.Send( $"{address}: {balance} TOKEN ({coinType})");
 
-			if (typeof(T) == typeof(string))
-				return (T)Convert.ChangeType(balanceToken.ToString("0.##################"), typeof(T));
-			return (T)Convert.ChangeType(balanceToken, typeof(T));
+
+			if (typeof(T) == typeof(string)) return FloorDecimal<T>(balance, int.Parse(mist)); 
+            return (T)Convert.ChangeType(balance, typeof(T));
+
 		}
 		public T NativeAPT<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
 		{
@@ -4118,11 +4315,12 @@ namespace w3tools //by @w3bgrep
 			var json = JObject.Parse(response);
 			string octas = json["data"]?["coin"]?["value"]?.ToString() ?? "0";
 			decimal balanceApt = decimal.Parse(octas) / 100000000m;
-			if (log) _log.Send( $"{address}: {balanceApt} APT");
+			if (log) _log.Send( $"[{address}] native is\n		  [{balanceApt}] by [{rpc}]");
 
-			if (typeof(T) == typeof(string))
-				return (T)Convert.ChangeType(balanceApt.ToString("0.##################"), typeof(T));
-			return (T)Convert.ChangeType(balanceApt, typeof(T));
+
+			if (typeof(T) == typeof(string)) return FloorDecimal<T>(balanceApt, int.Parse(octas)); 
+            return (T)Convert.ChangeType(balanceApt, typeof(T));
+
 		}
 		public T TokenAPT<T>(string coinType, string address = null, string rpc = null, string proxy = null, bool log = false)
 		{
@@ -4165,12 +4363,11 @@ namespace w3tools //by @w3bgrep
 
 			var json = JObject.Parse(response);
 			string octas = json["data"]?["coin"]?["value"]?.ToString() ?? "0";
-			decimal balanceToken = decimal.Parse(octas) / 1000000m; // Предполагаем 6 decimals, как для USDC
-			if (log) _log.Send( $"{address}: {balanceToken} TOKEN ({coinType})");
+			decimal balance = decimal.Parse(octas) / 1000000m; // Предполагаем 6 decimals, как для USDC
+			if (log) _log.Send( $"{address}: {balance} TOKEN ({coinType})");
+			if (typeof(T) == typeof(string)) return FloorDecimal<T>(balance, int.Parse(octas)); 
+            return (T)Convert.ChangeType(balance, typeof(T));
 
-			if (typeof(T) == typeof(string))
-				return (T)Convert.ChangeType(balanceToken.ToString("0.##################"), typeof(T));
-			return (T)Convert.ChangeType(balanceToken, typeof(T));
 		}
 		public string Send1559(string chainRpc, string contractAddress, string encodedData, decimal value, string walletKey, int speedup = 1)
 		{
@@ -4227,7 +4424,7 @@ namespace w3tools //by @w3bgrep
 		        throw new Exception($"FailedSend: {ex.Message}");
 		    }
 		}
-		public string GZ(string chainTo, decimal value, string chainRPC = null) //refuel GazZip
+		public string GZ(string chainTo, decimal value, string chainRPC = null, bool log = false) //refuel GazZip
 		
 		{
 			
@@ -4444,296 +4641,6 @@ namespace w3tools //by @w3bgrep
 	}
 	public static class Leaf
 	{
-
-
-
-		public static T gasNow<T>(IZennoPosterProjectModel project, string chainRPC = "", string proxy = "",bool log = false)
-		{
-			if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
-			string jsonBody = @"{""jsonrpc"":""2.0"",""method"":""eth_gasPrice"",""params"":[],""id"":1}";
-
-			string response;
-			using (var request = new HttpRequest())
-			{
-				request.UserAgent = "Mozilla/5.0";
-				request.IgnoreProtocolErrors = true;
-				request.ConnectTimeout = 5000;
-
-				if (!string.IsNullOrEmpty(proxy))
-				{
-					try
-					{
-						request.Proxy = ProxyClient.Parse(proxy.Contains("@") ? proxy : $"HTTP://{proxy}");
-					}
-					catch (Exception ex)
-					{
-						project.SendErrorToLog($"Ошибка парсинга прокси '{proxy}': {ex.Message}");
-						throw;
-					}
-				}
-
-				try
-				{
-					HttpResponse httpResponse = request.Post(chainRPC, jsonBody, "application/json");
-					response = httpResponse.ToString();
-				}
-				catch (HttpException ex)
-				{
-					project.SendErrorToLog($"Ошибка HTTP-запроса: {ex.Message}, Status: {ex.Status}");
-					throw;
-				}
-			}
-
-			var match = Regex.Match(response, @"""result""\s*:\s*""([^""]+)""");
-			string hexResultGas = match.Success ? match.Groups[1].Value.TrimStart('0', 'x') : "0";
-			
-			BigInteger gasWei = BigInteger.Parse("0" + hexResultGas, NumberStyles.AllowHexSpecifier);
-			decimal gasGwei = (decimal)gasWei / 1000000000m;
-			
-			project.SendInfoToLog($"[Leaf.xNet] Gas price: {gasGwei} Gwei");
-
-			if (typeof(T) == typeof(string))
-				return (T)Convert.ChangeType(gasGwei.ToString("0.######", CultureInfo.InvariantCulture), typeof(T));
-			
-			return (T)Convert.ChangeType(gasGwei, typeof(T));
-		}								
-		public static T balERC20<T>(IZennoPosterProjectModel project, string tokenContract, string chainRPC = "", string address = "", string tokenDecimal = "18", string proxy = "",bool log = false)
-		{
-			if (address == "") address = project.Variables["addressEvm"].Value;
-			if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
-			
-			string data = "0x70a08231000000000000000000000000" + address.Replace("0x", "");
-			
-			string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_call"", ""params"": [{{ ""to"": ""{tokenContract}"", ""data"": ""{data}"" }}, ""latest""], ""id"": 1 }}";
-
-			string response;
-			using (var request = new HttpRequest())
-			{
-				request.UserAgent = "Mozilla/5.0";
-				request.IgnoreProtocolErrors = true;
-				request.ConnectTimeout = 5000;
-
-				if (!string.IsNullOrEmpty(proxy))
-				{
-					try
-					{
-						request.Proxy = ProxyClient.Parse(proxy.Contains("@") ? proxy : $"HTTP://{proxy}");
-					}
-					catch (Exception ex)
-					{
-						project.SendErrorToLog($"Ошибка парсинга прокси '{proxy}': {ex.Message}");
-						throw;
-					}
-				}
-
-				try
-				{
-					HttpResponse httpResponse = request.Post(chainRPC, jsonBody, "application/json");
-					response = httpResponse.ToString();
-				}
-				catch (HttpException ex)
-				{
-					project.SendErrorToLog($"Ошибка HTTP-запроса: {ex.Message}, Status: {ex.Status}");
-					throw;
-				}
-			}
-
-			var match = Regex.Match(response, @"""result""\s*:\s*""([^""]+)""");
-			string hexResult = match.Success ? match.Groups[1].Value.TrimStart('0', 'x') : "0";
-			
-			BigInteger balanceWei = BigInteger.Parse("0" + hexResult, NumberStyles.AllowHexSpecifier);
-			decimal decimals = (decimal)Math.Pow(10, double.Parse(tokenDecimal));
-			decimal balance = (decimal)balanceWei / decimals;
-
-			project.SendInfoToLog($"[Leaf.xNet] Баланс ERC-20 токена ({tokenContract}) для адреса {address}: {balance}");
-
-			if (typeof(T) == typeof(string))
-				return (T)Convert.ChangeType(balance.ToString("0.##################", CultureInfo.InvariantCulture), typeof(T));
-			
-			return (T)Convert.ChangeType(balance, typeof(T));
-		}					
-		public static T balERC721<T>(IZennoPosterProjectModel project, string tokenContract, string chainRPC = "", string address = "", string proxy = "",bool log = false)
-		{
-			if (address == "") address = project.Variables["addressEvm"].Value;
-			if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
-
-			string functionSelector = "0x70a08231"; // keccak256("balanceOf(address)")[:4]
-			string paddedAddress = address.Replace("0x", "").ToLower().PadLeft(64, '0');
-			string data = functionSelector + paddedAddress;
-
-			string jsonBody = $@"{{
-				""jsonrpc"": ""2.0"",
-				""method"": ""eth_call"",
-				""params"": [{{
-					""to"": ""{tokenContract}"",
-					""data"": ""{data}""
-				}}, ""latest""],
-				""id"": 1
-			}}";
-
-			string response;
-			using (var request = new HttpRequest())
-			{
-				request.UserAgent = "Mozilla/5.0";
-				request.IgnoreProtocolErrors = true;
-				request.ConnectTimeout = 5000;
-
-				if (!string.IsNullOrEmpty(proxy))
-				{
-					try
-					{
-						request.Proxy = ProxyClient.Parse(proxy.Contains("@") ? proxy : $"HTTP://{proxy}");
-					}
-					catch (Exception ex)
-					{
-						project.SendErrorToLog($"Ошибка парсинга прокси '{proxy}': {ex.Message}");
-						throw;
-					}
-				}
-
-				try
-				{
-					HttpResponse httpResponse = request.Post(chainRPC, jsonBody, "application/json");
-					response = httpResponse.ToString();
-				}
-				catch (HttpException ex)
-				{
-					project.SendErrorToLog($"Ошибка HTTP-запроса: {ex.Message}, Status: {ex.Status}");
-					throw;
-				}
-			}
-
-			var match = Regex.Match(response, @"""result""\s*:\s*""([^""]+)""");
-			string hexResult = match.Success ? match.Groups[1].Value.TrimStart('0', 'x') : "0";
-
-			BigInteger balance = BigInteger.Parse("0" + hexResult, NumberStyles.AllowHexSpecifier);
-
-			project.SendInfoToLog($"[Leaf.xNet] Баланс токенов ERC-721 для адреса {address} в контракте {tokenContract}: {balance}");
-
-			if (typeof(T) == typeof(string))
-				return (T)Convert.ChangeType(balance.ToString(), typeof(T));
-
-			return (T)Convert.ChangeType(balance, typeof(T));
-		}
-		public static T balERC1155<T>(IZennoPosterProjectModel project, string tokenContract, string tokenId, string chainRPC = "", string address = "", string proxy = "",bool log = false)
-		{
-			if (address == "") address = project.Variables["addressEvm"].Value;
-			if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
-
-			string functionSelector = "0x00fdd58e";
-			string paddedAddress = address.Replace("0x", "").ToLower().PadLeft(64, '0');
-			string paddedTokenId = BigInteger.Parse(tokenId).ToString("x").PadLeft(64, '0');
-			string data = functionSelector + paddedAddress + paddedTokenId;
-
-			string jsonBody = $@"{{
-				""jsonrpc"": ""2.0"",
-				""method"": ""eth_call"",
-				""params"": [{{
-					""to"": ""{tokenContract}"",
-					""data"": ""{data}""
-				}}, ""latest""],
-				""id"": 1
-			}}";
-
-			string response;
-			using (var request = new HttpRequest())
-			{
-				request.UserAgent = "Mozilla/5.0";
-				request.IgnoreProtocolErrors = true;
-				request.ConnectTimeout = 5000;
-
-				if (!string.IsNullOrEmpty(proxy))
-				{
-					try
-					{
-						request.Proxy = ProxyClient.Parse(proxy.Contains("@") ? proxy : $"HTTP://{proxy}");
-					}
-					catch (Exception ex)
-					{
-						project.SendErrorToLog($"Ошибка парсинга прокси '{proxy}': {ex.Message}");
-						throw;
-					}
-				}
-
-				try
-				{
-					// Исправление: Передаём jsonBody как строку, а не StringContent
-					HttpResponse httpResponse = request.Post(chainRPC, jsonBody, "application/json");
-					response = httpResponse.ToString(); // Получаем тело ответа как строку
-				}
-				catch (HttpException ex)
-				{
-					project.SendErrorToLog($"Ошибка HTTP-запроса: {ex.Message}, Status: {ex.Status}");
-					throw;
-				}
-			}
-
-			var match = Regex.Match(response, @"""result""\s*:\s*""([^""]+)""");
-			string hexResult = match.Success ? match.Groups[1].Value.TrimStart('0', 'x') : "0";
-			BigInteger balance = BigInteger.Parse("0" + hexResult, NumberStyles.AllowHexSpecifier);
-			if (log) project.SendInfoToLog($"[Leaf.xNet ⇌] balance of ERC-1155 [{tokenContract}:id({tokenId})] on {address}: [{balance}]");
-
-			if (typeof(T) == typeof(string))
-				return (T)Convert.ChangeType(balance.ToString(), typeof(T));
-			else if (typeof(T) == typeof(int))
-				return (T)(object)(int)balance; // Явное преобразование BigInteger в int
-			else if (typeof(T) == typeof(BigInteger))
-				return (T)(object)balance; // Возвращаем BigInteger напрямую
-			else
-        	throw new InvalidOperationException($"!W unsupported type {typeof(T)}");
-		}
-		public static T chainId<T>(IZennoPosterProjectModel project, string chainRPC = "", string proxy = "",bool log = false)
-		{
-			if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
-			string jsonBodyGetChainId = @"{""jsonrpc"": ""2.0"",""method"": ""eth_chainId"",""params"": [],""id"": 1}";
-
-			string response;
-			using (var request = new HttpRequest())
-			{
-				request.UserAgent = "Mozilla/5.0";
-				request.IgnoreProtocolErrors = true;
-				request.ConnectTimeout = 5000;
-
-				if (!string.IsNullOrEmpty(proxy))
-				{
-					try
-					{
-						request.Proxy = ProxyClient.Parse(proxy.Contains("@") ? proxy : $"HTTP://{proxy}");
-					}
-					catch (Exception ex)
-					{
-						project.SendErrorToLog($"Ошибка парсинга прокси '{proxy}': {ex.Message}");
-						throw;
-					}
-				}
-
-				try
-				{
-					HttpResponse httpResponse = request.Post(chainRPC, jsonBodyGetChainId, "application/json");
-					response = httpResponse.ToString();
-				}
-				catch (HttpException ex)
-				{
-					project.SendErrorToLog($"Ошибка HTTP-запроса: {ex.Message}, Status: {ex.Status}");
-					throw;
-				}
-			}
-
-			var match = Regex.Match(response, @"""result""\s*:\s*""([^""]+)""");
-			string hexResultChainId = match.Success ? match.Groups[1].Value : "0x0";
-			
-			if (hexResultChainId == "0x0")
-				return (T)Convert.ChangeType("0", typeof(T));
-			
-			int chainId = Convert.ToInt32(hexResultChainId.TrimStart('0', 'x'), 16);
-			
-			if (typeof(T) == typeof(string))
-				return (T)Convert.ChangeType(chainId.ToString(), typeof(T));
-			
-			return (T)Convert.ChangeType(chainId, typeof(T));
-		}			
-		
-
 		private static string LeafHttpPost(IZennoPosterProjectModel project, string url, string jsonBody, string proxy = "",bool log = false)
 		{
 			using (var request = new HttpRequest())
@@ -4925,8 +4832,8 @@ namespace w3tools //by @w3bgrep
 	
 	}
 	#endregion
-	#region Socials
 
+	#region Socials
 	public class X
 	{
 		private readonly IZennoPosterProjectModel _project;
@@ -5099,451 +5006,159 @@ namespace w3tools //by @w3bgrep
 		}
 
 	}
-
 	public class Discord
-		{
-			private readonly IZennoPosterProjectModel _project;
-			private readonly Instance _instance;
-			private readonly bool _log;
-			public Discord(IZennoPosterProjectModel project, Instance instance, bool log = false)
-			{
-				_project = project;
-				_instance = instance;
-				_log = log;
-			}
-			private void DScredsFromDb(string tableName ="discord", string schemaName = "accounts", bool log = false)
-			{
-				
-				log = _project.Variables["debug"].Value == "True";
-				string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
-				var resp = SQL.W3Query(_project,$@"SELECT status, token, login, password, code2FA, username, servers FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value};");
-				string[] discordData = resp.Split('|');
-				_project.Variables["discordSTATUS"].Value = discordData[0].Trim();
-				_project.Variables["discordTOKEN"].Value = discordData[1].Trim();
-				_project.Variables["discordLOGIN"].Value = discordData[2].Trim();
-				_project.Variables["discordPASSWORD"].Value = discordData[3].Trim();
-				_project.Variables["discord2FACODE"].Value = discordData[4].Trim();
-				_project.Variables["discordUSERNAME"].Value = discordData[5].Trim();
-				_project.Variables["discordSERVERS"].Value = discordData[6].Trim();
-			} 
-			public void DSupdateDb(string toUpd, bool log = false)
-			{
-				string tableName ="discord"; string schemaName = "accounts";
-				log = _project.Variables["debug"].Value == "True";
-				string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
-				if (log) Loggers.l0g(_project,toUpd);
-				var Q = $@"UPDATE {table} SET {toUpd.Trim().TrimEnd(',')}, last = '{Time.Now("short")}' WHERE acc0 = {_project.Variables["acc0"].Value};";
-				SQL.W3Query(_project,Q,log); 
-			}
-			private void DSsetToken()
-			{
-				var jsCode = "function login(token) {\r\n    setInterval(() => {\r\n        document.body.appendChild(document.createElement `iframe`).contentWindow.localStorage.token = `\"${token}\"`\r\n    }, 50);\r\n    setTimeout(() => {\r\n        location.reload();\r\n    }, 1000);\r\n}\r\n    login(\'discordTOKEN\');\r\n".Replace("discordTOKEN",_project.Variables["discordTOKEN"].Value);
-				_instance.ActiveTab.MainDocument.EvaluateScript(jsCode);
-			}
-			private string DSgetToken()
-			{
-				var token = _instance.ActiveTab.MainDocument.EvaluateScript("return (webpackChunkdiscord_app.push([[\'\'],{},e=>{m=[];for(let c in e.c)m.push(e.c[c])}]),m).find(m=>m?.exports?.default?.getToken!== void 0).exports.default.getToken();\r\n");
-				return token;
-			}
-			private string DSlogin()
-			{
-				_project.SendInfoToLog("DLogin");
-				DateTime deadline = DateTime.Now.AddSeconds(60);
-				_instance.CloseExtraTabs();
-				_instance.SetHe(("input:text", "aria-label", "Email or Phone Number", "text", 0),_project.Variables["discordLOGIN"].Value);
-				_instance.SetHe(("input:password", "aria-label", "Password", "text", 0),_project.Variables["discordPASSWORD"].Value);
-				_instance.LMB(("button", "type", "submit", "regexp", 0));
+    {
+        private readonly IZennoPosterProjectModel _project;
+        private readonly Instance _instance;
+        private readonly bool _log;
+        public Discord(IZennoPosterProjectModel project, Instance instance, bool log = false)
+        {
+            _project = project;
+            _instance = instance;
+            _log = log;
+        }
+        private void DScredsFromDb(string tableName ="discord", string schemaName = "accounts", bool log = false)
+        {
+            
+            log = _project.Variables["debug"].Value == "True";
+            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+            var resp = SQL.W3Query(_project,$@"SELECT status, token, login, password, code2FA, username, servers FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value};");
+            string[] discordData = resp.Split('|');
+            _project.Variables["discordSTATUS"].Value = discordData[0].Trim();
+            _project.Variables["discordTOKEN"].Value = discordData[1].Trim();
+            _project.Variables["discordLOGIN"].Value = discordData[2].Trim();
+            _project.Variables["discordPASSWORD"].Value = discordData[3].Trim();
+            _project.Variables["discord2FACODE"].Value = discordData[4].Trim();
+            _project.Variables["discordUSERNAME"].Value = discordData[5].Trim();
+            _project.Variables["discordSERVERS"].Value = discordData[6].Trim();
+        } 
+        public void DSupdateDb(string toUpd, bool log = false)
+        {
+            string tableName ="discord"; string schemaName = "accounts";
+            log = _project.Variables["debug"].Value == "True";
+            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+            if (log) Loggers.l0g(_project,toUpd);
+            var Q = $@"UPDATE {table} SET {toUpd.Trim().TrimEnd(',')}, last = '{Time.Now("short")}' WHERE acc0 = {_project.Variables["acc0"].Value};";
+            SQL.W3Query(_project,Q,log); 
+        }
+        private void DSsetToken()
+        {
+            var jsCode = "function login(token) {\r\n    setInterval(() => {\r\n        document.body.appendChild(document.createElement `iframe`).contentWindow.localStorage.token = `\"${token}\"`\r\n    }, 50);\r\n    setTimeout(() => {\r\n        location.reload();\r\n    }, 1000);\r\n}\r\n    login(\'discordTOKEN\');\r\n".Replace("discordTOKEN",_project.Variables["discordTOKEN"].Value);
+            _instance.ActiveTab.MainDocument.EvaluateScript(jsCode);
+        }
+        private string DSgetToken()
+        {
+            var token = _instance.ActiveTab.MainDocument.EvaluateScript("return (webpackChunkdiscord_app.push([[\'\'],{},e=>{m=[];for(let c in e.c)m.push(e.c[c])}]),m).find(m=>m?.exports?.default?.getToken!== void 0).exports.default.getToken();\r\n");
+            return token;
+        }
+        private string DSlogin()
+        {
+            _project.SendInfoToLog("DLogin");
+            DateTime deadline = DateTime.Now.AddSeconds(60);
+            _instance.CloseExtraTabs();
+            _instance.SetHe(("input:text", "aria-label", "Email or Phone Number", "text", 0),_project.Variables["discordLOGIN"].Value);
+            _instance.SetHe(("input:password", "aria-label", "Password", "text", 0),_project.Variables["discordPASSWORD"].Value);
+            _instance.LMB(("button", "type", "submit", "regexp", 0));
 
-				while (_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Are\\ you\\ human\\?", "regexp", 0).IsVoid && 
-					_instance.ActiveTab.FindElementByAttribute("input:text", "autocomplete", "one-time-code", "regexp", 0).IsVoid) Thread.Sleep(1000);
+            while (_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Are\\ you\\ human\\?", "regexp", 0).IsVoid && 
+                _instance.ActiveTab.FindElementByAttribute("input:text", "autocomplete", "one-time-code", "regexp", 0).IsVoid) Thread.Sleep(1000);
 
-				if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Are\\ you\\ human\\?", "regexp", 0).IsVoid){
-					if ((_project.Variables["humanNear"].Value) != "True") return "capcha";
-					else _instance.WaitForUserAction(100, "dsCap");
-				}
-				_instance.SetHe(("input:text", "autocomplete", "one-time-code", "regexp", 0),OTP.Offline(_project.Variables["discord2FACODE"].Value));
-				_instance.LMB(("button", "type", "submit", "regexp", 0));
-				Thread.Sleep(3000);	
-				return "ok";
-			}
-			public string DSload(bool log = false)
-			{
-				DScredsFromDb();
+            if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Are\\ you\\ human\\?", "regexp", 0).IsVoid){
+                if ((_project.Variables["humanNear"].Value) != "True") return "capcha";
+                else _instance.WaitForUserAction(100, "dsCap");
+            }
+            _instance.SetHe(("input:text", "autocomplete", "one-time-code", "regexp", 0),OTP.Offline(_project.Variables["discord2FACODE"].Value));
+            _instance.LMB(("button", "type", "submit", "regexp", 0));
+            Thread.Sleep(3000);	
+            return "ok";
+        }
+        public string DSload(bool log = false)
+        {
+            DScredsFromDb();
 
-				string state = null;
-				var emu = _instance.UseFullMouseEmulation;
-				_instance.UseFullMouseEmulation = false;
-				bool tokenUsed = false;
-				_instance.ActiveTab.Navigate("https://discord.com/channels/@me", "");
+            string state = null;
+            var emu = _instance.UseFullMouseEmulation;
+            _instance.UseFullMouseEmulation = false;
+            bool tokenUsed = false;
+            _instance.ActiveTab.Navigate("https://discord.com/channels/@me", "");
 
-				start:
-				state = null;
-				while (string.IsNullOrEmpty(state))
-				{
-					_instance.LMB(("button", "innertext", "Continue\\ in\\ Browser", "regexp", 0),thr0w:false);
-					if (!_instance.ActiveTab.FindElementByAttribute("input:text", "aria-label", "Email or Phone Number", "text", 0).IsVoid)state = "login";	
-					if (!_instance.ActiveTab.FindElementByAttribute("section", "aria-label", "User\\ area", "regexp", 0).IsVoid)state = "logged";	
-				}
+            start:
+            state = null;
+            while (string.IsNullOrEmpty(state))
+            {
+                _instance.LMB(("button", "innertext", "Continue\\ in\\ Browser", "regexp", 0),thr0w:false);
+                if (!_instance.ActiveTab.FindElementByAttribute("input:text", "aria-label", "Email or Phone Number", "text", 0).IsVoid)state = "login";	
+                if (!_instance.ActiveTab.FindElementByAttribute("section", "aria-label", "User\\ area", "regexp", 0).IsVoid)state = "logged";	
+            }
 
-				Loggers.l0g(_project,state);
-
-
-				if (state == "login" && !tokenUsed){
-					DSsetToken();
-					tokenUsed = true;
-					//Thread.Sleep(5000);					
-					goto start;
-				}
-
-				else if (state == "login" && tokenUsed){
-					var login = DSlogin();
-					if (login == "ok"){
-						Thread.Sleep(5000);
-						goto start;		
-					}
-					else if (login == "capcha") 
-						Loggers.l0g(_project,"!W capcha");
-						_instance.UseFullMouseEmulation = emu;	
-						state = "capcha";
-				}
-
-				else if (state == "logged"){
-					state = _instance.ActiveTab.FindElementByAttribute("div", "class", "avatarWrapper__", "regexp", 0).FirstChild.GetAttribute("aria-label");
-					Loggers.l0g(_project,state);
-					var token = DSgetToken();
-					DSupdateDb ($"token = '{token}', status = 'ok'");
-					_instance.UseFullMouseEmulation = emu;
-				}
-				return state;
-
-			}
-			public string DSservers()
-			{
-				_instance.UseFullMouseEmulation = true;
-				var folders = new List<HtmlElement>();
-				var servers = new List<string>();
-				var list = _instance.ActiveTab.FindElementByAttribute("div", "aria-label", "Servers", "regexp", 0).GetChildren(false).ToList();
-				foreach (HtmlElement item in list)
-				{
-					
-					if (item.GetAttribute("class").Contains("listItem")) 
-					{
-						var server = item.FindChildByTag("div",1).FirstChild.GetAttribute("data-dnd-name");
-						servers.Add(server);
-					}
-					
-					if (item.GetAttribute("class").Contains("wrapper")) 
-					{
-						_instance.WaitClick(() => item);
-						var FolderServer = item.FindChildByTag("ul",0).GetChildren(false).ToList();
-						//_project.SendInfoToLog(FolderServer.Count.ToString());
-						foreach(HtmlElement itemInFolder in FolderServer)
-						{
-							var server = itemInFolder.FindChildByTag("div",1).FirstChild.GetAttribute("data-dnd-name");
-							servers.Add(server);
-						}
-					}
-
-				}
-
-				string result = string.Join(" | ",servers);
-				DSupdateDb ($"servers = '{result}'");
-				//_project.SendInfoToLog(servers.Count.ToString());
-				//_project.SendInfoToLog(string.Join(" | ",servers));
-				return result;
-			}
-		}
-
-	public static class Twitter
-	{
-		public static void TwitterSetToken(this Instance instance, IZennoPosterProjectModel project, string authToken = "", bool log = false, [CallerMemberName] string caller = "")
-		{
-			if (project.Variables["debug"].Value == "True") log = true;
-			instance.ClearCookie("x.com");
-			instance.ClearCookie("twitter.com");
-			instance.ClearCache("x.com");
-			instance.ClearCache("twitter.com");
-			if (authToken == "") authToken = project.Variables["twitterTOKEN"].Value;
-			string[] headers = new string[]
-			{
-			    $"accept: {project.Profile.HTTPAccept}",
-			    "accept-encoding: gzip, deflate, br",
-			    $"accept-language: {project.Profile.AcceptLanguage}",
-			    "sec-ch-ua-mobile: ?0",
-			    "sec-ch-ua-platform: \"Windows\"",
-			    "sec-fetch-dest: document",
-			    "sec-fetch-mode: navigate",
-			    "sec-fetch-site: none",
-			    "sec-fetch-user: ?1",
-			    "upgrade-insecure-requests: 1",
-			    $"user-agent: {project.Profile.UserAgent}"
-			};
-			
-			string result = ZennoPoster.HttpGet(
-			    "https://x.com/", 
-			    instance.GetProxy(),
-			    "UTF-8",
-			    ZennoLab.InterfacesLibrary.Enums.Http.ResponceType.HeaderAndBody,
-			    5000,
-			    "",
-			    project.Profile.UserAgent,
-			    true,
-			    5, 
-			    headers,
-			    "", 
-			    false
-			);
-			
-			instance.SetCookie($@".twitter.com	TRUE	/	FALSE	05/18/2033 06:33:20	auth_token	{authToken}	FALSE	TRUE");
-			instance.SetCookie($@".x.com	TRUE	/	FALSE	05/18/2033 06:33:20	auth_token	{authToken}	FALSE	TRUE");
-			if (log) Loggers.l0g(project,$"[{caller}].[TwitterTokenSet] {authToken} set");
-		}
-		public static string TwitterGetStatus(this Instance instance, IZennoPosterProjectModel project,bool log = false, [CallerMemberName] string caller = "")
-		{
-			if (project.Variables["debug"].Value == "True") log = true;
-
-			DateTime deadline = DateTime.Now.AddSeconds(60);
-			string login = project.Variables["twitterLOGIN"].Value; var status = "";
-			instance.ActiveTab.Navigate($"https://x.com/{project.Variables["twitterLOGIN"].Value}", "");
-			Thread.Sleep(2000);
-			instance.ActiveTab.MainDocument.EvaluateScript("location.reload(true)"); Thread.Sleep(3000);
-
-			instance.ActiveTab.FindElementByAttribute("button", "innertext", "Accept\\ all\\ cookies", "regexp", 0).RiseEvent("click", instance.EmulationLevel);
-			instance.ActiveTab.FindElementByAttribute("button", "data-testid", "xMigrationBottomBar", "regexp", 0).RiseEvent("click", instance.EmulationLevel);
-			instance.ActiveTab.FindElementByAttribute("button", "innertext", "Refresh", "regexp", 0).RiseEvent("click", instance.EmulationLevel);
-			
-			while (true)
-			{
-				Thread.Sleep(2000);
-
-				if (log) Loggers.l0g(project,$"{instance.ActiveTab.URL}");
-				
-				if (DateTime.Now > deadline) Loggers.l0g(project,"TwitterGetStatus timeout",thr0w:true);
-				
-				if (!instance.ActiveTab.FindElementByAttribute("span", "innertext", "Something\\ went\\ wrong.\\ Try\\ reloading.", "regexp", 0).IsVoid)
-				{	
-					instance.ActiveTab.MainDocument.EvaluateScript("location.reload(true)");
-					Thread.Sleep(5000);
-					continue;}
-				
-				if (!instance.ActiveTab.FindElementByAttribute("*", "innertext", @"Caution:\s+This\s+account\s+is\s+temporarily\s+restricted", "regexp", 0).IsVoid)
-					{status = "restricted";break;}
-				if (!instance.ActiveTab.FindElementByAttribute("*", "innertext", @"Account\s+suspended\s+X\s+suspends\s+accounts\s+which\s+violate\s+the\s+X\s+Rules", "regexp", 0).IsVoid)
-					{status = "suspended";break;}
-				if (!instance.ActiveTab.FindElementByAttribute("*", "innertext", @"Log\ in", "regexp", 0).IsVoid || !instance.ActiveTab.FindElementByAttribute("a", "data-testid", "loginButton", "regexp", 0).IsVoid)
-					{status = "unlogged";break;}
-
-				if (!instance.ActiveTab.FindElementByAttribute("*", "innertext", "erify\\ your\\ email\\ address", "regexp", 0).IsVoid ||
-					!instance.ActiveTab.FindElementByAttribute("div", "innertext", "We\\ sent\\ your\\ verification\\ code.", "regexp", 0).IsVoid)
-					{status = "emailCapcha";break;}
-				if (!instance.ActiveTab.FindElementByAttribute("button", "data-testid", "SideNav_AccountSwitcher_Button", "regexp", 0).IsVoid)
-					{
-						
-						while (instance.ActiveTab.FindElementByAttribute("a", "data-testid", "AccountSwitcher_Logout_Button", "regexp", 0).IsVoid)
-						{
-						    if (DateTime.Now > deadline ) 
-							{
-								instance.ActiveTab.Navigate($"https://x.com/{project.Variables["twitterLOGIN"].Value}", "");
-								Thread.Sleep(2000);
-								continue;
-							}
-							instance.ActiveTab.FindElementByAttribute("button", "innertext", "Got\\ it", "regexp", 0).RiseEvent("click", instance.EmulationLevel);
-							instance.ActiveTab.FindElementByAttribute("button", "data-testid", "SideNav_AccountSwitcher_Button", "regexp", 0).RiseEvent("click", instance.EmulationLevel);
-						    Thread.Sleep(1000);
-						}
-						Thread.Sleep(1000);	
-						if (log) Loggers.l0g(project,$"[{caller}].[TwitterGetStatus] getting data from logOut button url now is {instance.ActiveTab.URL}");
-						string attribute = instance.ActiveTab.FindElementByAttribute("a", "data-testid", "AccountSwitcher_Logout_Button", "regexp", 0).GetAttribute("innertext");
-						instance.ActiveTab.FindElementByAttribute("button", "data-testid", "SideNav_AccountSwitcher_Button", "regexp", 0).RiseEvent("click", instance.EmulationLevel);
-						
-						if (attribute.IndexOf(login, StringComparison.OrdinalIgnoreCase) >= 0)	
-							{status = "ok";	break;}
-						else
-						{
-							instance.CloseAllTabs();
-							instance.ClearCookie("x.com");instance.ClearCache("x.com");
-							instance.ClearCookie("twitter.com");instance.ClearCache("twitter.com");
-							if (log) Loggers.l0g(project,$"string [@{login}] not found in attribute [{attribute}]");
-							//Loggers.W3Debug(project,$"string [@{login}] not found in attribute [{attribute}]");
-							instance.ActiveTab.Navigate($"https://x.com/{project.Variables["twitterLOGIN"].Value}", "");
-							Thread.Sleep(2000);
-							status = "unlogged";
-							break;
-						}
-					}
-			}
-			return status;
-		}
-		public static string TwitterLogin(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
-		{
-			DateTime deadline = DateTime.Now.AddSeconds(60);
-			var status = "";
-			var login = project.Variables["twitterLOGIN"].Value;
-			
-			instance.ActiveTab.Navigate("https://x.com/", "");Thread.Sleep(2000);
-			
-			instance.ActiveTab.FindElementByAttribute("button", "innertext", "Accept\\ all\\ cookies", "regexp", 0).RiseEvent("click", instance.EmulationLevel);
-			instance.ActiveTab.FindElementByAttribute("button", "data-testid", "xMigrationBottomBar", "regexp", 0).RiseEvent("click", instance.EmulationLevel);
-			Thread.Sleep(2000);
-			instance.WaitClick(() =>  instance.ActiveTab.FindElementByAttribute("a", "data-testid", "login", "regexp", 0));
-			//1
-			string waitEllement = instance.WaitGetValue(() => 
-			    instance.ActiveTab.FindElementByAttribute("span", "innertext", "Phone,\\ email,\\ or\\ username", "regexp", 0),30);
-			Loggers.W3Debug(project,$"input login found");
-			instance.WaitSetValue(() => 
-				instance.ActiveTab.GetDocumentByAddress("0").FindElementByAttribute("input:text", "autocomplete", "username", "text", 0),login);
-			
-			//2
-			instance.ClickOut(() => 
-				instance.ActiveTab.GetDocumentByAddress("0").FindElementByAttribute("span", "innertext", "Next", "regexp", 1));
-			Loggers.W3Debug(project,$"next button is dissapeared");
-			
-			try
-			{var check = instance.WaitGetValue(() => 
-			    instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Sorry, we could not find your account')]", 0),2);
-				Loggers.W3Debug(project,$"Sorry, we could not find your account");
-				status = "notFound"; return status;}
-			catch{}
-			
-			Loggers.W3Debug(project,$"input password");
-			instance.WaitSetValue(() => 
-				instance.ActiveTab.GetDocumentByAddress("0").FindElementByName("password"),project.Variables["twitterPASSWORD"].Value);
-			instance.ClickOut(() => 
-				instance.ActiveTab.GetDocumentByAddress("0").FindElementByAttribute("button", "data-testid", "LoginForm_Login_Button", "regexp", 0));
-			
-			
-			try
-			{var check = instance.WaitGetValue(() => 
-			    instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Wrong password!')]", 0),2);
-				Loggers.l0g(project,$"!Wrong password!");
-				status = "wrongPassword"; return status;}
-			catch{}
-			
-			Loggers.W3Debug(project,$"input otp");
-			var codeOTP = OTP.Offline(project.Variables["twitterCODE2FA"].Value); 
-			instance.WaitSetValue(() => 
-				instance.ActiveTab.GetDocumentByAddress("0").FindElementByName("text"),codeOTP);
-			
-			instance.ClickOut(() => 
-				instance.ActiveTab.GetDocumentByAddress("0").FindElementByAttribute("span", "innertext", "Next", "regexp", 1));
-			
-			try
-			{var check = instance.WaitGetValue(() => 
-			    instance.ActiveTab.FindElementByAttribute("span", "innertext", "Oops,\\ something\\ went\\ wrong.\\ Please\\ try\\ again\\ later.", "regexp", 0),3);
-				Loggers.l0g(project,$"!W Oops,\\ something\\ went\\ wrong");
-				status = "somethingWrong"; return status;}
-			catch{}
-			
-			try
-			{var check = instance.WaitGetValue(() => 
-			    instance.ActiveTab.FindElementByAttribute("*", "innertext", "Suspicious\\ login\\ prevented", "regexp", 0),1);
-				Loggers.l0g(project,$"!W Suspicious\\ login\\ prevented");
-				status = "suspiciousLogin"; return status;}
-			catch{}
-			
-			try
-			{var check = instance.WaitGetValue(() => 
-			    instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Your account is suspended')]", 0),1);
-				Loggers.l0g(project,$"!W Your account is suspended");
-				status = "suspended"; return status;}
-			catch{}
-			
-			instance.ActiveTab.FindElementByAttribute("button", "innertext", "Accept\\ all\\ cookies", "regexp", 0).RiseEvent("click", instance.EmulationLevel);
-			instance.ActiveTab.FindElementByAttribute("button", "data-testid", "xMigrationBottomBar", "regexp", 0).RiseEvent("click", instance.EmulationLevel);
-			
-			Loggers.W3Debug(project,$"should be ok");
-			status = "ok"; return status;
-			Thread.Sleep(3000);
+            Loggers.l0g(_project,state);
 
 
-		}
-		public static string TwitterSyncToken(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
-		{
-			bool found = false;
-			string authTokenTwitter = "";
-			string authTokenX = "";
-			string tokenTable = project.Variables["twitterTOKEN"].Value;
-			
-			var twitterCookies = project.Profile.CookieContainer.Get(".twitter.com");
-			var xCookies = project.Profile.CookieContainer.Get(".x.com");
-			
-			foreach (var cookie in twitterCookies)
-			{
-			    if (cookie.Name == "auth_token")
-			    {
-			        authTokenTwitter = cookie.Value;
-			        found = true;break;
-			    }
-			}
-			
-			foreach (var cookie in xCookies)
-			{
-			    if (cookie.Name == "auth_token")
-			    {
-			        authTokenX = cookie.Value;
-			        found = true;break;
-			    }
-			}
-			
-			if (found)
-			{
-			    string chosenToken = !string.IsNullOrEmpty(authTokenX) ? authTokenX : authTokenTwitter; 
-				project.Variables["twitterTOKEN"].Value = chosenToken;
-				Db.TwitterTokenUpdate(project);
-			    project.Variables["a0debug"].Value = $"token extracted {chosenToken} from {(!string.IsNullOrEmpty(authTokenX) ? ".x.com" : ".twitter.com")}";
-			    if (authTokenTwitter != authTokenX)
-			    {
-			        string expirationDate = "05/18/2033 06:33:20"; 
-			        if (!string.IsNullOrEmpty(authTokenX))
-						instance.SetCookie($@".twitter.com	TRUE	/	FALSE	{expirationDate}	auth_token	{authTokenX}	FALSE	TRUE");
-			        else if (!string.IsNullOrEmpty(authTokenTwitter))
-						instance.SetCookie($@".x.com	TRUE	/	FALSE	{expirationDate}	auth_token	{authTokenTwitter}	FALSE	TRUE");
-					return chosenToken; 
-			    }
-			}
-			return "";
-		}		
-		public static string TwitterFullCheck(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
-		{
-			Db.Twitter(project);
-			if (project.Variables["debug"].Value == "True") log = true;
-			bool tokenSet = false;
-			DateTime deadline = DateTime.Now.AddSeconds(60);
-			var status = "";
-			while (true)
-			{
-				if (DateTime.Now > deadline) Loggers.l0g(project,"twitter full timeout",thr0w:true);
-				status = instance.TwitterGetStatus(project);
-				if (log) Loggers.l0g(project,status);
-				if (status == "unlogged")
-				{
-					if (tokenSet == false)
-					{
-						instance.TwitterSetToken(project);
-						tokenSet = true;
-						Thread.Sleep(3000);
-						continue;
-					}
-					else
-					{
-						status = instance.TwitterLogin(project);
-						if (status != "ok") break;
-						Thread.Sleep(3000);
-						continue;
-					}
-				}
-				if (log) Loggers.l0g(project,status);
-				break;
-			}
-			Thread.Sleep(3000);
-			if (status == "ok")
-			{
-				var token = instance.TwitterSyncToken(project);	
-				if (log) Loggers.l0g(project,token);				
-			}
-			return status;
-		}		
-	}
+            if (state == "login" && !tokenUsed){
+                DSsetToken();
+                tokenUsed = true;
+                //Thread.Sleep(5000);					
+                goto start;
+            }
+
+            else if (state == "login" && tokenUsed){
+                var login = DSlogin();
+                if (login == "ok"){
+                    Thread.Sleep(5000);
+                    goto start;		
+                }
+                else if (login == "capcha") 
+                    Loggers.l0g(_project,"!W capcha");
+                    _instance.UseFullMouseEmulation = emu;	
+                    state = "capcha";
+            }
+
+            else if (state == "logged"){
+                state = _instance.ActiveTab.FindElementByAttribute("div", "class", "avatarWrapper__", "regexp", 0).FirstChild.GetAttribute("aria-label");
+                Loggers.l0g(_project,state);
+                var token = DSgetToken();
+                DSupdateDb ($"token = '{token}', status = 'ok'");
+                _instance.UseFullMouseEmulation = emu;
+            }
+            return state;
+
+        }
+        public string DSservers()
+        {
+            _instance.UseFullMouseEmulation = true;
+            var folders = new List<HtmlElement>();
+            var servers = new List<string>();
+            var list = _instance.ActiveTab.FindElementByAttribute("div", "aria-label", "Servers", "regexp", 0).GetChildren(false).ToList();
+            foreach (HtmlElement item in list)
+            {
+                
+                if (item.GetAttribute("class").Contains("listItem")) 
+                {
+                    var server = item.FindChildByTag("div",1).FirstChild.GetAttribute("data-dnd-name");
+                    servers.Add(server);
+                }
+                
+                if (item.GetAttribute("class").Contains("wrapper")) 
+                {
+                    _instance.WaitClick(() => item);
+                    var FolderServer = item.FindChildByTag("ul",0).GetChildren(false).ToList();
+                    //_project.SendInfoToLog(FolderServer.Count.ToString());
+                    foreach(HtmlElement itemInFolder in FolderServer)
+                    {
+                        var server = itemInFolder.FindChildByTag("div",1).FirstChild.GetAttribute("data-dnd-name");
+                        servers.Add(server);
+                    }
+                }
+
+            }
+
+            string result = string.Join(" | ",servers);
+            DSupdateDb ($"servers = '{result}'");
+            //_project.SendInfoToLog(servers.Count.ToString());
+            //_project.SendInfoToLog(string.Join(" | ",servers));
+            return result;
+        }
+    }
 	public static class Google
 	{
 		public static string GoogleCheckLogin(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
@@ -5777,81 +5392,9 @@ namespace w3tools //by @w3bgrep
             }
 		}		
 	}
-
     #endregion
-	#region Time
-	
-	public static class Time
-	{
 
-		public static string UnixNow()
-		{
-			return ((long)((DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalMilliseconds)).ToString();
-		}
-		public static string Now(string format = "unix") // unix|iso
-		{
-			if (format == "unix") return ((long)((DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalMilliseconds)).ToString();	//Unix Epoch
-			else if (format == "iso") return DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"); // ISO 8601 
-			else if (format == "short") return DateTime.UtcNow.ToString("MM-ddTHH:mm"); 		
-			throw new ArgumentException("Invalid format. Use 'unix' or 'iso'.");
-		}
-		public static string Elapsed(string start)
-		{
-			string result = $"{TimeSpan.FromSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - long.Parse(start))}";
-			return result;
-		}
-		public static int TimeElapsed(IZennoPosterProjectModel project, string varName = "varSessionId")
-		{
-		    var start = project.Variables[$"{varName}"].Value;
-		    long currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-		    long startTime = long.Parse(start);
-		    int difference = (int)(currentTime - startTime);
-		    
-		    return difference;
-		}
-		public static string cd(object input = null, string o = "unix")
-		{
-			DateTime utcNow = DateTime.UtcNow;
-			if (input == null)
-			{
-				DateTime todayEnd = utcNow.Date.AddHours(23).AddMinutes(59).AddSeconds(59);
-				if (o == "unix") return ((int)(todayEnd - new DateTime(1970, 1, 1)).TotalSeconds).ToString();
-				else if (o == "iso") return todayEnd.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"); // ISO 8601
-			}
-			else if (input is decimal || input is int)  
-			{
-				decimal minutes = Convert.ToDecimal(input);
-				int secondsToAdd = (int)Math.Round(minutes * 60); 
-				DateTime futureTime = utcNow.AddSeconds(secondsToAdd);
-				if (o == "unix") return ((int)(futureTime - new DateTime(1970, 1, 1)).TotalSeconds).ToString();
-				else if (o == "iso") return futureTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"); // ISO 8601
-			}
-			else if (input is string timeString)
-			{
-				TimeSpan parsedTime = TimeSpan.Parse(timeString);
-				DateTime futureTime = utcNow.Add(parsedTime);
-				if (o == "unix") return ((int)(futureTime - new DateTime(1970, 1, 1)).TotalSeconds).ToString();
-				else if (o == "iso") return futureTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"); // ISO 8601
-			}		    
-			throw new ArgumentException("Неподдерживаемый тип входного параметра");
-		}
-		public static string TotalTime(IZennoPosterProjectModel project)
-		{
-			var elapsedMinutes = (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - long.Parse(project.Variables["varSessionId"].Value)) / 60.0;
-            return TimeSpan.FromSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - long.Parse(project.Variables["varSessionId"].Value)).ToString();
-		}
-		public static void RndSleep(IZennoPosterProjectModel project, int min = 0,  int max = 0, bool log = false)
-		{
-			//int min = 0;  int max = 0; bool log = false;
-			var rnd = new Random();
-			if (min == 0) min = int.Parse(project.Variables["delayMin"].Value);
-			if (max == 0) min = int.Parse(project.Variables["delayMax"].Value);
-			int sleep = rnd.Next(min,max);
-			if (log) project.SendInfoToLog($"sleep {sleep}s");
-			Thread.Sleep(sleep*1000);			
-		}
-	}
-	#endregion
+
 	#region Tx
 	public static class Onchain
 	{
@@ -6033,6 +5576,7 @@ namespace w3tools //by @w3bgrep
         
 	}
 	#endregion
+
 	#region CEX
 	public static class Binance
 	{ 
@@ -6216,7 +5760,6 @@ namespace w3tools //by @w3bgrep
             return $"{foundAmount}:{foundCoin}:{foundStatus}";
         }
 	}
-
 	public class OKXApi
 	{
 		private readonly IZennoPosterProjectModel _project;
@@ -6691,8 +6234,8 @@ namespace w3tools //by @w3bgrep
                 return (T)Convert.ChangeType(price, typeof(T));      
         }
 	}
-
 	#endregion
+
 	#region Wallets
 
 	public class Wall3t
@@ -7589,8 +7132,76 @@ namespace w3tools //by @w3bgrep
 
 	}
 
+    public static class Time
+    {
 
-
+        public static string UnixNow()
+        {
+            return ((long)((DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalMilliseconds)).ToString();
+        }
+        public static string Now(string format = "unix") // unix|iso
+        {
+            if (format == "unix") return ((long)((DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalMilliseconds)).ToString();	//Unix Epoch
+            else if (format == "iso") return DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"); // ISO 8601 
+            else if (format == "short") return DateTime.UtcNow.ToString("MM-ddTHH:mm"); 		
+            throw new ArgumentException("Invalid format. Use 'unix' or 'iso'.");
+        }
+        public static string Elapsed(string start)
+        {
+            string result = $"{TimeSpan.FromSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - long.Parse(start))}";
+            return result;
+        }
+        public static int TimeElapsed(IZennoPosterProjectModel project, string varName = "varSessionId")
+        {
+            var start = project.Variables[$"{varName}"].Value;
+            long currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            long startTime = long.Parse(start);
+            int difference = (int)(currentTime - startTime);
+            
+            return difference;
+        }
+        public static string cd(object input = null, string o = "unix")
+        {
+            DateTime utcNow = DateTime.UtcNow;
+            if (input == null)
+            {
+                DateTime todayEnd = utcNow.Date.AddHours(23).AddMinutes(59).AddSeconds(59);
+                if (o == "unix") return ((int)(todayEnd - new DateTime(1970, 1, 1)).TotalSeconds).ToString();
+                else if (o == "iso") return todayEnd.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"); // ISO 8601
+            }
+            else if (input is decimal || input is int)  
+            {
+                decimal minutes = Convert.ToDecimal(input);
+                int secondsToAdd = (int)Math.Round(minutes * 60); 
+                DateTime futureTime = utcNow.AddSeconds(secondsToAdd);
+                if (o == "unix") return ((int)(futureTime - new DateTime(1970, 1, 1)).TotalSeconds).ToString();
+                else if (o == "iso") return futureTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"); // ISO 8601
+            }
+            else if (input is string timeString)
+            {
+                TimeSpan parsedTime = TimeSpan.Parse(timeString);
+                DateTime futureTime = utcNow.Add(parsedTime);
+                if (o == "unix") return ((int)(futureTime - new DateTime(1970, 1, 1)).TotalSeconds).ToString();
+                else if (o == "iso") return futureTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"); // ISO 8601
+            }		    
+            throw new ArgumentException("Неподдерживаемый тип входного параметра");
+        }
+        public static string TotalTime(IZennoPosterProjectModel project)
+        {
+            var elapsedMinutes = (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - long.Parse(project.Variables["varSessionId"].Value)) / 60.0;
+            return TimeSpan.FromSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - long.Parse(project.Variables["varSessionId"].Value)).ToString();
+        }
+        public static void RndSleep(IZennoPosterProjectModel project, int min = 0,  int max = 0, bool log = false)
+        {
+            //int min = 0;  int max = 0; bool log = false;
+            var rnd = new Random();
+            if (min == 0) min = int.Parse(project.Variables["delayMin"].Value);
+            if (max == 0) min = int.Parse(project.Variables["delayMax"].Value);
+            int sleep = rnd.Next(min,max);
+            if (log) project.SendInfoToLog($"sleep {sleep}s");
+            Thread.Sleep(sleep*1000);			
+        }
+    }
 	public static class OTP
 	{
 		public static string Offline(string keyString, int waitIfTimeLess = 5)
