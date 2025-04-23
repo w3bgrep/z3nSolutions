@@ -476,6 +476,59 @@ namespace w3tools //by @w3bgrep
             if (thr0w) throw new Exception($"{formated}");
 		}
 	}
+
+    public class L0g
+    {
+        private readonly IZennoPosterProjectModel _project;
+        private readonly DateTime _start = DateTime.Now;
+        
+        public L0g(IZennoPosterProjectModel project)
+		{
+			_project = project;
+			_start = DateTime.Now;
+		}
+        public void Send(string toLog = "", [CallerMemberName] string callerName = "", bool show = true, bool thr0w = false)
+        {
+            var acc0 = _project.Variables["acc0"].Value;
+			var port = _project.Variables["instancePort"].Value;
+            var age = DateTime.Now - _start;
+            var totalAge = TimeSpan.FromSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - long.Parse(_project.Variables["varSessionId"].Value)).ToString();
+			
+            var stackFrame = new System.Diagnostics.StackFrame(1); 
+			var callingMethod = stackFrame.GetMethod();
+
+			if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = _project.Variables["projectName"].Value;
+			
+			string formated = $"⛑  [{acc0}] ⚙  [{port}] ⏱  [{totalAge}] ⛏  [{callerName}]. elapsed:[{age}]\n          {toLog.Trim()}";
+			LogType type = LogType.Info; LogColor color = LogColor.Default;
+            if (formated.Contains("!W")) 
+            {
+                type = LogType.Warning;
+                color = LogColor.Orange;
+            }
+            else if (formated.Contains("!E")) 
+            {
+                type = LogType.Error;
+                color = LogColor.Orange;
+            }
+            else if (formated.Contains("relax")) 
+            {
+                type = LogType.Info;
+                color = LogColor.LightBlue;
+            }
+            else if (Time.TimeElapsed(_project) > 60 * 60)
+            {
+                type = LogType.Info;
+                color = LogColor.Yellow;
+            }
+			
+			_project.SendToLog(formated, type, show, color);
+            if (thr0w) throw new Exception($"{formated}");
+          
+        }
+        
+
+    }
 	#endregion
 	#region OnStart
     public static class OnStart	{
@@ -1024,10 +1077,11 @@ namespace w3tools //by @w3bgrep
 	            return result?.ToString() ?? string.Empty;
 	        }
 	    }
-		public static string pSQL(IZennoPosterProjectModel project, string query, bool log = false, bool throwOnEx = false, string host ="localhost:5432", string dbName = "", string dbUser = "", string dbPswd = "", [CallerMemberName] string callerName = "")
+		public static string pSQL(IZennoPosterProjectModel project, string query, bool log = false, bool throwOnEx = false, string host ="localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "", [CallerMemberName] string callerName = "")
 		{
 
-			if (string.IsNullOrEmpty(dbName)) dbName = project.Variables["DBpstgrName"].Value;
+			
+            if (string.IsNullOrEmpty(dbName)) dbName = project.Variables["DBpstgrName"].Value;
 			if (string.IsNullOrEmpty(dbUser)) dbUser = project.Variables["DBpstgrUser"].Value;
 			
 			if (string.IsNullOrEmpty(dbPswd)) 
@@ -1092,7 +1146,7 @@ namespace w3tools //by @w3bgrep
 				return dt;
 			}
 		}
-        public static void pSQLMakeTable (IZennoPosterProjectModel project, Dictionary<string, string> tableStructure, string tableName = "", bool strictMode = false, bool insertData = true, string host = "localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "", string schemaName = "projects", bool log = false)
+        public static void pSQLMakeTable (IZennoPosterProjectModel project, Dictionary<string, string> tableStructure, string tableName = "", bool strictMode = false, bool insertData = true, string host = null, string dbName = "postgres", string dbUser = "postgres", string dbPswd = "", string schemaName = "projects", bool log = false)
         {
             
 			string query = ""; string dbMode = "PostgreSQL";
@@ -1253,8 +1307,89 @@ namespace w3tools //by @w3bgrep
 			}
 		}
 	}
+    public class PostgresService : IDisposable
+    {
+        private readonly PostgresDB _db;
+        private readonly IZennoPosterProjectModel _project;
+        private readonly bool _log;
+        private readonly bool _throwOnEx;
 
-	public class DbP0st : IDisposable
+        public PostgresService(
+            IZennoPosterProjectModel project,
+            string host = "localhost:5432",
+            string dbName = "",
+            string dbUser = "",
+            string dbPswd = "",
+            bool log = false,
+            bool throwOnEx = false)
+        {
+            _project = project;
+            _log = log;
+            _throwOnEx = throwOnEx;
+
+            // Получаем параметры из project.Variables, если не переданы
+            if (string.IsNullOrEmpty(dbName)) dbName = project.Variables["DBpstgrName"].Value;
+            if (string.IsNullOrEmpty(dbUser)) dbUser = project.Variables["DBpstgrUser"].Value;
+            if (string.IsNullOrEmpty(dbPswd))
+            {
+                dbPswd = project.Variables["DBpstgrPass"].Value;
+                if (string.IsNullOrEmpty(dbPswd)) throw new Exception("PostgreSQL password is null");
+            }
+
+            _db = new PostgresDB(host, dbName, dbUser, dbPswd);
+        }
+
+        public string ExecuteQuery(string query)
+        {
+            try
+            {
+                _db.open();
+                string response;
+
+                if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
+                {
+                    response = string.Join("\r\n", _db.getAll(query));
+                }
+                else
+                {
+                    response = _db.Query(query).ToString();
+                }
+
+                if (_log)
+                {
+                    if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _project.SendToLog(
+                            $"[PstgSQL ▼ ]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]\nRESULT: [{response.Replace('\n', '|')}]",
+                            LogType.Info, true, LogColor.Gray);
+                    }
+                    else if (response != "0")
+                    {
+                        _project.SendToLog(
+                            $"[PstgSQL ▲ ]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]",
+                            LogType.Info, true, LogColor.Gray);
+                    }
+                }
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                Loggers.l0g(_project, $"!W {ex.Message}", thr0w: _throwOnEx);
+                return string.Empty;
+            }
+            finally
+            {
+                _db.close();
+            }
+        }
+
+        public void Dispose()
+        {
+            _db?.Dispose();
+        }
+    }
+	public class DbP0stgre : IDisposable
 	{
 	    private NpgsqlConnection _conn;
 		private readonly IZennoPosterProjectModel _project;
@@ -1264,7 +1399,7 @@ namespace w3tools //by @w3bgrep
 			_conn?.Dispose();
 		}
 		
-	    private DbP0st(string host, string database, string user, string password) 
+	    private DbP0stgre(string host, string database, string user, string password) 
 	    {
 	        var (hostname, port) = ParseHostPort(host, 5432);
 	        var cs = $"Host={hostname};Port={port};Database={database};Username={user};Password={password};";
@@ -1347,6 +1482,23 @@ namespace w3tools //by @w3bgrep
 				db.close(); 
             }
 		}
+
+        public static string pSQL2(
+            IZennoPosterProjectModel project,
+            string query,
+            bool log = false,
+            bool throwOnEx = false,
+            string host = "localhost:5432",
+            string dbName = "",
+            string dbUser = "",
+            string dbPswd = "",
+            [CallerMemberName] string callerName = "")
+        {
+            using (var service = new PostgresService(project, host, dbName, dbUser, dbPswd, log, throwOnEx))
+            {
+                return service.ExecuteQuery(query);
+            }
+        }
 	
 	}
 
@@ -1408,12 +1560,13 @@ namespace w3tools //by @w3bgrep
     }   
     public static class SQL
 	{
-        public static string W3Query(IZennoPosterProjectModel project, string query, bool log = false, bool throwOnEx = false, string host = "localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "")
+        public static string W3Query(IZennoPosterProjectModel project, string query, bool log = false, bool throwOnEx = false)
         {
             string dbMode = project.Variables["DBmode"].Value;
             if (project.Variables["debug"].Value == "True") log = true;
             if (dbMode == "SQLite") return SQLite.lSQL(project, query, log);
-            else if (dbMode == "PostgreSQL") return PostgresDB.pSQL(project, query, log, throwOnEx, host, dbName, dbUser, dbPswd);
+            else if (dbMode == "PostgreSQL") return PostgresDB.pSQL(project, query, log, throwOnEx);
+            //else if (dbMode == "PostgreSQL") return DbP0stgre.pSQL(project, query, log, throwOnEx, host, dbName, dbUser, dbPswd);
             else return $"unknown DBmode: {dbMode}";
         }
         public static void W3MakeTable(IZennoPosterProjectModel project, Dictionary<string, string> tableStructure, string tableName = "", bool strictMode = false, bool insertData = false, string host = "localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "", string schemaName = "projects", bool log = false)
@@ -1566,7 +1719,6 @@ namespace w3tools //by @w3bgrep
 			}
 		}
 	}
-
 
 	public class DataImporter
 	{
@@ -3054,15 +3206,82 @@ namespace w3tools //by @w3bgrep
     public class Sql
     {  
         private readonly IZennoPosterProjectModel _project;
-        private readonly bool _log;
+        private readonly L0g _log;
+        private readonly string _dbMode;
+        private readonly bool _debug;
+
+
         public Sql(IZennoPosterProjectModel project, bool log = false)
 		{
 			_project = project;
-			_log = log;
+			_log = new L0g(_project);
+            _dbMode = _project.Variables["DBmode"].Value;
+            _debug = (_project.Variables["debug"].Value == "True");
+           
+
 		}
+        public string sqlLog (string query, string response = null)
+        {
+            string dbMode = _project.Variables["DBmode"].Value; 
+            string toLog = null;
+
+            if (dbMode == "SQLite") toLog += $"[SQLite ";
+            else if (dbMode == "PostgreSQL") toLog += $"[PstgSQL ";
+
+            if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase)) {
+                toLog += $"▼ ]: ";
+                if (!string.IsNullOrEmpty(response)) toLog += $"\n          [{response.Replace('\n','|')}]";
+                }
+            else  toLog += $"▲ ]: [";
+
+            toLog += $"[{Regex.Replace(query.Trim(), @"\s+", " ")}]";
+
+            
+
+            return toLog;
+
+        }
+
+
+        public string DbQ(string query, bool log = false, bool throwOnEx = false)
+        {
+            
+            
+            string dbMode = _project.Variables["DBmode"].Value;
+            if (_project.Variables["debug"].Value == "True") log = true;
+            string result = null;
+
+            if (dbMode == "SQLite") {
+                result = SQLite.lSQL(_project, query, log);
+            }              
+            else if (dbMode == "PostgreSQL"){
+                result = PostgresDB.pSQL(_project, query, log, throwOnEx);
+            }
+            else throw new Exception($"unknown DBmode: {dbMode}");
+            if (log) _log.Send(sqlLog(query,result)); 
+            return result;
+
+        }
+        public void Upd(string toUpd, string tableName = null, bool log = false, bool throwOnEx = false)
+		{          
+            if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
+            if (_dbMode == "PostgreSQL" && !tableName.Contains(".")) tableName =  "accounts." + tableName;
+
+            var Q = $@"UPDATE {tableName} SET {toUpd.Trim().TrimEnd(',')}, last = '{Time.Now("short")}' WHERE acc0 = {_project.Variables["acc0"].Value};";
+			DbQ(Q,log:log,throwOnEx:throwOnEx); 
+		}
+        public  string Get( string toGet, string tableName = null, bool log = false, bool throwOnEx = false)
+		{
+            if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
+            if (_dbMode == "PostgreSQL" && !tableName.Contains(".")) tableName =  "accounts." + tableName;
+
+            var Q = $@"SELECT {toGet.Trim().TrimEnd(',')} from {tableName} WHERE acc0 = {_project.Variables["acc0"].Value};";
+			return DbQ(Q,log:log,throwOnEx:throwOnEx);  
+		}
+
         public string KeyEVM(string tableName ="blockchain_private", string schemaName = "accounts")
         {
-			string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+			string table = (_dbMode == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
             var resp = SQL.W3Query(_project,$"SELECT secp256k1 FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
             return SAFU.Decode(_project,resp);
         }
@@ -3189,20 +3408,7 @@ namespace w3tools //by @w3bgrep
             string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
 			return SQL.W3Query(_project,$"SELECT value FROM {tableName} WHERE var = 'settingsApiBinance';");
 		}
-		public  void Upd( string toUpd, string tableName = "", bool log = false, bool throwOnEx = false)
-		{
-			if (tableName == "")tableName = _project.Variables["_projectTable"].Value;		
-			if (log) Loggers.l0g(_project,toUpd);
-			var Q = $@"UPDATE {tableName} SET {toUpd.Trim().TrimEnd(',')}, last = '{Time.Now("short")}' WHERE acc0 = {_project.Variables["acc0"].Value};";
-			SQL.W3Query(_project,Q,throwOnEx:throwOnEx); 
-		}
-        public  string Get( string toGet, string tableName = "", bool log = false, bool throwOnEx = false)
-		{
-			if (tableName == "")tableName = _project.Variables["_projectTable"].Value;		
-			if (log) Loggers.l0g(_project,toGet);
-			var Q = $@"SELECT {toGet.Trim().TrimEnd(',')} from {tableName} WHERE acc0 = {_project.Variables["acc0"].Value};";
-			return SQL.W3Query(_project,Q,throwOnEx:throwOnEx); 
-		}
+		
 		public  string[] okxKeys( string tableName ="settings", string schemaName = "accounts")  
 		{
             string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
@@ -3235,9 +3441,11 @@ namespace w3tools //by @w3bgrep
 	public class OnChain
 	{
 		private readonly IZennoPosterProjectModel _project;
+        private readonly L0g _log;
 		public OnChain(IZennoPosterProjectModel project)
 		{
 			_project = project;
+            _log = new L0g(_project);
 		}
 
 		public string Rpc(string chain)
@@ -3280,6 +3488,29 @@ namespace w3tools //by @w3bgrep
             return rpcs.Trim().Split('\n');
         }
 
+        public T FloorDecimal<T>(decimal value, int decimalPlaces = 18)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+
+            if (decimalPlaces < 0)
+                throw new ArgumentException("Decimal places must be non-negative", nameof(decimalPlaces));
+
+            // Округление вниз до указанного количества знаков
+            decimal multiplier = (decimal)Math.Pow(10, decimalPlaces);
+            decimal flooredValue = Math.Floor(value * multiplier) / multiplier;
+
+            // Форматирование результата
+            if (typeof(T) == typeof(string))
+            {
+                string format = "0." + new string('#', decimalPlaces);
+                return (T)Convert.ChangeType(flooredValue.ToString(format, CultureInfo.InvariantCulture), typeof(T));
+            }
+            if (typeof(T) == typeof(int))
+                return (T)Convert.ChangeType((int)flooredValue, typeof(T));
+            if (typeof(T) == typeof(double))
+                return (T)Convert.ChangeType((double)flooredValue, typeof(T));
+            return (T)Convert.ChangeType(flooredValue, typeof(T));
+        }
 		public T GasPrice<T>(string chainRPC = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -3337,7 +3568,6 @@ namespace w3tools //by @w3bgrep
 				return (T)Convert.ChangeType(gasGwei.ToString("0.######", CultureInfo.InvariantCulture), typeof(T));
 			return (T)Convert.ChangeType(gasGwei, typeof(T));
 		}
-
 		public T NativeEVM<T>(string chainRPC = null, string address = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -3381,12 +3611,223 @@ namespace w3tools //by @w3bgrep
 			string hexBalance = json["result"]?.ToString()?.TrimStart('0', 'x') ?? "0";
 			BigInteger balanceWei = BigInteger.Parse("0" + hexBalance, NumberStyles.AllowHexSpecifier);
 			decimal balanceNative = (decimal)balanceWei / 1000000000000000000m;
-			if (log) Loggers.l0g(_project, $"{address}: {balanceNative} ETH [{chainRPC}]");
+
+
+			if (log) _log.Send($"{address}: {balanceNative} ETH [{chainRPC}]");
 
 			if (typeof(T) == typeof(string))
 				return (T)Convert.ChangeType(balanceNative.ToString("0.##################"), typeof(T));
 			return (T)Convert.ChangeType(balanceNative, typeof(T));
 		}
+        public T BalERC20<T>(string tokenContract, string chainRPC = null, string address = null, string tokenDecimal = "18", string proxy = null, bool log = false)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            if (string.IsNullOrEmpty(address)) 
+            {
+                string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : "") + "blockchain_public";	
+                address = SQL.W3Query(_project, $"SELECT evm FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
+            }
+            if (string.IsNullOrEmpty(chainRPC)) chainRPC = _project.Variables["blockchainRPC"].Value;
+
+            string data = "0x70a08231000000000000000000000000" + address.Replace("0x", "");
+            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_call"", ""params"": [{{ ""to"": ""{tokenContract}"", ""data"": ""{data}"" }}, ""latest""], ""id"": 1 }}";
+
+            string response;
+            using (var request = new HttpRequest())
+            {
+                request.UserAgent = "Mozilla/5.0";
+                request.IgnoreProtocolErrors = true;
+                request.ConnectTimeout = 5000;
+
+                if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
+                if (!string.IsNullOrEmpty(proxy))
+                {
+                    string[] proxyArray = proxy.Split(':');
+                    string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);
+                    request.Proxy = new HttpProxyClient(host, port, username, password);
+                }
+
+                try
+                {
+                    HttpResponse httpResponse = request.Post(chainRPC, jsonBody, "application/json");
+                    response = httpResponse.ToString();
+                }
+                catch (HttpException ex)
+                {
+                    _project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
+                    throw;
+                }
+            }
+
+            var json = JObject.Parse(response);
+            string hexBalance = json["result"]?.ToString()?.TrimStart('0', 'x') ?? "0";
+            BigInteger balanceWei = BigInteger.Parse("0" + hexBalance, NumberStyles.AllowHexSpecifier);
+            decimal decimals = (decimal)Math.Pow(10, double.Parse(tokenDecimal));
+            decimal balance = (decimal)balanceWei / decimals;
+
+            if (log) _log.Send($"[Leaf.xNet] Баланс ERC-20 токена ({tokenContract}) для адреса {address}: {balance}");
+
+            if (typeof(T) == typeof(string))
+                return (T)Convert.ChangeType(balance.ToString("0.##################", CultureInfo.InvariantCulture), typeof(T));
+
+            return (T)Convert.ChangeType(balance, typeof(T));
+        }
+        public T BalERC721<T>(string tokenContract, string chainRPC = null, string address = null, string proxy = null, bool log = false)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            if (string.IsNullOrEmpty(address)) 
+            {
+                string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : "") + "blockchain_public";	
+                address = SQL.W3Query(_project, $"SELECT evm FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
+            }
+            if (string.IsNullOrEmpty(chainRPC)) chainRPC = _project.Variables["blockchainRPC"].Value;
+
+            string functionSelector = "0x70a08231";
+            string paddedAddress = address.Replace("0x", "").ToLower().PadLeft(64, '0');
+            string data = functionSelector + paddedAddress;
+            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_call"", ""params"": [{{ ""to"": ""{tokenContract}"", ""data"": ""{data}"" }}, ""latest""], ""id"": 1 }}";
+
+            string response;
+            using (var request = new HttpRequest())
+            {
+                request.UserAgent = "Mozilla/5.0";
+                request.IgnoreProtocolErrors = true;
+                request.ConnectTimeout = 5000;
+
+                if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
+                if (!string.IsNullOrEmpty(proxy))
+                {
+                    string[] proxyArray = proxy.Split(':');
+                    string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);
+                    request.Proxy = new HttpProxyClient(host, port, username, password);
+                }
+
+                try
+                {
+                    HttpResponse httpResponse = request.Post(chainRPC, jsonBody, "application/json");
+                    response = httpResponse.ToString();
+                }
+                catch (HttpException ex)
+                {
+                    _project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
+                    throw;
+                }
+            }
+
+            var json = JObject.Parse(response);
+            string hexBalance = json["result"]?.ToString()?.TrimStart('0', 'x') ?? "0";
+            BigInteger balance = BigInteger.Parse("0" + hexBalance, NumberStyles.AllowHexSpecifier);
+
+            if (log) _log.Send($"[Leaf.xNet] Баланс токенов ERC-721 для адреса {address} в контракте {tokenContract}: {balance}");
+
+            if (typeof(T) == typeof(string))
+                return (T)Convert.ChangeType(balance.ToString(), typeof(T));
+
+            return (T)Convert.ChangeType(balance, typeof(T));
+        }
+        public T BalERC1155<T>(string tokenContract, string tokenId, string chainRPC = null, string address = null, string proxy = null, bool log = false)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            if (string.IsNullOrEmpty(address)) 
+            {
+                string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : "") + "blockchain_public";	
+                address = SQL.W3Query(_project, $"SELECT evm FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
+            }
+            if (string.IsNullOrEmpty(chainRPC)) chainRPC = _project.Variables["blockchainRPC"].Value;
+
+            string functionSelector = "0x00fdd58e";
+            string paddedAddress = address.Replace("0x", "").ToLower().PadLeft(64, '0');
+            string paddedTokenId = BigInteger.Parse(tokenId).ToString("x").PadLeft(64, '0');
+            string data = functionSelector + paddedAddress + paddedTokenId;
+            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_call"", ""params"": [{{ ""to"": ""{tokenContract}"", ""data"": ""{data}"" }}, ""latest""], ""id"": 1 }}";
+
+            string response;
+            using (var request = new HttpRequest())
+            {
+                request.UserAgent = "Mozilla/5.0";
+                request.IgnoreProtocolErrors = true;
+                request.ConnectTimeout = 5000;
+
+                if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
+                if (!string.IsNullOrEmpty(proxy))
+                {
+                    string[] proxyArray = proxy.Split(':');
+                    string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);
+                    request.Proxy = new HttpProxyClient(host, port, username, password);
+                }
+
+                try
+                {
+                    HttpResponse httpResponse = request.Post(chainRPC, jsonBody, "application/json");
+                    response = httpResponse.ToString();
+                }
+                catch (HttpException ex)
+                {
+                    _project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
+                    throw;
+                }
+            }
+
+            var json = JObject.Parse(response);
+            string hexBalance = json["result"]?.ToString()?.TrimStart('0', 'x') ?? "0";
+            BigInteger balance = BigInteger.Parse("0" + hexBalance, NumberStyles.AllowHexSpecifier);
+
+            if (log) _log.Send($"[Leaf.xNet ⇌] balance of ERC-1155 [{tokenContract}:id({tokenId})] on {address}: [{balance}]");
+
+            if (typeof(T) == typeof(string))
+                return (T)Convert.ChangeType(balance.ToString(), typeof(T));
+            else if (typeof(T) == typeof(int))
+                return (T)(object)(int)balance;
+            else if (typeof(T) == typeof(BigInteger))
+                return (T)(object)balance;
+            else
+                throw new InvalidOperationException($"!W unsupported type {typeof(T)}");
+        }
+        public T ChainId<T>(string chainRPC = null, string proxy = null, bool log = false)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            if (string.IsNullOrEmpty(chainRPC)) chainRPC = _project.Variables["blockchainRPC"].Value;
+            string jsonBody = @"{""jsonrpc"": ""2.0"",""method"": ""eth_chainId"",""params"": [],""id"": 1}";
+
+            string response;
+            using (var request = new HttpRequest())
+            {
+                request.UserAgent = "Mozilla/5.0";
+                request.IgnoreProtocolErrors = true;
+                request.ConnectTimeout = 5000;
+
+                if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
+                if (!string.IsNullOrEmpty(proxy))
+                {
+                    string[] proxyArray = proxy.Split(':');
+                    string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);
+                    request.Proxy = new HttpProxyClient(host, port, username, password);
+                }
+
+                try
+                {
+                    HttpResponse httpResponse = request.Post(chainRPC, jsonBody, "application/json");
+                    response = httpResponse.ToString();
+                }
+                catch (HttpException ex)
+                {
+                    _project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
+                    throw;
+                }
+            }
+
+            var json = JObject.Parse(response);
+            string hexResult = json["result"]?.ToString() ?? "0x0";
+            if (hexResult == "0x0")
+                return (T)Convert.ChangeType("0", typeof(T));
+
+            int chainId = Convert.ToInt32(hexResult.TrimStart('0', 'x'), 16);
+
+            if (typeof(T) == typeof(string))
+                return (T)Convert.ChangeType(chainId.ToString(), typeof(T));
+
+            return (T)Convert.ChangeType(chainId, typeof(T));
+        }
 		public T NonceEVM<T>(string chainRPC = null, string address = null, string proxy = null, bool log = false)
 		{
 			if (string.IsNullOrEmpty(address)) 
@@ -3432,7 +3873,7 @@ namespace w3tools //by @w3bgrep
 				return (T)Convert.ChangeType("0", typeof(T));
 			
 			int transactionCount = Convert.ToInt32(hexResultNonce.TrimStart('0', 'x'), 16);
-			if (log) Loggers.l0g(_project, $"{address} nonce now {transactionCount}");
+			if (log) _log.Send( $"{address} nonce now {transactionCount}");
 			if (typeof(T) == typeof(string))
 				return (T)Convert.ChangeType(transactionCount.ToString(), typeof(T));			
 			return (T)Convert.ChangeType(transactionCount, typeof(T));
@@ -3479,16 +3920,15 @@ namespace w3tools //by @w3bgrep
 			var json = JObject.Parse(response);
 			string lamports = json["result"]?["value"]?.ToString() ?? "0";			
 
-			//var match = Regex.Match(response, @"""value""\s*:\s*(\d+)");
-			//string lamports = match.Success ? match.Groups[1].Value : "0";
+
 			decimal balanceSol = decimal.Parse(lamports) / 1000000000m;
-			if (log) Loggers.l0g(_project,$"{address}: {balanceSol} SOL");
+			if (log) _log.Send($"{address}: {balanceSol} SOL");
 
 			if (typeof(T) == typeof(string))
 				return (T)Convert.ChangeType(balanceSol.ToString("0.##################"), typeof(T));
 			return (T)Convert.ChangeType(balanceSol, typeof(T));
 		}
-		public T TokenSPL<T>(string tokenMint, string address = null, string rpc = null, string proxy = null, bool log = false)
+		public T TokenSPL<T>(string tokenMint, string address = null, int floor = 0, string rpc = null, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 			if (string.IsNullOrEmpty(address)) 
@@ -3526,7 +3966,6 @@ namespace w3tools //by @w3bgrep
 					throw;
 				}
 			}
-
 			var json = JObject.Parse(response);
 			var tokenAccounts = json["result"]?["value"] as JArray;
 			string lamports = tokenAccounts != null && tokenAccounts.Count > 0 
@@ -3536,11 +3975,10 @@ namespace w3tools //by @w3bgrep
 				? int.Parse(tokenAccounts[0]?["account"]?["data"]?["parsed"]?["info"]?["tokenAmount"]?["decimals"]?.ToString() ?? "0")
 				: 0;
 			decimal balanceToken = decimal.Parse(lamports) / (decimal)Math.Pow(10, decimals);
-			if (log) Loggers.l0g(_project, $"{address}: {balanceToken} TOKEN ({tokenMint})");
-
-			if (typeof(T) == typeof(string))
-				return (T)Convert.ChangeType(balanceToken.ToString("0.##################"), typeof(T));
-			return (T)Convert.ChangeType(balanceToken, typeof(T));
+			if (log) _log.Send( $"{address}: {balanceToken} TOKEN ({tokenMint})");
+            if (floor != 0 )decimals = floor;
+            if (typeof(T) == typeof(string)) return FloorDecimal<T>(balanceToken, decimals); 
+            return (T)Convert.ChangeType(balanceToken, typeof(T));
 		}
 		public T NativeSUI<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
 		{
@@ -3584,7 +4022,7 @@ namespace w3tools //by @w3bgrep
 			var json = JObject.Parse(response);
 			string mist = json["result"]?["totalBalance"]?.ToString() ?? "0";
 			decimal balanceSui = decimal.Parse(mist) / 1000000000m;
-			if (log) Loggers.l0g(_project, $"{address}: {balanceSui} SUI");
+			if (log) _log.Send( $"{address}: {balanceSui} SUI");
 
 			if (typeof(T) == typeof(string))
 				return (T)Convert.ChangeType(balanceSui.ToString("0.##################"), typeof(T));
@@ -3632,7 +4070,7 @@ namespace w3tools //by @w3bgrep
 			var json = JObject.Parse(response);
 			string mist = json["result"]?["totalBalance"]?.ToString() ?? "0";
 			decimal balanceToken = decimal.Parse(mist) / 1000000m;
-			if (log) Loggers.l0g(_project, $"{address}: {balanceToken} TOKEN ({coinType})");
+			if (log) _log.Send( $"{address}: {balanceToken} TOKEN ({coinType})");
 
 			if (typeof(T) == typeof(string))
 				return (T)Convert.ChangeType(balanceToken.ToString("0.##################"), typeof(T));
@@ -3680,7 +4118,7 @@ namespace w3tools //by @w3bgrep
 			var json = JObject.Parse(response);
 			string octas = json["data"]?["coin"]?["value"]?.ToString() ?? "0";
 			decimal balanceApt = decimal.Parse(octas) / 100000000m;
-			if (log) Loggers.l0g(_project, $"{address}: {balanceApt} APT");
+			if (log) _log.Send( $"{address}: {balanceApt} APT");
 
 			if (typeof(T) == typeof(string))
 				return (T)Convert.ChangeType(balanceApt.ToString("0.##################"), typeof(T));
@@ -3728,7 +4166,7 @@ namespace w3tools //by @w3bgrep
 			var json = JObject.Parse(response);
 			string octas = json["data"]?["coin"]?["value"]?.ToString() ?? "0";
 			decimal balanceToken = decimal.Parse(octas) / 1000000m; // Предполагаем 6 decimals, как для USDC
-			if (log) Loggers.l0g(_project, $"{address}: {balanceToken} TOKEN ({coinType})");
+			if (log) _log.Send( $"{address}: {balanceToken} TOKEN ({coinType})");
 
 			if (typeof(T) == typeof(string))
 				return (T)Convert.ChangeType(balanceToken.ToString("0.##################"), typeof(T));
@@ -3819,10 +4257,10 @@ namespace w3tools //by @w3bgrep
 					var required = value + 0.00015m;
 				    if (native > required)
 				    {
-				        Loggers.l0g(_project,$"CHOSEN: rpc:[{chainRPC}] native:[{native}]");
+				        if (log) _log.Send($"CHOSEN: rpc:[{chainRPC}] native:[{native}]");
 						found = true; break;
 				    }
-					Loggers.l0g(_project,$"rpc:[{chainRPC}] native:[{native}] lower than [{required}]");
+					if (log) _log.Send($"rpc:[{chainRPC}] native:[{native}] lower than [{required}]");
 				    Thread.Sleep(1000);
 				}
 				
@@ -3836,7 +4274,7 @@ namespace w3tools //by @w3bgrep
 			else 
 			{
 				var native = NativeEVM<decimal>(chainRPC);
-				Loggers.l0g(_project,$"rpc:[{chainRPC}] native:[{native}]");
+				if (log) _log.Send($"rpc:[{chainRPC}] native:[{native}]");
 				if (native < value + 0.0002m)
 				{
 					return $"fail: no balance over {value}ETH found on {chainRPC}";
@@ -3865,7 +4303,7 @@ namespace w3tools //by @w3bgrep
 			}
 			catch (Exception ex){_project.SendWarningToLog($"{ex.Message}",true);throw;}
 			
-			Loggers.l0g(_project,txHash);
+			if (log) _log.Send(txHash);
 			WaitTransaction(chainRPC,txHash);
 			return txHash;
 		}
@@ -5782,10 +6220,13 @@ namespace w3tools //by @w3bgrep
 	public class OKXApi
 	{
 		private readonly IZennoPosterProjectModel _project;
+        private readonly string[] _apiKeys;
+        
 
 		public OKXApi(IZennoPosterProjectModel project)
 		{
 			_project = project;
+            _apiKeys = okxKeys();
 		}
 		public string[] okxKeys()  
 		{
@@ -5799,18 +6240,19 @@ namespace w3tools //by @w3bgrep
 		private string MapNetwork(string chain, bool log)
 		{
 			if (log) Loggers.l0g(_project, "Mapping network: " + chain);
+            chain = chain.ToLower();
 			switch (chain)
 			{
-				case "Arbitrum": return "Arbitrum One";
-				case "Ethereum": return "ERC20";
-                case "Base": return "Base";
-				case "Binance Smart Chain": return "BSC";
-				case "Avalanche C-Chain": return "Avalanche C-Chain";
-				case "Polygon": return "Polygon";
-				case "Optimism": return "Optimism";
-				case "TRC-20": return "TRC20";
-				case "zkSync Era": return "zkSync Era";
-				case "Aptos": return "Aptos";
+				case "arbitrum": return "Arbitrum One";
+				case "ethereum": return "ERC20";
+                case "base": return "Base";
+				case "bsc": return "BSC";
+				case "avalanche": return "Avalanche C-Chain";
+				case "polygon": return "Polygon";
+				case "optimism": return "Optimism";
+				case "trc20": return "TRC20";
+				case "zksync": return "zkSync Era";
+				case "aptos": return "Aptos";
 				default:
 					if (log) Loggers.l0g(_project, "Unsupported network: " + chain);
 					throw new ArgumentException("Unsupported network: " + chain);
@@ -5830,10 +6272,10 @@ namespace w3tools //by @w3bgrep
 		private string OKXPost(string url, object body, string proxy = null, bool log = false)
 		{
 
-			var ApiKeys = okxKeys();
-			string apiKey = ApiKeys[0];
-			string secretKey = ApiKeys[1];
-			string passphrase = ApiKeys[2];
+			//var ApiKeys = okxKeys();
+			string apiKey = _apiKeys[0];
+			string secretKey = _apiKeys[1];
+			string passphrase = _apiKeys[2];
 
 			var jsonBody = JsonConvert.SerializeObject(body);
 			string timestamp =  DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
@@ -5875,10 +6317,10 @@ namespace w3tools //by @w3bgrep
 		}
 		private string OKXGet(string url, string proxy = null, bool log = false)
 		{
-			var ApiKeys = okxKeys();
-			string apiKey = ApiKeys[0];
-			string secretKey = ApiKeys[1];
-			string passphrase = ApiKeys[2];
+			//var ApiKeys = okxKeys();
+			string apiKey = _apiKeys[0];
+			string secretKey = _apiKeys[1];
+			string passphrase = _apiKeys[2];
 
 
 			string timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");			
@@ -6074,8 +6516,8 @@ namespace w3tools //by @w3bgrep
 			string network = MapNetwork(chain, log);
 			var body = new
 			{
-				amt = amount.ToString("F4").Replace(',', '.'),
-				fee = fee.ToString().Replace(',', '.'),
+				amt = amount.ToString("G", CultureInfo.InvariantCulture),
+				fee = fee.ToString("G", CultureInfo.InvariantCulture),
 				dest = "4",
 				ccy = currency,
 				chain = currency + "-" + network,
@@ -9607,17 +10049,27 @@ namespace w3tools //by @w3bgrep
     public class Url
     {
         //private readonly string Url; 
-        public Url()
-		{
+        private readonly Instance _instance;
 
-             
+
+		public Url(Instance instance)
+		{
+			_instance = instance;
 		}
 
-        public string Stargate (string srcChain, string dstChain, string srcToken = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", string dstToken = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE")
+        public void Stargate (string srcChain, string dstChain, string srcToken = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", string dstToken = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE")
         {
-            string baseUrl = "https://stargate.finance/bridge?";
-            string url = baseUrl + $"srcChain={srcChain}" + $"&srcToken={srcToken}" + $"&dstChain={dstChain}"+ $"&dstToken={dstToken}";
-            return url;
+            
+            string url = "https://stargate.finance/bridge?" + $"srcChain={srcChain}" + $"&srcToken={srcToken}" + $"&dstChain={dstChain}"+ $"&dstToken={dstToken}";
+             _instance.ActiveTab.Navigate(url, "");
+           
+        }
+        public void Relay (string fromChainId, string to, string toCurrency = "0x0000000000000000000000000000000000000000", string fromCurrency = "0x0000000000000000000000000000000000000000")
+        {
+
+            string url = $"https://relay.link/bridge/{to}?fromChainId={fromChainId}&toCurrency={toCurrency}&fromCurrency={fromCurrency}";
+            _instance.ActiveTab.Navigate(url, "");
+
         }
 
     }
