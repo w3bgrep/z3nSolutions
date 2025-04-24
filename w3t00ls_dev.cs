@@ -483,7 +483,7 @@ namespace w3tools //by @w3bgrep
 			_project = project;
 			_start = DateTime.Now;
 		}
-        public void Send(string toLog = "", [CallerMemberName] string callerName = "", bool show = true, bool thr0w = false)
+        public void Send(string toLog, [CallerMemberName] string callerName = "", bool show = true, bool thr0w = false)
         {
             var acc0 = _project.Variables["acc0"].Value;
 			var port = _project.Variables["instancePort"].Value;
@@ -494,7 +494,7 @@ namespace w3tools //by @w3bgrep
 			var callingMethod = stackFrame.GetMethod();
 
 			if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = _project.Variables["projectName"].Value;
-			
+			if (toLog == null) toLog = "null"; 
 			string formated = $"⛑  [{acc0}] ⚙  [{port}] ⏱  [{totalAge}] ⛏  [{callerName}]. elapsed:[{age}]\n          {toLog.Trim()}";
 			LogType type = LogType.Info; LogColor color = LogColor.Default;
             if (formated.Contains("!W")) 
@@ -668,11 +668,11 @@ namespace w3tools //by @w3bgrep
 		public static void FilterAccList(IZennoPosterProjectModel project, List<string> dbQueries, bool log = false)
 		{
 			// Ручной режим
-			if (!string.IsNullOrEmpty(project.Variables["cfgManualAcc0"].Value)) 
+			if (!string.IsNullOrEmpty(project.Variables["acc0Forced"].Value)) 
 			{
 				project.Lists["accs"].Clear();
-				project.Lists["accs"].Add(project.Variables["cfgManualAcc0"].Value);
-				if (log) Loggers.l0g(project, $@"manual mode on with {project.Variables["cfgManualAcc0"].Value}");
+				project.Lists["accs"].Add(project.Variables["acc0Forced"].Value);
+				if (log) Loggers.l0g(project, $@"manual mode on with {project.Variables["acc0Forced"].Value}");
 				return;
 			}
 
@@ -3326,19 +3326,20 @@ namespace w3tools //by @w3bgrep
         private readonly string _dbMode;
         private readonly bool _debug;
 
+		private readonly bool _logShow;
+
 
         public Sql(IZennoPosterProjectModel project, bool log = false)
 		{
 			_project = project;
 			_log = new L0g(_project);
             _dbMode = _project.Variables["DBmode"].Value;
-            _debug = (_project.Variables["debug"].Value == "True");
-           
-
+			_logShow = log;
 		}
-        public string sqlLog (string query, string response = null)
+        public void SqlLog (string query, string response = null, bool log = false)
         {
-            string dbMode = _project.Variables["DBmode"].Value; 
+            if (!_logShow && !log) return;
+			string dbMode = _project.Variables["DBmode"].Value; 
             string toLog = null;
 			
             if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase)) {
@@ -3348,8 +3349,7 @@ namespace w3tools //by @w3bgrep
             else  {
 				toLog += $"[ ▲ {dbMode}]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]";
 			}
-            return toLog;
-
+			_log.Send(toLog);
         }
 
 
@@ -3368,9 +3368,8 @@ namespace w3tools //by @w3bgrep
                 result = PostgresDB.pSQL(_project, query, log, throwOnEx);
             }
             else throw new Exception($"unknown DBmode: {dbMode}");
-            if (log) _log.Send(sqlLog(query,result)); 
+			SqlLog(query,result,log:log);
             return result;
-
         }
         public void Upd(string toUpd, string tableName = null, bool log = false, bool throwOnEx = false)
 		{          
@@ -3561,10 +3560,11 @@ namespace w3tools //by @w3bgrep
 
 		public void BalLog(string address, string balance, string rpc, string contract = null, [CallerMemberName] string callerName = "", bool log = false)
 		{	
+			if (!_logShow && !log) return;
 			var stackFrame = new System.Diagnostics.StackFrame(1); 
 			var callingMethod = stackFrame.GetMethod();
 			if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
-			if (_logShow) _log.Send( $"[ ⛽  {callerName}] [{address}] balance {contract} is\n		  [{balance}] by [{rpc}]");
+			_log.Send( $"[ ⛽  {callerName}] [{address}] balance {contract} is\n		  [{balance}] by [{rpc}]");
 		}
 
 		public string Rpc(string chain)
@@ -3762,7 +3762,7 @@ namespace w3tools //by @w3bgrep
 			decimal balance = (decimal)balanceWei / 1000000000000000000m;
 
 			string balanceString = FloorDecimal<string>(balance, int.Parse("18")); 
-			BalLog( address,  balanceString,  chainRPC);
+			BalLog( address,  balanceString,  chainRPC, log:log);
 			if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(balanceString, typeof(T));
             return (T)Convert.ChangeType(balance, typeof(T));			
 		}
@@ -3813,8 +3813,7 @@ namespace w3tools //by @w3bgrep
             decimal balance = (decimal)balanceWei / decimals;
 
 			string balanceString = FloorDecimal<string>(balance, int.Parse(tokenDecimal)); 
-			BalLog( address,  balanceString,  chainRPC, tokenContract);
-
+			BalLog( address,  balanceString,  chainRPC, tokenContract,log:log);
 			if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(balanceString, typeof(T));
             return (T)Convert.ChangeType(balance, typeof(T));		
 
@@ -4071,7 +4070,7 @@ namespace w3tools //by @w3bgrep
 			decimal balance = decimal.Parse(tokenDecimal) / 1000000000m;
 
 			string balanceString = FloorDecimal<string>(balance, int.Parse(tokenDecimal));
-			BalLog( address,  balanceString,  chainRPC);
+			BalLog( address,  balanceString,  chainRPC,log:log);
 
 			if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(balanceString, typeof(T));
             return (T)Convert.ChangeType(balance, typeof(T));		
@@ -4311,7 +4310,7 @@ namespace w3tools //by @w3bgrep
 			}
 
 			string balanceString = FloorDecimal<string>(balance, 8);
-			if (log) BalLog(address, balanceString, rpc);
+			BalLog(address, balanceString, rpc ,log:log);
 
 			if (typeof(T) == typeof(string)) return (T)(object)balanceString;
 			return (T)Convert.ChangeType(balance, typeof(T));
@@ -6047,7 +6046,7 @@ namespace w3tools //by @w3bgrep
             return balanceList;
         }
 
-		public void OKXWithdraw( string toAddress, string currency, string chain, double amount, double fee, string proxy = null, bool log = false)
+		public void OKXWithdraw( string toAddress, string currency, string chain, decimal amount, decimal fee, string proxy = null, bool log = false)
 		{
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 			string network = MapNetwork(chain, log);
