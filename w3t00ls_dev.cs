@@ -497,26 +497,39 @@ namespace w3tools //by @w3bgrep
 			if (toLog == null) toLog = "null"; 
 			string formated = $"⛑  [{acc0}] ⚙  [{port}] ⏱  [{totalAge}] ⛏  [{callerName}]. elapsed:[{age}]\n          {toLog.Trim()}";
 			LogType type = LogType.Info; LogColor color = LogColor.Default;
-            if (formated.Contains("!W")) 
-            {
-                type = LogType.Warning;
-                color = LogColor.Orange;
-            }
-            else if (formated.Contains("!E")) 
-            {
-                type = LogType.Error;
-                color = LogColor.Orange;
-            }
-            else if (formated.Contains("relax")) 
-            {
-                type = LogType.Info;
-                color = LogColor.LightBlue;
-            }
-            else if (Time.TimeElapsed(_project) > 60 * 60)
-            {
-                type = LogType.Info;
-                color = LogColor.Yellow;
-            }
+            
+			
+			
+			if (formated.Contains("!W")) type = LogType.Warning;
+            if (formated.Contains("!E")) type = LogType.Error;
+            if (Time.TimeElapsed(_project) > 60 * 60) formated = "[!TIMEOUT EXEEDED]\n" + formated ; 
+
+			var colorMap = new Dictionary<string, LogColor>
+				{
+					{ "c..", LogColor.Default },
+					{ "c.w", LogColor.Gray },
+					{ "c.y", LogColor.Yellow },
+					{ "c.o", LogColor.Orange },
+					{ "c.r", LogColor.Red },
+					{ "c.p", LogColor.Pink },
+					{ "c.v", LogColor.Violet },
+					{ "c.b", LogColor.Blue },
+					{ "c.lb", LogColor.LightBlue },
+					{ "c.t", LogColor.Turquoise },
+					{ "c.g", LogColor.Green },
+					{ "!W", LogColor.Orange },
+					{ "!E", LogColor.Orange },
+					{ "relax", LogColor.LightBlue },
+				};
+
+			foreach (var pair in colorMap)
+			{
+				if (formated.Contains(pair.Key)){
+					color = pair.Value;
+					break;
+				}
+
+			}
 			
 			_project.SendToLog(formated, type, show, color);
             if (thr0w) throw new Exception($"{formated}");
@@ -3358,7 +3371,7 @@ namespace w3tools //by @w3bgrep
             
             
             string dbMode = _project.Variables["DBmode"].Value;
-            if (_project.Variables["debug"].Value == "True") log = true;
+            //if (_project.Variables["debug"].Value == "True") log = true;
             string result = null;
 
             if (dbMode == "SQLite") {
@@ -6636,11 +6649,17 @@ namespace w3tools //by @w3bgrep
  		public void BPApprove (bool log = false)
 		{
 			if (log) Loggers.l0g(_project,$"[BackPack] Approve...");
-            try{
-            _instance.SetHe(("input:password", "fulltagname", "input:password", "regexp", 0),_pass,deadline:1);
-            _instance.LMB(("button", "innertext", "Unlock", "regexp", 0));
+            
+			
+			try{
+            _instance.LMB(("div", "innertext", "Approve", "regexp", 0),"last");
+            _instance.CloseExtraTabs();
+			return;
             }
-            catch{}
+            catch{			
+            _instance.SetHe(("input:password", "fulltagname", "input:password", "regexp", 0),_pass);
+            _instance.LMB(("button", "innertext", "Unlock", "regexp", 0));
+			}
             _instance.LMB(("div", "innertext", "Approve", "regexp", 0),"last");
             _instance.CloseExtraTabs();
 		}
@@ -6965,9 +6984,9 @@ namespace w3tools //by @w3bgrep
 		}
 		public static void KeplrInstallExt(this Instance instance,IZennoPosterProjectModel project)
 		{
-			string path = $"{project.Path}.crx\\keplr0.12.169.crx";
+			string path = $"{project.Path}.crx\\keplr0.12.223.crx";//keplr0.12.169.crx"
 			instance.InstallCrxExtension(path);Thread.Sleep(2000);
-		}
+		}//0.12.223
 		public static void KeplrUnlock(this Instance instance,IZennoPosterProjectModel project)
 		{
 			instance.WaitSetValue(() => instance.ActiveTab.FindElementByAttribute("input:password", "tagname", "input", "regexp", 0),SAFU.HWPass(project));
