@@ -6847,7 +6847,7 @@ namespace w3tools //by @w3bgrep
 			var em = _instance.UseFullMouseEmulation;
 			_instance.UseFullMouseEmulation = false;
 			if (ZERInstall (log:log)) ZERImport(log:log);
-			else ZERUnlock(log:log);
+			else ZERUnlock(log:false); ZERCheck(log:log);
 			_instance.CloseExtraTabs();
 			_instance.UseFullMouseEmulation = em;
 		}
@@ -6858,8 +6858,7 @@ namespace w3tools //by @w3bgrep
 			var extListString = string.Join("\n", _instance.GetAllExtensions().Select(x => $"{x.Name}:{x.Id}"));
 			if (!extListString.Contains(extId)) 
 			{
-				//if (log)Loggers.l0g(_project,"RZRInstall");
-				WalLog("RZRInstall");
+				WalLog();
 				_instance.InstallCrxExtension(path);
 				return true;
 			}
@@ -6895,10 +6894,8 @@ namespace w3tools //by @w3bgrep
 			}
 			_instance.LMB(("button", "innertext", "Import\\ wallet", "regexp", 0));	
 			_instance.SetHe(("input:password", "fulltagname", "input:password", "text", 0),_pass);
-			//_instance.WaitSetValue(() => _instance.ActiveTab.FindElementByAttribute("input:password", "fulltagname", "input:password", "text", 0),_pass);
 			_instance.LMB(("button", "class", "_primary", "regexp", 0));
 			_instance.SetHe(("input:password", "fulltagname", "input:password", "text", 0),_pass);
-			//_instance.WaitSetValue(() => _instance.ActiveTab.FindElementByAttribute("input:password", "fulltagname", "input:password", "text", 0),_pass);
 			_instance.LMB(("button", "class", "_primary", "regexp", 0));
 			if (inputRef)
 			{
@@ -6910,16 +6907,25 @@ namespace w3tools //by @w3bgrep
 		}
 		public void ZERUnlock (bool log = false)
 		{
-			if (log)Loggers.l0g(_project,$"[RZRUnlock]");
 			_instance.ActiveTab.Navigate("chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/overview", "");
-			_instance.SetHe(("input:password", "fulltagname", "input:password", "text", 0),_pass);
-			_instance.WaitSetValue(() => _instance.ActiveTab.FindElementByAttribute("input:password", "fulltagname", "input:password", "text", 0),_pass);
-			_instance.LMB(("button", "class", "_primary", "regexp", 0));
 
+			string active = null;
+			try{
+				active = _instance.ReadHe(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html\\#/wallet-select", "regexp", 0));				
+			}
+			catch{
+				_instance.SetHe(("input:password", "fulltagname", "input:password", "text", 0),_pass);
+				_instance.LMB(("button", "class", "_primary", "regexp", 0));
+				active = _instance.ReadHe(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html\\#/wallet-select", "regexp", 0));
+			}
+			WalLog(active);
 		}
-		public void ZERCheck (bool log = false)
+		public string ZERCheck (bool log = false)
 		{
-
+			_instance.ActiveTab.Navigate("chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/wallet-select", "");
+			var active = _instance.ReadHe(("button", "class", "_wallet", "regexp", 0)).Replace("Explore Rewards","").Replace("\n"," ");
+			WalLog(active);
+			return active;
 		}
 
 	}
