@@ -506,17 +506,17 @@ namespace w3tools //by @w3bgrep
 
 			var colorMap = new Dictionary<string, LogColor>
 				{
-					{ "c..", LogColor.Default },
-					{ "c.w", LogColor.Gray },
-					{ "c.y", LogColor.Yellow },
-					{ "c.o", LogColor.Orange },
-					{ "c.r", LogColor.Red },
-					{ "c.p", LogColor.Pink },
-					{ "c.v", LogColor.Violet },
-					{ "c.b", LogColor.Blue },
-					{ "c.lb", LogColor.LightBlue },
-					{ "c.t", LogColor.Turquoise },
-					{ "c.g", LogColor.Green },
+					{ "`.", LogColor.Default },
+					{ "`w", LogColor.Gray },
+					{ "`y", LogColor.Yellow },
+					{ "`o", LogColor.Orange },
+					{ "`r", LogColor.Red },
+					{ "`p", LogColor.Pink },
+					{ "`v", LogColor.Violet },
+					{ "`b", LogColor.Blue },
+					{ "`lb", LogColor.LightBlue },
+					{ "`t", LogColor.Turquoise },
+					{ "`g", LogColor.Green },
 					{ "!W", LogColor.Orange },
 					{ "!E", LogColor.Orange },
 					{ "relax", LogColor.LightBlue },
@@ -6248,16 +6248,19 @@ namespace w3tools //by @w3bgrep
 	{
 		private readonly IZennoPosterProjectModel _project;
 		private readonly Instance _instance;
-		private readonly bool _log;
+		private readonly L0g _log;
+		private readonly bool _logShow;
         private readonly string _pass;
-
+		private readonly Sql _sql;
 
 		public Wall3t(IZennoPosterProjectModel project, Instance instance, bool log = false)
 		{
 			_project = project;
 			_instance = instance;
-			_log = log;
-            _pass = SAFU.HWPass(project);
+            _log = new L0g(_project);
+			_logShow = log;
+			_sql = new Sql(_project);
+            _pass = SAFU.HWPass(_project);
 		}
 		public void Switch(string toUse = "", bool log = false)
 		{
@@ -6299,6 +6302,14 @@ namespace w3tools //by @w3bgrep
 			_instance.UseFullMouseEmulation = em;
 			if (log)Loggers.l0g(_project,$"Enabled  {toUse}");
 
+		}
+		public void WalLog(string tolog = "",  [CallerMemberName] string callerName = "", bool log = false)
+		{	
+			if (!_logShow && !log) return;
+			var stackFrame = new System.Diagnostics.StackFrame(1); 
+			var callingMethod = stackFrame.GetMethod();
+			if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
+			_log.Send( $"[ 💰  {callerName}] [{tolog}] ");
 		}
 		
         //MetaMask
@@ -6779,9 +6790,9 @@ namespace w3tools //by @w3bgrep
 				if(!set)throw new Exception("no key");
 				return active;
 			} 
-			if (_log) _project.SendInfoToLog(string.Join("\n", pKeys));
-			if (_log) _project.SendInfoToLog(string.Join("\n", sKeys));
-			if (_log) _project.SendInfoToLog(active);
+			// if (_log) _project.SendInfoToLog(string.Join("\n", pKeys));
+			// if (_log) _project.SendInfoToLog(string.Join("\n", sKeys));
+			// if (_log) _project.SendInfoToLog(active);
 			if (mode == "pKeys") return string.Join("\n", pKeys);
 			if (mode == "sKeys") return string.Join("\n", sKeys);
 			return active;
@@ -6827,6 +6838,88 @@ namespace w3tools //by @w3bgrep
 			_instance.LMB(("button", "data-testid", "okd-button", "regexp", 0));
 			}
 			catch{}
+		}
+
+        //Zer
+		public void ZERLaunch (bool log = false)
+		{
+			if (log)Loggers.l0g(_project,"RZRLaunch");
+			var em = _instance.UseFullMouseEmulation;
+			_instance.UseFullMouseEmulation = false;
+			if (ZERInstall (log:log)) ZERImport(log:log);
+			else ZERUnlock(log:log);
+			_instance.CloseExtraTabs();
+			_instance.UseFullMouseEmulation = em;
+		}
+		public bool ZERInstall (bool log = false)
+		{
+			string path = $"{_project.Path}.crx\\Zerion1.21.3.crx";
+			var extId = "klghhnkeealcohjjanjjdaeeggmfmlpl";
+			var extListString = string.Join("\n", _instance.GetAllExtensions().Select(x => $"{x.Name}:{x.Id}"));
+			if (!extListString.Contains(extId)) 
+			{
+				//if (log)Loggers.l0g(_project,"RZRInstall");
+				WalLog("RZRInstall");
+				_instance.InstallCrxExtension(path);
+				return true;
+			}
+			return false;
+		}
+		public bool ZERImport (string sourse = "pkey", string refCode = null, bool log = false)
+		{
+			if (string.IsNullOrWhiteSpace(refCode))refCode = SQL.W3Query(_project,$@"SELECT referralCode
+			FROM projects.zerion
+			WHERE referralCode != '_' 
+			AND TRIM(referralCode) != ''
+			ORDER BY RANDOM()
+			LIMIT 1;");
+
+			var inputRef =true;
+			_instance.LMB(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\?windowType=tab&appMode=onboarding#/onboarding/import", "regexp", 0));
+			if (sourse == "pkey")
+			{
+				_instance.LMB(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\?windowType=tab&appMode=onboarding#/onboarding/import/private-key", "regexp", 0));
+				string key = Db.KeyEVM(_project);
+				_instance.ActiveTab.FindElementByName("key").SetValue(key, "Full", false);
+			}
+			else if (sourse == "seed")
+			{
+				_instance.LMB(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\?windowType=tab&appMode=onboarding#/onboarding/import/mnemonic", "regexp", 0));
+				string seedPhrase = Db.Seed(_project);
+				int index = 0;	
+				foreach(string word in seedPhrase.Split(' ')) 
+					{ 
+						_instance.ActiveTab.FindElementById($"word-{index}").SetValue(word, "Full", false);
+						index++;
+					}
+			}
+			_instance.LMB(("button", "innertext", "Import\\ wallet", "regexp", 0));	
+			_instance.SetHe(("input:password", "fulltagname", "input:password", "text", 0),_pass);
+			//_instance.WaitSetValue(() => _instance.ActiveTab.FindElementByAttribute("input:password", "fulltagname", "input:password", "text", 0),_pass);
+			_instance.LMB(("button", "class", "_primary", "regexp", 0));
+			_instance.SetHe(("input:password", "fulltagname", "input:password", "text", 0),_pass);
+			//_instance.WaitSetValue(() => _instance.ActiveTab.FindElementByAttribute("input:password", "fulltagname", "input:password", "text", 0),_pass);
+			_instance.LMB(("button", "class", "_primary", "regexp", 0));
+			if (inputRef)
+			{
+				_instance.LMB(("button", "innertext", "Enter\\ Referral\\ Code", "regexp", 0),refCode);
+				_instance.WaitSetValue(() => _instance.ActiveTab.FindElementByName("referralCode"),refCode);
+				_instance.LMB(("button", "class", "_regular", "regexp", 0));
+			}
+			return true;
+		}
+		public void ZERUnlock (bool log = false)
+		{
+			if (log)Loggers.l0g(_project,$"[RZRUnlock]");
+			_instance.ActiveTab.Navigate("chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/overview", "");
+			_instance.SetHe(("input:password", "fulltagname", "input:password", "text", 0),_pass);
+			_instance.WaitSetValue(() => _instance.ActiveTab.FindElementByAttribute("input:password", "fulltagname", "input:password", "text", 0),_pass);
+			_instance.LMB(("button", "class", "_primary", "regexp", 0));
+
+		}
+		public void ZERCheck (bool log = false)
+		{
+
 		}
 
 	}
