@@ -57,7 +57,7 @@ using ZXing;
 using ZXing.QrCode;
 using Npgsql;
 using Leaf.xNet;
-
+using W3t00ls;
 
 #endregion
 
@@ -473,71 +473,71 @@ namespace w3tools //by @w3bgrep
             if (thr0w) throw new Exception($"{formated}");
 		}
 	}
-    public class L0g
-    {
-        private readonly IZennoPosterProjectModel _project;
-        private readonly DateTime _start = DateTime.Now;
+    // public class L0g
+    // {
+    //     private readonly IZennoPosterProjectModel _project;
+    //     private readonly DateTime _start = DateTime.Now;
         
-        public L0g(IZennoPosterProjectModel project)
-		{
-			_project = project;
-			_start = DateTime.Now;
-		}
-        public void Send(string toLog, [CallerMemberName] string callerName = "", bool show = true, bool thr0w = false)
-        {
-            var acc0 = _project.Variables["acc0"].Value;
-			var port = _project.Variables["instancePort"].Value;
-            var age = DateTime.Now - _start;
-            var totalAge = TimeSpan.FromSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - long.Parse(_project.Variables["varSessionId"].Value)).ToString();
+    //     public L0g(IZennoPosterProjectModel project)
+	// 	{
+	// 		_project = project;
+	// 		_start = DateTime.Now;
+	// 	}
+    //     public void Send(string toLog, [CallerMemberName] string callerName = "", bool show = true, bool thr0w = false)
+    //     {
+    //         var acc0 = _project.Variables["acc0"].Value;
+	// 		var port = _project.Variables["instancePort"].Value;
+    //         var age = DateTime.Now - _start;
+    //         var totalAge = TimeSpan.FromSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - long.Parse(_project.Variables["varSessionId"].Value)).ToString();
 			
-            var stackFrame = new System.Diagnostics.StackFrame(1); 
-			var callingMethod = stackFrame.GetMethod();
+    //         var stackFrame = new System.Diagnostics.StackFrame(1); 
+	// 		var callingMethod = stackFrame.GetMethod();
 
-			if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = _project.Variables["projectName"].Value;
-			if (toLog == null) toLog = "null"; 
-			string formated = $"⛑  [{acc0}] ⚙  [{port}] ⏱  [{totalAge}] ⛏  [{callerName}]. elapsed:[{age}]\n          {toLog.Trim()}";
-			LogType type = LogType.Info; LogColor color = LogColor.Default;
+	// 		if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = _project.Variables["projectName"].Value;
+	// 		if (toLog == null) toLog = "null"; 
+	// 		string formated = $"⛑  [{acc0}] ⚙  [{port}] ⏱  [{totalAge}] ⛏  [{callerName}]. elapsed:[{age}]\n          {toLog.Trim()}";
+	// 		LogType type = LogType.Info; LogColor color = LogColor.Default;
             
 			
 			
-			if (formated.Contains("!W")) type = LogType.Warning;
-            if (formated.Contains("!E")) type = LogType.Error;
-            if (Time.TimeElapsed(_project) > 60 * 60) formated = "[!TIMEOUT EXEEDED]\n" + formated ; 
+	// 		if (formated.Contains("!W")) type = LogType.Warning;
+    //         if (formated.Contains("!E")) type = LogType.Error;
+    //         if (Time.TimeElapsed(_project) > 60 * 60) formated = "[!TIMEOUT EXEEDED]\n" + formated ; 
 
-			var colorMap = new Dictionary<string, LogColor>
-				{
-					{ "`.", LogColor.Default },
-					{ "`w", LogColor.Gray },
-					{ "`y", LogColor.Yellow },
-					{ "`o", LogColor.Orange },
-					{ "`r", LogColor.Red },
-					{ "`p", LogColor.Pink },
-					{ "`v", LogColor.Violet },
-					{ "`b", LogColor.Blue },
-					{ "`lb", LogColor.LightBlue },
-					{ "`t", LogColor.Turquoise },
-					{ "`g", LogColor.Green },
-					{ "!W", LogColor.Orange },
-					{ "!E", LogColor.Orange },
-					{ "relax", LogColor.LightBlue },
-				};
+	// 		var colorMap = new Dictionary<string, LogColor>
+	// 			{
+	// 				{ "`.", LogColor.Default },
+	// 				{ "`w", LogColor.Gray },
+	// 				{ "`y", LogColor.Yellow },
+	// 				{ "`o", LogColor.Orange },
+	// 				{ "`r", LogColor.Red },
+	// 				{ "`p", LogColor.Pink },
+	// 				{ "`v", LogColor.Violet },
+	// 				{ "`b", LogColor.Blue },
+	// 				{ "`lb", LogColor.LightBlue },
+	// 				{ "`t", LogColor.Turquoise },
+	// 				{ "`g", LogColor.Green },
+	// 				{ "!W", LogColor.Orange },
+	// 				{ "!E", LogColor.Orange },
+	// 				{ "relax", LogColor.LightBlue },
+	// 			};
 
-			foreach (var pair in colorMap)
-			{
-				if (formated.Contains(pair.Key)){
-					color = pair.Value;
-					break;
-				}
+	// 		foreach (var pair in colorMap)
+	// 		{
+	// 			if (formated.Contains(pair.Key)){
+	// 				color = pair.Value;
+	// 				break;
+	// 			}
 
-			}
+	// 		}
 			
-			_project.SendToLog(formated, type, show, color);
-            if (thr0w) throw new Exception($"{formated}");
+	// 		_project.SendToLog(formated, type, show, color);
+    //         if (thr0w) throw new Exception($"{formated}");
           
-        }
+    //     }
         
 
-    }
+    // }
 	#endregion
 
 	#region OnStart
@@ -1318,200 +1318,8 @@ namespace w3tools //by @w3bgrep
 			}
 		}
 	}
-    public class PostgresService : IDisposable
-    {
-        private readonly PostgresDB _db;
-        private readonly IZennoPosterProjectModel _project;
-        private readonly bool _log;
-        private readonly bool _throwOnEx;
-
-        public PostgresService(
-            IZennoPosterProjectModel project,
-            string host = "localhost:5432",
-            string dbName = "",
-            string dbUser = "",
-            string dbPswd = "",
-            bool log = false,
-            bool throwOnEx = false)
-        {
-            _project = project;
-            _log = log;
-            _throwOnEx = throwOnEx;
-
-            // Получаем параметры из project.Variables, если не переданы
-            if (string.IsNullOrEmpty(dbName)) dbName = project.Variables["DBpstgrName"].Value;
-            if (string.IsNullOrEmpty(dbUser)) dbUser = project.Variables["DBpstgrUser"].Value;
-            if (string.IsNullOrEmpty(dbPswd))
-            {
-                dbPswd = project.Variables["DBpstgrPass"].Value;
-                if (string.IsNullOrEmpty(dbPswd)) throw new Exception("PostgreSQL password is null");
-            }
-
-            _db = new PostgresDB(host, dbName, dbUser, dbPswd);
-        }
-
-        public string ExecuteQuery(string query)
-        {
-            try
-            {
-                _db.open();
-                string response;
-
-                if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
-                {
-                    response = string.Join("\r\n", _db.getAll(query));
-                }
-                else
-                {
-                    response = _db.Query(query).ToString();
-                }
-
-                if (_log)
-                {
-                    if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _project.SendToLog(
-                            $"[PstgSQL ▼ ]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]\nRESULT: [{response.Replace('\n', '|')}]",
-                            LogType.Info, true, LogColor.Gray);
-                    }
-                    else if (response != "0")
-                    {
-                        _project.SendToLog(
-                            $"[PstgSQL ▲ ]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]",
-                            LogType.Info, true, LogColor.Gray);
-                    }
-                }
-
-                return response;
-            }
-            catch (Exception ex)
-            {
-                Loggers.l0g(_project, $"!W {ex.Message}", thr0w: _throwOnEx);
-                return string.Empty;
-            }
-            finally
-            {
-                _db.close();
-            }
-        }
-
-        public void Dispose()
-        {
-            _db?.Dispose();
-        }
-    }
-	public class DbP0stgre : IDisposable
-	{
-	    private NpgsqlConnection _conn;
-		private readonly IZennoPosterProjectModel _project;
-		public void Dispose()
-		{
-			_conn?.Close();
-			_conn?.Dispose();
-		}
-		
-	    private DbP0stgre(string host, string database, string user, string password) 
-	    {
-	        var (hostname, port) = ParseHostPort(host, 5432);
-	        var cs = $"Host={hostname};Port={port};Database={database};Username={user};Password={password};";
-	        _conn = new NpgsqlConnection(cs);
-			//_project = project;
-	    }	
-		
-	    private (string host, int port) ParseHostPort(string input, int defaultPort) 
-	    {
-	        var parts = input.Split(':');
-	        return parts.Length == 2 
-	            ? (parts[0], int.Parse(parts[1])) 
-	            : (input, defaultPort);
-	    }
-        public void open()
-        {
-            if (_conn.State == System.Data.ConnectionState.Closed)
-            {
-                _conn.Open();
-            }
-        }	
-        public void close()
-        {
-            if (_conn.State == System.Data.ConnectionState.Open)
-            {
-                _conn.Close();
-            }
-        }
-        private void EnsureConnection()
-        {
-            if (_conn.State != System.Data.ConnectionState.Open)
-                throw new InvalidOperationException("Connection is not opened");
-        }	
-
-		public string pSQL(IZennoPosterProjectModel project, string query, bool log = false, bool throwOnEx = false, string host ="localhost:5432", string dbName = "", string dbUser = "", string dbPswd = "", [CallerMemberName] string callerName = "")
-		{
-
-			if (string.IsNullOrEmpty(dbName)) dbName = project.Variables["DBpstgrName"].Value;
-			if (string.IsNullOrEmpty(dbUser)) dbUser = project.Variables["DBpstgrUser"].Value;
-			
-			if (string.IsNullOrEmpty(dbPswd)) 
-            {
-                dbPswd = project.Variables["DBpstgrPass"].Value;
-                if (string.IsNullOrEmpty(dbPswd)) throw new Exception("PostgreSQL password isNull");
-            }
-
-            var db = new PostgresDB(host, dbName, dbUser, dbPswd);
-            try 
-            {
-                db.open();
-            }
-            catch (Exception ex)
-            {
-                Loggers.l0g(project,$"!W {ex.Message}", thr0w:throwOnEx);
-            }
-            try 
-			{	
-                var response = "";
-				if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
-                    response = string.Join("\r\n", db.getAll(query)); 
-                else 
-                    response = db.Query(query).ToString(); 
-				if (log) 
-				{
-					if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase)) project.SendToLog($"[PstgSQL ▼ ]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]\nRESULT: [{response.Replace('\n','|')}]", LogType.Info, true, LogColor.Gray);
-					else 
-					{
-						if (response != "0") project.SendToLog($"[PstgSQL ▲ ]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]", LogType.Info, true, LogColor.Gray);
-					}
-				}  
-				return response;				
-			}
-			catch (Exception ex)
-			{
-				Loggers.l0g(project,$"!W {ex.Message}", thr0w:throwOnEx);
-				return string.Empty;
-			}
-            finally
-            {
-				db.close(); 
-            }
-		}
-
-        public static string pSQL2(
-            IZennoPosterProjectModel project,
-            string query,
-            bool log = false,
-            bool throwOnEx = false,
-            string host = "localhost:5432",
-            string dbName = "",
-            string dbUser = "",
-            string dbPswd = "",
-            [CallerMemberName] string callerName = "")
-        {
-            using (var service = new PostgresService(project, host, dbName, dbUser, dbPswd, log, throwOnEx))
-            {
-                return service.ExecuteQuery(query);
-            }
-        }
+    
 	
-	}
     public static class SQLite
     {
 		public static string lSQL(IZennoPosterProjectModel project, string query, bool log = false, bool ignoreErrors = false)
