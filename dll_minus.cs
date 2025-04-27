@@ -1848,187 +1848,7 @@ namespace w3tools //by @w3bgrep
 	}
     #endregion
 
-	//#region Tx
-	// public static class Onchain
-	// {
-		
-	// 	public static string HexToString(string hexValue, string convert = "")
-	// 	{
-	// 	    try
-	// 	    {
-	// 	        hexValue = hexValue?.Replace("0x", "").Trim();
-	// 	        if (string.IsNullOrEmpty(hexValue)) return "0";
-	// 	        BigInteger number = BigInteger.Parse("0" + hexValue, NumberStyles.AllowHexSpecifier);
-	// 	        switch(convert.ToLower())
-	// 	        {
-	// 	            case "gwei":
-	// 	                decimal gweiValue = (decimal)number / 1000000000m;
-	// 	                return gweiValue.ToString("0.#########", CultureInfo.InvariantCulture);
-	// 	            case "eth":
-	// 	                decimal ethValue = (decimal)number / 1000000000000000000m;
-	// 	                return ethValue.ToString("0.##################", CultureInfo.InvariantCulture);
-	// 	            default:
-	// 	                return number.ToString();
-	// 	        }
-	// 	    }
-	// 	    catch
-	// 	    {
-	// 	        return "0";
-	// 	    }
-	// 	}			
-	// 	public static string SendLegacy(string chainRpc, string contractAddress, string encodedData, decimal value, string walletKey, int speedup = 1)
-	// 	{
-	// 		try 
-	// 		{
-	// 			var web3 = new Nethereum.Web3.Web3(chainRpc);
-	// 			try
-	// 			{
-	// 				var chainIdTask = web3.Eth.ChainId.SendRequestAsync();
-	// 				chainIdTask.Wait();
-	// 				int chainId = (int)chainIdTask.Result.Value;				
-	// 				string fromAddress = new Nethereum.Signer.EthECKey(walletKey).GetPublicAddress();	
-	// 				try
-	// 				{
-	// 					var gasPriceTask = web3.Eth.GasPrice.SendRequestAsync();
-	// 					gasPriceTask.Wait();
-	// 					BigInteger gasPrice = gasPriceTask.Result.Value;
-						
-	// 					BigInteger baseGasPrice = gasPrice / 100 + gasPrice;
-	// 					BigInteger adjustedGasPrice = baseGasPrice / 100 * speedup + gasPrice;
-						
-	// 					var transactionInput = new Nethereum.RPC.Eth.DTOs.TransactionInput
-	// 					{
-	// 						To = contractAddress,
-	// 						From = fromAddress,
-	// 						Data = encodedData,
-	// 						Value = new Nethereum.Hex.HexTypes.HexBigInteger((BigInteger)(value * 1000000000000000000m))
-	// 					};
-						
-	// 					try
-	// 					{
-	// 						var gasEstimateTask = web3.Eth.Transactions.EstimateGas.SendRequestAsync(transactionInput);
-	// 						gasEstimateTask.Wait();
-	// 						var gasEstimate = gasEstimateTask.Result;
-	// 						var gasLimit = gasEstimate.Value + (gasEstimate.Value / 2);
-							
-	// 						var blockchain = new Blockchain(walletKey, chainId, chainRpc);
-	// 						string hash = blockchain.SendTransaction(contractAddress, value, encodedData, gasLimit, adjustedGasPrice).Result;
-							
-	// 						return hash;
-	// 					}
-	// 					catch (Exception ex)
-	// 					{
-	// 						throw new Exception($"Ошибка на стадии оценки газа или отправки: {ex.Message}");
-	// 					}
-	// 				}
-	// 				catch (Exception ex)
-	// 				{
-	// 					throw new Exception($"Ошибка на стадии получения цены газа: {ex.Message}");
-	// 				}
-	// 			}
-	// 			catch (Exception ex)
-	// 			{
-	// 				throw new Exception($"Ошибка на стадии получения chainId: {ex.Message}");
-	// 			}
-	// 		}
-	// 		catch (Exception ex)
-	// 		{
-	// 			throw new Exception($"Ошибка отправки транзакции: {ex.Message}");
-	// 		}
-	// 	}
 	
-	// 	public static string ApproveMax(IZennoPosterProjectModel project, string contract, string spender, string chainRPC = "")
-	// 	{
-	// 		Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-
-	// 		if (chainRPC == "" ) chainRPC = project.Variables["blockchainRPC"].Value;
-
-	// 		string abi = @"[{""inputs"":[{""name"":""spender"",""type"":""address""},{""name"":""amount"",""type"":""uint256""}],""name"":""approve"",""outputs"":[{""name"":"""",""type"":""bool""}],""stateMutability"":""nonpayable"",""type"":""function""}]";
-
-	// 		string[] types = { "address", "uint256" };
-	// 		object[] values = { spender, BigInteger.Parse("115792089237316195423570985008687907853269984665640564039457584007913129639935") }; // max uint256
-
-	// 		try
-	// 		{
-	// 			string txHash = SendLegacy(
-	// 				chainRPC,
-	// 				contract,
-	// 				w3tools.Encoder.EncodeTransactionData(abi, "approve", types, values),
-	// 				0,
-	// 				Db.KeyEVM(project),
-	// 				3
-	// 			);
-				
-	// 			project.Variables["blockchainHash"].Value = txHash;
-	// 		}
-	// 		catch (Exception ex){Loggers.l0g(project,$"!W:{ex.Message}",thr0w:true);}
-
-	// 		Loggers.l0g(project,$"[APPROVE] {contract} for spender {spender}...");
-    //         return project.Variables["blockchainHash"].Value;
-
-	// 	}
-	// 	public static string ApproveCancel(IZennoPosterProjectModel project, string contract, string spender, string chainRPC = "")
-	// 	{
-	// 		Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-
-	// 		if (chainRPC == "" ) chainRPC = project.Variables["blockchainRPC"].Value;
-
-	// 		string abi = @"[{""inputs"":[{""name"":""spender"",""type"":""address""},{""name"":""amount"",""type"":""uint256""}],""name"":""approve"",""outputs"":[{""name"":"""",""type"":""bool""}],""stateMutability"":""nonpayable"",""type"":""function""}]";
-
-	// 		string[] types = { "address", "uint256" };
-	// 		object[] values = { spender, BigInteger.Parse("0") }; // max uint256
-
-	// 		try
-	// 		{
-	// 			string txHash = SendLegacy(
-	// 				chainRPC,
-	// 				contract,
-	// 				w3tools.Encoder.EncodeTransactionData(abi, "approve", types, values),
-	// 				0,
-	// 				Db.KeyEVM(project),
-	// 				3
-	// 			);
-				
-	// 			project.Variables["blockchainHash"].Value = txHash;
-	// 		}
-	// 		catch (Exception ex){Loggers.l0g(project,$"!W:{ex.Message}",thr0w:true);}
-
-
-	// 		Loggers.l0g(project,$"[APPROVE] {contract} for spender {spender}...");
-    //         return project.Variables["blockchainHash"].Value;
-	// 	}
-	// 	public static string WrapNative(IZennoPosterProjectModel project, string contract, decimal value, string chainRPC = "")
-	// 	{
-	// 	    Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-		    
-	// 	    if (chainRPC == "") chainRPC = project.Variables["blockchainRPC"].Value;
-		    
-	// 	    string abi = @"[{""inputs"":[],""name"":""deposit"",""outputs"":[],""stateMutability"":""payable"",""type"":""function""}]";
-		    
-	// 	    string[] types = { };
-	// 	    object[] values = { };
-		    
-	// 	    try
-	// 	    {
-	// 	        string txHash = SendLegacy(
-	// 	            chainRPC,
-	// 	            contract,
-	// 	            w3tools.Encoder.EncodeTransactionData(abi, "deposit", types, values),
-	// 	            value,
-	// 	            Db.KeyEVM(project),
-	// 	            3
-	// 	        );
-		        
-	// 	        project.Variables["blockchainHash"].Value = txHash;
-	// 	    }
-	// 		catch (Exception ex){Loggers.l0g(project,$"!W:{ex.Message}",thr0w:true);}
-		    
-	// 	    Loggers.l0g(project,$"[WRAP] {value} native to {contract}...");
-    //        return project.Variables["blockchainHash"].Value;
-	// 	}
-        
-	// }
-	// #endregion
 
 	#region CEX
 	public static class Binance
@@ -2218,12 +2038,30 @@ namespace w3tools //by @w3bgrep
 		private readonly IZennoPosterProjectModel _project;
         private readonly string[] _apiKeys;
         
-
-		public OKXApi(IZennoPosterProjectModel project)
+        private readonly L0g _log;
+        private readonly bool _logShow;
+        private readonly Sql _sql;
+		private readonly string _apiKey;
+		private readonly string _secretKey;
+		private readonly string _passphrase;
+		public OKXApi(IZennoPosterProjectModel project, bool log = false)
 		{
 			_project = project;
             _apiKeys = okxKeys();
+			_log = new L0g(_project);
+
+			_apiKey = _apiKeys[0];
+			_secretKey = _apiKeys[1];
+			_passphrase = _apiKeys[2];
 		}
+		public void CexLog(string toSend, [CallerMemberName] string callerName = "", bool log = false)
+        {
+            if (!_logShow && !log) return;
+            var stackFrame = new System.Diagnostics.StackFrame(1);
+            var callingMethod = stackFrame.GetMethod();
+            if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
+            _log.Send($"[ 💸  {callerName}] {toSend} ");
+        }
 		public string[] okxKeys()  
 		{
 			string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : null) + "settings";
@@ -2267,19 +2105,12 @@ namespace w3tools //by @w3bgrep
 		
 		private string OKXPost(string url, object body, string proxy = null, bool log = false)
 		{
-
-			//var ApiKeys = okxKeys();
-			string apiKey = _apiKeys[0];
-			string secretKey = _apiKeys[1];
-			string passphrase = _apiKeys[2];
-
 			var jsonBody = JsonConvert.SerializeObject(body);
 			string timestamp =  DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
             _project.SendInfoToLog(jsonBody);
-			// Prepare signature
-			//string url = "/api/v5/asset/withdrawal";
+
 			string message = timestamp + "POST" + url + jsonBody;
-			string signature = CalculateHmacSha256ToBaseSignature(message, secretKey);
+			string signature = CalculateHmacSha256ToBaseSignature(message, _secretKey);
 
 			// Send HTTP request
 			var result = ZennoPoster.HttpPost(
@@ -2297,10 +2128,10 @@ namespace w3tools //by @w3bgrep
 				new string[]
 				{
 					"Content-Type: application/json",
-					"OK-ACCESS-KEY: " + apiKey,
+					"OK-ACCESS-KEY: " + _apiKey,
 					"OK-ACCESS-SIGN: " + signature,
 					"OK-ACCESS-TIMESTAMP: " + timestamp,
-					"OK-ACCESS-PASSPHRASE: " + passphrase
+					"OK-ACCESS-PASSPHRASE: " + _passphrase
 				},
 				"",
 				false//,
@@ -2308,26 +2139,20 @@ namespace w3tools //by @w3bgrep
 				//_project.Profile.CookieContainer
 			);
 			_project.Json.FromString(result);
-			if (log) Loggers.l0g(_project, "Received response: " + result);
+			CexLog($"json received: [{result}]");
 			return result;			
 		}
 		private string OKXGet(string url, string proxy = null, bool log = false)
 		{
-			//var ApiKeys = okxKeys();
-			string apiKey = _apiKeys[0];
-			string secretKey = _apiKeys[1];
-			string passphrase = _apiKeys[2];
-
 
 			string timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");			
 			string message = timestamp + "GET" + url;
-			string signature = CalculateHmacSha256ToBaseSignature(message, secretKey);
+			string signature = CalculateHmacSha256ToBaseSignature(message, _secretKey);
 
 			var jsonResponse = ZennoPoster.HttpGet(			
 				"https://www.okx.com" + url,
 				proxy,
 				"UTF-8",
-				//ZennoLab.InterfacesLibrary.Enums.Http.ResponceType.
 				ResponceType.BodyOnly,
 				10000,
 				"",
@@ -2337,16 +2162,16 @@ namespace w3tools //by @w3bgrep
 				new string[]
 				{
 					"Content-Type: application/json",
-					"OK-ACCESS-KEY: " + apiKey,
+					"OK-ACCESS-KEY: " + _apiKey,
 					"OK-ACCESS-SIGN: " + signature,
 					"OK-ACCESS-TIMESTAMP: " + timestamp,
-					"OK-ACCESS-PASSPHRASE: " + passphrase
+					"OK-ACCESS-PASSPHRASE: " + _passphrase
 				},
 				"",
 				false
 			);
 
-			if (log) Loggers.l0g(_project, "OKX response:\n" + jsonResponse);
+			CexLog($"json received: [{jsonResponse}]");
 			_project.Json.FromString(jsonResponse);
 			return jsonResponse;
 		}
@@ -2371,7 +2196,7 @@ namespace w3tools //by @w3bgrep
 						string subAcct = item.subAcct;                   // "subName"
 						string label = item.label;             
 						subsList.Add($"{subAcct}");
-						if (log) Loggers.l0g(_project, $"found: {subAcct}:{label}");
+						CexLog($"found: {subAcct}:{label}");
 					}
 				}
 
@@ -2398,7 +2223,7 @@ namespace w3tools //by @w3bgrep
 						string ccy = item.ccy;                   // "EGLD"
 						string maxWd = item.maxWd;               // "0.22193226"
 						balanceList.Add($"{ccy}:{maxWd}");
-						Loggers.l0g(_project, $"Currency: {ccy}, Max Withdrawal: {maxWd}");
+						CexLog($"Currency: {ccy}, Max Withdrawal: {maxWd}");
 					}
 				}
 			}
@@ -2424,7 +2249,7 @@ namespace w3tools //by @w3bgrep
 						string adjEq = item.adjEq;                   // "EGLD"
 
 						balanceList.Add($"{adjEq}");
-						Loggers.l0g(_project, $"adjEq: {adjEq}");
+						CexLog($"adjEq: {adjEq}");
 					}
 				}
 			}
@@ -2450,7 +2275,8 @@ namespace w3tools //by @w3bgrep
 						string ccy = item.ccy;
 						string availBal = item.availBal;                    // "EGLD"
 						balanceList.Add($"{ccy}:{availBal}");
-						Loggers.l0g(_project, $"{ccy}:{availBal}");
+						CexLog($"{ccy}:{availBal}");
+						//Loggers.l0g(_project, $"{ccy}:{availBal}");
 					}
 				}
 			}
@@ -2481,7 +2307,8 @@ namespace w3tools //by @w3bgrep
                             }
                         }
                         catch{
-                            _project.SendInfoToLog($"failed to add [{maxWd}]$[{ccy}] from [{sub}] to main");
+							CexLog($"!W failed to add [{maxWd}]$[{ccy}] from [{sub}] to main");
+                            //_project.SendInfoToLog($"failed to add [{maxWd}]$[{ccy}] from [{sub}] to main");
                         }		
                 }
                 
@@ -2499,7 +2326,8 @@ namespace w3tools //by @w3bgrep
                             }
                         }
                         catch{
-                            _project.SendInfoToLog($"failed to add [{maxWd}]$[{ccy}] from [{sub}] to main");
+							CexLog($"!W failed to add [{maxWd}]$[{ccy}] from [{sub}] to main");
+                            //_project.SendInfoToLog($"failed to add [{maxWd}]$[{ccy}] from [{sub}] to main");
                         }		
                 }	
             }
@@ -2520,8 +2348,7 @@ namespace w3tools //by @w3bgrep
 				toAddr = toAddress
 			};
 			var jsonResponse = OKXPost("/api/v5/asset/withdrawal",body, proxy, log);
-
-			if (log) Loggers.l0g(_project, $"processing response {jsonResponse} ");
+			CexLog($"raw response: {jsonResponse}");
 
 			var response = JsonConvert.DeserializeObject<dynamic>(jsonResponse);
 			string msg = response.msg;
@@ -2530,7 +2357,7 @@ namespace w3tools //by @w3bgrep
 			if (code != "0") throw new Exception("Err [{code}]; Сообщение [{msg}]");
 			else
 			{
-				if (log) Loggers.l0g(_project, $"Refueled {toAddress} for {amount}");
+				CexLog($"Refueled {toAddress} for {amount} `b");
 			}
 			_project.Json.FromString(jsonResponse);
 		}
@@ -2551,7 +2378,7 @@ namespace w3tools //by @w3bgrep
 			};
 			var jsonResponse = OKXPost("/api/v5/asset/transfer",body, proxy, log);
 
-			if (log) Loggers.l0g(_project, $"processing response {jsonResponse} ");
+			CexLog($"raw response: {jsonResponse}");
 
 			var response = JsonConvert.DeserializeObject<dynamic>(jsonResponse);
 			string msg = response.msg;
@@ -2560,7 +2387,7 @@ namespace w3tools //by @w3bgrep
 			if (code != "0") throw new Exception("Err [{code}]; Сообщение [{msg}] amt:[{strAmount}] ccy:[{currency}]");
 			else
 			{
-				if (log) Loggers.l0g(_project, jsonResponse);
+				CexLog($"raw response: {jsonResponse}");
 			}
 			
 		}
@@ -2573,7 +2400,7 @@ namespace w3tools //by @w3bgrep
 			};
 			var jsonResponse = OKXPost("/api/v5/users/subaccount/create-subaccount",body, proxy, log);
 
-			if (log) Loggers.l0g(_project, $"processing response {jsonResponse} ");
+			CexLog($"raw response: {jsonResponse}");
 
 			var response = JsonConvert.DeserializeObject<dynamic>(jsonResponse);
 			string msg = response.msg;
@@ -2582,7 +2409,7 @@ namespace w3tools //by @w3bgrep
 			if (code != "0") throw new Exception($"Err [{code}]; Сообщение [{msg}]");
 			else
 			{
-				if (log) Loggers.l0g(_project, jsonResponse);
+				CexLog($"raw response: {jsonResponse}");
 			}
 			
 		}
