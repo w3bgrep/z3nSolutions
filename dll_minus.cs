@@ -715,6 +715,56 @@ namespace w3tools //by @w3bgrep
 			
 			Thread.Sleep(1000); while (true) try { instance.AllTabs[1].Close(); Thread.Sleep(1000); } catch { break;Thread.Sleep(1000); }
 		}
+
+		public static void SwitchExtentions(this IZennoPosterProjectModel project, string toUse = "")
+		{
+			try
+			{
+				string securePrefsPath = project.Variables["pathProfileFolder"].Value + @"\Default\Secure Preferences";
+				string json = File.ReadAllText(securePrefsPath);
+				JObject jObj = JObject.Parse(json);
+				JObject settings = (JObject)jObj["extensions"]?["settings"];
+
+				if (settings == null)
+				{
+					throw new Exception("Секция extensions.settings не найдена");
+				}
+
+				bool changesMade = false;
+				foreach (var extension in settings)
+				{
+					string extId = extension.Key;
+					JObject extData = (JObject)extension.Value;
+
+					string extName = (string)extData["manifest"]?["name"] ?? "";
+					extName = System.Text.RegularExpressions.Regex.Replace(extName, @" Wallet", "");
+					int state = (int?)extData["state"] ?? -1;
+					string extStatus = state == 1 ? "enabled" : "disabled";
+
+					if (state == -1) continue;
+
+					if ((toUse.Contains(extName) && extStatus == "disabled") ||
+						(toUse.Contains(extId) && extStatus == "disabled") ||
+						(!toUse.Contains(extName) && !toUse.Contains(extId) && extStatus == "enabled"))
+					{
+						extData["state"] = extStatus == "disabled" ? 1 : 0;
+						changesMade = true;
+						project.SendInfoToLog($"Changed: [{extName}] : [{extStatus} -> {(extData["state"].ToString() == "1" ? "enabled" : "disabled")}] : [{extId}]");
+					}
+				}
+
+				if (changesMade)
+				{
+					File.WriteAllText(securePrefsPath, jObj.ToString());
+					project.SendInfoToLog("Secure Preferences обновлён");
+				}
+			}
+			catch (Exception ex)
+			{
+				project.SendInfoToLog($"Err: {ex.Message}");
+			}
+		}
+
 		public static void BrowserScanCheck(this Instance instance, IZennoPosterProjectModel project)
 		{
 			if (project.Variables["skipBrowserScan"].Value == "True") 
@@ -1288,331 +1338,6 @@ namespace w3tools //by @w3bgrep
 	#endregion
 
 	#region Socials
-	public class X
-	{
-		private readonly IZennoPosterProjectModel _project;
-		private readonly Instance _instance;
-		private readonly bool _log;
-		public X(IZennoPosterProjectModel project, Instance instance, bool log = false)
-		{
-			_project = project;
-			_instance = instance;
-			_log = log;
-		}
-        private void XcredsFromDb(string tableName ="twitter", string schemaName = "accounts", bool log = false)
-        {
-            
-			log = _project.Variables["debug"].Value == "True";
-			string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
-			var q = $@"SELECT status, token, login, password, code2fa, emailLogin, emailPass FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value};";
-			var resp = SQL.W3Query(_project,q,log);
-			   
-            string[] twitterData = resp.Split('|');
-            _project.Variables["twitterSTATUS"].Value = twitterData[0].Trim();
-            _project.Variables["twitterTOKEN"].Value = twitterData[1].Trim();
-            _project.Variables["twitterLOGIN"].Value = twitterData[2].Trim();
-            _project.Variables["twitterPASSWORD"].Value = twitterData[3].Trim();
-            _project.Variables["twitterCODE2FA"].Value = twitterData[4].Trim();
-            _project.Variables["twitterEMAIL"].Value = twitterData[5].Trim();
-            _project.Variables["twitterEMAIL_PASSWORD"].Value = twitterData[6].Trim();			
-        } 
-        private void XupdateDb(string toUpd, bool log = false)
-		{
-			string tableName ="twitter"; string schemaName = "accounts";
-			log = _project.Variables["debug"].Value == "True";
-			string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
-			if (log) Loggers.l0g(_project,toUpd);
-			var Q = $@"UPDATE {table} SET {toUpd.Trim().TrimEnd(',')}, last = '{Time.Now("short")}' WHERE acc0 = {_project.Variables["acc0"].Value};";
-			SQL.W3Query(_project,Q,log); 
-		}
-		private string XcheckState(bool log = false)
-		{
-			log = _project.Variables["debug"].Value == "True";
-			DateTime start = DateTime.Now;
-			DateTime deadline = DateTime.Now.AddSeconds(60);
-			string login = _project.Variables["twitterLOGIN"].Value; 
-			_instance.ActiveTab.Navigate($"https://x.com/{login}", "");
-			var status = "";
-
-			while (string.IsNullOrEmpty(status))
-			{
-				Thread.Sleep(5000);
-				if (log) Loggers.l0g(_project,$"{DateTime.Now- start}s check... URLNow:[{_instance.ActiveTab.URL}]" );
-				if (DateTime.Now > deadline) Loggers.l0g(_project,"!W TwitterGetStatus timeout",thr0w:true);
-
-				else if (!_instance.ActiveTab.FindElementByAttribute("*", "innertext", @"Caution:\s+This\s+account\s+is\s+temporarily\s+restricted", "regexp", 0).IsVoid) 
-					status = "restricted";
-				else if (!_instance.ActiveTab.FindElementByAttribute("*", "innertext", @"Account\s+suspended\s+X\s+suspends\s+accounts\s+which\s+violate\s+the\s+X\s+Rules", "regexp", 0).IsVoid)
-					status = "suspended";
-				else if (!_instance.ActiveTab.FindElementByAttribute("*", "innertext", @"Log\ in", "regexp", 0).IsVoid || !_instance.ActiveTab.FindElementByAttribute("a", "data-testid", "loginButton", "regexp", 0).IsVoid)
-					status = "login";
-
-				else if (!_instance.ActiveTab.FindElementByAttribute("*", "innertext", "erify\\ your\\ email\\ address", "regexp", 0).IsVoid || 
-					!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "We\\ sent\\ your\\ verification\\ code.", "regexp", 0).IsVoid)
-						status = "emailCapcha";
-				else if (!_instance.ActiveTab.FindElementByAttribute("button", "data-testid", "SideNav_AccountSwitcher_Button", "regexp", 0).IsVoid)
-				{
-					var check = _instance.ActiveTab.FindElementByAttribute("button", "data-testid", "SideNav_AccountSwitcher_Button", "regexp", 0).FirstChild.FirstChild.GetAttribute("data-testid");
-					if (check == $"UserAvatar-Container-{login}") status = "ok";
-					else {
-						status = "mixed";
-						Loggers.l0g(_project,$"!W {status}. Detected  [{check}] instead [UserAvatar-Container-{login}] {DateTime.Now- start}" );
-					}
-				}
-				else if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Something\\ went\\ wrong.\\ Try\\ reloading.", "regexp", 0).IsVoid)
-				{	
-					_instance.ActiveTab.MainDocument.EvaluateScript("location.reload(true)");
-					//Thread.Sleep(5000);
-					continue;
-				}
-			}
-			if (log) Loggers.l0g(_project,$"{status} {DateTime.Now- start}" );
-			return status;
-		}
-		private void XsetToken()
-		{
-			var token = _project.Variables["twitterTOKEN"].Value; 
-			string jsCode = _project.ExecuteMacro($"document.cookie = \"auth_token={token}; domain=.x.com; path=/; expires=${DateTimeOffset.UtcNow.AddYears(1).ToString("R")}; Secure\";\r\nwindow.location.replace(\"https://x.com\")");
-			_instance.ActiveTab.MainDocument.EvaluateScript(jsCode);
-		}
-		private string XgetToken()
-		{
-			var cook = new C00kies(_project, _instance); 
-			var cookJson= cook.c00kies(".");
-			JArray toParse = JArray.Parse(cookJson);
-			int i = 0; var token = "";
-			while (token == "")
-			{
-				if (toParse[i]["name"].ToString() == "auth_token") token = toParse[i]["value"].ToString();
-				i++;
-			}
-			_project.Variables["twitterTOKEN"].Value = token;
-			Db.TwitterTokenUpdate(_project);
-			return token;
-		}
-		private string Xlogin()
-		{
-			DateTime deadline = DateTime.Now.AddSeconds(60);
-			var status = "";
-			var login = _project.Variables["twitterLOGIN"].Value;
-			
-			_instance.ActiveTab.Navigate("https://x.com/", "");Thread.Sleep(2000);
-			_instance.LMB(("button", "innertext", "Accept\\ all\\ cookies", "regexp", 0),deadline:1,thr0w:false);
-			_instance.LMB(("button", "data-testid", "xMigrationBottomBar", "regexp", 0),deadline:0,thr0w:false);
-			_instance.LMB(("a", "data-testid", "login", "regexp", 0));
-			_instance.SetHe(("input:text", "autocomplete", "username", "text", 0),login,deadline:30);
-			_instance.LMB(("span", "innertext", "Next", "regexp", 1),"clickOut");
-			
-			if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Sorry, we could not find your account')]", 0).IsVoid) return "NotFound"; 
-
-			_instance.WaitSetValue(() => 
-				_instance.ActiveTab.GetDocumentByAddress("0").FindElementByName("password"),_project.Variables["twitterPASSWORD"].Value);
-			
-			_instance.LMB(("button", "data-testid", "LoginForm_Login_Button", "regexp", 0),"clickOut");
-
-			if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Wrong password!')]", 0).IsVoid) return "WrongPass";
-
-			var codeOTP = OTP.Offline(_project.Variables["twitterCODE2FA"].Value); 
-			_instance.WaitSetValue(() => 
-				_instance.ActiveTab.GetDocumentByAddress("0").FindElementByName("text"),codeOTP);
-			
-			_instance.LMB(("span", "innertext", "Next", "regexp", 1),"clickOut");
-			
-			if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Your account is suspended')]", 0).IsVoid) return "Suspended";
-			if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Oops,\\ something\\ went\\ wrong.\\ Please\\ try\\ again\\ later.", "regexp", 0).IsVoid) return "SomethingWentWrong";
-			if (! _instance.ActiveTab.FindElementByAttribute("*", "innertext", "Suspicious\\ login\\ prevented", "regexp", 0).IsVoid)return "SuspiciousLogin";
-			
-			_instance.LMB(("button", "innertext", "Accept\\ all\\ cookies", "regexp", 0),deadline:1,thr0w:false);
-			_instance.LMB(("button", "data-testid", "xMigrationBottomBar", "regexp", 0),deadline:0,thr0w:false);
-			XgetToken();
-			return "ok";
-		}
-		public string Xload(bool log = false)
-		{
-			XcredsFromDb(log:log);
-			bool tokenUsed = false;
-			DateTime deadline = DateTime.Now.AddSeconds(60);
-			check:
-
-			if (DateTime.Now > deadline) Loggers.l0g(_project,"!W Xload timeout",thr0w:true);
-			var status = XcheckState(log:true);
-
-			//if (status == "ok") return status;
-			if (status == "login" && !tokenUsed) 
-			{
-				XsetToken();
-				tokenUsed = true;
-				Thread.Sleep(3000);
-			}
-			else if (status == "login" && tokenUsed) 
-			{
-				var login = Xlogin();
-				if (log) Loggers.l0g(_project,login);
-				Thread.Sleep(3000);
-			}
-			if (status == "restricted" || status == "suspended" || status == "emailCapcha" || status == "mixed" || status == "ok")
-			{
-			  XupdateDb($"status = '{status}'");
-			  return status;
-			}
-			if (log) Loggers.l0g(_project,status);
-			goto check;	
-		}
-
-	}
-	public class Discord
-    {
-        private readonly IZennoPosterProjectModel _project;
-        private readonly Instance _instance;
-        private readonly bool _log;
-        public Discord(IZennoPosterProjectModel project, Instance instance, bool log = false)
-        {
-            _project = project;
-            _instance = instance;
-            _log = log;
-        }
-        private void DScredsFromDb(string tableName ="discord", string schemaName = "accounts", bool log = false)
-        {
-            
-            log = _project.Variables["debug"].Value == "True";
-            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
-            var resp = SQL.W3Query(_project,$@"SELECT status, token, login, password, code2FA, username, servers FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value};");
-            string[] discordData = resp.Split('|');
-            _project.Variables["discordSTATUS"].Value = discordData[0].Trim();
-            _project.Variables["discordTOKEN"].Value = discordData[1].Trim();
-            _project.Variables["discordLOGIN"].Value = discordData[2].Trim();
-            _project.Variables["discordPASSWORD"].Value = discordData[3].Trim();
-            _project.Variables["discord2FACODE"].Value = discordData[4].Trim();
-            _project.Variables["discordUSERNAME"].Value = discordData[5].Trim();
-            _project.Variables["discordSERVERS"].Value = discordData[6].Trim();
-        } 
-        public void DSupdateDb(string toUpd, bool log = false)
-        {
-            string tableName ="discord"; string schemaName = "accounts";
-            log = _project.Variables["debug"].Value == "True";
-            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
-            if (log) Loggers.l0g(_project,toUpd);
-            var Q = $@"UPDATE {table} SET {toUpd.Trim().TrimEnd(',')}, last = '{Time.Now("short")}' WHERE acc0 = {_project.Variables["acc0"].Value};";
-            SQL.W3Query(_project,Q,log); 
-        }
-        private void DSsetToken()
-        {
-            var jsCode = "function login(token) {\r\n    setInterval(() => {\r\n        document.body.appendChild(document.createElement `iframe`).contentWindow.localStorage.token = `\"${token}\"`\r\n    }, 50);\r\n    setTimeout(() => {\r\n        location.reload();\r\n    }, 1000);\r\n}\r\n    login(\'discordTOKEN\');\r\n".Replace("discordTOKEN",_project.Variables["discordTOKEN"].Value);
-            _instance.ActiveTab.MainDocument.EvaluateScript(jsCode);
-        }
-        private string DSgetToken()
-        {
-            var token = _instance.ActiveTab.MainDocument.EvaluateScript("return (webpackChunkdiscord_app.push([[\'\'],{},e=>{m=[];for(let c in e.c)m.push(e.c[c])}]),m).find(m=>m?.exports?.default?.getToken!== void 0).exports.default.getToken();\r\n");
-            return token;
-        }
-        private string DSlogin()
-        {
-            _project.SendInfoToLog("DLogin");
-            DateTime deadline = DateTime.Now.AddSeconds(60);
-            _instance.CloseExtraTabs();
-            _instance.SetHe(("input:text", "aria-label", "Email or Phone Number", "text", 0),_project.Variables["discordLOGIN"].Value);
-            _instance.SetHe(("input:password", "aria-label", "Password", "text", 0),_project.Variables["discordPASSWORD"].Value);
-            _instance.LMB(("button", "type", "submit", "regexp", 0));
-
-            while (_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Are\\ you\\ human\\?", "regexp", 0).IsVoid && 
-                _instance.ActiveTab.FindElementByAttribute("input:text", "autocomplete", "one-time-code", "regexp", 0).IsVoid) Thread.Sleep(1000);
-
-            if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Are\\ you\\ human\\?", "regexp", 0).IsVoid){
-                if ((_project.Variables["humanNear"].Value) != "True") return "capcha";
-                else _instance.WaitForUserAction(100, "dsCap");
-            }
-            _instance.SetHe(("input:text", "autocomplete", "one-time-code", "regexp", 0),OTP.Offline(_project.Variables["discord2FACODE"].Value));
-            _instance.LMB(("button", "type", "submit", "regexp", 0));
-            Thread.Sleep(3000);	
-            return "ok";
-        }
-        public string DSload(bool log = false)
-        {
-            DScredsFromDb();
-
-            string state = null;
-            var emu = _instance.UseFullMouseEmulation;
-            _instance.UseFullMouseEmulation = false;
-            bool tokenUsed = false;
-            _instance.ActiveTab.Navigate("https://discord.com/channels/@me", "");
-
-            start:
-            state = null;
-            while (string.IsNullOrEmpty(state))
-            {
-                _instance.LMB(("button", "innertext", "Continue\\ in\\ Browser", "regexp", 0),thr0w:false);
-                if (!_instance.ActiveTab.FindElementByAttribute("input:text", "aria-label", "Email or Phone Number", "text", 0).IsVoid)state = "login";	
-                if (!_instance.ActiveTab.FindElementByAttribute("section", "aria-label", "User\\ area", "regexp", 0).IsVoid)state = "logged";	
-            }
-
-            Loggers.l0g(_project,state);
-
-
-            if (state == "login" && !tokenUsed){
-                DSsetToken();
-                tokenUsed = true;
-                //Thread.Sleep(5000);					
-                goto start;
-            }
-
-            else if (state == "login" && tokenUsed){
-                var login = DSlogin();
-                if (login == "ok"){
-                    Thread.Sleep(5000);
-                    goto start;		
-                }
-                else if (login == "capcha") 
-                    Loggers.l0g(_project,"!W capcha");
-                    _instance.UseFullMouseEmulation = emu;	
-                    state = "capcha";
-            }
-
-            else if (state == "logged"){
-                state = _instance.ActiveTab.FindElementByAttribute("div", "class", "avatarWrapper__", "regexp", 0).FirstChild.GetAttribute("aria-label");
-                Loggers.l0g(_project,state);
-                var token = DSgetToken();
-                DSupdateDb ($"token = '{token}', status = 'ok'");
-                _instance.UseFullMouseEmulation = emu;
-            }
-            return state;
-
-        }
-        public string DSservers()
-        {
-            _instance.UseFullMouseEmulation = true;
-            var folders = new List<HtmlElement>();
-            var servers = new List<string>();
-            var list = _instance.ActiveTab.FindElementByAttribute("div", "aria-label", "Servers", "regexp", 0).GetChildren(false).ToList();
-            foreach (HtmlElement item in list)
-            {
-                
-                if (item.GetAttribute("class").Contains("listItem")) 
-                {
-                    var server = item.FindChildByTag("div",1).FirstChild.GetAttribute("data-dnd-name");
-                    servers.Add(server);
-                }
-                
-                if (item.GetAttribute("class").Contains("wrapper")) 
-                {
-                    _instance.WaitClick(() => item);
-                    var FolderServer = item.FindChildByTag("ul",0).GetChildren(false).ToList();
-                    //_project.SendInfoToLog(FolderServer.Count.ToString());
-                    foreach(HtmlElement itemInFolder in FolderServer)
-                    {
-                        var server = itemInFolder.FindChildByTag("div",1).FirstChild.GetAttribute("data-dnd-name");
-                        servers.Add(server);
-                    }
-                }
-
-            }
-
-            string result = string.Join(" | ",servers);
-            DSupdateDb ($"servers = '{result}'");
-            //_project.SendInfoToLog(servers.Count.ToString());
-            //_project.SendInfoToLog(string.Join(" | ",servers));
-            return result;
-        }
-    }
 	public static class Google
 	{
 		public static string GoogleCheckLogin(this Instance instance, IZennoPosterProjectModel project, bool log = false, [CallerMemberName] string caller = "")
@@ -2033,487 +1758,6 @@ namespace w3tools //by @w3bgrep
             return $"{foundAmount}:{foundCoin}:{foundStatus}";
         }
 	}
-	public class OKXApi
-	{
-		private readonly IZennoPosterProjectModel _project;
-        private readonly string[] _apiKeys;
-        
-        private readonly L0g _log;
-        private readonly bool _logShow;
-        private readonly Sql _sql;
-		private readonly string _apiKey;
-		private readonly string _secretKey;
-		private readonly string _passphrase;
-		public OKXApi(IZennoPosterProjectModel project, bool log = false)
-		{
-			_project = project;
-            _apiKeys = okxKeys();
-			_log = new L0g(_project);
-
-			_apiKey = _apiKeys[0];
-			_secretKey = _apiKeys[1];
-			_passphrase = _apiKeys[2];
-		}
-		public void CexLog(string toSend, [CallerMemberName] string callerName = "", bool log = false)
-        {
-            if (!_logShow && !log) return;
-            var stackFrame = new System.Diagnostics.StackFrame(1);
-            var callingMethod = stackFrame.GetMethod();
-            if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
-            _log.Send($"[ 💸  {callerName}] {toSend} ");
-        }
-		public string[] okxKeys()  
-		{
-			string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : null) + "settings";
-			var key = SQL.W3Query(_project,$"SELECT value FROM {table} WHERE var = 'okx_apikey';",true);
-			var secret = SQL.W3Query(_project,$"SELECT value FROM {table} WHERE var = 'okx_secret';");
-			var passphrase = SQL.W3Query(_project,$"SELECT value FROM {table} WHERE var = 'okx_passphrase';");
-			string[] result = new string[] {key,secret,passphrase};
-			return result;
-		}
-		private string MapNetwork(string chain, bool log)
-		{
-			if (log) Loggers.l0g(_project, "Mapping network: " + chain);
-            chain = chain.ToLower();
-			switch (chain)
-			{
-				case "arbitrum": return "Arbitrum One";
-				case "ethereum": return "ERC20";
-                case "base": return "Base";
-				case "bsc": return "BSC";
-				case "avalanche": return "Avalanche C-Chain";
-				case "polygon": return "Polygon";
-				case "optimism": return "Optimism";
-				case "trc20": return "TRC20";
-				case "zksync": return "zkSync Era";
-				case "aptos": return "Aptos";
-				default:
-					if (log) Loggers.l0g(_project, "Unsupported network: " + chain);
-					throw new ArgumentException("Unsupported network: " + chain);
-			}
-		}
-		private string CalculateHmacSha256ToBaseSignature(string message, string key)
-		{
-			var keyBytes = Encoding.UTF8.GetBytes(key);
-			var messageBytes = Encoding.UTF8.GetBytes(message);
-			using (var hmacSha256 = new HMACSHA256(keyBytes))
-			{
-				var hashBytes = hmacSha256.ComputeHash(messageBytes);
-				return Convert.ToBase64String(hashBytes);
-			}
-		}
-		
-		private string OKXPost(string url, object body, string proxy = null, bool log = false)
-		{
-			var jsonBody = JsonConvert.SerializeObject(body);
-			string timestamp =  DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
-            _project.SendInfoToLog(jsonBody);
-
-			string message = timestamp + "POST" + url + jsonBody;
-			string signature = CalculateHmacSha256ToBaseSignature(message, _secretKey);
-
-			// Send HTTP request
-			var result = ZennoPoster.HttpPost(
-				"https://www.okx.com" + url,
-				jsonBody,
-				"application/json",
-				proxy,
-				"UTF-8",
-				ResponceType.BodyOnly,
-				10000,
-				"",
-				_project.Profile.UserAgent,
-				true,
-				5,
-				new string[]
-				{
-					"Content-Type: application/json",
-					"OK-ACCESS-KEY: " + _apiKey,
-					"OK-ACCESS-SIGN: " + signature,
-					"OK-ACCESS-TIMESTAMP: " + timestamp,
-					"OK-ACCESS-PASSPHRASE: " + _passphrase
-				},
-				"",
-				false//,
-				//false,
-				//_project.Profile.CookieContainer
-			);
-			_project.Json.FromString(result);
-			CexLog($"json received: [{result}]");
-			return result;			
-		}
-		private string OKXGet(string url, string proxy = null, bool log = false)
-		{
-
-			string timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");			
-			string message = timestamp + "GET" + url;
-			string signature = CalculateHmacSha256ToBaseSignature(message, _secretKey);
-
-			var jsonResponse = ZennoPoster.HttpGet(			
-				"https://www.okx.com" + url,
-				proxy,
-				"UTF-8",
-				ResponceType.BodyOnly,
-				10000,
-				"",
-				_project.Profile.UserAgent,
-				true,
-				5,
-				new string[]
-				{
-					"Content-Type: application/json",
-					"OK-ACCESS-KEY: " + _apiKey,
-					"OK-ACCESS-SIGN: " + signature,
-					"OK-ACCESS-TIMESTAMP: " + timestamp,
-					"OK-ACCESS-PASSPHRASE: " + _passphrase
-				},
-				"",
-				false
-			);
-
-			CexLog($"json received: [{jsonResponse}]");
-			_project.Json.FromString(jsonResponse);
-			return jsonResponse;
-		}
-
-		public List<string> OKXGetSubAccs(string proxy = null, bool log = false)
-		{
-			var jsonResponse = OKXGet("/api/v5/users/subaccount/list",log:log);
-			
-			var response = JsonConvert.DeserializeObject<dynamic>(jsonResponse);
-			string msg = response.msg;
-			string code = response.code;
-			var subsList = new List<string>();
-
-			if (code != "0") throw new Exception("OKXGetSubMax: Err [{code}]; Сообщение [{msg}]");
-			else
-			{	
-				var dataArray = response.data;
-				if (dataArray != null)
-				{
-					foreach (var item in dataArray)
-					{
-						string subAcct = item.subAcct;                   // "subName"
-						string label = item.label;             
-						subsList.Add($"{subAcct}");
-						CexLog($"found: {subAcct}:{label}");
-					}
-				}
-
-			}
-			return subsList;
-		}
-		public List<string> OKXGetSubMax(string accName, string proxy = null, bool log = false)
-		{
-			var jsonResponse = OKXGet($"/api/v5/account/subaccount/max-withdrawal?subAcct={accName}",log:log);
-			
-			var response = JsonConvert.DeserializeObject<dynamic>(jsonResponse);
-			string msg = response.msg;
-			string code = response.code;
-			var balanceList = new List<string>();
-			
-			if (code != "0") throw new Exception("OKXGetSubMax: Err [{code}]; Сообщение [{msg}]");
-			else
-			{
-				var dataArray = response.data;
-				if (dataArray != null)
-				{
-					foreach (var item in dataArray)
-					{
-						string ccy = item.ccy;                   // "EGLD"
-						string maxWd = item.maxWd;               // "0.22193226"
-						balanceList.Add($"{ccy}:{maxWd}");
-						CexLog($"Currency: {ccy}, Max Withdrawal: {maxWd}");
-					}
-				}
-			}
-			return balanceList;
-		}
-		public List<string> OKXGetSubTrading(string accName, string proxy = null, bool log = false)
-		{
-			var jsonResponse = OKXGet($"/api/v5/account/subaccount/balances?subAcct={accName}",log:log);
-			
-			var response = JsonConvert.DeserializeObject<dynamic>(jsonResponse);
-			string msg = response.msg;
-			string code = response.code;
-			var balanceList = new List<string>();
-			
-			if (code != "0") throw new Exception("OKXGetSubMax: Err [{code}]; Сообщение [{msg}]");
-			else
-			{
-				var dataArray = response.data;
-				if (dataArray != null)
-				{
-					foreach (var item in dataArray)
-					{
-						string adjEq = item.adjEq;                   // "EGLD"
-
-						balanceList.Add($"{adjEq}");
-						CexLog($"adjEq: {adjEq}");
-					}
-				}
-			}
-			return balanceList;
-		}
-		public List<string> OKXGetSubFunding(string accName, string proxy = null, bool log = false)
-		{
-			var jsonResponse = OKXGet($"/api/v5/asset/subaccount/balances?subAcct={accName}",log:log);
-			
-			var response = JsonConvert.DeserializeObject<dynamic>(jsonResponse);
-			string msg = response.msg;
-			string code = response.code;
-			var balanceList = new List<string>();
-			
-			if (code != "0") throw new Exception("Err [{code}]; Сообщение [{msg}]");
-			else
-			{
-				var dataArray = response.data;
-				if (dataArray != null)
-				{
-					foreach (var item in dataArray)
-					{
-						string ccy = item.ccy;
-						string availBal = item.availBal;                    // "EGLD"
-						balanceList.Add($"{ccy}:{availBal}");
-						CexLog($"{ccy}:{availBal}");
-						//Loggers.l0g(_project, $"{ccy}:{availBal}");
-					}
-				}
-			}
-			return balanceList;
-		}
-		public List<string> OKXGetSubsBal(string proxy = null, bool log = false)
-        {
-            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            var subs = OKXGetSubAccs();
-            _project.SendInfoToLog(subs.Count.ToString());
-            
-            var balanceList = new List<string>();
-            
-            foreach(string sub in subs){
-                
-                var balsFunding = OKXGetSubFunding(sub,log:true);
-                foreach (string bal in balsFunding)
-                {
-                    if(string.IsNullOrEmpty(bal)) continue;
-                    _project.SendInfoToLog($"balsFunding [{bal}]");	
-                    string ccy = bal.Split(':')[0]?.ToString();
-                    string maxWd = bal.Split(':')[1]?.ToString();
-                    if(!string.IsNullOrEmpty(maxWd))
-                        try{
-                            if(double.Parse(maxWd) > 0)	{	
-                                balanceList.Add($"{sub}:{ccy}:{maxWd}");
-                                Thread.Sleep(1000);
-                            }
-                        }
-                        catch{
-							CexLog($"!W failed to add [{maxWd}]$[{ccy}] from [{sub}] to main");
-                            //_project.SendInfoToLog($"failed to add [{maxWd}]$[{ccy}] from [{sub}] to main");
-                        }		
-                }
-                
-                var balsTrading = OKXGetSubMax(sub,log:true);
-                foreach (string bal in balsTrading)
-                {
-                    _project.SendInfoToLog($"balsTrading [{bal}]");	
-                    string ccy = bal.Split(':')[0]?.ToString();
-                    string maxWd = bal.Split(':')[1]?.ToString();
-                    if(!string.IsNullOrEmpty(maxWd))
-                        try{
-                            if(double.Parse(maxWd) > 0)	{	
-                                balanceList.Add($"{sub}:{ccy}:{maxWd}");
-                                Thread.Sleep(1000);
-                            }
-                        }
-                        catch{
-							CexLog($"!W failed to add [{maxWd}]$[{ccy}] from [{sub}] to main");
-                            //_project.SendInfoToLog($"failed to add [{maxWd}]$[{ccy}] from [{sub}] to main");
-                        }		
-                }	
-            }
-            return balanceList;
-        }
-
-		public void OKXWithdraw( string toAddress, string currency, string chain, decimal amount, decimal fee, string proxy = null, bool log = false)
-		{
-			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-			string network = MapNetwork(chain, log);
-			var body = new
-			{
-				amt = amount.ToString("G", CultureInfo.InvariantCulture),
-				fee = fee.ToString("G", CultureInfo.InvariantCulture),
-				dest = "4",
-				ccy = currency,
-				chain = currency + "-" + network,
-				toAddr = toAddress
-			};
-			var jsonResponse = OKXPost("/api/v5/asset/withdrawal",body, proxy, log);
-			CexLog($"raw response: {jsonResponse}");
-
-			var response = JsonConvert.DeserializeObject<dynamic>(jsonResponse);
-			string msg = response.msg;
-			string code = response.code;
-
-			if (code != "0") throw new Exception("Err [{code}]; Сообщение [{msg}]");
-			else
-			{
-				CexLog($"Refueled {toAddress} for {amount} `b");
-			}
-			_project.Json.FromString(jsonResponse);
-		}
-		private void OKXSubToMain( string fromSubName, string currency, decimal amount, string accountType = "6", string proxy = null, bool log = false)
-		{
-			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-			
-			string strAmount = amount.ToString("G", CultureInfo.InvariantCulture);
-			
-			var body = new
-			{
-				ccy = currency,
-				type = "2",
-				amt = strAmount,
-				from = accountType, //18 tradinng |6 funding
-				to = "6",
-				subAcct = fromSubName
-			};
-			var jsonResponse = OKXPost("/api/v5/asset/transfer",body, proxy, log);
-
-			CexLog($"raw response: {jsonResponse}");
-
-			var response = JsonConvert.DeserializeObject<dynamic>(jsonResponse);
-			string msg = response.msg;
-			string code = response.code;
-
-			if (code != "0") throw new Exception("Err [{code}]; Сообщение [{msg}] amt:[{strAmount}] ccy:[{currency}]");
-			else
-			{
-				CexLog($"raw response: {jsonResponse}");
-			}
-			
-		}
-		public void OKXCreateSub(string subName, string accountType = "1", string proxy = null, bool log = false)
-		{
-			var body = new
-			{
-				subAcct = subName,
-				type = accountType
-			};
-			var jsonResponse = OKXPost("/api/v5/users/subaccount/create-subaccount",body, proxy, log);
-
-			CexLog($"raw response: {jsonResponse}");
-
-			var response = JsonConvert.DeserializeObject<dynamic>(jsonResponse);
-			string msg = response.msg;
-			string code = response.code;
-
-			if (code != "0") throw new Exception($"Err [{code}]; Сообщение [{msg}]");
-			else
-			{
-				CexLog($"raw response: {jsonResponse}");
-			}
-			
-		}
-
-		public void OKXDrainSubs()
-		{
-			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-			var subs = OKXGetSubAccs();
-			_project.SendInfoToLog(subs.Count.ToString());
-
-			foreach(string sub in subs){
-				
-				var balsFunding = OKXGetSubFunding(sub,log:true);
-				foreach (string bal in balsFunding)
-				{
-					if(string.IsNullOrEmpty(bal)) continue;
-					_project.SendInfoToLog($"balsFunding [{bal}]");	
-					string ccy = bal.Split(':')[0]?.ToString();
-					string maxWd = bal.Split(':')[1]?.ToString();
-					if(!string.IsNullOrEmpty(maxWd))
-						try{
-							if(decimal.Parse(maxWd) > 0)	{
-								decimal amount = decimal.Parse(maxWd);
-								_project.SendInfoToLog($"sending {maxWd}${ccy} from {sub} to main");		
-								OKXSubToMain(sub,ccy,amount,"6",log:true);
-								Thread.Sleep(500);
-							}
-						}
-						catch{
-							_project.SendInfoToLog($"failed to send [{maxWd}]$[{ccy}] from [{sub}] to main");
-						}		
-				}
-				
-				var balsTrading = OKXGetSubMax(sub,log:true);
-				foreach (string bal in balsTrading)
-				{
-					_project.SendInfoToLog($"balsTrading [{bal}]");	
-					string ccy = bal.Split(':')[0]?.ToString();
-					string maxWd = bal.Split(':')[1]?.ToString();
-					if(!string.IsNullOrEmpty(maxWd))
-						try{
-							if(decimal.Parse(maxWd) > 0)	{
-								decimal amount = decimal.Parse(maxWd);
-								_project.SendInfoToLog($"sending {maxWd}${ccy} from {sub} to main");		
-								OKXSubToMain(sub,ccy,amount,"18",log:true);
-							}
-						}
-						catch{
-							_project.SendInfoToLog($"failed to send [{maxWd}]$[{ccy}] from [{sub}] to main");
-						}		
-				}	
-			}
-
-
-		}
-		public void OKXAddMaxSubs()
-		{
-			int i = 1;
-			while (true)
-			{
-				
-				try{
-					OKXCreateSub($"sub{i}t{Time.Now("unix")}");
-					i++;
-					Thread.Sleep(1500);
-				}
-				catch{
-					_project.SendInfoToLog($"{i} subs added");
-					break;
-				}
-			}
-		}
-        public T OKXPrice<T>(string pair, string proxy = null, bool log = false)
-        {
-   				var jsonResponse = OKXGet($"/api/v5/market/ticker?instId={pair}",log:log);
-	            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;			
-				var response = JsonConvert.DeserializeObject<dynamic>(jsonResponse);
-				string msg = response.msg;
-				string code = response.code;
-				string last = null;
-
-                if (code != "0") throw new Exception("Err [{code}]; Сообщение [{msg}]");
-                else
-                {
-                    var dataArray = response.data;
-                    if (dataArray != null)
-                    {
-                        foreach (var item in dataArray)
-                        {
-                            string lastPrice = item.last;
-                            if (!string.IsNullOrEmpty(lastPrice)){
-                                last = lastPrice;
-                                Loggers.l0g(_project, $"{pair}:{lastPrice}");
-                                break;
-                            }
-                        }
-                    }
-                }
-                decimal price = decimal.Parse(last);
-                if (typeof(T) == typeof(string))
-                    return (T)Convert.ChangeType(price.ToString("0.##################"), typeof(T));
-                return (T)Convert.ChangeType(price, typeof(T));      
-        }
-	}
 	#endregion
 
 	#region Wallets
@@ -2562,7 +1806,6 @@ namespace w3tools //by @w3bgrep
 
 			while (!_instance.ActiveTab.FindElementByAttribute("button", "class", "ext-name", "regexp", i).IsVoid)
 			{
-				if (log)Loggers.l0g(_project,$"Cheking ext no {i}");
 				extName = Regex.Replace(_instance.ActiveTab.FindElementByAttribute("button", "class", "ext-name", "regexp", i).GetAttribute("innertext"), @" Wallet", "");
 			    outerHtml = _instance.ActiveTab.FindElementByAttribute("li", "class", "ext\\ type-normal", "regexp", i).GetAttribute("outerhtml");
 			    extId = Regex.Match(outerHtml, @"extension-icon/([a-z0-9]+)").Groups[1].Value;
@@ -5364,5 +4607,45 @@ namespace w3tools //by @w3bgrep
 
     }
 
-	
+	 public class OKXApi2
+ {
+     private readonly IZennoPosterProjectModel _project;
+     private readonly string[] _apiKeys;
+
+     private readonly L0g _log;
+     private readonly bool _logShow;
+     private readonly Sql _sql;
+     private readonly string _apiKey;
+     private readonly string _secretKey;
+     private readonly string _passphrase;
+     public OKXApi2(IZennoPosterProjectModel project, bool log = false)
+     {
+         _project = project;
+         
+         _log = new L0g(_project);
+		 _sql = new Sql(_project);
+		 _apiKeys = okxKeys();
+         _apiKey = _apiKeys[0];
+         _secretKey = _apiKeys[1];
+         _passphrase = _apiKeys[2];
+     }
+     public void CexLog(string toSend = "", [CallerMemberName] string callerName = "", bool log = false)
+     {
+         if (!_logShow && !log) return;
+         var stackFrame = new System.Diagnostics.StackFrame(1);
+         var callingMethod = stackFrame.GetMethod();
+         if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
+         _log.Send($"[ 💸  {callerName}] {toSend} ");
+     }
+     public string[] okxKeys()
+     {
+         string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : null) + "settings";
+         _sql.DbQ($"SELECT value FROM {table} WHERE var = 'okx_apikey';");
+         var key = _sql.DbQ($"SELECT value FROM {table} WHERE var = 'okx_apikey';");
+         var secret = _sql.DbQ($"SELECT value FROM {table} WHERE var = 'okx_secret';");
+         var passphrase = _sql.DbQ($"SELECT value FROM {table} WHERE var = 'okx_passphrase';");
+         string[] result = new string[] { key, secret, passphrase };
+         return result;
+     }
+ }
 }
