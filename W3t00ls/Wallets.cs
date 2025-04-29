@@ -70,40 +70,46 @@ namespace W3t00ls
             
             
             WalLog($"switching extentions  {toUse}",log: log);
-            if (_instance.BrowserType.ToString() == "Chromium" && _project.Variables["acc0"].Value != "")
+
+            try
             {
-                var em = _instance.UseFullMouseEmulation;
-
-                int i = 0; string extName = ""; string outerHtml = ""; string extId = ""; string extStatus = "enabled";
-
-                string fileName = $"One-Click-Extensions-Manager.crx";
-                var managerId = "pbgjpgbpljobkekbhnnmlikbbfhbhmem";
-
-                Install(managerId, fileName, log);
-
-                while (_instance.ActiveTab.URL != "chrome-extension://pbgjpgbpljobkekbhnnmlikbbfhbhmem/index.html")
+                if (_instance.BrowserType.ToString() == "Chromium" && _project.Variables["acc0"].Value != "")
                 {
-                    _instance.ActiveTab.Navigate("chrome-extension://pbgjpgbpljobkekbhnnmlikbbfhbhmem/index.html", "");
+                    
+                    var em = _instance.UseFullMouseEmulation;
+
+                    int i = 0; string extName = ""; string outerHtml = ""; string extId = ""; string extStatus = "enabled";
+
+                    string fileName = $"One-Click-Extensions-Manager.crx";
+                    var managerId = "pbgjpgbpljobkekbhnnmlikbbfhbhmem";
+
+                    Install(managerId, fileName, log);
+
+                    while (_instance.ActiveTab.URL != "chrome-extension://pbgjpgbpljobkekbhnnmlikbbfhbhmem/index.html")
+                    {
+                        _instance.ActiveTab.Navigate("chrome-extension://pbgjpgbpljobkekbhnnmlikbbfhbhmem/index.html", "");
+                        _instance.CloseExtraTabs();
+                        WalLog($"URL is correct {_instance.ActiveTab.URL}", log: log);
+                    }
+
+                    while (!_instance.ActiveTab.FindElementByAttribute("button", "class", "ext-name", "regexp", i).IsVoid)
+                    {
+                        extName = Regex.Replace(_instance.ActiveTab.FindElementByAttribute("button", "class", "ext-name", "regexp", i).GetAttribute("innertext"), @" Wallet", "");
+                        outerHtml = _instance.ActiveTab.FindElementByAttribute("li", "class", "ext\\ type-normal", "regexp", i).GetAttribute("outerhtml");
+                        extId = Regex.Match(outerHtml, @"extension-icon/([a-z0-9]+)").Groups[1].Value;
+                        if (outerHtml.Contains("disabled")) extStatus = "disabled";
+                        if (toUse.Contains(extName) && extStatus == "disabled" || toUse.Contains(extId) && extStatus == "disabled" || !toUse.Contains(extName) && !toUse.Contains(extId) && extStatus == "enabled")
+                            _instance.HeClick(("button", "class", "ext-name", "regexp", i));
+                        i++;
+                    }
+
                     _instance.CloseExtraTabs();
-                    WalLog($"URL is correct {_instance.ActiveTab.URL}", log: log);
+                    _instance.UseFullMouseEmulation = em;
+                    WalLog($"Enabled  {toUse}", log: log);
                 }
 
-                while (!_instance.ActiveTab.FindElementByAttribute("button", "class", "ext-name", "regexp", i).IsVoid)
-                {
-                    extName = Regex.Replace(_instance.ActiveTab.FindElementByAttribute("button", "class", "ext-name", "regexp", i).GetAttribute("innertext"), @" Wallet", "");
-                    outerHtml = _instance.ActiveTab.FindElementByAttribute("li", "class", "ext\\ type-normal", "regexp", i).GetAttribute("outerhtml");
-                    extId = Regex.Match(outerHtml, @"extension-icon/([a-z0-9]+)").Groups[1].Value;
-                    if (outerHtml.Contains("disabled")) extStatus = "disabled";
-                    if (toUse.Contains(extName) && extStatus == "disabled" || toUse.Contains(extId) && extStatus == "disabled" || !toUse.Contains(extName) && !toUse.Contains(extId) && extStatus == "enabled")
-                        _instance.HeClick(("button", "class", "ext-name", "regexp", i));
-                    i++;
-                }
-
-                _instance.CloseExtraTabs();
-                _instance.UseFullMouseEmulation = em;
-                WalLog($"Enabled  {toUse}", log: log);
             }
-            else 
+            catch 
             {
                 try
                 {
@@ -148,9 +154,10 @@ namespace W3t00ls
                 catch (Exception ex)
                 {
                     WalLog($"Err: {ex.Message}", log: log);
-                    throw;      
+                    throw;
                 }
             }
+
 
         }
     }
