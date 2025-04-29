@@ -81,11 +81,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Blockchain.cs" />
-    <Compile Include="Browser.cs" />
     <Compile Include="Cookies.cs" />
     <Compile Include="Crypto.cs" />
     <Compile Include="DataImporter.cs" />
     <Compile Include="Discord.cs" />
+    <Compile Include="InstanceExtensions.cs" />
     <Compile Include="ISAFU.cs" />
     <Compile Include="L0g.cs" />
     <Compile Include="OKXApi.cs" />
@@ -97,6 +97,7 @@
     <Compile Include="Sql.cs" />
     <Compile Include="SQLite.cs" />
     <Compile Include="Time.cs" />
+    <Compile Include="ProjectExtensions.cs" />
     <Compile Include="Wallets.cs" />
     <Compile Include="X.cs" />
   </ItemGroup>
