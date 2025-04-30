@@ -20,6 +20,7 @@ using Newtonsoft.Json.Linq;
 
 namespace W3t00ls
 {
+    
     public static class ProjectExtensions
     {
         private static readonly object LockObject = new object();
@@ -74,7 +75,6 @@ namespace W3t00ls
             if (thr0w) throw new Exception($"{formated}");
 
         }
-
         public static bool SetGlobalVar(this IZennoPosterProjectModel project, bool log = false)
         {
             lock (LockObject)
@@ -151,15 +151,6 @@ namespace W3t00ls
             project.Variables[$"{varName}"].Value = (int.Parse(project.Variables[$"{varName}"].Value) + input).ToString();
             return project.Variables[$"{varName}"].Value;
         }
-        public static string EscapeMarkdown(string text)
-        {
-            string[] specialChars = new[] { "_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!" };
-            foreach (var ch in specialChars)
-            {
-                text = text.Replace(ch, "\\" + ch);
-            }
-            return text;
-        }
         public static void Sleep(this IZennoPosterProjectModel project, int min = 0, int max = 1)
         {
             Random rnd = new Random();
@@ -193,26 +184,26 @@ namespace W3t00ls
         }
         public static T Age<T>(this IZennoPosterProjectModel project)
         {
-            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            Random rnd = new Random();
-            long Age = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - long.Parse(project.Variables["varSessionId"].Value);
+                Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+                Random rnd = new Random();
+                long Age = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - long.Parse(project.Variables["varSessionId"].Value);
 
 
-            if (typeof(T) == typeof(string))
-            {
-                string result = TimeSpan.FromSeconds(Age).ToString();
-                return (T)(object)result;
-            }
-            else if (typeof(T) == typeof(TimeSpan))
-            {
-                TimeSpan result = TimeSpan.FromSeconds(Age);
-                return (T)(object)result;
-            }
-            else
-            {
-                return (T)Convert.ChangeType(Age, typeof(T));
-            }
-
+                if (typeof(T) == typeof(string))
+                {
+                    string result = TimeSpan.FromSeconds(Age).ToString();
+                    return (T)(object)result;
+                }
+                else if (typeof(T) == typeof(TimeSpan))
+                {
+                    TimeSpan result = TimeSpan.FromSeconds(Age);
+                    return (T)(object)result;
+                }
+                else
+                {
+                    return (T)Convert.ChangeType(Age, typeof(T));
+                }
+        
         }
         public static T RndAmount<T>(this IZennoPosterProjectModel project, decimal min = 0, decimal max = 0)
         {
@@ -228,18 +219,6 @@ namespace W3t00ls
 
             return (T)Convert.ChangeType(value, typeof(T));
 
-        }
-        public static string DecodeQr(HtmlElement element)
-        {
-            try
-            {
-                var bitmap = element.DrawPartAsBitmap(0, 0, 200, 200, true);
-                var reader = new BarcodeReader();
-                var result = reader.Decode(bitmap);
-                if (result == null || string.IsNullOrEmpty(result.Text)) return "qrIsNull";
-                return result.Text;
-            }
-            catch (Exception) { return "qrError"; }
         }
         public static string GetExtVer(this IZennoPosterProjectModel project, string extId)
         {
@@ -269,9 +248,5 @@ namespace W3t00ls
 
         }
    
-    
-    
-    
-    
     }
 }

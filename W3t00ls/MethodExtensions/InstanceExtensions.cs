@@ -380,11 +380,13 @@ namespace W3t00ls
 
         public static void CtrlV(this Instance instance, string ToPaste)
         {
-            lock (LockObject) { System.Windows.Forms.Clipboard.SetText(ToPaste); instance.ActiveTab.KeyEvent("v", "press", "ctrl"); }
+            lock (LockObject) { 
+                System.Windows.Forms.Clipboard.SetText(ToPaste);
+                instance.ActiveTab.KeyEvent("v", "press", "ctrl");
+            }
         }
 
 
- 
         //cookies
         public static string GetCookies(this Instance instance, IZennoPosterProjectModel project, string domainFilter = "")
         {

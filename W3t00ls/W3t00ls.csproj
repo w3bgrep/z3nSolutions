@@ -11,6 +11,7 @@
     <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -23,7 +24,6 @@
     <MapFileExtensions>true</MapFileExtensions>
     <ApplicationRevision>0</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
-    <IsWebBootstrapper>false</IsWebBootstrapper>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
@@ -81,25 +81,26 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Blockchain.cs" />
-    <Compile Include="Cookies.cs" />
-    <Compile Include="Crypto.cs" />
+    <Compile Include="StaticTools\Crypto.cs" />
     <Compile Include="DataImporter.cs" />
-    <Compile Include="Discord.cs" />
-    <Compile Include="InstanceExtensions.cs" />
+    <Compile Include="Socials\Discord.cs" />
+    <Compile Include="MethodExtensions\InstanceExtensions.cs" />
     <Compile Include="ISAFU.cs" />
     <Compile Include="L0g.cs" />
     <Compile Include="OKXApi.cs" />
     <Compile Include="OnChain.cs" />
-    <Compile Include="OTP.cs" />
-    <Compile Include="PostgreSQL.cs" />
+    <Compile Include="StaticTools\OTP.cs" />
+    <Compile Include="Sql\PostgreSQL.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Sql.cs" />
-    <Compile Include="SQLite.cs" />
-    <Compile Include="Time.cs" />
-    <Compile Include="ProjectExtensions.cs" />
+    <Compile Include="Sql\Sql.cs" />
+    <Compile Include="Sql\SQLite.cs" />
+    <Compile Include="MethodExtensions\HtmlExtensions.cs" />
+    <Compile Include="MethodExtensions\StringExtentions.cs" />
+    <Compile Include="StaticTools\Time.cs" />
+    <Compile Include="MethodExtensions\ProjectExtensions.cs" />
     <Compile Include="Wallets.cs" />
-    <Compile Include="X.cs" />
+    <Compile Include="Socials\X.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="ValidateZennoPosterDllPath" BeforeTargets="BeforeBuild">

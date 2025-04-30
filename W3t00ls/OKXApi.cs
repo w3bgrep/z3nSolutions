@@ -30,8 +30,8 @@ namespace W3t00ls
             _project = project;
             _sql = new Sql(_project);
             _log = new L0g(_project);
-
-            _apiKeys = okxKeys();
+            _logShow = log;
+            _apiKeys = OkxKeys();
             _apiKey = _apiKeys[0];
             _secretKey = _apiKeys[1];
             _passphrase = _apiKeys[2];
@@ -44,7 +44,7 @@ namespace W3t00ls
             if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
             _log.Send($"[ 💸  {callerName}] {toSend} ");
         }
-        public string[] okxKeys()
+        public string[] OkxKeys()
         {
             string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : null) + "settings";
             _sql.DbQ($"SELECT value FROM {table} WHERE var = 'okx_apikey';");

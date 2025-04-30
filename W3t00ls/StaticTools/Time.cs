@@ -4,19 +4,24 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 
 namespace W3t00ls
 {
     public static class Time
     {
+        private static readonly object LockObject = new object();
 
         public static string Now(string format = "unix") // unix|iso
         {
-            if (format == "unix") return ((long)((DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalMilliseconds)).ToString();	//Unix Epoch
-            else if (format == "iso") return DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"); // ISO 8601 
-            else if (format == "short") return DateTime.UtcNow.ToString("MM-ddTHH:mm");
-            throw new ArgumentException("Invalid format. Use 'unix' or 'iso'.");
+            lock (LockObject)
+            {
+                if (format == "unix") return ((long)((DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalMilliseconds)).ToString();   //Unix Epoch
+                else if (format == "iso") return DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"); // ISO 8601 
+                else if (format == "short") return DateTime.UtcNow.ToString("MM-ddTHH:mm");
+                throw new ArgumentException("Invalid format. Use 'unix' or 'iso'.");
+            }
         }
 
         public static int TimeElapsed(IZennoPosterProjectModel project, string varName = "varSessionId")

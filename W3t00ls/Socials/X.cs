@@ -37,11 +37,11 @@ namespace W3t00ls
             _log = new L0g(_project);
             _logShow = log;
             
-            loadCreds();
+            LoadCreds();
 
         }
 
-        private string loadCreds()
+        private string LoadCreds()
         {
             //public string Twitter(string tableName = "twitter", string schemaName = "accounts")
 
@@ -124,8 +124,9 @@ namespace W3t00ls
         }
         private string XgetToken()
         {
-            var cook = new Cookies(_project, _instance);
-            var cookJson = cook.Get(".");
+            //var cook = new Cookies(_project, _instance);
+            //var cookJson = cook.Get(".");
+            var cookJson = _instance.GetCookies(_project,".");
             JArray toParse = JArray.Parse(cookJson);
             int i = 0; var token = "";
             while (token == "")

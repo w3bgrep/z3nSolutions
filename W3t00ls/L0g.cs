@@ -12,7 +12,6 @@ namespace W3t00ls
     {
         private readonly IZennoPosterProjectModel _project;
         private readonly DateTime _start = DateTime.Now;
-
         public L0g(IZennoPosterProjectModel project)
         {
             _project = project;
@@ -71,9 +70,6 @@ namespace W3t00ls
             if (thr0w) throw new Exception($"{formated}");
 
         }
-
     }
-
-
 }
 
