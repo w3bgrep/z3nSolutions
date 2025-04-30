@@ -983,6 +983,14 @@ namespace W3t00ls
             _fileName = "Keplr0.12.223.crx";
         }
 
+        public void KeplrClick(HtmlElement he)
+        {
+            int x = int.Parse(he.GetAttribute("leftInTab")); int y = int.Parse(he.GetAttribute("topInTab"));
+            x = x - 450; _instance.Click(x, x, y, y, "Left", "Normal"); Thread.Sleep(1000);
+            return;
+        }
+
+
         public string KeplrMain(string source = "pkey", string fileName = null, bool log = false)
         {
             if (string.IsNullOrEmpty(fileName)) fileName = _fileName;
@@ -1187,18 +1195,18 @@ namespace W3t00ls
             {
                 _instance.CloseExtraTabs();
                 _instance.ActiveTab.Navigate($"chrome-extension://{_extId}/popup.html#/wallet/select", "");
-                _instance.ActiveTab.FindElementByAttribute("button", "innertext", "Add\\ Wallet", "regexp", 0);
+                _instance.HeGet(("button", "innertext", "Add\\ Wallet", "regexp", 0));
 
                 var imported = KeplrPrune(log);
                 if (imported.Contains("seed") && imported.Contains("pkey"))
                 {
-                    _instance.HeClick(("div", "innertext", source, "regexp", 0));
+                    KeplrClick(_instance.GetHe(("div", "innertext", source, "regexp", 0), "last"));
                     WalLog($"Source set to {source}", log: log);
                     return;
                 }
 
                 WalLog("Not all wallets imported, adding new wallet", log: log);
-                _instance.HeClick(("button", "innertext", "Add\\ Wallet", "regexp", 0));
+                KeplrClick(_instance.GetHe(("button", "innertext", "Add\\ Wallet", "regexp", 0)));
                 KeplrImportPkey(log: log);
             }
         }
@@ -1211,7 +1219,8 @@ namespace W3t00ls
             try
             {
                 _instance.HeSet(("input:password", "tagname", "input", "regexp", 0), password);
-                _instance.HeClick(("button", "innertext", "Unlock", "regexp", 0));
+                KeplrClick(_instance.GetHe(("button", "innertext", "Unlock", "regexp", 0)));
+                //_instance.HeClick(("button", "innertext", "Unlock", "regexp", 0));
 
                 if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Invalid\\ password", "regexp", 0).IsVoid)
                 {
@@ -1236,12 +1245,13 @@ namespace W3t00ls
             _instance.UseFullMouseEmulation = true;
             var imported = "";
             int i = 0;
-
+            _instance.HeGet(("button", "innertext", "Add\\ Wallet", "regexp", 0));
+            _project.Sleep(1, 1);
             try
             {
                 while (true)
                 {
-                    var dotBtn = _instance.ActiveTab.FindElementByAttribute("path", "d", "M10.5 6C10.5 5.17157 11.1716 4.5 12 4.5C12.8284 4.5 13.5 5.17157 13.5 6C13.5 6.82843 12.8284 7.5 12 7.5C11.1716 7.5 10.5 6.82843 10.5 6ZM10.5 12C10.5 11.1716 11.1716 10.5 12 10.5C12.8284 10.5 13.5 11.1716 13.5 12C13.5 12.8284 12.8284 13.5 12 13.5C11.1716 13.5 10.5 12.8284 10.5 18C10.5 17.1716 11.1716 16.5 12 16.5C12.8284 16.5 13.5 17.1716 13.5 18C13.5 18.8284 12.8284 19.5 12 19.5C11.1716 19.5 10.5 18.8284 10.5 18Z", "text", i);
+                    var dotBtn = _instance.ActiveTab.FindElementByAttribute("path", "d", "M10.5 6C10.5 5.17157 11.1716 4.5 12 4.5C12.8284 4.5 13.5 5.17157 13.5 6C13.5 6.82843 12.8284 7.5 12 7.5C11.1716 7.5 10.5 6.82843 10.5 6ZM10.5 12C10.5 11.1716 11.1716 10.5 12 10.5C12.8284 10.5 13.5 11.1716 13.5 12C13.5 12.8284 12.8284 13.5 12 13.5C11.1716 13.5 10.5 12.8284 10.5 12ZM10.5 18C10.5 17.1716 11.1716 16.5 12 16.5C12.8284 16.5 13.5 17.1716 13.5 18C13.5 18.8284 12.8284 19.5 12 19.5C11.1716 19.5 10.5 18.8284 10.5 18Z", "text", i);
 
                     if (dotBtn.IsVoid)
                         break;
@@ -1251,27 +1261,27 @@ namespace W3t00ls
 
                     if (tileText.Contains("pkey"))
                     {
-                        imported += "pkey;";
+                        imported += "pkey";
                         i++;
                         continue;
                     }
                     if (tileText.Contains("seed"))
                     {
-                        imported += "seed;";
+                        imported += "seed";
                         i++;
                         continue;
                     }
                     if (keepTemp && tileText.Contains("temp"))
                     {
-                        imported += "temp;";
+                        imported += "temp";
                         i++;
                         continue;
                     }
 
-                    _instance.HeClick(dotBtn);
-                    _instance.HeClick(("div", "innertext", "Delete\\ Wallet", "regexp", 0));
+                    KeplrClick(dotBtn);
+                    KeplrClick(_instance.GetHe(("div", "innertext", "Delete\\ Wallet", "regexp", 0), "last"));
                     _instance.HeSet(("password", "name"), _pass);
-                    _instance.HeClick(("button", "type", "submit", "regexp", 0));
+                    KeplrClick(_instance.GetHe(("button", "type", "submit", "regexp", 0)));
                     i++;
                 }
 
