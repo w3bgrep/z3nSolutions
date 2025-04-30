@@ -1,17 +1,21 @@
 ﻿using Global.WinApi;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
+
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
+using System.IO;
+
+using System.Globalization;
+
+using System.Runtime.CompilerServices;
 using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using ZennoLab.CommandCenter;
 using ZXing;
 
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 
 namespace W3t00ls
@@ -70,7 +74,7 @@ namespace W3t00ls
             if (thr0w) throw new Exception($"{formated}");
 
         }
-        
+
         public static bool SetGlobalVar(this IZennoPosterProjectModel project, bool log = false)
         {
             lock (LockObject)
@@ -107,7 +111,7 @@ namespace W3t00ls
                     }
                     if (project.Variables["cleanGlobal"].Value == "True")
                     {
-                        
+
                         project.L0g($"!W cleanGlobal is [on] Cleaned: {string.Join(",", cleaned)}");
                     }
                     else
@@ -197,7 +201,7 @@ namespace W3t00ls
             if (typeof(T) == typeof(string))
             {
                 string result = TimeSpan.FromSeconds(Age).ToString();
-                return (T)(object)result; 
+                return (T)(object)result;
             }
             else if (typeof(T) == typeof(TimeSpan))
             {
@@ -238,7 +242,32 @@ namespace W3t00ls
             }
             catch (Exception) { return "qrError"; }
         }
+        public static string GetExtVer(this IZennoPosterProjectModel project, string extId)
+        {
+            string securePrefsPath = project.Variables["pathProfileFolder"].Value + @"\Default\Secure Preferences";
+            string json = File.ReadAllText(securePrefsPath);
+            JObject jObj = JObject.Parse(json);
+            JObject settings = (JObject)jObj["extensions"]?["settings"];
 
+            if (settings == null)
+            {
+                throw new Exception("Секция extensions.settings не найдена");
+            }
 
+            JObject extData = (JObject)settings[extId];
+            if (extData == null)
+            {
+                throw new Exception($"Расширение с ID {extId} не найдено");
+            }
+
+            string version = (string)extData["manifest"]?["version"];
+            if (string.IsNullOrEmpty(version))
+            {
+                throw new Exception($"Версия для расширения {extId} не найдена");
+            }
+
+            return version;
+
+        }
     }
 }
