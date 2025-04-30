@@ -198,7 +198,7 @@ namespace W3t00ls
                         new ZerionWallet(_project, _instance, log).ZerionLnch(log: log);
                         break;
                     case WType.Keplr:
-                        new KeplrWallet(_project, _instance, log).KeplrMain(log: log);
+                        new KeplrWallet(_project, _instance, log).KeplrLaunch(log: log);
                         break;
                     default:
                         WalLog($"Unknown wallet: {wallet}", log: log || _log);
@@ -1022,6 +1022,30 @@ namespace W3t00ls
             }
         }
 
+        public void KeplrLaunch(string source = "seed", string fileName = null, bool log = false)
+        {
+            if (string.IsNullOrEmpty(fileName)) fileName = _fileName;
+
+            var em = _instance.UseFullMouseEmulation;
+            _instance.UseFullMouseEmulation = false;
+
+            WalLog($"Launching Rabby wallet with file {fileName}", log: log);
+            if (Install(_extId, fileName, log))
+            {
+                KeplrImportSeed(log: log);
+                KeplrImportPkey(log: log);
+            }
+            else
+                KeplrUnlock(log: log);
+
+            KeplrSetSource(source, log);
+
+            _instance.CloseExtraTabs();
+            _instance.UseFullMouseEmulation = em;
+        }
+
+
+
         public string KeplrApprove(bool log = false)
         {
             WalLog("Approving Keplr transaction", log: log);
@@ -1110,7 +1134,14 @@ namespace W3t00ls
             var password = _pass;
             var seedPhrase = _sql.Seed();
 
-            try
+
+            try { _instance.HeGet(("button", "innertext", "Import\\ an\\ existing\\ wallet", "regexp", 0)); }
+            catch
+            {
+                _instance.ActiveTab.Navigate($"chrome-extension://{_extId}/register.html#/", "");
+            }
+
+                try
             {
                 _instance.HeClick(("button", "innertext", "Import\\ an\\ existing\\ wallet", "regexp", 0));
                 _instance.HeClick(("button", "innertext", "Use\\ recovery\\ phrase\\ or\\ private\\ key", "regexp", 0));
@@ -1118,7 +1149,7 @@ namespace W3t00ls
                 int index = 0;
                 foreach (string word in seedPhrase.Split(' '))
                 {
-                    _instance.HeSet(("input", "fulltagname", "input:", "regexp", index), word);
+                    _instance.HeSet(("input", "fulltagname", "input:", "regexp", index), word, delay:0);
                     index++;
                 }
 
@@ -1127,12 +1158,8 @@ namespace W3t00ls
                 _instance.HeSet(("password", "name"), password);
                 _instance.HeSet(("confirmPassword", "name"), password);
                 _instance.HeClick(("button", "innertext", "Next", "regexp", 0));
-
-                int j = 0;
-                while (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Select\\ All", "regexp", j).IsVoid)
-                    j++;
-                _instance.HeClick(("div", "innertext", "Select\\ All", "regexp", j - 1));
-
+                _instance.HeClick(("input:checkbox", "fulltagname", "input:checkbox", "regexp", 0));
+        
                 _instance.HeClick(("button", "innertext", "Save", "regexp", 0));
 
                 while (!_instance.ActiveTab.FindElementByAttribute("button", "innertext", "Import", "regexp", 0).IsVoid)
@@ -1158,6 +1185,9 @@ namespace W3t00ls
             var key = temp ? new Key().ToHex() : _sql.KeyEVM();
             var walletName = temp ? "temp" : "pkey";
 
+            try { _instance.HeGet(("button", "innertext", "Import\\ an\\ existing\\ wallet", "regexp", 0)); }
+            catch { _instance.ActiveTab.Navigate($"chrome-extension://{_extId}/register.html#/", ""); }
+
             try
             {
                 _instance.HeClick(("button", "innertext", "Import\\ an\\ existing\\ wallet", "regexp", 0));
@@ -1166,8 +1196,12 @@ namespace W3t00ls
                 _instance.HeSet(("input:password", "tagname", "input", "regexp", 0), key);
                 _instance.HeClick(("button", "innertext", "Import", "regexp", 1));
                 _instance.HeSet(("name", "name"), walletName);
-                _instance.HeSet(("password", "name"), password);
-                _instance.HeSet(("confirmPassword", "name"), password);
+                try
+                {
+                    _instance.HeSet(("password", "name"), password);
+                    _instance.HeSet(("confirmPassword", "name"), password);
+                }
+                catch { }
                 _instance.HeClick(("button", "innertext", "Next", "regexp", 0));
                 _instance.HeClick(("button", "innertext", "Save", "regexp", 0));
 
@@ -1216,8 +1250,15 @@ namespace W3t00ls
             WalLog("Unlocking Keplr wallet", log: log);
             var password = _pass;
 
+            if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Copy\\ Address", "regexp", 0).IsVoid)
+            {
+                WalLog("Keplr wallet is set, ready to select source", log: log);
+                return ;
+            }
             try
             {
+                
+                _instance.ActiveTab.Navigate($"chrome-extension://{_extId}/popup.html#/", "");
                 _instance.HeSet(("input:password", "tagname", "input", "regexp", 0), password);
                 KeplrClick(_instance.GetHe(("button", "innertext", "Unlock", "regexp", 0)));
                 //_instance.HeClick(("button", "innertext", "Unlock", "regexp", 0));
@@ -1242,7 +1283,7 @@ namespace W3t00ls
         public string KeplrPrune(bool keepTemp = false, bool log = false)
         {
             WalLog("Pruning Keplr wallets", log: log);
-            _instance.UseFullMouseEmulation = true;
+            //_instance.UseFullMouseEmulation = true;
             var imported = "";
             int i = 0;
             _instance.HeGet(("button", "innertext", "Add\\ Wallet", "regexp", 0));

@@ -160,7 +160,7 @@ namespace W3t00ls
             }
             return text;
         }
-        public static void Sleep(this IZennoPosterProjectModel project, int min = 1, int max = 5)
+        public static void Sleep(this IZennoPosterProjectModel project, int min = 0, int max = 1)
         {
             Random rnd = new Random();
             Thread.Sleep(rnd.Next(min, max) * 1000);
@@ -229,7 +229,6 @@ namespace W3t00ls
             return (T)Convert.ChangeType(value, typeof(T));
 
         }
-
         public static string DecodeQr(HtmlElement element)
         {
             try
@@ -269,5 +268,10 @@ namespace W3t00ls
             return version;
 
         }
+   
+    
+    
+    
+    
     }
 }
