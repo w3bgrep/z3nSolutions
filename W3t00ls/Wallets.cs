@@ -1049,7 +1049,7 @@ namespace W3t00ls
         public string KeplrApprove(bool log = false)
         {
             WalLog("Approving Keplr transaction", log: log);
-            var deadline = DateTime.Now.AddSeconds(10);
+            var deadline = DateTime.Now.AddSeconds(20);
 
             try
             {
@@ -1064,12 +1064,14 @@ namespace W3t00ls
                 }
 
                 _instance.UseFullMouseEmulation = false;
-                _instance.HeClick(("button", "innertext", "Approve", "regexp", 0), deadline: 5);
+                approve:
+                _instance.HeClick(("button", "innertext", "Approve", "regexp", 0));
                 WalLog("Approve button clicked", log: log);
 
                 while (_instance.ActiveTab.URL.Contains(_extId) && DateTime.Now < deadline)
                 {
                     Thread.Sleep(100);
+                    goto approve;
                 }
                 if (DateTime.Now >= deadline)
                 {
@@ -1185,7 +1187,7 @@ namespace W3t00ls
             var key = temp ? new Key().ToHex() : _sql.KeyEVM();
             var walletName = temp ? "temp" : "pkey";
 
-            try { _instance.HeGet(("button", "innertext", "Import\\ an\\ existing\\ wallet", "regexp", 0)); }
+            try { _instance.HeGet(("button", "innertext", "Import\\ an\\ existing\\ wallet", "regexp", 0), deadline: 3); }
             catch { _instance.ActiveTab.Navigate($"chrome-extension://{_extId}/register.html#/", ""); }
 
             try
@@ -1198,7 +1200,7 @@ namespace W3t00ls
                 _instance.HeSet(("name", "name"), walletName);
                 try
                 {
-                    _instance.HeSet(("password", "name"), password);
+                    _instance.HeSet(("password", "name"), password, deadline:3);
                     _instance.HeSet(("confirmPassword", "name"), password);
                 }
                 catch { }
