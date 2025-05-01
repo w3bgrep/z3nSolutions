@@ -224,5 +224,19 @@ namespace W3t00ls
             string[] result = new string[] { key, secret, passphrase };
             return result;
         }
+
+        public string Ref(string refCode = null, bool log = false)
+        {
+            if (string.IsNullOrEmpty(refCode)) refCode = _project.Variables["cfgRefCode"].Value;
+
+            if (string.IsNullOrEmpty(refCode) || refCode == "_") refCode = DbQ($@"SELECT refcode FROM {_project.Variables["projectTable"].Value}
+			WHERE refcode != '_' 
+			AND TRIM(refcode) != ''
+			ORDER BY RANDOM()
+			LIMIT 1;", log);
+            return refCode;
+        }
+
+
     }
 }

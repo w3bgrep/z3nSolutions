@@ -16,6 +16,11 @@ using ZXing;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Leaf.xNet;
+using System.Diagnostics;
+using System.Text;
+using Npgsql;
+using Global.SettingsManager.Enums;
 
 
 namespace W3t00ls
@@ -24,6 +29,7 @@ namespace W3t00ls
     public static class ProjectExtensions
     {
         private static readonly object LockObject = new object();
+ 
         public static void L0g(this IZennoPosterProjectModel project, string toLog, [CallerMemberName] string callerName = "", bool show = true, bool thr0w = false ,bool toZp = true)
         {
             if (!show) return;
@@ -72,6 +78,37 @@ namespace W3t00ls
             project.SendToLog(formated, type, toZp, color);
             if (thr0w) throw new Exception($"{formated}");
 
+        }
+
+        public static void SetRange(this IZennoPosterProjectModel project)
+        {
+            string accRange = project.Variables["cfgAccRange"].Value;
+            int rangeS, rangeE;
+            string range;
+
+            if (accRange.Contains(","))
+            {
+                range = accRange;
+                var rangeParts = accRange.Split(',').Select(int.Parse).ToArray();
+                rangeS = rangeParts.Min();
+                rangeE = rangeParts.Max();
+            }
+            else if (accRange.Contains("-"))
+            {
+                var rangeParts = accRange.Split('-').Select(int.Parse).ToArray();
+                rangeS = rangeParts[0];
+                rangeE = rangeParts[1];
+                range = string.Join(",", Enumerable.Range(rangeS, rangeE - rangeS + 1));
+            }
+            else
+            {
+                rangeE = int.Parse(accRange);
+                rangeS = int.Parse(accRange);
+                range = accRange;
+            }
+            project.Variables["rangeStart"].Value = $"{rangeS}";
+            project.Variables["rangeEnd"].Value = $"{rangeE}";
+            project.Variables["range"].Value = range;
         }
         public static bool SetGlobalVar(this IZennoPosterProjectModel project, bool log = false)
         {
@@ -144,11 +181,14 @@ namespace W3t00ls
                 }
             }
         }
+ 
         public static string MathVar(this IZennoPosterProjectModel project, string varName, int input)
         {
             project.Variables[$"{varName}"].Value = (int.Parse(project.Variables[$"{varName}"].Value) + input).ToString();
             return project.Variables[$"{varName}"].Value;
         }
+ 
+        
         public static void Sleep(this IZennoPosterProjectModel project, int min = 0, int max = 1)
         {
             Random rnd = new Random();
@@ -180,6 +220,7 @@ namespace W3t00ls
             form.ShowDialog();
             return smsBox.Text;
         }
+
         public static T Age<T>(this IZennoPosterProjectModel project)
         {
                 Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -218,6 +259,8 @@ namespace W3t00ls
             return (T)Convert.ChangeType(value, typeof(T));
 
         }
+
+
         public static string GetExtVer(this IZennoPosterProjectModel project, string extId)
         {
             string securePrefsPath = project.Variables["pathProfileFolder"].Value + @"\Default\Secure Preferences";
@@ -245,6 +288,136 @@ namespace W3t00ls
             return version;
 
         }
-   
+        public static string LeafPOST(this IZennoPosterProjectModel project, string url, string jsonBody, string proxy = "", bool log = false)
+        {
+            using (var request = new HttpRequest())
+            {
+                request.UserAgent = "Mozilla/5.0";
+                request.IgnoreProtocolErrors = true;
+                request.ConnectTimeout = 5000;
+
+                if (!string.IsNullOrEmpty(proxy))
+                {
+                    try
+                    {
+                        request.Proxy = ProxyClient.Parse(proxy.Contains("@") ? proxy : $"HTTP://{proxy}");
+                    }
+                    catch (Exception ex)
+                    {
+                        project.SendErrorToLog($"Ошибка прокси: {ex.Message}");
+                        throw;
+                    }
+                }
+
+                try
+                {
+                    HttpResponse httpResponse = request.Post(url, jsonBody, "application/json");
+                    return httpResponse.ToString();
+                }
+                catch (HttpException ex)
+                {
+                    project.SendErrorToLog($"Ошибка запроса: {ex.Message}");
+                    throw;
+                }
+            }
+        }
+
+
+        public static void InitVariables(this IZennoPosterProjectModel project, string author = null)
+        {
+            DisableLogs();
+            if (string.IsNullOrEmpty(author)) author = project.Variables["projectAuthor"].Value;
+            project.Variables["varSessionId"].Value = (DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString();
+            project.Variables["instancePort"].Value = $"_";
+            
+            string projectName = project.ExecuteMacro(project.Name).Split('.')[0];
+            project.Variables["projectName"].Value = projectName;
+
+            string[] vars = { "cfgPin", "DBsqltPath" };
+            project.CheckVars(vars);
+            
+            string tablename;
+            string schema = "projects.";
+            if (project.Variables["DBmode"].Value == "PostgreSQL") tablename = schema + projectName.ToLower();
+            else tablename = "_" + projectName.ToLower();
+            project.Variables["projectTable"].Value = tablename;
+
+
+            project.Logo(author);
+            project.SetRange();
+
+            SAFU.Initialize(project);
+
+        }
+
+
+        private static void DisableLogs()
+        {
+            try
+            {
+                StringBuilder logBuilder = new StringBuilder();
+                string basePath = @"C:\Program Files\ZennoLab";
+
+                foreach (string langDir in Directory.GetDirectories(basePath))
+                {
+                    foreach (string programDir in Directory.GetDirectories(langDir))
+                    {
+                        foreach (string versionDir in Directory.GetDirectories(programDir))
+                        {
+                            string logsPath = Path.Combine(versionDir, "Progs", "Logs");
+                            if (Directory.Exists(logsPath))
+                            {
+                                Directory.Delete(logsPath, true);
+                                Process process = new Process();
+                                process.StartInfo.FileName = "cmd.exe";
+                                process.StartInfo.Arguments = $"/c mklink /d \"{logsPath}\" \"NUL\"";
+                                process.StartInfo.UseShellExecute = false;
+                                process.StartInfo.CreateNoWindow = true;
+                                process.StartInfo.RedirectStandardOutput = true;
+                                process.StartInfo.RedirectStandardError = true;
+
+                                logBuilder.AppendLine($"Attempting to create symlink: {process.StartInfo.Arguments}");
+
+                                process.Start();
+                                string output = process.StandardOutput.ReadToEnd();
+                                string error = process.StandardError.ReadToEnd();
+                                process.WaitForExit();
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex) { }
+        }
+        private static void Logo(this IZennoPosterProjectModel project, string author)
+        {
+            string name = project.ExecuteMacro(project.Name).Split('.')[0];
+            if (author != "") author = $" script author: @{author}";
+            string logo = $@"using w3tools;
+            ┌by─┐					
+            │    w3bgrep			
+            └─→┘
+                        ► init {name} ░▒▓█ {author}";
+            project.SendInfoToLog(logo, true);
+        }
+
+        private static void CheckVars(this IZennoPosterProjectModel project, string[] vars)
+        {
+            foreach (string var in vars)
+            {
+                try
+                {
+                    if (string.IsNullOrEmpty(project.Variables[var].Value))
+                    {
+                        throw new Exception($"!E {var} is null or empty");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    project.L0g(ex.Message);
+                    throw;
+                }
+            }
+        }
     }
 }

@@ -10,6 +10,7 @@ using ZennoLab.InterfacesLibrary.ProjectModel;
 using System.Runtime.CompilerServices;
 using ZennoLab.InterfacesLibrary.Enums.Http;
 using NBitcoin.Protocol;
+using NBitcoin;
 
 namespace W3t00ls
 {
@@ -96,11 +97,11 @@ namespace W3t00ls
             return DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
         }
 
-        private string BinancePOST(string method, object body, bool log = false)
+        private string BinancePOST(string method, string body, bool log = false)
         {
  
             string url = $"https://api.binance.com{method}";
-            var result = ZennoPoster.HTTP.Request(HttpMethod.POST, url, body, "application/x-www-form-urlencoded; charset=utf-8", _proxy, "UTF-8", ResponceType.BodyOnly, 30000, "", project.Profile.UserAgent, true, 5,
+            var result = ZennoPoster.HTTP.Request(HttpMethod.POST, url, body, "application/x-www-form-urlencoded; charset=utf-8", _proxy, "UTF-8", ResponceType.BodyOnly, 30000, "", _project.Profile.UserAgent, true, 5,
                 new string[] {
                     "X-MBX-APIKEY: "+_apiKey,
                     "Content-Type: application/x-www-form-urlencoded; charset=utf-8"
@@ -111,8 +112,31 @@ namespace W3t00ls
             CexLog($"json received: [{result}]");
             return result;
         }
+        private string BinanceGET(string method, string parameters, bool log = false)
+        {
 
-
+            string url = $"https://api.binance.com{method}?{parameters}";
+            string result = ZennoPoster.HttpGet(
+                            url,
+                            _proxy,
+                            "UTF-8",
+                            ResponceType.BodyOnly,
+                            30000,
+                            "",
+                            "Mozilla/4.0",
+                            true,
+                            5,
+                            new string[] {
+                            "X-MBX-APIKEY: "+_apiKey,
+                            "Content-Type: application/x-www-form-urlencoded; charset=utf-8"
+                            },
+                            "",
+                            true
+                        );
+            _project.Json.FromString(result);
+            CexLog($"json received: [{result}]");
+            return result;
+        }
 
         public  string GetUserAsset(string coin = "")
         {
@@ -128,7 +152,7 @@ namespace W3t00ls
             _project.Json.FromString(result);
 
             var balanceList = "";
-            foreach (var item in project.Json)
+            foreach (var item in _project.Json)
             {
                 string asset = item.asset;
                 string free = item.free;
@@ -166,44 +190,16 @@ namespace W3t00ls
             return result;
         }
 
-        public static string GetWithdrawHistory(IZennoPosterProjectModel project, string searchId = "")
+        public  string GetWithdrawHistory(IZennoPosterProjectModel project, string searchId = "")
         {
+            var method = "/sapi/v1/capital/withdraw/history";
+            string parameters = $"timestamp={TimeStamp()}";
+            string hash = MkSign(parameters);
+            string signed = $"{parameters}&signature={hash}";
+
+            string response = BinanceGET(method, signed, _logShow);
 
 
-            string parameters = $"timestamp={Time.UnixNow()}";
-            string hash = "";
-
-            byte[] secretkeyBytes = Encoding.UTF8.GetBytes(secretKey);
-            using (HMACSHA256 hmacsha256 = new HMACSHA256(secretkeyBytes))
-            {
-                byte[] inputBytes = Encoding.UTF8.GetBytes(parameters);
-                byte[] hashValue = hmacsha256.ComputeHash(inputBytes);
-                hash = BitConverter.ToString(hashValue).Replace("-", "").ToLower();
-            }
-
-            string[] headers = new string[] {
-                "User-Agent: Mozilla/4.0 (compatible; PHP Binance API)",
-                $"X-MBX-APIKEY: {apiKey}",
-                "Content-Type: application/x-www-form-urlencoded"
-            };
-
-            string url = $"https://api.binance.com/sapi/v1/capital/withdraw/history?{parameters}&signature={hash}";
-
-            string response = ZennoPoster.HttpGet(
-                url,
-                proxy,
-                "UTF-8",
-                ZennoLab.InterfacesLibrary.Enums.Http.ResponceType.BodyOnly,
-                30000,
-                "",
-                "Mozilla/4.0",
-                true,
-                5,
-                headers,
-                "",
-                true
-            );
-            project.SendInfoToLog(response);
             project.Json.FromString(response);
 
             var historyList = "";

@@ -80,14 +80,17 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BinanceApi.cs" />
     <Compile Include="Blockchain.cs" />
+    <Compile Include="Google.cs" />
+    <Compile Include="StaticTools\Converter.cs" />
     <Compile Include="StaticTools\Crypto.cs" />
     <Compile Include="DataImporter.cs" />
     <Compile Include="Socials\Discord.cs" />
     <Compile Include="MethodExtensions\InstanceExtensions.cs" />
     <Compile Include="ISAFU.cs" />
     <Compile Include="L0g.cs" />
-    <Compile Include="OKXApi.cs" />
+    <Compile Include="CexApi\OKXApi.cs" />
     <Compile Include="OnChain.cs" />
     <Compile Include="StaticTools\OTP.cs" />
     <Compile Include="Sql\PostgreSQL.cs" />
