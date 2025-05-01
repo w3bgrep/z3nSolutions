@@ -33,7 +33,7 @@ namespace W3t00ls
 
         public OnChain(IZennoPosterProjectModel project, bool log = false)
         {
-            
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             _project = project;
             _log = new L0g(_project);
             _sql = new Sql(_project);
@@ -843,9 +843,17 @@ namespace W3t00ls
         }
         public T TokenInitia<T>(string address = null, string chain = "interwoven-1", string token = "uinit", bool log = false) 
         {
-            if (string.IsNullOrEmpty(address)) address = "init12ewdfhgku0jma2wyeelz02lsht6t4e7hq4yed3";
+            if (string.IsNullOrEmpty(address))
+                try
+                {
+                    address = _project.Variables["addressInitia"].Value;                  
+                }
+                catch {
+                    _log.Send("no Address provided");
+                    throw;
+                }
 
-            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            
 
             string url = $"https://celatone-api-prod.alleslabs.dev/v1/initia/{chain}/accounts/{address}/balances";
 
@@ -1011,9 +1019,6 @@ namespace W3t00ls
                 throw new Exception($"FailedSend: {ex.Message}");
             }
         }
-
-
-
 
 
         public string GZ(string chainTo, decimal value, string rpc = null, bool log = false) //refuel GazZip

@@ -9,6 +9,7 @@ using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using Newtonsoft.Json.Linq;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
+using Leaf.xNet;
 
 namespace W3t00ls
 {
@@ -207,6 +208,99 @@ namespace W3t00ls
 
             goto check;
         }
+
+        public static string GenerateTweet(IZennoPosterProjectModel project, string content, string bio = "", bool log = false)
+        {
+            project.Variables["api_response"].Value = "";
+
+            var requestBody = new
+            {
+                model = "sonar",
+                messages = new[]
+                {
+                    new
+                    {
+                        role = "system",
+                        content = string.IsNullOrEmpty(bio)
+                            ? "You are a social media account. Generate tweets that reflect a generic social media persona."
+                            : $"You are a social media account with the bio: '{bio}'. Generate tweets that reflect this persona, incorporating themes relevant to bio."
+                    },
+                    new
+                    {
+                        role = "user",
+                        content = content
+                    }
+                },
+                temperature = 0.8,
+                top_p = 0.9,
+                top_k = 0,
+                stream = false,
+                presence_penalty = 0,
+                frequency_penalty = 1
+            };
+
+            string jsonBody = Newtonsoft.Json.JsonConvert.SerializeObject(requestBody, Newtonsoft.Json.Formatting.None);
+
+            string[] headers = new string[]
+            {
+                "Content-Type: application/json",
+                $"Authorization: Bearer {project.Variables["settingsApiPerplexity"].Value}"
+            };
+
+            string response;
+            using (var request = new HttpRequest())
+            {
+                request.UserAgent = "Mozilla/5.0";
+                request.IgnoreProtocolErrors = true;
+                request.ConnectTimeout = 5000;
+
+                foreach (var header in headers)
+                {
+                    var parts = header.Split(new[] { ": " }, 2, StringSplitOptions.None);
+                    if (parts.Length == 2)
+                    {
+                        request.AddHeader(parts[0], parts[1]);
+                    }
+                }
+
+                try
+                {
+                    HttpResponse httpResponse = request.Post("https://api.perplexity.ai/chat/completions", jsonBody, "application/json");
+                    response = httpResponse.ToString();
+                }
+                catch (HttpException ex)
+                {
+                    project.SendErrorToLog($"Ошибка HTTP-запроса: {ex.Message}, Status: {ex.Status}");
+                    throw;
+                }
+            }
+
+            project.Variables["api_response"].Value = response;
+
+            if (log)
+            {
+                project.SendInfoToLog($"Full response: {response}");
+            }
+
+            try
+            {
+                var jsonResponse = Newtonsoft.Json.Linq.JObject.Parse(response);
+                string tweetText = jsonResponse["choices"][0]["message"]["content"].ToString();
+
+                if (log)
+                {
+                    project.SendInfoToLog($"Generated tweet: {tweetText}");
+                }
+
+                return tweetText; 
+            }
+            catch (Exception ex)
+            {
+                project.SendErrorToLog($"Error parsing response: {ex.Message}");
+                throw;
+            }
+        }
+
 
     }
 }
