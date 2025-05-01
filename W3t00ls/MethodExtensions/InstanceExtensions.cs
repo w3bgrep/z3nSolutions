@@ -7,10 +7,11 @@ using System.Threading.Tasks;
 using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using ZennoLab.Macros;
-
-
+using ZennoLab.InterfacesLibrary.Enums.Browser;
+using static W3t00ls.Requests;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Text.RegularExpressions;
 
 
 namespace W3t00ls
@@ -513,6 +514,77 @@ namespace W3t00ls
                 project.L0g( $"!W cant't parse JSON: [{cookiesJson}]  {ex.Message}");
             }
         }
+
+
+        public static void SetDisplay(this Instance instance, string webGl, IZennoPosterProjectModel project)
+        {
+
+            var jsonObject = JObject.Parse(webGl);
+            var mapping = new Dictionary<string, string>
+            {
+                {"Renderer", "RENDERER"},
+                {"Vendor", "VENDOR"},
+                {"Version", "VERSION"},
+                {"ShadingLanguageVersion", "SHADING_LANGUAGE_VERSION"},
+                {"UnmaskedRenderer", "UNMASKED_RENDERER_WEBGL"},
+                {"UnmaskedVendor", "UNMASKED_VENDOR"},
+                {"MaxCombinedTextureImageUnits", "MAX_COMBINED_TEXTURE_IMAGE_UNITS"},
+                {"MaxCubeMapTextureSize", "MAX_CUBE_MAP_TEXTURE_SIZE"},
+                {"MaxFragmentUniformVectors", "MAX_FRAGMENT_UNIFORM_VECTORS"},
+                {"MaxTextureSize", "MAX_TEXTURE_SIZE"},
+                {"MaxVertexAttribs", "MAX_VERTEX_ATTRIBS"}
+            };
+
+            foreach (var pair in mapping)
+            {
+                string value = "";
+                if (jsonObject["parameters"]["default"][pair.Value] != null) value = jsonObject["parameters"]["default"][pair.Value].ToString();
+                else if (jsonObject["parameters"]["webgl"][pair.Value] != null) value = jsonObject["parameters"]["webgl"][pair.Value].ToString();
+                else if (jsonObject["parameters"]["webgl2"][pair.Value] != null) value = jsonObject["parameters"]["webgl2"][pair.Value].ToString();
+                if (!string.IsNullOrEmpty(value)) instance.WebGLPreferences.Set((WebGLPreference)Enum.Parse(typeof(WebGLPreference), pair.Key), value);
+
+            }
+            
+            try
+            {
+                instance.SetWindowSize(1280, 720);
+                project.Profile.AcceptLanguage = "en-US,en;q=0.9";
+                project.Profile.Language = "EN";
+                project.Profile.UserAgentBrowserLanguage = "en-US";
+                instance.UseMedia = false;
+
+            }
+            catch (Exception ex)
+            {
+                try { project.GlobalVariables[$"w3tools", $"Thread{project.Variables["acc0"].Value}"].Value = null; } catch { }
+                project.Variables["acc0"].Value = "";
+                project.L0g(ex.Message, thr0w: true);
+            }
+
+        }
+
+        public static void SetProxy(this Instance instance, string proxy, IZennoPosterProjectModel project)
+		{
+			long uTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds(); 
+			string ipLocal = GET($"http://api.ipify.org/");
+
+			while (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - uTime < 60)
+			{
+				instance.SetProxy(proxy, true, true, true, true); Thread.Sleep(2000);
+				string ipProxy = GET($"http://api.ipify.org/",proxy);
+                project.L0g($"local:[{ipLocal}]?proxyfied:[{ipProxy}]");
+				project.Variables["ip"].Value = ipProxy;
+				project.Variables["proxy"].Value = proxy;
+				if (ipLocal != ipProxy) return;
+			}
+
+            project.L0g( "!W badProxy");
+            throw new Exception("!W badProxy");
+		}
+
+
+  
+
     }
 
 

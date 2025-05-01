@@ -21,6 +21,7 @@ using System.Diagnostics;
 using System.Text;
 using Npgsql;
 using Global.SettingsManager.Enums;
+using static ZennoLab.CommandCenter.ZennoPoster;
 
 
 namespace W3t00ls
@@ -41,7 +42,6 @@ namespace W3t00ls
             totalAge = project.Age<string>();
             var stackFrame = new System.Diagnostics.StackFrame(1);
             var callingMethod = stackFrame.GetMethod();
-
             if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = project.Variables["projectName"].Value;
             if (toLog == null) toLog = "null";
             string formated = $"⛑  [{acc0}] ⚙  [{port}] ⏱  [{totalAge}] ⛏  [{callerName}].\n          {toLog.Trim()}";
@@ -80,9 +80,9 @@ namespace W3t00ls
 
         }
 
-        public static void SetRange(this IZennoPosterProjectModel project)
+        public static void SetRange(this IZennoPosterProjectModel project, string accRange = null)
         {
-            string accRange = project.Variables["cfgAccRange"].Value;
+            if (!string.IsNullOrEmpty(accRange)) accRange = project.Variables["cfgAccRange"].Value;
             int rangeS, rangeE;
             string range;
 
@@ -323,101 +323,6 @@ namespace W3t00ls
         }
 
 
-        public static void InitVariables(this IZennoPosterProjectModel project, string author = null)
-        {
-            DisableLogs();
-            if (string.IsNullOrEmpty(author)) author = project.Variables["projectAuthor"].Value;
-            project.Variables["varSessionId"].Value = (DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString();
-            project.Variables["instancePort"].Value = $"_";
-            
-            string projectName = project.ExecuteMacro(project.Name).Split('.')[0];
-            project.Variables["projectName"].Value = projectName;
-
-            string[] vars = { "cfgPin", "DBsqltPath" };
-            project.CheckVars(vars);
-            
-            string tablename;
-            string schema = "projects.";
-            if (project.Variables["DBmode"].Value == "PostgreSQL") tablename = schema + projectName.ToLower();
-            else tablename = "_" + projectName.ToLower();
-            project.Variables["projectTable"].Value = tablename;
-
-
-            project.Logo(author);
-            project.SetRange();
-
-            SAFU.Initialize(project);
-
-        }
-
-
-        private static void DisableLogs()
-        {
-            try
-            {
-                StringBuilder logBuilder = new StringBuilder();
-                string basePath = @"C:\Program Files\ZennoLab";
-
-                foreach (string langDir in Directory.GetDirectories(basePath))
-                {
-                    foreach (string programDir in Directory.GetDirectories(langDir))
-                    {
-                        foreach (string versionDir in Directory.GetDirectories(programDir))
-                        {
-                            string logsPath = Path.Combine(versionDir, "Progs", "Logs");
-                            if (Directory.Exists(logsPath))
-                            {
-                                Directory.Delete(logsPath, true);
-                                Process process = new Process();
-                                process.StartInfo.FileName = "cmd.exe";
-                                process.StartInfo.Arguments = $"/c mklink /d \"{logsPath}\" \"NUL\"";
-                                process.StartInfo.UseShellExecute = false;
-                                process.StartInfo.CreateNoWindow = true;
-                                process.StartInfo.RedirectStandardOutput = true;
-                                process.StartInfo.RedirectStandardError = true;
-
-                                logBuilder.AppendLine($"Attempting to create symlink: {process.StartInfo.Arguments}");
-
-                                process.Start();
-                                string output = process.StandardOutput.ReadToEnd();
-                                string error = process.StandardError.ReadToEnd();
-                                process.WaitForExit();
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex) { }
-        }
-        private static void Logo(this IZennoPosterProjectModel project, string author)
-        {
-            string name = project.ExecuteMacro(project.Name).Split('.')[0];
-            if (author != "") author = $" script author: @{author}";
-            string logo = $@"using w3tools;
-            ┌by─┐					
-            │    w3bgrep			
-            └─→┘
-                        ► init {name} ░▒▓█ {author}";
-            project.SendInfoToLog(logo, true);
-        }
-
-        private static void CheckVars(this IZennoPosterProjectModel project, string[] vars)
-        {
-            foreach (string var in vars)
-            {
-                try
-                {
-                    if (string.IsNullOrEmpty(project.Variables[var].Value))
-                    {
-                        throw new Exception($"!E {var} is null or empty");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    project.L0g(ex.Message);
-                    throw;
-                }
-            }
-        }
+   
     }
 }
