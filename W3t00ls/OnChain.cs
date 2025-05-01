@@ -9,11 +9,16 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 using Newtonsoft.Json.Linq;
 
 using static ZennoLab.CommandCenter.ZennoPoster;
 using ZennoLab.InterfacesLibrary.ProjectModel;
+using Nethereum.Model;
+using System.Web.UI.WebControls;
+
+
 
 namespace W3t00ls
 {
@@ -110,7 +115,7 @@ namespace W3t00ls
             string[] toAdd = chains.Split(',');
             foreach (string chain in toAdd) rpcs += Rpc(chain.Trim()) + "\n";
             return rpcs.Trim().Split('\n');
-        }
+        }      
         public T FloorDecimal<T>(decimal value, int? decimalPlaces = null)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -162,6 +167,8 @@ namespace W3t00ls
                 return (T)Convert.ChangeType(value, typeof(T)); // Return original value as fallback
             }
         }
+  
+             
         public T GasPrice<T>(string rpc = null, string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -217,6 +224,7 @@ namespace W3t00ls
                 return (T)Convert.ChangeType(gasGwei.ToString("0.######", CultureInfo.InvariantCulture), typeof(T));
             return (T)Convert.ChangeType(gasGwei, typeof(T));
         }
+              
         public T NativeEVM<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -832,8 +840,55 @@ namespace W3t00ls
             if (log) _log.Send($"{address}: {balance} TOKEN ({coinType})");
             if (typeof(T) == typeof(string)) return FloorDecimal<T>(balance, int.Parse(octas));
             return (T)Convert.ChangeType(balance, typeof(T));
+        }
+        public T TokenInitia<T>(string address = null, string chain = "interwoven-1", string token = "uinit", bool log = false) 
+        {
+            if (string.IsNullOrEmpty(address)) address = "init12ewdfhgku0jma2wyeelz02lsht6t4e7hq4yed3";
+
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+
+            string url = $"https://celatone-api-prod.alleslabs.dev/v1/initia/{chain}/accounts/{address}/balances";
+
+            string jsonString = Requests.GET(_project, url);
+
+            _project.L0g(jsonString , show:log);
+            _project.Json.FromString(jsonString);
+            try
+            {
+                JArray balances = JArray.Parse(jsonString);
+                List<string> balanceList = new List<string>();
+                foreach (JObject balance in balances)
+                {
+                    string denom = balance["denom"].ToString();
+                    string amount = balance["amount"].ToString();
+                    if (double.TryParse(amount, out double amountValue))
+                    {
+                        double amountInMillions = amountValue / 1000000;
+                        balanceList.Add($"{denom}:{amountInMillions.ToString("0.########", CultureInfo.InvariantCulture)}");
+                    }
+                    else
+                    {
+                        balanceList.Add($"{denom}:{amount}");
+                    }
+                }
+                string balanceToken = balanceList.FirstOrDefault(entry => entry.StartsWith(token + ":"))?.Split(':')[1] ?? "";
+                if (typeof(T) == typeof(string))
+                    return (T)Convert.ChangeType(balanceToken, typeof(T));
+                else if (double.TryParse(balanceToken, NumberStyles.Float, CultureInfo.InvariantCulture, out double balanceValue))
+                    return (T)Convert.ChangeType(balanceValue, typeof(T));
+                else
+                    return default(T);
+
+            }
+            catch (Exception ex)
+            {
+                _project.L0g(ex.Message);
+                return default(T);
+            }
 
         }
+
+
 
         public string SendLegacy(string chainRpc, string contractAddress, string encodedData, decimal value, string walletKey, int speedup = 1)
         {
@@ -956,6 +1011,10 @@ namespace W3t00ls
                 throw new Exception($"FailedSend: {ex.Message}");
             }
         }
+
+
+
+
 
         public string GZ(string chainTo, decimal value, string rpc = null, bool log = false) //refuel GazZip
 

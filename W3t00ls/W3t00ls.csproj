@@ -97,6 +97,7 @@
     <Compile Include="Sql\SQLite.cs" />
     <Compile Include="MethodExtensions\HtmlExtensions.cs" />
     <Compile Include="MethodExtensions\StringExtentions.cs" />
+    <Compile Include="StaticTools\Requests.cs" />
     <Compile Include="StaticTools\Time.cs" />
     <Compile Include="MethodExtensions\ProjectExtensions.cs" />
     <Compile Include="Wallets.cs" />

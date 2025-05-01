@@ -24,8 +24,9 @@ namespace W3t00ls
     public static class ProjectExtensions
     {
         private static readonly object LockObject = new object();
-        public static void L0g(this IZennoPosterProjectModel project, string toLog, [CallerMemberName] string callerName = "", bool show = true, bool thr0w = false)
+        public static void L0g(this IZennoPosterProjectModel project, string toLog, [CallerMemberName] string callerName = "", bool show = true, bool thr0w = false ,bool toZp = true)
         {
+            if (!show) return;
             string acc0 = "null";
             string port = "null";
             string totalAge = "null";
@@ -38,11 +39,8 @@ namespace W3t00ls
             if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = project.Variables["projectName"].Value;
             if (toLog == null) toLog = "null";
             string formated = $"⛑  [{acc0}] ⚙  [{port}] ⏱  [{totalAge}] ⛏  [{callerName}].\n          {toLog.Trim()}";
+            
             LogType type = LogType.Info; LogColor color = LogColor.Default;
-
-            if (formated.Contains("!W")) type = LogType.Warning;
-            if (formated.Contains("!E")) type = LogType.Error;
-
             var colorMap = new Dictionary<string, LogColor>
                 {
                     { "`.", LogColor.Default },
@@ -60,7 +58,6 @@ namespace W3t00ls
                     { "!E", LogColor.Orange },
                     { "relax", LogColor.LightBlue },
                 };
-
             foreach (var pair in colorMap)
             {
                 if (formated.Contains(pair.Key))
@@ -70,8 +67,9 @@ namespace W3t00ls
                 }
 
             }
-
-            project.SendToLog(formated, type, show, color);
+            if (formated.Contains("!W")) type = LogType.Warning;
+            if (formated.Contains("!E")) type = LogType.Error;
+            project.SendToLog(formated, type, toZp, color);
             if (thr0w) throw new Exception($"{formated}");
 
         }
