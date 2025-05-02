@@ -1,7 +1,10 @@
-﻿using System;
+﻿using Nethereum.Model;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using ZennoLab.CommandCenter;
+using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 
 namespace W3t00ls
@@ -35,7 +38,8 @@ namespace W3t00ls
             {
                 toLog += $"[ ▲ {dbMode}]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]";
             }
-            _log.Send(toLog);
+            _project.L0g(toLog);
+            //_log.Send(toLog);
         }
         public string DbQ(string query, bool log = false, bool throwOnEx = false)
         {
@@ -48,7 +52,7 @@ namespace W3t00ls
             }
             else if (dbMode == "PostgreSQL")
             {
-                result = PostgresDB.pSQL(_project, query, log, throwOnEx);
+                result = PostgresDB.DbQueryPostgre(_project, query, log, throwOnEx);
             }
             else throw new Exception($"unknown DBmode: {dbMode}");
             SqlLog(query, result, log: log);
@@ -57,7 +61,7 @@ namespace W3t00ls
         public void MkTable(Dictionary<string, string> tableStructure, string tableName = null, bool strictMode = false, bool insertData = false, string host = "localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "", string schemaName = "projects", bool log = false)
         {
             string dbMode = _project.Variables["DBmode"].Value;
-            if (string.IsNullOrEmpty(tableName)) 
+            if (string.IsNullOrEmpty(tableName))
             {
                 if (_project.Variables["makeTable"].Value != "True") return;
                 else tableName = $"{_project.Variables["projectName"].Value.ToLower()}";
@@ -69,10 +73,10 @@ namespace W3t00ls
             }
             else if (dbMode == "PostgreSQL")
             {
-                PostgresDB.pSQLMakeTable(_project, tableStructure, tableName, strictMode, insertData, host, dbName, dbUser, dbPswd, schemaName, log: log);
+                PostgresDB.MkTablePostgre(_project, tableStructure, tableName, strictMode, insertData, host, dbName, dbUser, dbPswd, schemaName, log: log);
             }
             else throw new Exception($"unknown DBmode: {dbMode}");
-            return ;
+            return;
         }
         public void Upd(string toUpd, string tableName = null, bool log = false, bool throwOnEx = false)
         {
@@ -171,7 +175,7 @@ namespace W3t00ls
             _project.Variables["twitterEMAIL"].Value = twitterData[5].Trim();
             _project.Variables["twitterEMAIL_PASSWORD"].Value = twitterData[6].Trim();
             return _project.Variables["twitterSTATUS"].Value;
-            
+
         }
         public string Discord(string tableName = "discord", string schemaName = "accounts")
         {
@@ -242,6 +246,128 @@ namespace W3t00ls
             return refCode;
         }
 
+    }
+
+
+    public class TableMngr : Sql
+    {
+        private readonly IZennoPosterProjectModel _project;
+
+        protected readonly string _tableName;
+        protected readonly string _schemaName;
+        private readonly bool _logShow;
+
+
+        public TableMngr(IZennoPosterProjectModel project, string tablename = null, string schemaName = null, bool log = false)
+            : base(project, log)
+        {
+            _tableName = tablename;
+            _schemaName = schemaName;
+            if (string.IsNullOrEmpty(_tableName)) _tableName =  _project.ExecuteMacro(_project.Name).Split('.')[0].ToLower();
+            if (string.IsNullOrEmpty(_schemaName)) _schemaName = "projects";
+            _logShow = log;
+            _project = project;
+        }
+        private void Log(string query, string response = null, bool log = false)
+        {
+            if (!_logShow && !log) return;
+            string dbMode = _project.Variables["DBmode"].Value;
+            string toLog = null;
+
+            if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
+            {
+                toLog += $"[ ▼ {dbMode}]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]";
+                if (!string.IsNullOrEmpty(response)) toLog += $"\n          [{response.Replace('\n', '|')}]";
+            }
+            else
+            {
+                toLog += $"[ ▲ {dbMode}]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]";
+            }
+            _project.L0g(toLog);
+        }
+        private bool CreateIfNotExist(Dictionary<string, string> tableStructure)
+        {
+            string tableName = _tableName;
+            string schemaName = _schemaName;
+
+            if (_tableName.Contains("."))
+            {
+                tableName = _tableName.Split('.')[0];
+                schemaName = _tableName.Split('.')[1];
+            }
+            string query = $"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '{schemaName}' AND table_name = '{tableName}';";
+            var resp = DbQ($"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '{schemaName}' AND table_name = '{tableName}';");
+            string tableExists = resp.Trim() ?? "0";
+
+            if (tableExists == "0")
+            {
+                DbQ($@"
+					CREATE TABLE {schemaName}.{tableName} (
+						{string.Join(", ", tableStructure.Select(kvp => $"\"{kvp.Key}\" {kvp.Value.Replace("AUTOINCREMENT", "SERIAL")}"))}
+					);", _logShow);
+                return true;
+            }
+            return false;
+        }
+        private void ManageColumns(Dictionary<string, string> tableStructure, bool prune)
+        {
+           string ChkQ = DbQ($@"SELECT column_name FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}';", _logShow);
+
+           var currentColumns = ChkQ.Split('\n').ToList(); 
+            if (prune)
+            {
+                var columnsToRemove = currentColumns.Where(col => !tableStructure.ContainsKey(col)).ToList();
+                foreach (var column in columnsToRemove)
+                {
+
+                    DbQ($@"ALTER TABLE {_schemaName}.{_tableName} DROP COLUMN {column} CASCADE;", _logShow);
+                }
+            }
+            foreach (var column in tableStructure)
+            {
+                string columnExists = DbQ($@"SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}' AND lower(column_name) = lower('{column.Key}');")?.Trim() ?? "0";
+                if (columnExists == "0")
+                {
+                    DbQ($@"ALTER TABLE {_schemaName}.{_tableName} ADD COLUMN {column.Key} {column.Value};", _logShow);
+                }
+            }
+        }
+        private void FillInitial(string cfgRangeEnd,bool log = false)
+        {
+            if (!int.TryParse(cfgRangeEnd, out int rangeEnd) || rangeEnd <= 0)
+                throw new ArgumentException("cfgRangeEnd must be a positive integer");
+
+            string maxAcc0Query = $@"SELECT COALESCE(MAX(acc0), 0) FROM {_schemaName}.{_tableName};";
+
+            string maxAcc0Str = DbQ(maxAcc0Query)?.Trim() ?? "0";
+            if (!int.TryParse(maxAcc0Str, out int maxAcc0))
+            {
+                maxAcc0 = 1;
+            }
+
+            if (maxAcc0 < rangeEnd)
+            {
+                for (int currentAcc0 = maxAcc0 + 1; currentAcc0 <= rangeEnd; currentAcc0++)
+                {
+                    string insertQuery = $@"INSERT INTO {_schemaName}.{_tableName} (acc0) VALUES ({currentAcc0}) ON CONFLICT DO NOTHING;";
+
+                    DbQ(insertQuery, _logShow);
+                }
+            }
+            else
+            {
+                if (log)
+                {
+                    Log($"No new data to insert. Max acc0 ({maxAcc0}) is >= rangeEnd ({rangeEnd})");
+                }
+            }
+        }
+        public void ManageTable(Dictionary<string, string> tableStructure, bool prune)
+        {
+            var created = CreateIfNotExist (tableStructure);
+            ManageColumns(tableStructure, prune:prune);
+            FillInitial(_project.Variables["rangeEnd"].Value);
+        }
 
     }
 }

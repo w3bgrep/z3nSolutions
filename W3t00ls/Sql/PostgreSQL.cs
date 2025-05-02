@@ -96,11 +96,8 @@ namespace W3t00ls
             }
         }
  
-        
-        
-        
-        
-        public static string pSQL(IZennoPosterProjectModel project, string query, bool log = false, bool throwOnEx = false, string host = "localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "", [CallerMemberName] string callerName = "")
+
+        public static string DbQueryPostgre(IZennoPosterProjectModel project, string query, bool log = false, bool throwOnEx = false, string host = "localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "", [CallerMemberName] string callerName = "")
         {
 
 
@@ -142,7 +139,7 @@ namespace W3t00ls
                 db.close();
             }
         }
-        public static void pSQLMakeTable(IZennoPosterProjectModel project, Dictionary<string, string> tableStructure, string tableName = "", bool strictMode = false, bool insertData = true, string host = null, string dbName = "postgres", string dbUser = "postgres", string dbPswd = "", string schemaName = "projects", bool log = false)
+        public static void MkTablePostgre(IZennoPosterProjectModel project, Dictionary<string, string> tableStructure, string tableName = "", bool strictMode = false, bool insertData = true, string host = null, string dbName = "postgres", string dbUser = "postgres", string dbPswd = "", string schemaName = "projects", bool log = false)
         {
 
             if (string.IsNullOrEmpty(tableName))
@@ -184,7 +181,7 @@ namespace W3t00ls
             }
             string query = $"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '{schemaName}' AND table_name = '{tableName}';";
 
-            string tableExists = db.DbRead(query);
+            string tableExists = db.DbRead(query)?.Trim() ?? "0";
 
             if (tableExists == "0")
             {
@@ -265,6 +262,13 @@ namespace W3t00ls
                 }
             }
         }
+    
+    
+    
+    
+    
+    
+    
     }
 }
 
