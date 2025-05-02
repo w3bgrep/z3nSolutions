@@ -381,7 +381,7 @@ namespace W3t00ls
                 }
             }
         }
-        public void ManageTable(Dictionary<string, string> tableStructure, bool prune)
+        public void ManageTable(Dictionary<string, string> tableStructure, bool prune = false)
         {
             var created = CreateIfNotExist (tableStructure);
             ManageColumns(tableStructure, prune:prune);
@@ -415,7 +415,7 @@ namespace W3t00ls
             }
             return tableStructure;
         }
-
+        
 
 
     }

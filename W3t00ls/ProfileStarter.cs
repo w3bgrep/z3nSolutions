@@ -372,6 +372,32 @@ namespace W3t00ls
             StarterLog($"final list [{string.Join("|", _project.Lists["accs"])}]");
         }
 
+        public List<string> MkToDoQueries(string toDo = null, string defaultRange = null, string defaultDoFail = null)
+        {
+            var nowIso = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
 
+            if (string.IsNullOrEmpty(toDo)) toDo = _project.Variables["cfgToDo"].Value;
+
+            string[] toDoItems = (toDo ?? "").Split(',');
+
+            var allQueries = new List<string>();
+
+            foreach (string taskId in toDoItems)
+            {
+                string trimmedTaskId = taskId.Trim();
+                if (!string.IsNullOrWhiteSpace(trimmedTaskId))
+                {
+                    string tableName = _project.Variables["projectTable"].Value;
+                    string range = defaultRange ?? _project.Variables["range"].Value;
+                    string doFail = defaultDoFail ?? _project.Variables["doFail"].Value;
+                    string failCondition = (doFail != "True" ? "AND status NOT LIKE '%fail%'" : "");
+                    string query = $@"SELECT acc0 FROM {tableName} WHERE acc0 in ({range}) {failCondition} AND status NOT LIKE '%skip%' 
+                AND ({trimmedTaskId} < '{nowIso}' OR {trimmedTaskId} = '_')";
+                    allQueries.Add(query);
+                }
+            }
+
+            return allQueries;
+        }
     }
 }
