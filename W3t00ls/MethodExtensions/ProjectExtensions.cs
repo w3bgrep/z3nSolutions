@@ -34,9 +34,6 @@ namespace W3t00ls
         public static void L0g(this IZennoPosterProjectModel project, string toLog, [CallerMemberName] string callerName = "", bool show = true, bool thr0w = false ,bool toZp = true)
         {
             if (!show) return;
-            //string acc0 = null;
-            //string port = null;
-            //string totalAge = null;
             string formated = null;
             try {
                 string acc0 = project.Variables["acc0"].Value;
@@ -65,16 +62,13 @@ namespace W3t00ls
             }
             catch { }
 
-            //var stackFrame = new System.Diagnostics.StackFrame(1);
-            //var callingMethod = stackFrame.GetMethod();
-            //if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = project.Variables["projectName"].Value;
-           // if (toLog == null) toLog = "null";
-
-            if (!string.IsNullOrEmpty(toLog)) formated += $"\n          {toLog.Trim()}";
 
 
-            //string formated = $"⛑  [{acc0}] ⚙  [{port}] ⌛  [{totalAge}] ⛏  [{callerName}].\n          {toLog.Trim()}";
-            
+            if (!string.IsNullOrEmpty(toLog))
+            {
+                if (toLog.Split('\n').Count() > 3) toLog.Replace("\n", " ");
+                formated += $"\n          {toLog.Trim()}";
+            }
             LogType type = LogType.Info; LogColor color = LogColor.Default;
             var colorMap = new Dictionary<string, LogColor>
                 {
