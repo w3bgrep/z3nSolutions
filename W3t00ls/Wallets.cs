@@ -16,7 +16,7 @@ using System.Collections.Generic;
 
 namespace W3t00ls
 {
-    public enum WType
+    public enum W
     {
         MetaMask,
         Rabby,
@@ -53,7 +53,7 @@ namespace W3t00ls
             if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
             _log.Send($"[ 👛  {callerName}] [{tolog}] ");
         }
-        protected bool Install(string extId, string fileName, bool log = false)
+        public bool Install(string extId, string fileName, bool log = false)
         {
             string path = $"{_project.Path}.crx\\{fileName}";
             var extListString = string.Join("\n", _instance.GetAllExtensions().Select(x => $"{x.Name}:{x.Id}"));
@@ -65,25 +65,78 @@ namespace W3t00ls
             }
             return false;
         }
+        
+    }
+
+    public class WltMngr
+    {
+        private readonly IZennoPosterProjectModel _project;
+        private readonly Instance _instance;
+        private readonly bool _log;
+
+        public WltMngr(IZennoPosterProjectModel project, Instance instance, bool log = false)
+        {
+            _project = project;
+            _instance = instance;
+            _log = log;
+        }
+
+        public void Launch(IEnumerable<W> requiredWallets, bool log = false)
+        {
+            WalLog($"Switching wallets: {string.Join(", ", requiredWallets)}", log: log || _log);
+            foreach (var wallet in requiredWallets)
+            {
+                switch (wallet)
+                {
+                    case W.MetaMask:
+                        new MetaMaskWallet(_project, _instance, log).MetaMaskLnch(log: log);
+                        break;
+                    case W.Rabby:
+                        new RabbyWallet(_project, _instance, log).RabbyLnch(log: log);
+                        break;
+                    case W.Backpack:
+                        new BackpackWallet(_project, _instance, log).BackpackLnch(log: log);
+                        break;
+                    case W.Razor:
+                        new RazorWallet(_project, _instance, log).RazorLnch(log: log);
+                        break;
+                    case W.Zerion:
+                        new ZerionWallet(_project, _instance, log).ZerionLnch(log: log);
+                        break;
+                    case W.Keplr:
+                        new KeplrWallet(_project, _instance, log).KeplrLaunch(log: log);
+                        break;
+                    default:
+                        WalLog($"Unknown wallet: {wallet}", log: log || _log);
+                        break;
+                }
+            }
+        }
+
+        public void Launch(string requiredWallets, bool log = false)
+        {
+            var walletTypes = ParseWallets(requiredWallets);
+            Launch(walletTypes, log);
+        }
+
         public void Switch(string toUse = "", bool log = false)
         {
-            
-            
-            WalLog($"switching extentions  {toUse}",log: log);
+
+
+            WalLog($"switching extentions  {toUse}", log: log);
 
             try
             {
                 if (_instance.BrowserType.ToString() == "Chromium" && _project.Variables["acc0"].Value != "")
                 {
-                    
+                    var wlt = new Wlt(_project, _instance, log);
+                    string fileName = $"One-Click-Extensions-Manager.crx";
+                    var managerId = "pbgjpgbpljobkekbhnnmlikbbfhbhmem";
+                    wlt.Install(managerId, fileName, log);
+
                     var em = _instance.UseFullMouseEmulation;
 
                     int i = 0; string extName = ""; string outerHtml = ""; string extId = ""; string extStatus = "enabled";
-
-                    string fileName = $"One-Click-Extensions-Manager.crx";
-                    var managerId = "pbgjpgbpljobkekbhnnmlikbbfhbhmem";
-
-                    Install(managerId, fileName, log);
 
                     while (_instance.ActiveTab.URL != "chrome-extension://pbgjpgbpljobkekbhnnmlikbbfhbhmem/index.html")
                     {
@@ -109,7 +162,7 @@ namespace W3t00ls
                 }
 
             }
-            catch 
+            catch
             {
                 try
                 {
@@ -160,72 +213,19 @@ namespace W3t00ls
 
 
         }
-    }
 
-    public class WltMngr
-    {
-        private readonly IZennoPosterProjectModel _project;
-        private readonly Instance _instance;
-        private readonly bool _log;
-
-        public WltMngr(IZennoPosterProjectModel project, Instance instance, bool log = false)
-        {
-            _project = project;
-            _instance = instance;
-            _log = log;
-        }
-
-        public void Switch(IEnumerable<WType> requiredWallets, bool log = false)
-        {
-            WalLog($"Switching wallets: {string.Join(", ", requiredWallets)}", log: log || _log);
-            foreach (var wallet in requiredWallets)
-            {
-                switch (wallet)
-                {
-                    case WType.MetaMask:
-                        new MetaMaskWallet(_project, _instance, log).MetaMaskLnch(log: log);
-                        break;
-                    case WType.Rabby:
-                        new RabbyWallet(_project, _instance, log).RabbyLnch(log: log);
-                        break;
-                    case WType.Backpack:
-                        new BackpackWallet(_project, _instance, log).BackpackLnch(log: log);
-                        break;
-                    case WType.Razor:
-                        new RazorWallet(_project, _instance, log).RazorLnch(log: log);
-                        break;
-                    case WType.Zerion:
-                        new ZerionWallet(_project, _instance, log).ZerionLnch(log: log);
-                        break;
-                    case WType.Keplr:
-                        new KeplrWallet(_project, _instance, log).KeplrLaunch(log: log);
-                        break;
-                    default:
-                        WalLog($"Unknown wallet: {wallet}", log: log || _log);
-                        break;
-                }
-            }
-        }
-
-        // Перегрузка для обратной совместимости со строками
-        public void Switch(string requiredWallets, bool log = false)
-        {
-            var walletTypes = ParseWallets(requiredWallets);
-            Switch(walletTypes, log);
-        }
-
-        public void Approve(WType wallet, bool log = false)
+        public void Approve(W wallet, bool log = false)
         {
             WalLog($"Approving for wallet: {wallet}", log: log || _log);
             switch (wallet)
             {
-                case WType.MetaMask:
+                case W.MetaMask:
                     new MetaMaskWallet(_project, _instance, log).MetaMaskConfirm(log: log);
                     break;
-                case WType.Backpack:
+                case W.Backpack:
                     new BackpackWallet(_project, _instance, log).BackpackApprove(log: log);
                     break;
-                case WType.Keplr:
+                case W.Keplr:
                     new KeplrWallet(_project, _instance, log).KeplrApprove(log: log);
                     break;
                 default:
@@ -234,10 +234,9 @@ namespace W3t00ls
             }
         }
 
-        // Перегрузка для обратной совместимости со строками
         public void Approve(string wallet, bool log = false)
         {
-            if (!Enum.TryParse<WType>(wallet, true, out var walletType))
+            if (!Enum.TryParse<W>(wallet, true, out var walletType))
             {
                 WalLog($"Invalid wallet name: {wallet}", log: log || _log);
                 throw new Exception($"Invalid wallet name: {wallet}");
@@ -250,15 +249,15 @@ namespace W3t00ls
             new KeplrWallet(_project, _instance, log).KeplrSetSource(source, log);
         }
 
-        private List<WType> ParseWallets(string requiredWallets)
+        private List<W> ParseWallets(string requiredWallets)
         {
-            var result = new List<WType>();
+            var result = new List<W>();
             if (string.IsNullOrEmpty(requiredWallets))
                 return result;
 
             foreach (var wallet in requiredWallets.Split(','))
             {
-                if (Enum.TryParse<WType>(wallet.Trim(), true, out var walletType))
+                if (Enum.TryParse<W>(wallet.Trim(), true, out var walletType))
                 {
                     result.Add(walletType);
                 }
