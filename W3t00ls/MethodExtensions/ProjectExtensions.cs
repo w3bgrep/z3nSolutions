@@ -322,7 +322,39 @@ namespace W3t00ls
             }
         }
 
+        public static void GetGlobalVars(this IZennoPosterProjectModel project)
+        {
+            try
+            {
+                var nameSpase = "w3tools";
+                var cleaned = new List<int>();
+                var notDeclared = new List<int>();
+                var busyAccounts = new List<int>();
+                for (int i = int.Parse(project.Variables["rangeStart"].Value); i <= int.Parse(project.Variables["rangeEnd"].Value); i++)
+                {
+                    string threadKey = $"Thread{i}";
+                    try
+                    {
+                        var globalVar = project.GlobalVariables[nameSpase, threadKey];
+                        if (globalVar != null)
+                        {
+                            if (!string.IsNullOrEmpty(globalVar.Value)) busyAccounts.Add(i);
+                            if (project.Variables["cleanGlobal"].Value == "True")
+                            {
+                                globalVar.Value = string.Empty;
+                                cleaned.Add(i);
+                            }
+                        }
+                        else notDeclared.Add(i);
+                    }
+                    catch { notDeclared.Add(i); }
+                }
+                if (project.Variables["cleanGlobal"].Value == "True") project.L0g($"GlobalVars cleaned: {string.Join(",", cleaned)}");
+                else project.Variables["busyAccounts"].Value = string.Join(",", busyAccounts);
+            }
+            catch (Exception ex) { project.L0g($"⚙  {ex.Message}"); }
 
-   
+        }
+
     }
 }

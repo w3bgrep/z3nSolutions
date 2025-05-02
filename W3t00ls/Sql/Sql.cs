@@ -54,10 +54,15 @@ namespace W3t00ls
             SqlLog(query, result, log: log);
             return result;
         }
-        public void MkTable(Dictionary<string, string> tableStructure, string tableName = "", bool strictMode = false, bool insertData = false, string host = "localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "", string schemaName = "projects", bool log = false)
+        public void MkTable(Dictionary<string, string> tableStructure, string tableName = null, bool strictMode = false, bool insertData = false, string host = "localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "", string schemaName = "projects", bool log = false)
         {
             string dbMode = _project.Variables["DBmode"].Value;
-
+            if (string.IsNullOrEmpty(tableName)) 
+            {
+                if (_project.Variables["makeTable"].Value != "True") return;
+                else tableName = $"{_project.Variables["projectName"].Value.ToLower()}";
+                if (dbMode != "PostgreSQL") tableName = $"_{tableName}";
+            }
             if (dbMode == "SQLite")
             {
                 SQLite.lSQLMakeTable(_project, tableStructure, tableName, strictMode);

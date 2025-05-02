@@ -857,7 +857,7 @@ namespace W3t00ls
 
             string url = $"https://celatone-api-prod.alleslabs.dev/v1/initia/{chain}/accounts/{address}/balances";
 
-            string jsonString = Requests.GET(_project, url);
+            string jsonString = Requests.GET(url);
 
             _project.L0g(jsonString , show:log);
             _project.Json.FromString(jsonString);
@@ -895,8 +895,6 @@ namespace W3t00ls
             }
 
         }
-
-
 
         public string SendLegacy(string chainRpc, string contractAddress, string encodedData, decimal value, string walletKey, int speedup = 1)
         {
