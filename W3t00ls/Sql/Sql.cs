@@ -388,5 +388,35 @@ namespace W3t00ls
             FillInitial(_project.Variables["rangeEnd"].Value);
         }
 
+        public Dictionary<string, string> CreateTableStructure(string[] staticColumns, string dynamicToDo = null, string defaultType = "TEXT DEFAULT ''")
+        {
+            if (string.IsNullOrEmpty(dynamicToDo)) dynamicToDo = _project.Variables["cfgToDo"].Value;
+
+
+            var tableStructure = new Dictionary<string, string>
+            {
+                { "acc0", "INTEGER PRIMARY KEY" }
+            };
+            foreach (string name in staticColumns)
+            {
+                if (!tableStructure.ContainsKey(name))
+                {
+                    tableStructure.Add(name, defaultType);
+                }
+            }
+            string[] toDoItems = (dynamicToDo ?? "").Split(',');
+            foreach (string taskId in toDoItems)
+            {
+                string trimmedTaskId = taskId.Trim();
+                if (!string.IsNullOrWhiteSpace(trimmedTaskId) && !tableStructure.ContainsKey(trimmedTaskId))
+                {
+                    tableStructure.Add(trimmedTaskId, defaultType);
+                }
+            }
+            return tableStructure;
+        }
+
+
+
     }
 }
