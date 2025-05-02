@@ -82,7 +82,7 @@ namespace W3t00ls
 
         public static void SetRange(this IZennoPosterProjectModel project, string accRange = null)
         {
-            if (!string.IsNullOrEmpty(accRange)) accRange = project.Variables["cfgAccRange"].Value;
+            if (string.IsNullOrEmpty(accRange)) accRange = project.Variables["cfgAccRange"].Value;
             int rangeS, rangeE;
             string range;
 
@@ -223,25 +223,35 @@ namespace W3t00ls
 
         public static T Age<T>(this IZennoPosterProjectModel project)
         {
-                Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-                Random rnd = new Random();
-                long Age = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - long.Parse(project.Variables["varSessionId"].Value);
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            long start;
+            try 
+            {
+                start = long.Parse(project.Variables["varSessionId"].Value);
+            }
+            catch 
+            {
+                project.Variables["varSessionId"].Value = (DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString();
+                start = long.Parse(project.Variables["varSessionId"].Value);
+            }
+
+            long Age = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - start;
 
 
-                if (typeof(T) == typeof(string))
-                {
-                    string result = TimeSpan.FromSeconds(Age).ToString();
-                    return (T)(object)result;
-                }
-                else if (typeof(T) == typeof(TimeSpan))
-                {
-                    TimeSpan result = TimeSpan.FromSeconds(Age);
-                    return (T)(object)result;
-                }
-                else
-                {
-                    return (T)Convert.ChangeType(Age, typeof(T));
-                }
+            if (typeof(T) == typeof(string))
+            {
+                string result = TimeSpan.FromSeconds(Age).ToString();
+                return (T)(object)result;
+            }
+            else if (typeof(T) == typeof(TimeSpan))
+            {
+                TimeSpan result = TimeSpan.FromSeconds(Age);
+                return (T)(object)result;
+            }
+            else
+            {
+                return (T)Convert.ChangeType(Age, typeof(T));
+            }
         
         }
         public static T RndAmount<T>(this IZennoPosterProjectModel project, decimal min = 0, decimal max = 0)

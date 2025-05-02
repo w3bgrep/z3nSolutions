@@ -25,7 +25,6 @@ namespace W3t00ls
     {
         protected readonly IZennoPosterProjectModel _project;
         protected readonly Instance _instance;
-        protected readonly L0g _log;
         protected readonly bool _logShow;
         protected readonly string _pass;
         protected readonly Sql _sql;
@@ -34,18 +33,13 @@ namespace W3t00ls
         {
             _project = project;
             _sql = new Sql(_project);
-            _log = new L0g(_project);
             _logShow = log;
             _instance = instance;
-
-            
-            
             _skipCheck = project.Variables["skipBrowserScan"].Value == "True";
         }
         public Starter(IZennoPosterProjectModel project, bool log = false)
         {
             _project = project;
-            _log = new L0g(_project);
             _logShow = log;
             _sql = new Sql(_project);
             _skipCheck = project.Variables["skipBrowserScan"].Value == "True";
@@ -55,7 +49,7 @@ namespace W3t00ls
         {
             if (!_logShow && !log) return;
 
-            var stackFrame = new System.Diagnostics.StackFrame(1);
+            var stackFrame = new StackFrame(1);
             var callingMethod = stackFrame.GetMethod();
             if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
             _project.L0g($"[ ▶  {callerName}] [{tolog}] ");
