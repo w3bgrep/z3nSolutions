@@ -207,12 +207,10 @@ namespace W3t00ls
 
         }
 
-        public void InitVariables(string author = null)
+        public void InitVariables(string author = "")
         {
             DisableLogs();
-            if (string.IsNullOrEmpty(author)) author = _project.Variables["projectAuthor"].Value;
             _project.Variables["varSessionId"].Value = (DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString();
-            _project.Variables["instancePort"].Value = $"_";
 
             string projectName = _project.ExecuteMacro(_project.Name).Split('.')[0];
             _project.Variables["projectName"].Value = projectName;
@@ -226,10 +224,9 @@ namespace W3t00ls
             else tablename = "_" + projectName.ToLower();
             _project.Variables["projectTable"].Value = tablename;
 
-
-            Logo(author);
-            _project.SetRange();
+            _project.SetRange(log:true);
             SAFU.Initialize(_project);
+            Logo(author);
 
         }
 

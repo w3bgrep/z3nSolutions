@@ -34,17 +34,46 @@ namespace W3t00ls
         public static void L0g(this IZennoPosterProjectModel project, string toLog, [CallerMemberName] string callerName = "", bool show = true, bool thr0w = false ,bool toZp = true)
         {
             if (!show) return;
-            string acc0 = "null";
-            string port = "null";
-            string totalAge = "null";
-            try { acc0 = project.Variables["acc0"].Value; } catch { }
-            try { port = project.Variables["instancePort"].Value; } catch { }
-            totalAge = project.Age<string>();
-            var stackFrame = new System.Diagnostics.StackFrame(1);
-            var callingMethod = stackFrame.GetMethod();
-            if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = project.Variables["projectName"].Value;
-            if (toLog == null) toLog = "null";
-            string formated = $"⛑  [{acc0}] ⚙  [{port}] ⏱  [{totalAge}] ⛏  [{callerName}].\n          {toLog.Trim()}";
+            //string acc0 = null;
+            //string port = null;
+            //string totalAge = null;
+            string formated = null;
+            try {
+                string acc0 = project.Variables["acc0"].Value;
+                if (!string.IsNullOrEmpty(acc0))formated += $"⛑  [{acc0}]";
+            } catch { }
+
+            try {
+                string port = project.Variables["instancePort"].Value;
+                if (!string.IsNullOrEmpty(port)) formated += $" 🌐  [{port}]";
+            } catch { }
+
+            try
+            {
+                string totalAge = project.Age<string>();
+                if (!string.IsNullOrEmpty(totalAge)) formated += $" ⌛  [{totalAge}]";
+            }
+            catch { }
+
+            try
+            {
+                var stackFrame = new System.Diagnostics.StackFrame(1);
+                var callingMethod = stackFrame.GetMethod();
+                if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno"))
+                     formated += $" 🔳  ";
+                else formated += $" 🔲  [{callerName}]";
+            }
+            catch { }
+
+            //var stackFrame = new System.Diagnostics.StackFrame(1);
+            //var callingMethod = stackFrame.GetMethod();
+            //if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = project.Variables["projectName"].Value;
+           // if (toLog == null) toLog = "null";
+
+            if (!string.IsNullOrEmpty(toLog)) formated += $"\n          {toLog.Trim()}";
+
+
+            //string formated = $"⛑  [{acc0}] ⚙  [{port}] ⌛  [{totalAge}] ⛏  [{callerName}].\n          {toLog.Trim()}";
             
             LogType type = LogType.Info; LogColor color = LogColor.Default;
             var colorMap = new Dictionary<string, LogColor>
@@ -71,7 +100,7 @@ namespace W3t00ls
                     color = pair.Value;
                     break;
                 }
-
+                
             }
             if (formated.Contains("!W")) type = LogType.Warning;
             if (formated.Contains("!E")) type = LogType.Error;
@@ -80,7 +109,7 @@ namespace W3t00ls
 
         }
 
-        public static void SetRange(this IZennoPosterProjectModel project, string accRange = null)
+        public static void SetRange(this IZennoPosterProjectModel project, string accRange = null, bool log = false)
         {
             if (string.IsNullOrEmpty(accRange)) accRange = project.Variables["cfgAccRange"].Value;
             int rangeS, rangeE;
@@ -109,6 +138,8 @@ namespace W3t00ls
             project.Variables["rangeStart"].Value = $"{rangeS}";
             project.Variables["rangeEnd"].Value = $"{rangeE}";
             project.Variables["range"].Value = range;
+
+            project.L0g($"{rangeS}-{rangeE}\n{range}");
         }
         public static bool SetGlobalVar(this IZennoPosterProjectModel project, bool log = false)
         {
@@ -231,7 +262,7 @@ namespace W3t00ls
             }
             catch 
             {
-                project.Variables["varSessionId"].Value = (DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString();
+                project.Variables["varSessionId"].Value = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
                 start = long.Parse(project.Variables["varSessionId"].Value);
             }
 

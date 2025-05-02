@@ -261,12 +261,14 @@ namespace W3t00ls
         public TableMngr(IZennoPosterProjectModel project, string tablename = null, string schemaName = null, bool log = false)
             : base(project, log)
         {
+            _project = project;
+            _logShow = log;
             _tableName = tablename;
             _schemaName = schemaName;
             if (string.IsNullOrEmpty(_tableName)) _tableName =  _project.ExecuteMacro(_project.Name).Split('.')[0].ToLower();
             if (string.IsNullOrEmpty(_schemaName)) _schemaName = "projects";
             _logShow = log;
-            _project = project;
+
         }
         private void Log(string query, string response = null, bool log = false)
         {
@@ -311,16 +313,33 @@ namespace W3t00ls
         }
         private void ManageColumns(Dictionary<string, string> tableStructure, bool prune)
         {
-           string ChkQ = DbQ($@"SELECT column_name FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}';", _logShow);
+            string ChkQ = DbQ($@"SELECT column_name FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}';", true);
 
-           var currentColumns = ChkQ.Split('\n').ToList(); 
+            var currentColumns = ChkQ.Split('\n').ToList();
+
             if (prune)
             {
-                var columnsToRemove = currentColumns.Where(col => !tableStructure.ContainsKey(col)).ToList();
+                var current = string.Join("|", currentColumns);
+                var keys = string.Join("|", tableStructure.Keys);
+
+                //var columnsToRemove = currentColumns.Where(col => !tableStructure.ContainsKey(col)).ToList();
+                var columnsToRemove = new List<string>();
+                foreach (var col in currentColumns)
+                {
+                    string column = col.Trim();
+                    if (!tableStructure.ContainsKey(column))
+                    {
+                        SqlLog($"[{col}] ! in [{keys}] ");
+                        columnsToRemove.Add(column);
+                    }
+                }
+
+                var ToRemove = string.Join("|", columnsToRemove);
+                SqlLog(ToRemove);
+
                 foreach (var column in columnsToRemove)
                 {
-
-                    DbQ($@"ALTER TABLE {_schemaName}.{_tableName} DROP COLUMN {column} CASCADE;", _logShow);
+                    DbQ($@"ALTER TABLE {_schemaName}.{_tableName} DROP COLUMN {column} CASCADE;", true);
                 }
             }
             foreach (var column in tableStructure)
@@ -328,7 +347,7 @@ namespace W3t00ls
                 string columnExists = DbQ($@"SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}' AND lower(column_name) = lower('{column.Key}');")?.Trim() ?? "0";
                 if (columnExists == "0")
                 {
-                    DbQ($@"ALTER TABLE {_schemaName}.{_tableName} ADD COLUMN {column.Key} {column.Value};", _logShow);
+                    DbQ($@"ALTER TABLE {_schemaName}.{_tableName} ADD COLUMN {column.Key} {column.Value};", true);
                 }
             }
         }
