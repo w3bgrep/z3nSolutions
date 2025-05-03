@@ -45,7 +45,7 @@ namespace W3t00ls
             _skipCheck = project.Variables["skipBrowserScan"].Value == "True";
         }
 
-        public void StarterLog(string tolog = "", [CallerMemberName] string callerName = "", bool log = false)
+        private void Log(string tolog = "", [CallerMemberName] string callerName = "", bool log = false)
         {
             if (!_logShow && !log) return;
 
@@ -58,7 +58,7 @@ namespace W3t00ls
 
         public void StartBrowser()
         {
-            StarterLog("initProfile");
+            Log("initProfile");
             _project.Variables["instancePort"].Value = _instance.Port.ToString();
             
             var webGlData = _sql.Get("webGL", "profile");
@@ -77,7 +77,7 @@ namespace W3t00ls
             }
             catch 
             {
-                StarterLog($"!W Fail to set cookies from file {cookiePath}");
+                Log($"!W Fail to set cookies from file {cookiePath}");
                 try
                 {
                     var cookies = _sql.Get("cookies", "profile");
@@ -85,7 +85,7 @@ namespace W3t00ls
                 }
                 catch (Exception Ex)
                     {
-                    StarterLog($"!E Fail to set cookies from db Err. {Ex.Message}");
+                    Log($"!E Fail to set cookies from db Err. {Ex.Message}");
 
                 }
 
@@ -309,7 +309,7 @@ namespace W3t00ls
                 string varName = varData.Split('|')[0];
                 string varValue = varData.Split('|')[1].Trim();
                 try { _project.Variables[$"{varName}"].Value = varValue; }
-                catch (Exception ex) { _project.L0g($"⚙  {ex.Message}"); }
+                catch (Exception ex) { Log($"⚙  {ex.Message}"); }
             }
         }
 
@@ -319,7 +319,7 @@ namespace W3t00ls
             {
                 _project.Lists["accs"].Clear();
                 _project.Lists["accs"].Add(_project.Variables["acc0Forced"].Value);
-                StarterLog($@"manual mode on with {_project.Variables["acc0Forced"].Value}");
+                Log($@"manual mode on with {_project.Variables["acc0Forced"].Value}");
                 return;
             }
 
@@ -338,22 +338,22 @@ namespace W3t00ls
                 catch
                 {
 
-                    StarterLog($"{query}");
+                    Log($"{query}");
                 }
             }
 
             if (allAccounts.Count == 0)
             {
                 _project.Variables["noAccsToDo"].Value = "True";
-                StarterLog($"♻ noAccountsAvailable by queries [{string.Join(" | ", dbQueries)}]");
+                Log($"♻ noAccountsAvailable by queries [{string.Join(" | ", dbQueries)}]");
                 return;
             }
-            StarterLog($"Initial availableAccounts: [{string.Join(", ", allAccounts)}]");
+            Log($"Initial availableAccounts: [{string.Join(", ", allAccounts)}]");
 
             if (!string.IsNullOrEmpty(_project.Variables["requiredSocial"].Value))
             {
                 string[] demanded = _project.Variables["requiredSocial"].Value.Split(',');
-                StarterLog($"Filtering by socials: [{string.Join(", ", demanded)}]");
+                Log($"Filtering by socials: [{string.Join(", ", demanded)}]");
 
                 foreach (string social in demanded)
                 {
@@ -364,12 +364,12 @@ namespace W3t00ls
                         .Select(x => x.Trim())
                         .Where(x => !string.IsNullOrEmpty(x));
                     allAccounts.ExceptWith(notOK);
-                    StarterLog($"After {social} filter: [{string.Join("|", allAccounts)}]");
+                    Log($"After {social} filter: [{string.Join("|", allAccounts)}]");
                 }
             }
             _project.Lists["accs"].Clear();
             _project.Lists["accs"].AddRange(allAccounts);
-            StarterLog($"final list [{string.Join("|", _project.Lists["accs"])}]");
+                Log($"final list [{string.Join("|", _project.Lists["accs"])}]");
         }
 
         public List<string> MkToDoQueries(string toDo = null, string defaultRange = null, string defaultDoFail = null)

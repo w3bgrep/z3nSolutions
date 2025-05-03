@@ -80,7 +80,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BinanceApi.cs" />
+    <Compile Include="CexApi\BinanceApi.cs" />
     <Compile Include="Blockchain.cs" />
     <Compile Include="Socials\Google.cs" />
     <Compile Include="ProfileStarter.cs" />
