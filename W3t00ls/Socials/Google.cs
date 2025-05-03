@@ -13,7 +13,7 @@ using System.Diagnostics;
 
 namespace W3t00ls
 {
-    public class Google2
+    public class Google
     {
         protected readonly IZennoPosterProjectModel _project;
         protected readonly Instance _instance;
@@ -28,7 +28,7 @@ namespace W3t00ls
         protected string _recoveryMail;
         protected string _recoveryCodes;
 
-        public Google2(IZennoPosterProjectModel project, Instance instance, bool log = false)
+        public Google(IZennoPosterProjectModel project, Instance instance, bool log = false)
         {
 
             _project = project;
@@ -120,7 +120,7 @@ namespace W3t00ls
             }
             return status;
         }
-        public string GoogleFullCheck(bool log = false)
+        public string GoogLoad(bool log = false)
         {
             var status = "";
             while (true)
