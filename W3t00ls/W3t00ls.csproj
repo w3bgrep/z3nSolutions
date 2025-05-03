@@ -82,7 +82,7 @@
   <ItemGroup>
     <Compile Include="BinanceApi.cs" />
     <Compile Include="Blockchain.cs" />
-    <Compile Include="Google.cs" />
+    <Compile Include="Socials\Google.cs" />
     <Compile Include="ProfileStarter.cs" />
     <Compile Include="StaticTools\Converter.cs" />
     <Compile Include="StaticTools\Crypto.cs" />
