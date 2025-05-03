@@ -48,11 +48,26 @@ namespace W3t00ls
 
             if (dbMode == "SQLite")
             {
-                result = SQLite.lSQL(_project, query, log);
+                try
+                {
+                    result = SQLite.lSQL(_project, query, log);
+                }
+                catch (Exception ex)
+                {
+                    SqlLog($"!W Err:[{ex.Message}]. Q:[{query}]");
+                    if (throwOnEx) throw;
+                }
             }
             else if (dbMode == "PostgreSQL")
             {
-                result = PostgresDB.DbQueryPostgre(_project, query, log, throwOnEx);
+                try { 
+                    result = PostgresDB.DbQueryPostgre(_project, query, log, throwOnEx);
+                }
+                catch (Exception ex)
+                {
+                    SqlLog($"!W Err:[{ex.Message}]. Q:[{query}]");
+                    if (throwOnEx) throw;
+                }
             }
             else throw new Exception($"unknown DBmode: {dbMode}");
             SqlLog(query, result, log: log);

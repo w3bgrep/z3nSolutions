@@ -56,10 +56,17 @@ namespace W3t00ls
         public bool Install(string extId, string fileName, bool log = false)
         {
             string path = $"{_project.Path}.crx\\{fileName}";
+
+            if (!File.Exists(path))
+            {
+                WalLog($"File not found: {path}", log: log);
+                throw new FileNotFoundException($"CRX file not found: {path}");
+            }
+
             var extListString = string.Join("\n", _instance.GetAllExtensions().Select(x => $"{x.Name}:{x.Id}"));
             if (!extListString.Contains(extId))
             {
-                WalLog($"installing {fileName}", log:log);
+                WalLog($"installing {path}", log:log);
                 _instance.InstallCrxExtension(path);
                 return true;
             }
@@ -720,33 +727,34 @@ namespace W3t00ls
 
             var em = _instance.UseFullMouseEmulation;
             _instance.UseFullMouseEmulation = false;
+            
 
-            WalLog($"Launching MetaMask wallet with file {fileName}", log: log);
+            WalLog($"Launching MetaMask wallet with file {fileName}", log:log);
 
             var extListString = string.Join("\n", _instance.GetAllExtensions().Select(x => $"{x.Name}:{x.Id}"));
             if (!extListString.Contains(_extId))
             {
-                WalLog($"Installing MetaMask extension from {fileName}", log: log);
+                WalLog($"Installing MetaMask extension from {fileName}", log:log);
                 _instance.InstallCrxExtension($"{_project.Path}.crx\\{fileName}");
                 _instance.CloseExtraTabs();
             }
 
-            string state = CheckWalletState(log);
+            string state = CheckWalletState(log:log);
             while (state != "mainPage")
             {
                 if (state == "initPage")
                 {
-                    MetaMaskImport(key, log);
+                    MetaMaskImport(key, log:log);
                 }
                 else if (state == "passwordPage")
                 {
-                    MetaMaskUnlock(log);
+                    MetaMaskUnlock(log:log);
                 }
-                state = CheckWalletState(log);
+                state = CheckWalletState(log:log);
             }
 
-            string address = MetaMaskChkAddress(log);
-            WalLog($"MetaMask wallet address: {address}", log: log);
+            string address = MetaMaskChkAddress(log:log);
+            WalLog($"MetaMask wallet address: {address}", log:log);
 
             _instance.UseFullMouseEmulation = em;
         }
@@ -865,6 +873,8 @@ namespace W3t00ls
 
         public string MetaMaskChkAddress(bool skipCheck = false, bool log = false)
         {
+            string expectedAddress = _sql.AdrEvm();
+
             WalLog("Checking MetaMask wallet address", log: log);
 
             try
@@ -879,7 +889,7 @@ namespace W3t00ls
                 _instance.HeClick(("button", "data-testid", "account-list-menu-details", "regexp", 0));
                 string address = _instance.HeGet(("button", "data-testid", "address-copy-button-text", "regexp", 0));
 
-                if (!skipCheck && !string.Equals(address, _project.Variables["addressEvm"].Value, StringComparison.OrdinalIgnoreCase))
+                if (!skipCheck && !string.Equals(address, expectedAddress, StringComparison.OrdinalIgnoreCase))
                 {
                     _instance.CloseAllTabs();
                     _instance.UninstallExtension(_extId);
@@ -902,7 +912,7 @@ namespace W3t00ls
             WalLog("Confirming MetaMask transaction", log: log);
             var me = _instance.UseFullMouseEmulation;
             _instance.UseFullMouseEmulation = false;
-            var deadline = DateTime.Now.AddSeconds(60);
+            var deadline = DateTime.Now.AddSeconds(20);
 
             try
             {
