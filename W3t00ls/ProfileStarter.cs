@@ -224,7 +224,7 @@ namespace W3t00ls
             else tablename = "_" + projectName.ToLower();
             _project.Variables["projectTable"].Value = tablename;
 
-            _project.SetRange(log:true);
+            _project.SetRange();
             SAFU.Initialize(_project);
             Logo(author);
 

@@ -66,7 +66,8 @@ namespace W3t00ls
 
             if (!string.IsNullOrEmpty(toLog))
             {
-                if (toLog.Split('\n').Count() > 3) toLog.Replace("\n", " ");
+                int lineCount = toLog.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None).Length;
+                if (lineCount > 3) toLog = toLog.Replace("\r\n", " ").Replace("\n", " ").Replace("\r", " ");
                 formated += $"\n          {toLog.Trim()}";
             }
             LogType type = LogType.Info; LogColor color = LogColor.Default;
@@ -133,7 +134,7 @@ namespace W3t00ls
             project.Variables["rangeEnd"].Value = $"{rangeE}";
             project.Variables["range"].Value = range;
 
-            project.L0g($"{rangeS}-{rangeE}\n{range}");
+            //project.L0g($"{rangeS}-{rangeE}\n{range}");
         }
         public static bool SetGlobalVar(this IZennoPosterProjectModel project, bool log = false)
         {

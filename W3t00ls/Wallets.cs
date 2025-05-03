@@ -1251,10 +1251,11 @@ namespace W3t00ls
             WalLog("Unlocking Keplr wallet", log: log);
             var password = _pass;
 
+            unlock:
             if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Copy\\ Address", "regexp", 0).IsVoid)
             {
                 WalLog("Keplr wallet is set, ready to select source", log: log);
-                return ;
+                return;
             }
             try
             {
@@ -1277,7 +1278,10 @@ namespace W3t00ls
             catch (Exception ex)
             {
                 WalLog($"Failed to unlock Keplr wallet: {ex.Message}", log: log);
-                throw;
+                //throw;
+                _instance.CloseAllTabs();
+                goto unlock;
+
             }
         }
 

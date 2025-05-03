@@ -29,17 +29,17 @@ namespace W3t00ls
             string dbMode = _project.Variables["DBmode"].Value;
             string toLog = null;
 
+
             if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
             {
                 toLog += $"[ ▼ {dbMode}]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]";
-                if (!string.IsNullOrEmpty(response)) toLog += $"\n          [{response.Replace('\n', '|')}]";
+                if (!string.IsNullOrEmpty(response)) toLog += $"\n          [{response.Replace("\n", "|").Replace("\r", "")}]";
             }
             else
             {
                 toLog += $"[ ▲ {dbMode}]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]";
             }
             _project.L0g(toLog);
-            //_log.Send(toLog);
         }
         public string DbQ(string query, bool log = false, bool throwOnEx = false)
         {
