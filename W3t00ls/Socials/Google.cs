@@ -13,11 +13,11 @@ using System.Diagnostics;
 
 namespace W3t00ls
 {
-    public class Google
+    public class Google2
     {
         protected readonly IZennoPosterProjectModel _project;
         protected readonly Instance _instance;
-        
+
         protected readonly bool _logShow;
         protected readonly Sql _sql;
 
@@ -28,13 +28,13 @@ namespace W3t00ls
         protected string _recoveryMail;
         protected string _recoveryCodes;
 
-        public Google(IZennoPosterProjectModel project, Instance instance, bool log = false)
+        public Google2(IZennoPosterProjectModel project, Instance instance, bool log = false)
         {
 
             _project = project;
             _instance = instance;
             _sql = new Sql(_project);
-            
+
             _logShow = log;
 
             LoadCreds();
@@ -71,6 +71,7 @@ namespace W3t00ls
                 _project.Variables["googleBACKUP_CODES"].Value = _recoveryCodes;
             }
             catch { }
+            Log(_status);
             return _status;
 
         }
@@ -83,7 +84,7 @@ namespace W3t00ls
             try
             {
                 var heToWait = _instance.HeGet(("a", "href", "https://accounts.google.com/SignOutOptions\\?", "regexp", 0), atr: "aria-label");
-                
+
                 var currentAcc = heToWait.Split('\n')[1];
                 if (currentAcc.IndexOf(_login, StringComparison.OrdinalIgnoreCase) >= 0)
                 {
@@ -142,14 +143,16 @@ namespace W3t00ls
                 try
                 {
                     var userContainer = _instance.HeGet(("div", "data-authuser", "0", "regexp", 0));
+                    Log($"userContainer found: {userContainer}");
 
-                    
                     if (userContainer.IndexOf(_login, StringComparison.OrdinalIgnoreCase) >= 0)
                     {
                         _instance.HeClick(("div", "data-authuser", "0", "regexp", 0));
-                        try {
-                            _instance.HeClick(("button", "innertext", "Continue", "regexp", 0),deadline:2);
-                        } catch { }
+                        try
+                        {
+                            _instance.HeClick(("button", "innertext", "Continue", "regexp", 0), deadline: 2);
+                        }
+                        catch { }
                         status = "ok";
                         return status;
                     }
@@ -165,38 +168,42 @@ namespace W3t00ls
                 }
                 catch
                 {
-                    Log($"no loggined Accounts detected");
+                    Log($"no loggined Accounts detected. logining with {_login}");
                     try
                     {
-                        _instance.HeSet(("identifierId"),_login, "id");
+
+                        _instance.HeSet(("identifierId", "id"), _login);
                         _instance.HeClick(("button", "innertext", "Next", "regexp", 0));
                         status = "unlogged";
                     }
-                    catch {
-                    
+                    catch
+                    {
+
                     }
 
                     try
                     {
-                        string Capcha = _instance.HeGet(("div", "innertext", "Verify\\ it’s\\ you", "regexp", 0),deadline:5);
+                        string Capcha = _instance.HeGet(("div", "innertext", "Verify\\ it’s\\ you", "regexp", 0), deadline: 5);
                         status = "capcha";
                         _sql.Upd("status = 'status = '!WCapcha'", "google");
                         _sql.Upd("status = 'status = '!W fail.Google Capcha or Locked'");
                         throw new Exception("CAPCHA");
                     }
-                    catch {
+                    catch
+                    {
                         if (status == "capcha") throw;
                     }
 
                     try
                     {
-                        string BadBrowser = _instance.HeGet((("div", "innertext", "Try\\ using\\ a\\ different\\ browser.", "regexp", 0), "regexp", 0), deadline: 1); 
+                        string BadBrowser = _instance.HeGet((("div", "innertext", "Try\\ using\\ a\\ different\\ browser.", "regexp", 0), "regexp", 0), deadline: 1);
                         status = "BadBrowser";
                         _sql.Upd("status = 'status = '!W BadBrowser'", "google");
                         _sql.Upd("status = 'status = '!W fail.Google BadBrowser'");
                         throw new Exception("BadBrowser");
                     }
-                    catch {
+                    catch
+                    {
                         if (status == "BadBrowser") throw;
                     }
 
@@ -220,18 +227,24 @@ namespace W3t00ls
                     }
                     try
                     {
-                        _instance.HeSet(("Passwd"),_pass,"name",deadline:5);
+                        _instance.HeSet(("Passwd", "name"), _pass, deadline: 5);
                         _instance.HeClick(("button", "innertext", "Next", "regexp", 0));
 
                     }
-                    catch { }
+                    catch
+                    {
+                        Log($"no Passwd demanded");
+                    }
 
                     try
                     {
-                        _instance.HeSet(("totpPin"), OTP.Offline(_2fa), "id");
+                        _instance.HeSet(("totpPin", "id"), OTP.Offline(_2fa));
                         _instance.HeClick(("button", "innertext", "Next", "regexp", 0));
                     }
-                    catch { }
+                    catch
+                    {
+                        Log($"no OTP demanded");
+                    }
 
                     try
                     {
@@ -246,8 +259,6 @@ namespace W3t00ls
                         if (status == "verify") throw;
                     }
 
-
-
                     try
                     {
                         _instance.HeGet(("*", "innertext", "error\\nAdd\\ a\\ recovery\\ phone", "regexp", 0));
@@ -256,9 +267,16 @@ namespace W3t00ls
                     }
                     catch { }
 
-                    try {
-                        _instance.HeClick(("span", "innertext", "Not\\ now", "regexp", 0),deadline:1);
-                    } catch { }
+                    try
+                    {
+                        _instance.HeClick(("span", "innertext", "Not\\ now", "regexp", 0), deadline: 1);
+                    }
+                    catch { }
+                    try
+                    {
+                        _instance.HeClick(("span", "innertext", "skip", "regexp", 0), deadline: 1);
+                    }
+                    catch { }
 
                     status = "mustBeOk";
                     return status;

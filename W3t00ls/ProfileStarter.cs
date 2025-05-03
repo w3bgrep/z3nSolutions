@@ -357,8 +357,11 @@ namespace W3t00ls
 
                 foreach (string social in demanded)
                 {
+                    
                     string tableName = social.Trim().ToLower();
-                    if (_project.Variables["DBmode"].Value == "PostgreSql") tableName = $"accounts.{tableName}";
+                                     
+
+                    if (_project.Variables["DBmode"].Value == "PostgreSQL") tableName = $"accounts.{tableName}";
                     var notOK = _sql.DbQ($"SELECT acc0 FROM {tableName} WHERE status NOT LIKE '%ok%'", log)
                         .Split('\n')
                         .Select(x => x.Trim())
