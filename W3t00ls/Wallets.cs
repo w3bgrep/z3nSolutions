@@ -721,6 +721,10 @@ namespace W3t00ls
             _fileName = "MetaMask11.16.0.crx";
         }
 
+        
+        
+        
+        
         public void MetaMaskLnch(string key = null, string fileName = null, bool log = false)
         {
             if (string.IsNullOrEmpty(fileName)) fileName = _fileName;
@@ -757,6 +761,28 @@ namespace W3t00ls
             WalLog($"MetaMask wallet address: {address}", log:log);
 
             _instance.UseFullMouseEmulation = em;
+        }
+
+
+        public void MetaMaskLaunch(string fileName = null, string key = null, bool log = false)
+        {
+            if (string.IsNullOrEmpty(fileName)) fileName = _fileName;
+
+            var em = _instance.UseFullMouseEmulation;
+            _instance.UseFullMouseEmulation = false;
+
+            WalLog($"Launching MM wallet with file {fileName}", log: log);
+            if (Install(_extId, fileName, log))
+                MetaMaskImport(key, log: log);
+            else
+                MetaMaskUnlock(log: log);
+
+            string address = MetaMaskChkAddress(log: log);
+            _instance.CloseExtraTabs();
+            _instance.UseFullMouseEmulation = em;
+
+
+
         }
 
         private string CheckWalletState(bool log = false)
