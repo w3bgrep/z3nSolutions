@@ -4,22 +4,14 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using W3t00ls;
 using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
-using static ZennoLab.CommandCenter.ZennoPoster;
-
 using System.IO;
-
-
-using static W3t00ls.Requests;
 using System.Text.RegularExpressions;
-using static Global.Env.EnvironmentVariables;
 using System.Diagnostics;
-using System.Collections;
 
-namespace W3t00ls
+
+namespace ZBS
 {
     public class Starter
     {
@@ -162,7 +154,7 @@ namespace W3t00ls
                 }
 
 
-                string heToWait = _instance.HeGet(("anchor_progress"), "id");
+                string heToWait = _instance.HeGet(("anchor_progress", "id"));
 
                 var score = heToWait.Split(' ')[3].Split('\n')[0]; var problems = "";
 
@@ -273,7 +265,7 @@ namespace W3t00ls
         {
             string name = _project.ExecuteMacro(_project.Name).Split('.')[0];
             if (author != "") author = $" script author: @{author}";
-            string logo = $@"using w3tools;
+            string logo = $@"using ZennoposterBoosterSolutions;
             ┌by─┐					
             │    w3bgrep			
             └─→┘

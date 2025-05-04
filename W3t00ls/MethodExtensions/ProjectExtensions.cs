@@ -1,5 +1,4 @@
-﻿using Global.WinApi;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 using System.Linq;
@@ -11,20 +10,14 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
-using ZennoLab.CommandCenter;
-using ZXing;
 
-using Newtonsoft.Json;
+
 using Newtonsoft.Json.Linq;
 using Leaf.xNet;
-using System.Diagnostics;
-using System.Text;
-using Npgsql;
-using Global.SettingsManager.Enums;
-using static ZennoLab.CommandCenter.ZennoPoster;
 
 
-namespace W3t00ls
+
+namespace ZBS
 {
     
     public static class ProjectExtensions
@@ -215,11 +208,16 @@ namespace W3t00ls
         }
  
         
-        public static void Sleep(this IZennoPosterProjectModel project, int min = 0, int max = 1)
+        public static void Sleep(this IZennoPosterProjectModel project, int min, int max)
         {
             Random rnd = new Random();
             Thread.Sleep(rnd.Next(min, max) * 1000);
         }
+        public static void Sleep(this IZennoPosterProjectModel project, int max = 1)
+        {
+            Thread.Sleep( max * 1000);
+        }
+
         public static string InputBox(string message = "input data please", int width = 600, int height = 600)
         {
 

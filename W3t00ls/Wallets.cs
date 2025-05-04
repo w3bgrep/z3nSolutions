@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Linq;
-
 using System.Data;
-
 using System.IO;
 using System.Text.RegularExpressions;
-
 using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using Newtonsoft.Json.Linq;
@@ -14,7 +11,7 @@ using System.Threading;
 using NBitcoin;
 using System.Collections.Generic;
 
-namespace W3t00ls
+namespace ZBS
 {
     public enum W
     {
@@ -559,27 +556,49 @@ namespace W3t00ls
         {
             WalLog("Unlocking Backpack wallet", log: log);
             var password = _pass;
-
+            
+        
+            unlock:
             if (_instance.ActiveTab.URL != $"chrome-extension://{_extId}/popout.html")
                 _instance.ActiveTab.Navigate($"chrome-extension://{_extId}/popout.html", "");
 
-            _instance.CloseExtraTabs();
+            //_instance.CloseExtraTabs();
+
+            
+            if (!_instance.ActiveTab.FindElementByAttribute("path", "d", "M12 5v14", "text", 0).IsVoid)
+            {
+                WalLog("Wallet already unlocked", log: log);
+                return;
+            }
 
             try
             {
+
+                try
+                {
+                    _instance.HeGet(("input:password", "fulltagname", "input:password", "regexp", 0));
+                }
+                catch
+                {
+                    _instance.CloseAllTabs();
+                    goto unlock;
+                }
+
                 _instance.HeSet(("input:password", "fulltagname", "input:password", "regexp", 0), password);
                 _instance.HeClick(("button", "innertext", "Unlock", "regexp", 0));
+
+
                 WalLog("Wallet unlocked successfully", log: log);
             }
-            catch
+            catch (Exception ex)
             {
-                if (!_instance.ActiveTab.FindElementByAttribute("path", "d", "M12 5v14", "text", 0).IsVoid)
-                {
-                    WalLog("Wallet already unlocked", log: log);
-                    return;
-                }
-                throw new Exception("Failed to unlock Backpack wallet");
+                WalLog($"!E Failed to unlock Keplr wallet: {ex.Message}", log: log);
+                //throw;
+                _instance.CloseAllTabs();
+                goto unlock;
+
             }
+
         }
 
         public void BackpackCheck(bool log = false)
@@ -721,10 +740,6 @@ namespace W3t00ls
             _fileName = "MetaMask11.16.0.crx";
         }
 
-        
-        
-        
-        
         public void MetaMaskLnchold(string key = null, string fileName = null, bool log = false)
         {
             if (string.IsNullOrEmpty(fileName)) fileName = _fileName;
@@ -783,7 +798,7 @@ namespace W3t00ls
 
         }
 
-        public bool MetaMaskWaitTx(bool log = false)
+        public bool MetaMaskWaitTx(int gap = 2, bool log = false)
         {
             bool result = false;
             Tab tab = _instance.NewTab("mm");
@@ -798,7 +813,7 @@ namespace W3t00ls
             if (txBoxList.Count > 1)
             {
                 _project.L0g(txBoxText);
-                _project.Sleep();
+                _project.Sleep(gap, gap);
                 goto check;
             }
 
@@ -860,33 +875,33 @@ namespace W3t00ls
 
             try
             {
-                _instance.HeClick(("h2", "innertext", "Let\'s\\ get\\ started", "regexp", 0));
-                _instance.HeClick(("span", "innertext", "I\\ agree\\ to\\ MetaMask\'s\\ Terms\\ of\\ use", "regexp", 1));
-                _instance.HeClick(("button", "aria-label", "Close", "regexp", 0));
-                _instance.HeClick(("button", "data-testid", "onboarding-create-wallet", "regexp", 0));
-                _instance.HeClick(("button", "data-testid", "metametrics-no-thanks", "regexp", 0));
+                _instance.HeClick(("h2", "innertext", "Let\'s\\ get\\ started", "regexp", 0),delay:0);
+                _instance.HeClick(("span", "innertext", "I\\ agree\\ to\\ MetaMask\'s\\ Terms\\ of\\ use", "regexp", 1), delay: 0);
+                _instance.HeClick(("button", "aria-label", "Close", "regexp", 0), delay: 0);
+                _instance.HeClick(("button", "data-testid", "onboarding-create-wallet", "regexp", 0), delay: 0);
+                _instance.HeClick(("button", "data-testid", "metametrics-no-thanks", "regexp", 0), delay: 0);
                 _instance.HeSet(("input:password", "data-testid", "create-password-new", "regexp", 0), password);
                 _instance.HeSet(("input:password", "data-testid", "create-password-confirm", "regexp", 0), password);
-                _instance.HeClick(("span", "innertext", "I\\ understand\\ that\\ MetaMask\\ cannot\\ recover\\ this\\ password\\ for\\ me.\\ Learn\\ more", "regexp", 0));
-                _instance.HeClick(("button", "data-testid", "create-password-wallet", "regexp", 0));
-                _instance.HeClick(("button", "data-testid", "secure-wallet-later", "regexp", 0));
-                _instance.HeClick(("label", "class", "skip-srp-backup-popover__label", "regexp", 0));
-                _instance.HeClick(("button", "data-testid", "skip-srp-backup", "regexp", 0));
-                _instance.HeClick(("button", "data-testid", "onboarding-complete-done", "regexp", 0));
-                _instance.HeClick(("button", "data-testid", "pin-extension-next", "regexp", 0));
-                _instance.HeClick(("button", "data-testid", "pin-extension-done", "regexp", 0));
+                _instance.HeClick(("span", "innertext", "I\\ understand\\ that\\ MetaMask\\ cannot\\ recover\\ this\\ password\\ for\\ me.\\ Learn\\ more", "regexp", 0), delay: 0);
+                _instance.HeClick(("button", "data-testid", "create-password-wallet", "regexp", 0), delay: 0);
+                _instance.HeClick(("button", "data-testid", "secure-wallet-later", "regexp", 0), delay: 0);
+                _instance.HeClick(("label", "class", "skip-srp-backup-popover__label", "regexp", 0)             , delay: 0);
+                _instance.HeClick(("button", "data-testid", "skip-srp-backup", "regexp", 0), delay: 0);
+                _instance.HeClick(("button", "data-testid", "onboarding-complete-done", "regexp", 0), delay: 0);
+                _instance.HeClick(("button", "data-testid", "pin-extension-next", "regexp", 0), delay: 0);
+                _instance.HeClick(("button", "data-testid", "pin-extension-done", "regexp", 0), delay: 0);
 
                 while (!_instance.ActiveTab.FindElementByAttribute("button", "innertext", "Got\\ it", "regexp", 0).IsVoid)
                 {
-                    try { _instance.HeClick(("button", "data-testid", "popover-close", "regexp", 0)); }
-                    catch { _instance.HeClick(("button", "innertext", "Got\\ it", "regexp", 0)); }
+                    try { _instance.HeClick(("button", "data-testid", "popover-close", "regexp", 0), delay: 0); }
+                    catch { _instance.HeClick(("button", "innertext", "Got\\ it", "regexp", 0), delay: 0); }
                 }
 
-                _instance.HeClick(("button", "data-testid", "account-menu-icon", "regexp", 0));
-                _instance.HeClick(("button", "data-testid", "multichain-account-menu-popover-action-button", "regexp", 0));
-                _instance.HeClick(("span", "style", "mask-image:\\ url\\(\"./images/icons/import.svg\"\\);", "regexp", 0));
+                _instance.HeClick(("button", "data-testid", "account-menu-icon", "regexp", 0), delay: 0);
+                _instance.HeClick(("button", "data-testid", "multichain-account-menu-popover-action-button", "regexp", 0), delay: 0);
+                _instance.HeClick(("span", "style", "mask-image:\\ url\\(\"./images/icons/import.svg\"\\);", "regexp", 0), delay: 0);
                 _instance.HeSet(("private-key-box", "id"), key);
-                _instance.HeClick(("button", "data-testid", "import-account-confirm-button", "regexp", 0));
+                _instance.HeClick(("button", "data-testid", "import-account-confirm-button", "regexp", 0), delay: 0);
                 WalLog("Successfully imported MetaMask wallet", log: log);
             }
             catch (Exception ex)
@@ -1049,8 +1064,6 @@ namespace W3t00ls
             x = x - 450; _instance.Click(x, x, y, y, "Left", "Normal"); Thread.Sleep(1000);
             return;
         }
-
-
         public string KeplrMain(string source = "pkey", string fileName = null, bool log = false)
         {
             if (string.IsNullOrEmpty(fileName)) fileName = _fileName;
@@ -1081,7 +1094,6 @@ namespace W3t00ls
                 }
             }
         }
-
         public void KeplrLaunch(string source = "seed", string fileName = null, bool log = false)
         {
             if (string.IsNullOrEmpty(fileName)) fileName = _fileName;
@@ -1103,9 +1115,6 @@ namespace W3t00ls
             _instance.CloseExtraTabs();
             _instance.UseFullMouseEmulation = em;
         }
-
-
-
         public string KeplrApprove(bool log = false)
         {
             WalLog("Approving Keplr transaction", log: log);
@@ -1152,7 +1161,6 @@ namespace W3t00ls
                 _instance.UseFullMouseEmulation = true;
             }
         }
-
         private string KeplrCheck(bool log = false)
         {
             WalLog("Checking Keplr wallet state", log: log);
@@ -1189,7 +1197,6 @@ namespace W3t00ls
             WalLog("Timeout checking Keplr state", log: log);
             throw new Exception("Cannot check Keplr wallet state");
         }
-
         public void KeplrImportSeed(bool log = false)
         {
             WalLog("Importing Keplr wallet with seed phrase", log: log);
@@ -1239,7 +1246,6 @@ namespace W3t00ls
                 throw;
             }
         }
-
         public void KeplrImportPkey(bool temp = false, bool log = false)
         {
             WalLog($"Importing Keplr wallet with private key (temp: {temp})", log: log);
@@ -1282,7 +1288,6 @@ namespace W3t00ls
                 throw;
             }
         }
-
         public void KeplrSetSource(string source, bool log = false)
         {
             WalLog($"Setting Keplr wallet source to {source}", log: log);
@@ -1306,7 +1311,6 @@ namespace W3t00ls
                 KeplrImportPkey(log: log);
             }
         }
-
         public void KeplrUnlock(bool log = false)
         {
             WalLog("Unlocking Keplr wallet", log: log);
@@ -1322,6 +1326,15 @@ namespace W3t00ls
             {
                 
                 _instance.ActiveTab.Navigate($"chrome-extension://{_extId}/popup.html#/", "");
+
+                try {
+                    _instance.HeGet(("input:password", "tagname", "input", "regexp", 0));
+                }
+                catch {
+                    _instance.CloseAllTabs();
+                    goto unlock;
+                }
+
                 _instance.HeSet(("input:password", "tagname", "input", "regexp", 0), password);
                 KeplrClick(_instance.GetHe(("button", "innertext", "Unlock", "regexp", 0)));
                 //_instance.HeClick(("button", "innertext", "Unlock", "regexp", 0));
