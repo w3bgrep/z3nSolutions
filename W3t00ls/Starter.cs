@@ -162,7 +162,7 @@ namespace W3t00ls
                 }
 
 
-                string heToWait = _instance.HeGet(("anchor_progress"), "id");
+                string heToWait = _instance.HeGet(("anchor_progress", "id"));
 
                 var score = heToWait.Split(' ')[3].Split('\n')[0]; var problems = "";
 

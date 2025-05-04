@@ -215,11 +215,16 @@ namespace W3t00ls
         }
  
         
-        public static void Sleep(this IZennoPosterProjectModel project, int min = 0, int max = 1)
+        public static void Sleep(this IZennoPosterProjectModel project, int min, int max)
         {
             Random rnd = new Random();
             Thread.Sleep(rnd.Next(min, max) * 1000);
         }
+        public static void Sleep(this IZennoPosterProjectModel project, int max = 1)
+        {
+            Thread.Sleep( max * 1000);
+        }
+
         public static string InputBox(string message = "input data please", int width = 600, int height = 600)
         {
 
