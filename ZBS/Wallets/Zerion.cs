@@ -113,6 +113,26 @@ namespace ZBSolutions
             WalLog($"{active} {balance} {pnl}", log: log);
             return active;
         }
+
+        public bool ZerionApprove(bool log = false)
+        {
+
+            try
+            {
+                var button = _instance.HeGet(("button", "class", "_primary", "regexp", 0));
+                WalLog(button, log: log);
+                _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                WalLog($"!W {ex.Message}", log: log);
+                throw;
+            }
+        }
+
+
+
     }
 
 }

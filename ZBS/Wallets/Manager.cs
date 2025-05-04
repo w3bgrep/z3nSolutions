@@ -10,13 +10,13 @@ using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 namespace ZBSolutions
 {
-    public class WltMngr
+    public class Wallet
     {
         private readonly IZennoPosterProjectModel _project;
         private readonly Instance _instance;
         private readonly bool _log;
 
-        public WltMngr(IZennoPosterProjectModel project, Instance instance, bool log = false)
+        public Wallet(IZennoPosterProjectModel project, Instance instance, bool log = false)
         {
             _project = project;
             _instance = instance;
@@ -169,6 +169,9 @@ namespace ZBSolutions
                     break;
                 case W.Keplr:
                     new KeplrWallet(_project, _instance, log).KeplrApprove(log: log);
+                    break;
+                case W.Zerion:
+                    new ZerionWallet(_project, _instance, log).ZerionApprove(log: log);
                     break;
                 default:
                     WalLog($"Approve not supported for wallet: {wallet}", log: log || _log);
