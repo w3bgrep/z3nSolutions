@@ -13,13 +13,13 @@ using static ZennoLab.CommandCenter.ZennoPoster;
 using System.IO;
 
 
-using static W3t00ls.Requests;
+using static ZBS.Requests;
 using System.Text.RegularExpressions;
 using static Global.Env.EnvironmentVariables;
 using System.Diagnostics;
 using System.Collections;
 
-namespace W3t00ls
+namespace ZBS
 {
     public class Starter
     {

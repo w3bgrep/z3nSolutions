@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using ZennoLab.CommandCenter;
 using ZXing;
 
-namespace W3t00ls
+namespace ZBS
 {
     internal static class HtmlExtensions
     {

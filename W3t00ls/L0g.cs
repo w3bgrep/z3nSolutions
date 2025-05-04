@@ -6,7 +6,7 @@ using ZennoLab.InterfacesLibrary.Enums.Log;
 using System.Globalization;
 
 
-namespace W3t00ls
+namespace ZBS
 {
     public class L0g
     {

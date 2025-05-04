@@ -8,7 +8,7 @@ using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.Enums.Http;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 
-namespace W3t00ls
+namespace ZBS
 {
     internal static class Requests
     {

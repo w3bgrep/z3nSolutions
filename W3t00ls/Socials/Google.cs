@@ -11,7 +11,7 @@ using ZennoLab.InterfacesLibrary.ProjectModel;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
 
-namespace W3t00ls
+namespace ZBS
 {
     public class Google
     {

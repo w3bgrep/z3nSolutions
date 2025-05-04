@@ -13,7 +13,7 @@ using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using static ZennoLab.CommandCenter.ZennoPoster;
 
-namespace W3t00ls
+namespace ZBS
 {
     
     public class PostgresDB : IDisposable

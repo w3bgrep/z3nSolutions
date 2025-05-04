@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 
-namespace W3t00ls
+namespace ZBS
 {
     public class Discord
     {

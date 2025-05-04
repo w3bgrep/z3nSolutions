@@ -12,7 +12,7 @@ using ZennoLab.InterfacesLibrary.Enums.Http;
 using NBitcoin.Protocol;
 using NBitcoin;
 
-namespace W3t00ls
+namespace ZBS
 {
     public  class BinanceApi
     {

@@ -14,7 +14,7 @@ using System.Threading;
 using NBitcoin;
 using System.Collections.Generic;
 
-namespace W3t00ls
+namespace ZBS
 {
     public enum W
     {

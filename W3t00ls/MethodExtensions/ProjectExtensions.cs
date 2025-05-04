@@ -24,7 +24,7 @@ using Global.SettingsManager.Enums;
 using static ZennoLab.CommandCenter.ZennoPoster;
 
 
-namespace W3t00ls
+namespace ZBS
 {
     
     public static class ProjectExtensions

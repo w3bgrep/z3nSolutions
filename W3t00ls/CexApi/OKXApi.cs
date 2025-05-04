@@ -12,7 +12,7 @@ using ZennoLab.InterfacesLibrary.Enums.Http;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using Newtonsoft.Json;
 
-namespace W3t00ls
+namespace ZBS
 {
     public class OKXApi
     {

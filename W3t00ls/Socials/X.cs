@@ -11,7 +11,7 @@ using Newtonsoft.Json.Linq;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
 using Leaf.xNet;
 
-namespace W3t00ls
+namespace ZBS
 {
     public class X
     {

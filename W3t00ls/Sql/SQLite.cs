@@ -8,7 +8,7 @@ using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 
-namespace W3t00ls
+namespace ZBS
 {
     public static class SQLite
     {

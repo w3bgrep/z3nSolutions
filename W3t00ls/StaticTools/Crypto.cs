@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace W3t00ls
+namespace ZBS
 {
     public static class Crypto
     {
