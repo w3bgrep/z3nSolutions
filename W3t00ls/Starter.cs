@@ -273,7 +273,7 @@ namespace W3t00ls
         {
             string name = _project.ExecuteMacro(_project.Name).Split('.')[0];
             if (author != "") author = $" script author: @{author}";
-            string logo = $@"using w3tools;
+            string logo = $@"using ZennoposterBoosterSolutions;
             ┌by─┐					
             │    w3bgrep			
             └─→┘
