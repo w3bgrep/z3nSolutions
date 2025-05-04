@@ -309,7 +309,7 @@ namespace W3t00ls
                 string varName = varData.Split('|')[0];
                 string varValue = varData.Split('|')[1].Trim();
                 try { _project.Variables[$"{varName}"].Value = varValue; }
-                catch (Exception ex) { Log($"⚙  {ex.Message}"); }
+                catch  {}
             }
         }
 

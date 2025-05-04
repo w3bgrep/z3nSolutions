@@ -725,7 +725,7 @@ namespace W3t00ls
         
         
         
-        public void MetaMaskLnch(string key = null, string fileName = null, bool log = false)
+        public void MetaMaskLnchold(string key = null, string fileName = null, bool log = false)
         {
             if (string.IsNullOrEmpty(fileName)) fileName = _fileName;
 
@@ -764,7 +764,7 @@ namespace W3t00ls
         }
 
 
-        public void MetaMaskLaunch(string fileName = null, string key = null, bool log = false)
+        public void MetaMaskLnch(string fileName = null, string key = null, bool log = false)
         {
             if (string.IsNullOrEmpty(fileName)) fileName = _fileName;
 
@@ -781,8 +781,33 @@ namespace W3t00ls
             _instance.CloseExtraTabs();
             _instance.UseFullMouseEmulation = em;
 
+        }
 
+        public bool MetaMaskWaitTx(bool log = false)
+        {
+            bool result = false;
+            Tab tab = _instance.NewTab("mm");
+            if (tab.IsBusy) tab.WaitDownloading();
 
+            _instance.ActiveTab.Navigate($"chrome-extension://{_extId}/home.html", "");
+
+            check:
+            var txBoxText = _instance.HeGet(("div", "class", "transaction-list__transactions", "regexp", 0));
+            var txBoxList = _instance.ActiveTab.FindElementByAttribute("div", "class", "transaction-list__transactions", "regexp", 0).GetChildren(false).ToList();
+
+            if (txBoxList.Count > 1)
+            {
+                _project.L0g(txBoxText);
+                _project.Sleep();
+                goto check;
+            }
+
+            var completedList = _instance.ActiveTab.FindElementByAttribute("div", "class", " transaction-list__completed-transactions", "regexp", 0).GetChildren(false).ToList();
+            var last = completedList[1];
+            if (last.InnerText.Contains("Confirmed")) result = true;
+            _project.L0g(last.InnerText);
+            _instance.CloseExtraTabs();
+            return result;
         }
 
         private string CheckWalletState(bool log = false)
@@ -875,7 +900,7 @@ namespace W3t00ls
         {
             WalLog("Unlocking MetaMask wallet", log: log);
             var password = _pass;
-
+            if (!_instance.ActiveTab.URL.Contains(_extId)) _instance.ActiveTab.Navigate($"chrome-extension://{_extId}/home.html", "");
             try
             {
                 _instance.HeSet(("password", "id"), password);
