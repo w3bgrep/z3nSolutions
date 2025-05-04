@@ -1092,17 +1092,14 @@ namespace ZBSolutions
             WaitTransaction(rpc, txHash);
             return txHash;
         }
-        public string WaitTransaction(string rpc = null, string hash = null, int deadline = 60, string proxy = "", bool log = false)
+        public bool WaitTransaction(string rpc = null, string hash = null, int deadline = 60, string proxy = "", bool log = false)
         {
-            // Установка значений по умолчанию из переменных проекта, если параметры пустые
             if (string.IsNullOrEmpty(hash)) hash = _project.Variables["blockchainHash"].Value;
             if (string.IsNullOrEmpty(rpc)) rpc = _project.Variables["blockchainRPC"].Value;
 
-            // JSON-запросы для получения receipt и raw транзакции
             string jsonReceipt = $@"{{""jsonrpc"":""2.0"",""method"":""eth_getTransactionReceipt"",""params"":[""{hash}""],""id"":1}}";
             string jsonRaw = $@"{{""jsonrpc"":""2.0"",""method"":""eth_getTransactionByHash"",""params"":[""{hash}""],""id"":1}}";
 
-            // Инициализация HTTP-запроса
             string response;
             using (var request = new HttpRequest())
             {
@@ -1118,12 +1115,10 @@ namespace ZBSolutions
                     request.Proxy = new HttpProxyClient(host, port, username, password);
                 }
 
-                // Таймер для отслеживания дедлайна
                 DateTime startTime = DateTime.Now;
                 TimeSpan timeout = TimeSpan.FromSeconds(deadline);
 
 
-                // Основной цикл ожидания транзакции
                 while (true)
                 {
                     if (DateTime.Now - startTime > timeout)
@@ -1131,7 +1126,6 @@ namespace ZBSolutions
 
                     string logString = "";
 
-                    // Проверка receipt транзакции
                     try
                     {
                         HttpResponse httpResponse = request.Post(rpc, jsonReceipt, "application/json");
@@ -1158,10 +1152,10 @@ namespace ZBSolutions
                                 string status = HexToString(_project.Json.result.status);
 
                                 _project.Variables["txStatus"].Value = status == "1" ? "SUCCSESS" : "!W FAIL";
+                                bool res  = status == "1" ? true : false;
                                 string result = $"{rpc} {hash} [{_project.Variables["txStatus"].Value}] gasUsed: {gasUsed}";
                                 _log.Send($"[ TX state:  {result}");
-                                //Loggers.W3Debug(_project, result);
-                                return result;
+                                return res;
                             }
                             catch
                             {
@@ -1176,7 +1170,6 @@ namespace ZBSolutions
                         continue;
                     }
 
-                    // Проверка raw транзакции
                     try
                     {
                         HttpResponse httpResponse = request.Post(rpc, jsonRaw, "application/json");
@@ -1221,8 +1214,7 @@ namespace ZBSolutions
                         continue;
                     }
                     _log.Send($"[ TX state:  {logString}");
-                    //Loggers.W3Debug(_project, logString);
-                    Thread.Sleep(3000); // Задержка перед следующей итерацией
+                    Thread.Sleep(3000); 
                 }
             }
         }
