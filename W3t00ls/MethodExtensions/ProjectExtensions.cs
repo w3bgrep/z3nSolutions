@@ -1,5 +1,4 @@
-﻿using Global.WinApi;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 using System.Linq;
@@ -11,17 +10,11 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
-using ZennoLab.CommandCenter;
-using ZXing;
 
-using Newtonsoft.Json;
+
 using Newtonsoft.Json.Linq;
 using Leaf.xNet;
-using System.Diagnostics;
-using System.Text;
-using Npgsql;
-using Global.SettingsManager.Enums;
-using static ZennoLab.CommandCenter.ZennoPoster;
+
 
 
 namespace ZBS

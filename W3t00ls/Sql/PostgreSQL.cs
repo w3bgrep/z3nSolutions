@@ -1,17 +1,11 @@
 ﻿using Npgsql;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using W3t00ls;
 using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
-using static ZennoLab.CommandCenter.ZennoPoster;
 
 namespace ZBS
 {
