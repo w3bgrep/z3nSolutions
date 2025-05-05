@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Numerics;
+
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -89,6 +91,81 @@ namespace ZBSolutions
             return addresses;
 
         }
+        protected string HexToString(string hexValue, string convert = "")
+        {
+            try
+            {
+                hexValue = hexValue?.Replace("0x", "").Trim();
+                if (string.IsNullOrEmpty(hexValue)) return "0";
+                BigInteger number = BigInteger.Parse("0" + hexValue, NumberStyles.AllowHexSpecifier);
+                switch (convert.ToLower())
+                {
+                    case "gwei":
+                        decimal gweiValue = (decimal)number / 1000000000m;
+                        return gweiValue.ToString("0.#########", CultureInfo.InvariantCulture);
+                    case "eth":
+                        decimal ethValue = (decimal)number / 1000000000000000000m;
+                        return ethValue.ToString("0.##################", CultureInfo.InvariantCulture);
+                    default:
+                        return number.ToString();
+                }
+            }
+            catch
+            {
+                return "0";
+            }
+        }
+        protected T FloorDecimal<T>(decimal value, int? decimalPlaces = null)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+
+            int effectiveDecimalPlaces = decimalPlaces ?? 18;
+
+            if (effectiveDecimalPlaces < 0)
+                throw new ArgumentException("Decimal places must be non-negative", nameof(decimalPlaces));
+
+            try
+            {
+                string valueStr = value.ToString(CultureInfo.InvariantCulture);
+                int actualDecimalPlaces = 0;
+                if (valueStr.Contains("."))
+                {
+                    actualDecimalPlaces = valueStr.Split('.')[1].Length;
+                }
+
+                effectiveDecimalPlaces = Math.Min(effectiveDecimalPlaces, actualDecimalPlaces);
+
+                if (effectiveDecimalPlaces > 28) // decimal type supports up to 28-29 digits
+                {
+                    _project.SendWarningToLog($"Requested decimal places ({effectiveDecimalPlaces}) exceeds decimal type limit. Adjusting to 28.");
+                    effectiveDecimalPlaces = 28;
+                }
+
+                decimal multiplier = (decimal)Math.Pow(10, effectiveDecimalPlaces);
+                decimal flooredValue = Math.Floor(value * multiplier) / multiplier;
+
+                if (typeof(T) == typeof(string))
+                {
+                    string format = "0." + new string('#', effectiveDecimalPlaces);
+                    return (T)Convert.ChangeType(flooredValue.ToString(format, CultureInfo.InvariantCulture), typeof(T));
+                }
+                if (typeof(T) == typeof(int))
+                    return (T)Convert.ChangeType((int)flooredValue, typeof(T));
+                if (typeof(T) == typeof(double))
+                    return (T)Convert.ChangeType((double)flooredValue, typeof(T));
+                return (T)Convert.ChangeType(flooredValue, typeof(T));
+            }
+            catch (OverflowException ex)
+            {
+                _project.SendWarningToLog($"Overflow error while flooring {value} to {effectiveDecimalPlaces} decimal places: {ex.Message}");
+                return (T)Convert.ChangeType(value, typeof(T)); // Return original value as fallback
+            }
+            catch (Exception ex)
+            {
+                _project.SendWarningToLog($"Error while flooring {value} to {effectiveDecimalPlaces} decimal places: {ex.Message}");
+                return (T)Convert.ChangeType(value, typeof(T)); // Return original value as fallback
+            }
+        }
 
         public string Rpc(string chain)
         {
@@ -116,7 +193,5 @@ namespace ZBSolutions
                 throw new Exception("noRpcProvided");
             }
         }
-
-
     }
 }

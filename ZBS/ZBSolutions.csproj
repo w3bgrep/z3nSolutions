@@ -80,8 +80,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="SendTx.cs" />
+    <Compile Include="OnChain\W3bWrite.cs" />
     <Compile Include="Sql\TableSvc.cs" />
+    <Compile Include="W3bRead.cs" />
     <Compile Include="Wallets\Manager.cs" />
     <Compile Include="Wallets\Keplr.cs" />
     <Compile Include="Wallets\Rabby.cs" />
@@ -100,7 +101,7 @@
     <Compile Include="ISAFU.cs" />
     <Compile Include="L0g.cs" />
     <Compile Include="CexApi\OKXApi.cs" />
-    <Compile Include="OnChain.cs" />
+    <Compile Include="OnChain\OnChain.cs" />
     <Compile Include="StaticTools\OTP.cs" />
     <Compile Include="Sql\PostgreSQL.cs" />
     <Compile Include="Program.cs" />
@@ -115,7 +116,7 @@
     <Compile Include="Wallets\Wlt.cs" />
     <Compile Include="Socials\X.cs" />
     <Compile Include="Wallets\Zerion.cs" />
-    <Compile Include="Web3.cs" />
+    <Compile Include="OnChain\W3b.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="ValidateZennoPosterDllPath" BeforeTargets="BeforeBuild">

@@ -16,11 +16,11 @@ using Nethereum.Model;
 
 namespace ZBSolutions
 {
-    public class SendTx : W3b
+    public class W3bWrite : W3b
     {
         private readonly string _key;
         private readonly string _adrEvm;
-        public SendTx(IZennoPosterProjectModel project,string key = null, bool log = false)
+        public W3bWrite(IZennoPosterProjectModel project,string key = null, bool log = false)
         : base(project, log)
         {
             _key = Key(key);
