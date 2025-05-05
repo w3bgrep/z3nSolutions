@@ -101,7 +101,6 @@
     <Compile Include="ISAFU.cs" />
     <Compile Include="L0g.cs" />
     <Compile Include="CexApi\OKXApi.cs" />
-    <Compile Include="OnChain\OnChain.cs" />
     <Compile Include="StaticTools\OTP.cs" />
     <Compile Include="Sql\PostgreSQL.cs" />
     <Compile Include="Program.cs" />

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NBitcoin;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,11 +14,30 @@ namespace ZBSolutions
         protected readonly string _extId;
         protected readonly string _fileName;
 
-        public ZerionWallet(IZennoPosterProjectModel project, Instance instance, bool log = false)
+        public ZerionWallet(IZennoPosterProjectModel project, Instance instance, bool log = false, string key = null, string seed = null)
             : base(project, instance, log)
         {
             _extId = "klghhnkeealcohjjanjjdaeeggmfmlpl";
             _fileName = "Zerion1.21.3.crx";
+            _key = KeyCheck(key);
+            _seed = SeedCheck(seed);
+        }
+
+        private string KeyCheck(string key)
+        {
+            if (string.IsNullOrEmpty(key))
+                key = Decrypt(KeyT.secp256k1);
+            if (string.IsNullOrEmpty(key))
+                throw new Exception("emptykey");
+            return key;
+        }
+        private string SeedCheck(string seed)
+        {
+            if (string.IsNullOrEmpty(seed))
+                seed = Decrypt(KeyT.bip39);
+            if (string.IsNullOrEmpty(seed))
+                throw new Exception("emptykey");
+            return seed;
         }
 
         public void ZerionLnch(string fileName = null, bool log = false)
@@ -55,13 +75,13 @@ namespace ZBSolutions
             if (source == "pkey")
             {
                 _instance.HeClick(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\?windowType=tab&appMode=onboarding#/onboarding/import/private-key", "regexp", 0));
-                string key = _sqLoad.KeyEVM();
+                string key = _key;
                 _instance.ActiveTab.FindElementByName("key").SetValue(key, "Full", false);
             }
             else if (source == "seed")
             {
                 _instance.HeClick(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\?windowType=tab&appMode=onboarding#/onboarding/import/mnemonic", "regexp", 0));
-                string seedPhrase = _sqLoad.Seed();
+                string seedPhrase = _seed;
                 int index = 0;
                 foreach (string word in seedPhrase.Split(' '))
                 {
@@ -98,7 +118,7 @@ namespace ZBSolutions
                 _instance.HeClick(("button", "class", "_primary", "regexp", 0));
                 active = _instance.HeGet(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html\\#/wallet-select", "regexp", 0));
             }
-            WalLog(active, log: log);
+            Log(active, log: log);
         }
 
         public string ZerionCheck(bool log = false)
@@ -110,7 +130,7 @@ namespace ZBSolutions
             var balance = _instance.HeGet(("div", "class", "_uitext_", "regexp", 1));
             var pnl = _instance.HeGet(("div", "class", "_uitext_", "regexp", 2));
 
-            WalLog($"{active} {balance} {pnl}", log: log);
+            Log($"{active} {balance} {pnl}", log: log);
             return active;
         }
 
@@ -120,13 +140,13 @@ namespace ZBSolutions
             try
             {
                 var button = _instance.HeGet(("button", "class", "_primary", "regexp", 0));
-                WalLog(button, log: log);
+                Log(button, log: log);
                 _instance.HeClick(("button", "class", "_primary", "regexp", 0));
                 return true;
             }
             catch (Exception ex)
             {
-                WalLog($"!W {ex.Message}", log: log);
+                Log($"!W {ex.Message}", log: log);
                 throw;
             }
         }
