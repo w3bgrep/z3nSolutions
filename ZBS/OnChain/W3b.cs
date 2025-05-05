@@ -40,6 +40,15 @@ namespace ZBSolutions
             if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
             _project.L0g($"[ 💠  {callerName}] [{tolog}] ");
         }
+
+        protected void Log(string address, string balance, string rpc, string contract = null, [CallerMemberName] string callerName = "", bool log = false)
+        {
+            if (!_logShow && !log) return;
+            var stackFrame = new System.Diagnostics.StackFrame(1);
+            var callingMethod = stackFrame.GetMethod();
+            if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
+            _project.L0g($"[ 💠  {callerName}] [{address}] balance {contract} is\n		  [{balance}] by [{rpc}]");
+        }
         private Dictionary<string, string> LoadRPCs(Dictionary<string, string> rpcs = null)
         {
 
@@ -75,7 +84,6 @@ namespace ZBSolutions
 
             if (rpcs == null)
             {
-                Log("default Rpc Loaded");
                 rpcs = rpcs_fallback;
             }          
             return rpcs;   

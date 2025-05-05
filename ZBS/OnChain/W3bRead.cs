@@ -25,14 +25,14 @@ namespace ZBSolutions
             _defRpc = project.Variables["blockchainRPC"].Value;
         }
 
-        private void BalLog(string address, string balance, string rpc, string contract = null, [CallerMemberName] string callerName = "", bool log = false)
-        {
-            if (!_logShow && !log) return;
-            var stackFrame = new System.Diagnostics.StackFrame(1);
-            var callingMethod = stackFrame.GetMethod();
-            if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
-            _project.L0g($"[ ⛽  {callerName}] [{address}] balance {contract} is\n		  [{balance}] by [{rpc}]");
-        }
+        //private void Log(string address, string balance, string rpc, string contract = null, [CallerMemberName] string callerName = "", bool log = false)
+        //{
+        //    if (!_logShow && !log) return;
+        //    var stackFrame = new System.Diagnostics.StackFrame(1);
+        //    var callingMethod = stackFrame.GetMethod();
+        //    if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
+        //    _project.L0g($"[ 💠  {callerName}] [{address}] balance {contract} is\n		  [{balance}] by [{rpc}]");
+        //}
 
         public T GasPrice<T>(string rpc = null, string proxy = null, bool log = false)
         {
@@ -84,7 +84,7 @@ namespace ZBSolutions
             BigInteger gasWei = BigInteger.Parse("0" + hexResultGas, NumberStyles.AllowHexSpecifier);
             decimal gasGwei = (decimal)gasWei / 1000000000m;
 
-            BalLog(rpc, gasGwei.ToString(), "", log: log);
+            Log(rpc, gasGwei.ToString(), "", log: log);
             if (typeof(T) == typeof(string))
                 return (T)Convert.ChangeType(gasGwei.ToString("0.######", CultureInfo.InvariantCulture), typeof(T));
             return (T)Convert.ChangeType(gasGwei, typeof(T));
@@ -130,7 +130,7 @@ namespace ZBSolutions
             decimal balance = (decimal)balanceWei / 1000000000000000000m;
 
             string balanceString = FloorDecimal<string>(balance, int.Parse("18"));
-            BalLog(address, balanceString, rpc, log: log);
+            Log(address, balanceString, rpc, log: log);
             if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(balanceString, typeof(T));
             return (T)Convert.ChangeType(balance, typeof(T));
         }
@@ -177,7 +177,7 @@ namespace ZBSolutions
             decimal balance = (decimal)balanceWei / decimals;
 
             string balanceString = FloorDecimal<string>(balance, int.Parse(tokenDecimal));
-            BalLog(address, balanceString, rpc, tokenContract, log: log);
+            Log(address, balanceString, rpc, tokenContract, log: log);
             if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(balanceString, typeof(T));
             return (T)Convert.ChangeType(balance, typeof(T));
 
@@ -223,7 +223,7 @@ namespace ZBSolutions
             var json = JObject.Parse(response);
             string hexBalance = json["result"]?.ToString()?.TrimStart('0', 'x') ?? "0";
             BigInteger balance = BigInteger.Parse("0" + hexBalance, NumberStyles.AllowHexSpecifier);
-            BalLog(address, balance.ToString(), rpc, tokenContract, log: log);
+            Log(address, balance.ToString(), rpc, tokenContract, log: log);
 
             if (typeof(T) == typeof(string))
                 return (T)Convert.ChangeType(balance.ToString(), typeof(T));
@@ -272,7 +272,7 @@ namespace ZBSolutions
             var json = JObject.Parse(response);
             string hexBalance = json["result"]?.ToString()?.TrimStart('0', 'x') ?? "0";
             BigInteger balance = BigInteger.Parse("0" + hexBalance, NumberStyles.AllowHexSpecifier);
-            BalLog(address, balance.ToString(), rpc, $"[{tokenContract}:id({tokenId})]", log: log);
+            Log(address, balance.ToString(), rpc, $"[{tokenContract}:id({tokenId})]", log: log);
 
             if (typeof(T) == typeof(string))
                 return (T)Convert.ChangeType(balance.ToString(), typeof(T));
@@ -417,7 +417,7 @@ namespace ZBSolutions
             decimal balance = decimal.Parse(tokenDecimal) / 1000000000m;
 
             string balanceString = FloorDecimal<string>(balance, int.Parse(tokenDecimal));
-            BalLog(address, balanceString, rpc, log: log);
+            Log(address, balanceString, rpc, log: log);
 
             if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(balanceString, typeof(T));
             return (T)Convert.ChangeType(balance, typeof(T));
@@ -469,7 +469,7 @@ namespace ZBSolutions
             decimal balance = decimal.Parse(lamports) / (decimal)Math.Pow(10, decimals);
 
             string balanceString = FloorDecimal<string>(balance, decimals);
-            BalLog(address, balanceString, rpc, tokenMint);
+            Log(address, balanceString, rpc, tokenMint);
 
             if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(balanceString, typeof(T));
             return (T)Convert.ChangeType(balance, typeof(T));
@@ -652,7 +652,7 @@ namespace ZBSolutions
             }
 
             string balanceString = FloorDecimal<string>(balance, 8);
-            BalLog(address, balanceString, rpc, log: log);
+            Log(address, balanceString, rpc, log: log);
 
             if (typeof(T) == typeof(string)) return (T)(object)balanceString;
             return (T)Convert.ChangeType(balance, typeof(T));
