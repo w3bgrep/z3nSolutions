@@ -140,7 +140,7 @@ namespace ZBSolutions
         {
             WalLog("Importing MetaMask wallet with private key", log: log);
             var password = _pass;
-            if (string.IsNullOrEmpty(key)) key = _sql.KeyEVM();
+            if (string.IsNullOrEmpty(key)) key = _sqLoad.KeyEVM();
 
             var deadline = DateTime.Now.AddSeconds(60);
             while (!_instance.ActiveTab.URL.Contains("#onboarding/welcome") && DateTime.Now < deadline)
@@ -221,7 +221,7 @@ namespace ZBSolutions
 
         public string MetaMaskChkAddress(bool skipCheck = false, bool log = false)
         {
-            string expectedAddress = _sql.AdrEvm();
+            string expectedAddress = _sqLoad.AdrEvm();
 
             WalLog("Checking MetaMask wallet address", log: log);
 

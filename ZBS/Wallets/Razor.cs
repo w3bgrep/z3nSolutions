@@ -38,7 +38,7 @@ namespace ZBSolutions
         public bool RazorImport(bool log = false)
         {
             WalLog(log: log);
-            var key = _sql.KeySOL();
+            var key = _sqLoad.KeySOL();
             var password = _pass;
 
             _instance.CloseExtraTabs();

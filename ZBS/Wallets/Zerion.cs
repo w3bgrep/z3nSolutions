@@ -55,13 +55,13 @@ namespace ZBSolutions
             if (source == "pkey")
             {
                 _instance.HeClick(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\?windowType=tab&appMode=onboarding#/onboarding/import/private-key", "regexp", 0));
-                string key = _sql.KeyEVM();
+                string key = _sqLoad.KeyEVM();
                 _instance.ActiveTab.FindElementByName("key").SetValue(key, "Full", false);
             }
             else if (source == "seed")
             {
                 _instance.HeClick(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\?windowType=tab&appMode=onboarding#/onboarding/import/mnemonic", "regexp", 0));
-                string seedPhrase = _sql.Seed();
+                string seedPhrase = _sqLoad.Seed();
                 int index = 0;
                 foreach (string word in seedPhrase.Split(' '))
                 {

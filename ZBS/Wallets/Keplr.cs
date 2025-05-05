@@ -165,7 +165,7 @@ namespace ZBSolutions
         {
             WalLog("Importing Keplr wallet with seed phrase", log: log);
             var password = _pass;
-            var seedPhrase = _sql.Seed();
+            var seedPhrase = _sqLoad.Seed();
 
 
             try { _instance.HeGet(("button", "innertext", "Import\\ an\\ existing\\ wallet", "regexp", 0)); }
@@ -214,7 +214,7 @@ namespace ZBSolutions
         {
             WalLog($"Importing Keplr wallet with private key (temp: {temp})", log: log);
             var password = _pass;
-            var key = temp ? new Key().ToHex() : _sql.KeyEVM();
+            var key = temp ? new Key().ToHex() : _sqLoad.KeyEVM();
             var walletName = temp ? "temp" : "pkey";
 
             try { _instance.HeGet(("button", "innertext", "Import\\ an\\ existing\\ wallet", "regexp", 0), deadline: 3); }

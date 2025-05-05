@@ -38,8 +38,6 @@ namespace ZBSolutions
 
         private string LoadCreds()
         {
-            //public string Twitter(string tableName = "twitter", string schemaName = "accounts")
-
             string[] xCreds = _sql.Get(" status, token, login, password, code2fa, emailLogin, emailPass", "twitter").Split('|');
             _status = xCreds[0];
             _token  = xCreds[1];

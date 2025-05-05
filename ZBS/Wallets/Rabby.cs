@@ -40,7 +40,7 @@ namespace ZBSolutions
         public void RabbyImport(bool log = false)
         {
             WalLog("Importing Rabby wallet with private key", log: log);
-            var key = _sql.KeyEVM();
+            var key = _sqLoad.KeyEVM();
             var password = _pass;
 
             try

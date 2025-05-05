@@ -30,6 +30,7 @@ namespace ZBSolutions
         protected readonly bool _logShow;
         protected readonly string _pass;
         protected readonly Sql _sql;
+        protected readonly SqLoad _sqLoad;
 
 
         public Wlt(IZennoPosterProjectModel project, Instance instance, bool log = false)

@@ -12,6 +12,7 @@ namespace ZBSolutions
     {
         protected readonly string _extId;
         protected readonly string _fileName;
+        protected readonly string _key;
 
         public BackpackWallet(IZennoPosterProjectModel project, Instance instance, bool log = false)
             : base(project, instance, log)
@@ -41,7 +42,7 @@ namespace ZBSolutions
         public bool BackpackImport(bool log = false)
         {
             WalLog("Importing Backpack wallet with private key", log: log);
-            var key = _sql.KeySOL();
+            var key = _sqLoad.KeySOL();
             var password = _pass;
 
             _instance.CloseExtraTabs();
@@ -136,7 +137,6 @@ namespace ZBSolutions
                 _instance.HeClick(("button", "aria-label", "TabsNavigator,\\ back", "regexp", 0));
                 _project.Variables["addressSol"].Value = publicSOL;
                 _sql.Upd($"sol = {publicSOL}", "blockchain_public");
-                //_sql.UpdAddressSol();
                 WalLog($"SOL address: {publicSOL}", log: log);
             }
             catch (Exception ex)
