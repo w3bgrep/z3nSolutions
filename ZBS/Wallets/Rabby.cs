@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NBitcoin;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,11 +14,30 @@ namespace ZBSolutions
         protected readonly string _extId;
         protected readonly string _fileName;
 
-        public RabbyWallet(IZennoPosterProjectModel project, Instance instance, bool log = false)
+        public RabbyWallet(IZennoPosterProjectModel project, Instance instance, bool log = false, string key = null, string seed = null)
             : base(project, instance, log)
         {
             _extId = "acmacodkjbdgmoleebolmdjonilkdbch";
             _fileName = "Rabby0.93.24.crx";
+            _key = KeyCheck(key);
+            _seed = SeedCheck(seed);
+        }
+
+        private string KeyCheck(string key)
+        {
+            if (string.IsNullOrEmpty(key))
+                key = Decrypt(KeyT.secp256k1);
+            if (string.IsNullOrEmpty(key))
+                throw new Exception("emptykey");
+            return key;
+        }
+        private string SeedCheck(string seed)
+        {
+            if (string.IsNullOrEmpty(seed))
+                seed = Decrypt(KeyT.bip39);
+            if (string.IsNullOrEmpty(seed))
+                throw new Exception("emptykey");
+            return seed;
         }
 
         public void RabbyLnch(string fileName = null, bool log = false)
@@ -27,7 +47,7 @@ namespace ZBSolutions
             var em = _instance.UseFullMouseEmulation;
             _instance.UseFullMouseEmulation = true;
 
-            WalLog($"Launching Rabby wallet with file {fileName}", log: log);
+            Log($"Launching Rabby wallet with file {fileName}", log: log);
             if (Install(_extId, fileName, log))
                 RabbyImport(log: log);
             else
@@ -39,8 +59,8 @@ namespace ZBSolutions
 
         public void RabbyImport(bool log = false)
         {
-            WalLog("Importing Rabby wallet with private key", log: log);
-            var key = _sqLoad.KeyEVM();
+            Log("Importing Rabby wallet with private key", log: log);
+            var key = _key;
             var password = _pass;
 
             try
@@ -53,25 +73,25 @@ namespace ZBSolutions
                 _instance.HeSet(("confirmPassword", "id"), password);
                 _instance.HeClick(("button", "innertext", "Confirm", "regexp", 0));
                 _instance.HeClick(("button", "innertext", "Get\\ Started", "regexp", 0));
-                WalLog("Successfully imported Rabby wallet", log: log);
+                Log("Successfully imported Rabby wallet", log: log);
             }
             catch (Exception ex)
             {
-                WalLog($"Failed to import Rabby wallet: {ex.Message}", log: log);
+                Log($"Failed to import Rabby wallet: {ex.Message}", log: log);
                 throw;
             }
         }
 
         public void RabbyUnlock(bool log = false)
         {
-            WalLog("Unlocking Rabby wallet", log: log);
+            Log("Unlocking Rabby wallet", log: log);
             var password = _pass;
 
             _instance.UseFullMouseEmulation = true;
 
             while (_instance.ActiveTab.URL == $"chrome-extension://{_extId}/offscreen.html")
             {
-                WalLog("Closing offscreen tab and retrying unlock", log: log);
+                Log("Closing offscreen tab and retrying unlock", log: log);
                 _instance.ActiveTab.Close();
                 _instance.ActiveTab.Navigate($"chrome-extension://{_extId}/index.html#/unlock", "");
             }
@@ -80,11 +100,11 @@ namespace ZBSolutions
             {
                 _instance.HeSet(("password", "id"), password);
                 _instance.HeClick(("button", "innertext", "Unlock", "regexp", 0));
-                WalLog("Wallet unlocked successfully", log: log);
+                Log("Wallet unlocked successfully", log: log);
             }
             catch (Exception ex)
             {
-                WalLog($"Failed to unlock Rabby wallet: {ex.Message}", log: log);
+                Log($"Failed to unlock Rabby wallet: {ex.Message}", log: log);
                 throw;
             }
         }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NBitcoin;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,11 +16,30 @@ namespace ZBSolutions
         protected readonly string _extId;
         protected readonly string _fileName;
 
-        public MetaMaskWallet(IZennoPosterProjectModel project, Instance instance, bool log = false)
+        public MetaMaskWallet(IZennoPosterProjectModel project, Instance instance, bool log = false, string key = null, string seed = null)
             : base(project, instance, log)
         {
             _extId = "nkbihfbeogaeaoehlefnkodbefgpgknn";
             _fileName = "MetaMask11.16.0.crx";
+            _key = KeyCheck(key);
+            _seed = SeedCheck(seed);
+        }
+
+        private string KeyCheck(string key)
+        {
+            if (string.IsNullOrEmpty(key))
+                key = Decrypt(KeyT.secp256k1);
+            if (string.IsNullOrEmpty(key))
+                throw new Exception("emptykey");
+            return key;
+        }
+        private string SeedCheck(string seed)
+        {
+            if (string.IsNullOrEmpty(seed))
+                seed = Decrypt(KeyT.bip39);
+            if (string.IsNullOrEmpty(seed))
+                throw new Exception("emptykey");
+            return seed;
         }
 
         public void MetaMaskLnchold(string key = null, string fileName = null, bool log = false)
@@ -30,12 +50,12 @@ namespace ZBSolutions
             _instance.UseFullMouseEmulation = false;
 
 
-            WalLog($"Launching MetaMask wallet with file {fileName}", log: log);
+            Log($"Launching MetaMask wallet with file {fileName}", log: log);
 
             var extListString = string.Join("\n", _instance.GetAllExtensions().Select(x => $"{x.Name}:{x.Id}"));
             if (!extListString.Contains(_extId))
             {
-                WalLog($"Installing MetaMask extension from {fileName}", log: log);
+                Log($"Installing MetaMask extension from {fileName}", log: log);
                 _instance.InstallCrxExtension($"{_project.Path}.crx\\{fileName}");
                 _instance.CloseExtraTabs();
             }
@@ -55,7 +75,7 @@ namespace ZBSolutions
             }
 
             string address = MetaMaskChkAddress(log: log);
-            WalLog($"MetaMask wallet address: {address}", log: log);
+            Log($"MetaMask wallet address: {address}", log: log);
 
             _instance.UseFullMouseEmulation = em;
         }
@@ -68,7 +88,7 @@ namespace ZBSolutions
             var em = _instance.UseFullMouseEmulation;
             _instance.UseFullMouseEmulation = false;
 
-            WalLog($"Launching MM wallet with file {fileName}", log: log);
+            Log($"Launching MM wallet with file {fileName}", log: log);
             if (Install(_extId, fileName, log))
                 MetaMaskImport(key, log: log);
             else
@@ -116,31 +136,31 @@ namespace ZBSolutions
             {
                 if (!_instance.ActiveTab.FindElementByAttribute("button", "data-testid", "account-options-menu-button", "regexp", 0).IsVoid)
                 {
-                    WalLog("Wallet is on main page", log: log);
+                    Log("Wallet is on main page", log: log);
                     return "mainPage";
                 }
                 else if (!_instance.ActiveTab.FindElementByAttribute("h2", "innertext", "Let\'s\\ get\\ started", "regexp", 0).IsVoid)
                 {
-                    WalLog("Wallet is on initialization page", log: log);
+                    Log("Wallet is on initialization page", log: log);
                     return "initPage";
                 }
                 else if (!_instance.ActiveTab.FindElementByAttribute("button", "data-testid", "unlock-submit", "regexp", 0).IsVoid)
                 {
-                    WalLog("Wallet is on password page", log: log);
+                    Log("Wallet is on password page", log: log);
                     return "passwordPage";
                 }
                 Thread.Sleep(1000);
             }
 
-            WalLog("Timeout waiting for wallet state", log: log);
+            Log("Timeout waiting for wallet state", log: log);
             throw new Exception("Timeout waiting for MetaMask wallet state");
         }
 
         public void MetaMaskImport(string key = null, bool log = false)
         {
-            WalLog("Importing MetaMask wallet with private key", log: log);
+            Log("Importing MetaMask wallet with private key", log: log);
             var password = _pass;
-            if (string.IsNullOrEmpty(key)) key = _sqLoad.KeyEVM();
+            if (string.IsNullOrEmpty(key)) key = _key;
 
             var deadline = DateTime.Now.AddSeconds(60);
             while (!_instance.ActiveTab.URL.Contains("#onboarding/welcome") && DateTime.Now < deadline)
@@ -151,7 +171,7 @@ namespace ZBSolutions
             }
             if (DateTime.Now >= deadline)
             {
-                WalLog("Timeout waiting for onboarding page", log: log);
+                Log("Timeout waiting for onboarding page", log: log);
                 throw new Exception("Timeout waiting for MetaMask onboarding page");
             }
 
@@ -184,18 +204,18 @@ namespace ZBSolutions
                 _instance.HeClick(("span", "style", "mask-image:\\ url\\(\"./images/icons/import.svg\"\\);", "regexp", 0), delay: 0);
                 _instance.HeSet(("private-key-box", "id"), key);
                 _instance.HeClick(("button", "data-testid", "import-account-confirm-button", "regexp", 0), delay: 0);
-                WalLog("Successfully imported MetaMask wallet", log: log);
+                Log("Successfully imported MetaMask wallet", log: log);
             }
             catch (Exception ex)
             {
-                WalLog($"Failed to import MetaMask wallet: {ex.Message}", log: log);
+                Log($"Failed to import MetaMask wallet: {ex.Message}", log: log);
                 throw;
             }
         }
 
         public void MetaMaskUnlock(bool log = false)
         {
-            WalLog("Unlocking MetaMask wallet", log: log);
+            Log("Unlocking MetaMask wallet", log: log);
             var password = _pass;
             if (!_instance.ActiveTab.URL.Contains(_extId)) _instance.ActiveTab.Navigate($"chrome-extension://{_extId}/home.html", "");
             try
@@ -207,23 +227,22 @@ namespace ZBSolutions
                 {
                     _instance.CloseAllTabs();
                     _instance.UninstallExtension(_extId);
-                    WalLog("Incorrect password provided", log: log);
+                    Log("Incorrect password provided", log: log);
                     throw new Exception("Wrong password for MetaMask");
                 }
-                WalLog("Wallet unlocked successfully", log: log);
+                Log("Wallet unlocked successfully", log: log);
             }
             catch (Exception ex)
             {
-                WalLog($"Failed to unlock MetaMask wallet: {ex.Message}", log: log);
+                Log($"Failed to unlock MetaMask wallet: {ex.Message}", log: log);
                 throw;
             }
         }
 
         public string MetaMaskChkAddress(bool skipCheck = false, bool log = false)
         {
-            string expectedAddress = _sqLoad.AdrEvm();
-
-            WalLog("Checking MetaMask wallet address", log: log);
+            string expectedAddress = new W3b(_project).Address("evm");
+            Log("Checking MetaMask wallet address", log: log);
 
             try
             {
@@ -241,23 +260,23 @@ namespace ZBSolutions
                 {
                     _instance.CloseAllTabs();
                     _instance.UninstallExtension(_extId);
-                    WalLog("Incorrect address detected", log: log);
+                    Log("Incorrect address detected", log: log);
                     throw new Exception("Wrong address for MetaMask");
                 }
 
-                WalLog($"Retrieved address: {address}", log: log);
+                Log($"Retrieved address: {address}", log: log);
                 return address;
             }
             catch (Exception ex)
             {
-                WalLog($"Failed to check MetaMask address: {ex.Message}", log: log);
+                Log($"Failed to check MetaMask address: {ex.Message}", log: log);
                 throw;
             }
         }
 
         public string MetaMaskConfirm(bool log = false)
         {
-            WalLog("Confirming MetaMask transaction", log: log);
+            Log("Confirming MetaMask transaction", log: log);
             var me = _instance.UseFullMouseEmulation;
             _instance.UseFullMouseEmulation = false;
             var deadline = DateTime.Now.AddSeconds(20);
@@ -266,12 +285,12 @@ namespace ZBSolutions
             {
                 while (!_instance.ActiveTab.URL.Contains(_extId) && DateTime.Now < deadline)
                 {
-                    WalLog($"Waiting for MetaMask URL, current: {_instance.ActiveTab.URL}", log: log);
+                    Log($"Waiting for MetaMask URL, current: {_instance.ActiveTab.URL}", log: log);
                     Thread.Sleep(1000);
                 }
                 if (DateTime.Now >= deadline)
                 {
-                    WalLog("Timeout waiting for MetaMask URL", log: log);
+                    Log("Timeout waiting for MetaMask URL", log: log);
                     throw new Exception("Timeout waiting for MetaMask URL");
                 }
 
@@ -282,14 +301,14 @@ namespace ZBSolutions
                 var detail = _instance.ActiveTab.FindElementByAttribute("div", "class", "transaction-detail", "regexp", 0);
 
                 if (!simulation.IsVoid)
-                    WalLog($"Simulation details: {Regex.Replace(simulation.GetAttribute("innertext").Trim(), @"\s+", " ")}", log: log);
+                    Log($"Simulation details: {Regex.Replace(simulation.GetAttribute("innertext").Trim(), @"\s+", " ")}", log: log);
                 if (!detail.IsVoid)
-                    WalLog($"Transaction details: {Regex.Replace(detail.GetAttribute("innertext").Trim(), @"\s+", " ")}", log: log);
+                    Log($"Transaction details: {Regex.Replace(detail.GetAttribute("innertext").Trim(), @"\s+", " ")}", log: log);
 
                 if (!alert.IsVoid)
                 {
                     var error = Regex.Replace(alert.GetAttribute("innertext").Trim(), @"\s+", " ");
-                    WalLog($"Alert detected: {error}", log: log);
+                    Log($"Alert detected: {error}", log: log);
                     while (!_instance.ActiveTab.FindElementByAttribute("button", "data-testid", "page-container-footer-cancel", "regexp", 0).IsVoid)
                     {
                         _instance.ActiveTab.Touch.SwipeBetween(600, 400, 600, 300);
@@ -303,22 +322,22 @@ namespace ZBSolutions
                     try
                     {
                         _instance.HeClick(("button", "class", "button btn--rounded btn-primary", "regexp", 0), deadline: 3);
-                        WalLog("Confirm button clicked", log: log);
+                        Log("Confirm button clicked", log: log);
                         Thread.Sleep(2000);
                     }
                     catch (Exception ex)
                     {
-                        WalLog($"Failed to click confirm button: {ex.Message}", log: log);
+                        Log($"Failed to click confirm button: {ex.Message}", log: log);
                     }
                 }
 
                 if (DateTime.Now >= deadline)
                 {
-                    WalLog("Timeout during MetaMask interaction", log: log);
+                    Log("Timeout during MetaMask interaction", log: log);
                     throw new Exception("Timeout exceeded while interacting with MetaMask");
                 }
 
-                WalLog("MetaMask transaction confirmed", log: log);
+                Log("MetaMask transaction confirmed", log: log);
                 return "done";
             }
             finally

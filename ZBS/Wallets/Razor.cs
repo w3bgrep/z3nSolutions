@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NBitcoin;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,11 +14,30 @@ namespace ZBSolutions
         protected readonly string _extId;
         protected readonly string _fileName;
 
-        public RazorWallet(IZennoPosterProjectModel project, Instance instance, bool log = false)
+        public RazorWallet(IZennoPosterProjectModel project, Instance instance, bool log = false, string key = null, string seed = null)
             : base(project, instance, log)
         {
             _extId = "fdcnegogpncmfejlfnffnofpngdiejii";
             _fileName = "Razor2.0.9.crx";
+            _key = KeyCheck(key);
+            _seed = SeedCheck(seed);
+        }
+
+        private string KeyCheck(string key)
+        {
+            if (string.IsNullOrEmpty(key))
+                key = Decrypt(KeyT.secp256k1);
+            if (string.IsNullOrEmpty(key))
+                throw new Exception("emptykey");
+            return key;
+        }
+        private string SeedCheck(string seed)
+        {
+            if (string.IsNullOrEmpty(seed))
+                seed = Decrypt(KeyT.bip39);
+            if (string.IsNullOrEmpty(seed))
+                throw new Exception("emptykey");
+            return seed;
         }
 
         public void RazorLnch(string fileName = null, bool log = false)
@@ -27,7 +47,7 @@ namespace ZBSolutions
             var em = _instance.UseFullMouseEmulation;
             _instance.UseFullMouseEmulation = false;
 
-            WalLog(log: log);
+            Log(log: log);
             if (Install(_extId, fileName, log)) RazorImport(log: log);
             else RazorUnlock(log: log);
 
@@ -37,8 +57,8 @@ namespace ZBSolutions
 
         public bool RazorImport(bool log = false)
         {
-            WalLog(log: log);
-            var key = _sqLoad.KeySOL();
+            Log(log: log);
+            var key = _key;
             var password = _pass;
 
             _instance.CloseExtraTabs();
@@ -68,7 +88,7 @@ namespace ZBSolutions
 
         public void RazorUnlock(bool log = false)
         {
-            WalLog(log: log);
+            Log(log: log);
             var password = _pass;
 
             try
@@ -95,7 +115,7 @@ namespace ZBSolutions
 
         public void RazorCheck(bool log = false)
         {
-            WalLog(log: log);
+            Log(log: log);
 
             if (_instance.ActiveTab.URL != $"chrome-extension://{_extId}/index.html#/overview")
                 _instance.ActiveTab.Navigate($"chrome-extension://{_extId}/index.html#/overview", "");
@@ -105,7 +125,7 @@ namespace ZBSolutions
             var balance = _instance.HeGet(("div", "class", "_uitext_", "regexp", 1)) ?? "0";
             var pnl = _instance.HeGet(("div", "class", "_uitext_", "regexp", 2)) ?? "0";
 
-            WalLog($"Active: {active}, Balance: {balance}, PnL: {pnl}", log: log);
+            Log($"Active: {active}, Balance: {balance}, PnL: {pnl}", log: log);
         }
     }
 }

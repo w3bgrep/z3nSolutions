@@ -12,13 +12,22 @@ namespace ZBSolutions
     {
         protected readonly string _extId;
         protected readonly string _fileName;
-        protected readonly string _key;
 
-        public BackpackWallet(IZennoPosterProjectModel project, Instance instance, bool log = false)
+        public BackpackWallet(IZennoPosterProjectModel project, Instance instance, bool log = false,string key = null)
             : base(project, instance, log)
         {
             _extId = "aflkmfhebedbjioipglgcbcmnbpgliof";
             _fileName = "Backpack0.10.94.crx";
+            _key = KeyCheck(key);
+        }
+
+        string KeyCheck(string key)
+        {
+            if (string.IsNullOrEmpty(key)) 
+                key = Decrypt(KeyT.base58);
+            if (string.IsNullOrEmpty(key))
+                throw new Exception("emptykey");
+            return key;
         }
 
         public void BackpackLnch(string fileName = null, bool log = false)
@@ -28,7 +37,7 @@ namespace ZBSolutions
             var em = _instance.UseFullMouseEmulation;
             _instance.UseFullMouseEmulation = false;
 
-            WalLog($"Launching Backpack wallet with file {fileName}", log: log);
+            Log($"Launching Backpack wallet with file {fileName}", log: log);
             if (Install(_extId, fileName, log))
                 BackpackImport(log: log);
             else
@@ -41,8 +50,8 @@ namespace ZBSolutions
 
         public bool BackpackImport(bool log = false)
         {
-            WalLog("Importing Backpack wallet with private key", log: log);
-            var key = _sqLoad.KeySOL();
+            Log("Importing Backpack wallet with private key", log: log);
+            var key = _key;
             var password = _pass;
 
             _instance.CloseExtraTabs();
@@ -52,7 +61,7 @@ namespace ZBSolutions
             {
                 if (!_instance.ActiveTab.FindElementByAttribute("p", "innertext", "Already\\ setup", "regexp", 0).IsVoid)
                 {
-                    WalLog("Wallet already set up, skipping import", log: log);
+                    Log("Wallet already set up, skipping import", log: log);
                     return false;
                 }
                 else if (!_instance.ActiveTab.FindElementByAttribute("button", "innertext", "Import\\ Wallet", "regexp", 0).IsVoid)
@@ -67,7 +76,7 @@ namespace ZBSolutions
                     _instance.HeClick(("input:checkbox", "class", "PrivateSwitchBase-input\\ ", "regexp", 0));
                     _instance.HeClick(("button", "innertext", "Next", "regexp", 0));
                     _instance.HeClick(("button", "innertext", "Open\\ Backpack", "regexp", 0));
-                    WalLog("Successfully imported Backpack wallet", log: log);
+                    Log("Successfully imported Backpack wallet", log: log);
                     return true;
                 }
             }
@@ -75,7 +84,7 @@ namespace ZBSolutions
 
         public void BackpackUnlock(bool log = false)
         {
-            WalLog("Unlocking Backpack wallet", log: log);
+            Log("Unlocking Backpack wallet", log: log);
             var password = _pass;
 
 
@@ -88,7 +97,7 @@ namespace ZBSolutions
 
             if (!_instance.ActiveTab.FindElementByAttribute("path", "d", "M12 5v14", "text", 0).IsVoid)
             {
-                WalLog("Wallet already unlocked", log: log);
+                Log("Wallet already unlocked", log: log);
                 return;
             }
 
@@ -109,11 +118,11 @@ namespace ZBSolutions
                 _instance.HeClick(("button", "innertext", "Unlock", "regexp", 0));
 
 
-                WalLog("Wallet unlocked successfully", log: log);
+                Log("Wallet unlocked successfully", log: log);
             }
             catch (Exception ex)
             {
-                WalLog($"!E Failed to unlock Keplr wallet: {ex.Message}", log: log);
+                Log($"!E Failed to unlock Keplr wallet: {ex.Message}", log: log);
                 //throw;
                 _instance.CloseAllTabs();
                 goto unlock;
@@ -124,7 +133,7 @@ namespace ZBSolutions
 
         public void BackpackCheck(bool log = false)
         {
-            WalLog("Checking Backpack wallet address", log: log);
+            Log("Checking Backpack wallet address", log: log);
 
             _instance.CloseExtraTabs();
 
@@ -137,24 +146,24 @@ namespace ZBSolutions
                 _instance.HeClick(("button", "aria-label", "TabsNavigator,\\ back", "regexp", 0));
                 _project.Variables["addressSol"].Value = publicSOL;
                 _sql.Upd($"sol = {publicSOL}", "blockchain_public");
-                WalLog($"SOL address: {publicSOL}", log: log);
+                Log($"SOL address: {publicSOL}", log: log);
             }
             catch (Exception ex)
             {
-                WalLog($"Failed to check address: {ex.Message}", log: log);
+                Log($"Failed to check address: {ex.Message}", log: log);
                 throw;
             }
         }
 
         public void BackpackApprove(bool log = false)
         {
-            WalLog("Approving Backpack wallet action", log: log);
+            Log("Approving Backpack wallet action", log: log);
 
             try
             {
                 _instance.HeClick(("div", "innertext", "Approve", "regexp", 0), "last");
                 _instance.CloseExtraTabs();
-                WalLog("Action approved successfully", log: log);
+                Log("Action approved successfully", log: log);
             }
             catch
             {
@@ -162,7 +171,7 @@ namespace ZBSolutions
                 _instance.HeClick(("button", "innertext", "Unlock", "regexp", 0));
                 _instance.HeClick(("div", "innertext", "Approve", "regexp", 0), "last");
                 _instance.CloseExtraTabs();
-                WalLog("Action approved after unlocking", log: log);
+                Log("Action approved after unlocking", log: log);
             }
         }
     }

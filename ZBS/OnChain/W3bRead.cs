@@ -16,8 +16,8 @@ namespace ZBSolutions
 {
     public class W3bRead : W3b
     {
-        private readonly string _adrEvm;
-        private readonly string _defRpc;
+        public readonly string _adrEvm;
+        public readonly string _defRpc;
         public W3bRead(IZennoPosterProjectModel project, bool log = false)
         : base(project, log)
         {

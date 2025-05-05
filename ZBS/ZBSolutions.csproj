@@ -82,7 +82,7 @@
   <ItemGroup>
     <Compile Include="OnChain\W3bWrite.cs" />
     <Compile Include="Sql\TableSvc.cs" />
-    <Compile Include="W3bRead.cs" />
+    <Compile Include="OnChain\W3bRead.cs" />
     <Compile Include="Wallets\Manager.cs" />
     <Compile Include="Wallets\Keplr.cs" />
     <Compile Include="Wallets\Rabby.cs" />

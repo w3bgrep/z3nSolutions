@@ -13,18 +13,31 @@ using ZennoLab.InterfacesLibrary.ProjectModel;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using Nethereum.Model;
+using static Leaf.xNet.Services.Cloudflare.CloudflareBypass;
 
 namespace ZBSolutions
 {
+
+    public enum GZto
+    {
+        Sepolia,
+        Soneum,
+        BNB,
+        Gravity,
+        Zero,
+    }
+
     public class W3bWrite : W3b
     {
         private readonly string _key;
         private readonly string _adrEvm;
+        private readonly W3bRead _read;
         public W3bWrite(IZennoPosterProjectModel project,string key = null, bool log = false)
         : base(project, log)
         {
             _key = Key(key);
-            _adrEvm = Address("evm");//new Sql(project).AdrEvm();
+            _adrEvm = Address("evm");
+            _read = new W3bRead(project);
         }
 
         private string Key(string key = null) 
@@ -168,11 +181,34 @@ namespace ZBSolutions
         }
 
 
-        public string GZ(string chainTo, decimal value, string rpc = null, bool log = false) //refuel GazZip
+        public string GzTarget(GZto destination, bool log = false)
+        {
+            // 0x010066 Sepolia | 0x01019e Soneum | 0x01000e BNB | 0x0100f0 Gravity | 0x010169 Zero
+
+            switch (destination)
+            {
+                case GZto.Sepolia:
+                    return "0x010066";
+                case GZto.Soneum:
+                    return "0x01019e";
+                case GZto.BNB:
+                    return "0x01000e";
+                case GZto.Gravity:
+                    return "0x0100f0";
+                case GZto.Zero:
+                    return "0x010169";
+
+                default:
+                    return "null";
+            }
+
+        }
+
+        public string GZ(string chainTo, decimal value, string rpc = null, bool log = false) 
 
         {
 
-            // 0x010066 Sepolia | 0x01019e Soneum | 0x01000e BNB | 0x0100f0 Gravity | 0x010169 Zero
+             // 0x010066 Sepolia | 0x01019e Soneum | 0x01000e BNB | 0x0100f0 Gravity | 0x010169 Zero
             string txHash = null;
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             Random rnd = new Random();
@@ -195,14 +231,14 @@ namespace ZBSolutions
                 foreach (string RPC in chainList.Split(','))
                 {
                     rpc = RPC.Trim();
-                    var native = NativeEVM<decimal>(rpc);
+                    var native = _read.NativeEVM<decimal>(rpc);
                     var required = value + 0.00015m;
                     if (native > required)
                     {
                         _project.L0g($"CHOSEN: rpc:[{rpc}] native:[{native}]");
                         found = true; break;
                     }
-                    if (log) _log.Send($"rpc:[{rpc}] native:[{native}] lower than [{required}]");
+                    if (log) Log($"rpc:[{rpc}] native:[{native}] lower than [{required}]");
                     Thread.Sleep(1000);
                 }
 
@@ -215,16 +251,13 @@ namespace ZBSolutions
 
             else
             {
-                var native = NativeEVM<decimal>(rpc);
-                if (log) _log.Send($"rpc:[{rpc}] native:[{native}]");
+                var native = _read.NativeEVM<decimal>(rpc);
+                if (log) Log($"rpc:[{rpc}] native:[{native}]");
                 if (native < value + 0.0002m)
                 {
                     return $"fail: no balance over {value}ETH found on {rpc}";
                 }
             }
-
-            //string functionName = "transfer";// withdraw
-
             string[] types = { };
             object[] values = { };
 
@@ -234,25 +267,25 @@ namespace ZBSolutions
                 string dataEncoded = chainTo;//0x010066 for Sepolia | 0x01019e Soneum | 0x01000e BNB
                 txHash = Send1559(
                     rpc,
-                    "0x391E7C679d29bD940d63be94AD22A25d25b5A604",//gazZip
+                    "0x391E7C679d29bD940d63be94AD22A25d25b5A604",//gazZipContract
                     dataEncoded,
                     value,  // value в ETH
                     key,
-                    3          // speedup %
+                    3   // speedup %
                 );
                 Thread.Sleep(1000);
                 _project.Variables["blockchainHash"].Value = txHash;
             }
             catch (Exception ex) { _project.SendWarningToLog($"{ex.Message}", true); throw; }
 
-            if (log) _log.Send(txHash);
-            WaitTransaction(rpc, txHash);
+            if (log) Log(txHash);
+            _read.WaitTransaction(rpc, txHash);
             return txHash;
         }
         public string Approve(string contract, string spender, string amount, string rpc = "")
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            if (string.IsNullOrEmpty(rpc)) rpc = _defRpc;
+            if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
             string key = _sql.KeyEVM();
 
             string abi = @"[{""inputs"":[{""name"":""spender"",""type"":""address""},{""name"":""amount"",""type"":""uint256""}],""name"":""approve"",""outputs"":[{""name"":"""",""type"":""bool""}],""stateMutability"":""nonpayable"",""type"":""function""}]";
@@ -303,23 +336,23 @@ namespace ZBSolutions
                 }
                 catch (Exception ex)
                 {
-                    _log.Send($"!W:{ex.Message}");
+                    Log($"!W:{ex.Message}");
                 }
 
             }
             catch (Exception ex)
             {
-                _log.Send($"!W:{ex.Message}");
+                Log($"!W:{ex.Message}");
                 throw;
             }
 
-            _log.Send($"[APPROVE] {contract} for spender {spender} with amount {amount}...");
+            Log($"[APPROVE] {contract} for spender {spender} with amount {amount}...");
             return txHash;
         }
         public string WrapNative(string contract, decimal value, string rpc = "")
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            if (string.IsNullOrEmpty(rpc)) rpc = _defRpc;
+            if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
             string key = _sql.KeyEVM();
 
             string abi = @"[{""inputs"":[],""name"":""deposit"",""outputs"":[],""stateMutability"":""payable"",""type"":""function""}]";
@@ -345,22 +378,22 @@ namespace ZBSolutions
                 }
                 catch (Exception ex)
                 {
-                    _log.Send($"!W:{ex.Message}");
+                    Log($"!W:{ex.Message}");
                 }
             }
             catch (Exception ex)
             {
-                _log.Send($"!W:{ex.Message}");
+                Log($"!W:{ex.Message}");
                 throw;
             }
 
-            _log.Send($"[WRAP] {value} native to {contract}...");
+            Log($"[WRAP] {value} native to {contract}...");
             return txHash;
         }
         public string SendNative(string to, decimal amount, string rpc = "")
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            if (string.IsNullOrEmpty(rpc)) rpc = _defRpc;
+            if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
             string key = _sql.KeyEVM();
 
             string txHash = null;
@@ -381,18 +414,19 @@ namespace ZBSolutions
                 }
                 catch (Exception ex)
                 {
-                    _log.Send($"!W:{ex.Message}");
+                    Log($"!W:{ex.Message}");
                 }
             }
             catch (Exception ex)
             {
-                _log.Send($"!W:{ex.Message}");
+                Log($"!W:{ex.Message}");
                 throw;
             }
 
-            _log.Send($"[SEND_NATIVE] {amount} to {to}...");
+            Log($"[SEND_NATIVE] {amount} to {to}...");
             return txHash;
         }
+
 
 
     }
