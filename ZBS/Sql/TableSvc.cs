@@ -8,7 +8,7 @@ using ZennoLab.InterfacesLibrary.ProjectModel;
 
 namespace ZBSolutions
 {
-    internal class TableSvc : Sql
+    public class TableSvc : Sql
     {
 
         private readonly IZennoPosterProjectModel _project;
