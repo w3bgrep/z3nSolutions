@@ -891,7 +891,6 @@ namespace ZBSolutions
             _sql.MkTable(tableStructure, table, log:true);
             //SQL.W3MakeTable(_project, tableStructure, table); // Используем полное имя с схемой
 
-            // Обработка адресов
             string[] lines = addressInput.Text.Trim().Split('\n');
             int lineCount = 0;
 

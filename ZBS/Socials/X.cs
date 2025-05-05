@@ -119,8 +119,6 @@ namespace ZBSolutions
         }
         private string XgetToken()
         {
-            //var cook = new Cookies(_project, _instance);
-            //var cookJson = cook.Get(".");
             var cookJson = _instance.GetCookies(_project,".");
             JArray toParse = JArray.Parse(cookJson);
             int i = 0; var token = "";

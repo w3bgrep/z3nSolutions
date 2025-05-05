@@ -10,13 +10,13 @@ using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 namespace ZBSolutions
 {
-    public class wallet
+    public class WebWallet
     {
         private readonly IZennoPosterProjectModel _project;
         private readonly Instance _instance;
         private readonly bool _log;
 
-        public wallet(IZennoPosterProjectModel project, Instance instance, bool log = false)
+        public WebWallet(IZennoPosterProjectModel project, Instance instance, bool log = false)
         {
             _project = project;
             _instance = instance;

@@ -2,7 +2,7 @@
 using Nethereum.ABI.ABIDeserialisation;
 using Nethereum.ABI.Decoders;
 using Nethereum.ABI;
-using Nethereum.HdWallet;
+//using Nethereum.HdWallet;
 using Nethereum.Hex.HexConvertors.Extensions;
 using Nethereum.Hex.HexTypes;
 using Nethereum.RPC.Eth.DTOs;
@@ -200,7 +200,7 @@ namespace ZBSolutions
             string password = "";
             var accounts = new Dictionary<string, string>();
 
-            var wallet = new Wallet(words, password);
+            var wallet = new Nethereum.HdWallet.Wallet(words, password);
 
             for (int i = 0; i < amount; i++)
             {
