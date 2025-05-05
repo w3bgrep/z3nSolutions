@@ -62,7 +62,6 @@ namespace ZBSolutions
                 { "avalanche", "https://avalanche-c-chain.publicnode.com" },
                 { "bsc", "https://bsc-rpc.publicnode.com" },
                 { "gravity", "https://rpc.gravity.xyz" },
-                { "fantom", "https://rpc.fantom.network" },
                 { "opbnb", "https://opbnb-mainnet-rpc.bnbchain.org" },
                 { "polygon", "https://polygon-rpc.com" },
                 // Testnets
