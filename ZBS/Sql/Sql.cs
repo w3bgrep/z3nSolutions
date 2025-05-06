@@ -12,7 +12,7 @@ namespace ZBSolutions
     {
         private readonly IZennoPosterProjectModel _project;
         private readonly L0g _log;
-        private readonly string _dbMode;
+        protected readonly string _dbMode;
         private readonly bool _logShow;
 
         public Sql(IZennoPosterProjectModel project, bool log = false)

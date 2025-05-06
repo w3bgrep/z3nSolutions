@@ -83,7 +83,6 @@ namespace ZBSolutions
                 {"proxy", defaultColumn}
             };
             _sql.MkTable(tableStructure, tableName, false, schemaName: "");
-            //_sql.MkTable(tableStructure, tableName, false, schemaName: "");
             if (log) _project.SendInfoToLog($"Table {tableName} created", true);
 
             // Twitter

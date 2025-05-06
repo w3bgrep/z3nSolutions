@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using ZennoLab.InterfacesLibrary.ProjectModel;
+using ZXing.QrCode.Internal;
 
 namespace ZBSolutions
 {
@@ -141,13 +142,46 @@ namespace ZBSolutions
                 }
             }
         }
-
-
         public void MkTable(Dictionary<string, string> tableStructure, bool prune = false)
         {
-            CreateIfNotExist(tableStructure);
-            ManageColumns(tableStructure, prune: prune);
-            FillInitial(_project.Variables["rangeEnd"].Value);
+            if (_dbMode == "PostgreSQL")
+            {
+                CreateIfNotExist(tableStructure);
+                ManageColumns(tableStructure, prune: prune);
+                FillInitial(_project.Variables["rangeEnd"].Value);
+            }
+            else
+            {
+                string tableExists = DbQ($"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='{_tableName}';");
+                if (tableExists.Trim() == "0")
+                {
+                    string createTableQuery = $"CREATE TABLE {_tableName} (";
+                    createTableQuery += string.Join(", ", tableStructure.Select(kvp => $"{kvp.Key} {kvp.Value}"));
+                    createTableQuery += ");";
+                    DbQ(createTableQuery);
+                }
+                else
+                {
+                    string[] currentColumns = DbQ($"SELECT name FROM pragma_table_info('{_tableName}');").Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+                    if (prune)
+                    {
+                        var columnsToRemove = currentColumns.Where(col => !tableStructure.ContainsKey(col)).ToList();
+                        foreach (var column in columnsToRemove) DbQ($"ALTER TABLE {_tableName} DROP COLUMN {column};");
+                    }
+                    foreach (var column in tableStructure)
+                    {
+                        string resp = DbQ($"SELECT COUNT(*) FROM pragma_table_info('{_tableName}') WHERE name='{column.Key}';");
+                        if (resp.Trim() == "0") DbQ($"ALTER TABLE {_tableName} ADD COLUMN {column.Key} {column.Value};");
+                    }
+                }
+
+                if (tableStructure.ContainsKey("acc0") && !string.IsNullOrEmpty(_project.Variables["rangeEnd"].Value))
+                {
+                    for (int currentAcc0 = 1; currentAcc0 <= int.Parse(_project.Variables["rangeEnd"].Value); currentAcc0++)
+                    { DbQ($"INSERT OR IGNORE INTO {_tableName} (acc0) VALUES ('{currentAcc0}');"); }
+                }
+            }
+
         }
         public Dictionary<string, string> CreateTableStructure(string[] staticColumns, string dynamicToDo = null, string defaultType = "TEXT DEFAULT ''")
         {
