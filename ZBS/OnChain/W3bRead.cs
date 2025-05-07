@@ -4,10 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using System.Text.RegularExpressions;
@@ -25,14 +22,6 @@ namespace ZBSolutions
             _defRpc = project.Variables["blockchainRPC"].Value;
         }
 
-        //private void Log(string address, string balance, string rpc, string contract = null, [CallerMemberName] string callerName = "", bool log = false)
-        //{
-        //    if (!_logShow && !log) return;
-        //    var stackFrame = new System.Diagnostics.StackFrame(1);
-        //    var callingMethod = stackFrame.GetMethod();
-        //    if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
-        //    _project.L0g($"[ 💠  {callerName}] [{address}] balance {contract} is\n		  [{balance}] by [{rpc}]");
-        //}
 
         public T GasPrice<T>(string rpc = null, string proxy = null, bool log = false)
         {
