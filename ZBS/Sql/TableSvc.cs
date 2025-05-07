@@ -162,23 +162,27 @@ namespace ZBSolutions
                 }
                 else
                 {
+
                     string[] currentColumns = DbQ($"SELECT name FROM pragma_table_info('{_tableName}');").Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+                    
                     if (prune)
                     {
                         var columnsToRemove = currentColumns.Where(col => !tableStructure.ContainsKey(col)).ToList();
                         foreach (var column in columnsToRemove) DbQ($"ALTER TABLE {_tableName} DROP COLUMN {column};");
                     }
+
                     foreach (var column in tableStructure)
                     {
                         string resp = DbQ($"SELECT COUNT(*) FROM pragma_table_info('{_tableName}') WHERE name='{column.Key}';");
                         if (resp.Trim() == "0") DbQ($"ALTER TABLE {_tableName} ADD COLUMN {column.Key} {column.Value};");
                     }
-                }
 
-                if (tableStructure.ContainsKey("acc0") && !string.IsNullOrEmpty(_project.Variables["rangeEnd"].Value))
-                {
-                    for (int currentAcc0 = 1; currentAcc0 <= int.Parse(_project.Variables["rangeEnd"].Value); currentAcc0++)
-                    { DbQ($"INSERT OR IGNORE INTO {_tableName} (acc0) VALUES ('{currentAcc0}');"); }
+
+                    if (tableStructure.ContainsKey("acc0") && !string.IsNullOrEmpty(_project.Variables["rangeEnd"].Value))
+                    {
+                        for (int currentAcc0 = 1; currentAcc0 <= int.Parse(_project.Variables["rangeEnd"].Value); currentAcc0++)
+                        { DbQ($"INSERT OR IGNORE INTO {_tableName} (acc0) VALUES ('{currentAcc0}');"); }
+                    }
                 }
             }
 
