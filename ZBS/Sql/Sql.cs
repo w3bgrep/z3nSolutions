@@ -92,13 +92,19 @@ namespace ZBSolutions
             else throw new Exception($"unknown DBmode: {dbMode}");
             return;
         }
-        public void Upd(string toUpd, string tableName = null, bool log = false, bool throwOnEx = false)
+        public void Upd(string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true)
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
             if (_dbMode == "PostgreSQL" && !tableName.Contains(".")) tableName = "accounts." + tableName;
 
-            var Q = $@"UPDATE {tableName} SET {toUpd.Trim().TrimEnd(',')}, last = '{DateTime.UtcNow.ToString("MM-ddTHH:mm")}' WHERE acc0 = {_project.Variables["acc0"].Value};";
-            DbQ(Q, log: log, throwOnEx: throwOnEx);
+            string[] keywords = { "blockchain", "browser", "cex_deps", "native", "profile", "settings" };
+            if (keywords.Any(keyword => tableName.Contains(keyword))) last = false;
+            toUpd = toUpd.Trim().TrimEnd(',');
+
+            if (last) toUpd = toUpd + $", last = '{DateTime.UtcNow.ToString("MM-ddTHH:mm")}'";
+
+            DbQ($@"UPDATE {tableName} SET {toUpd} WHERE acc0 = {_project.Variables["acc0"].Value};", log: log, throwOnEx: throwOnEx);
+
         }
         public string Get(string toGet, string tableName = null, bool log = false, bool throwOnEx = false)
         {

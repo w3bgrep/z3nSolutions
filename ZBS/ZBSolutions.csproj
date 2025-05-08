@@ -95,7 +95,7 @@
     <Compile Include="Starter.cs" />
     <Compile Include="StaticTools\Converter.cs" />
     <Compile Include="StaticTools\Crypto.cs" />
-    <Compile Include="DataImporter.cs" />
+    <Compile Include="Sql\DataImporter.cs" />
     <Compile Include="Socials\Discord.cs" />
     <Compile Include="MethodExtensions\InstanceExtensions.cs" />
     <Compile Include="ISAFU.cs" />
