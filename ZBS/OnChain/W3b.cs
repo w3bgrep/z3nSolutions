@@ -87,7 +87,6 @@ namespace ZBSolutions
         {
             if (addresses == null)
             {
-                Log("default Rpc Loaded");
                 addresses = _sql.GetAddresses();
             }
             return addresses;

@@ -8,24 +8,23 @@ using Newtonsoft.Json.Linq;
 using System.IO;
 using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
+using Nethereum.Model;
 namespace ZBSolutions
 {
     public class WebWallet
     {
         private readonly IZennoPosterProjectModel _project;
         private readonly Instance _instance;
-        private readonly bool _log;
 
         public WebWallet(IZennoPosterProjectModel project, Instance instance, bool log = false)
         {
             _project = project;
             _instance = instance;
-            _log = log;
         }
 
         public void Launch(IEnumerable<W> requiredWallets, bool log = false)
         {
-            WalLog($"Switching wallets: {string.Join(", ", requiredWallets)}", log: log || _log);
+            WalLog($"Switching wallets: {string.Join(", ", requiredWallets)}", log: log);
             foreach (var wallet in requiredWallets)
             {
                 switch (wallet)
@@ -49,7 +48,7 @@ namespace ZBSolutions
                         new KeplrWallet(_project, _instance, log).KeplrLaunch(log: log);
                         break;
                     default:
-                        WalLog($"Unknown wallet: {wallet}", log: log || _log);
+                        WalLog($"Unknown wallet: {wallet}", log: log);
                         break;
                 }
             }
@@ -158,7 +157,7 @@ namespace ZBSolutions
 
         public void Approve(W wallet, bool log = false)
         {
-            WalLog($"Approving for wallet: {wallet}", log: log || _log);
+            WalLog($"Approving for wallet: {wallet}", log: log);
             switch (wallet)
             {
                 case W.MetaMask:
@@ -174,7 +173,7 @@ namespace ZBSolutions
                     new ZerionWallet(_project, _instance, log).ZerionApprove(log: log);
                     break;
                 default:
-                    WalLog($"Approve not supported for wallet: {wallet}", log: log || _log);
+                    WalLog($"Approve not supported for wallet: {wallet}", log: log);
                     throw new Exception($"Approve not supported for {wallet}");
             }
         }
@@ -183,7 +182,7 @@ namespace ZBSolutions
         {
             if (!Enum.TryParse<W>(wallet, true, out var walletType))
             {
-                WalLog($"Invalid wallet name: {wallet}", log: log || _log);
+                WalLog($"Invalid wallet name: {wallet}", log: log);
                 throw new Exception($"Invalid wallet name: {wallet}");
             }
             Approve(walletType, log);
@@ -194,7 +193,7 @@ namespace ZBSolutions
             new KeplrWallet(_project, _instance, log).KeplrSetSource(source, log);
         }
 
-        private List<W> ParseWallets(string requiredWallets)
+        private List<W> ParseWallets(string requiredWallets, bool log = false)
         {
             var result = new List<W>();
             if (string.IsNullOrEmpty(requiredWallets))
@@ -208,7 +207,7 @@ namespace ZBSolutions
                 }
                 else
                 {
-                    WalLog($"Invalid wallet name in requiredWallets: {wallet}", log: _log);
+                    WalLog($"Invalid wallet name in requiredWallets: {wallet}", log: log);
                 }
             }
             return result;

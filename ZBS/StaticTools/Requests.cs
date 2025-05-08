@@ -10,7 +10,7 @@ using ZennoLab.InterfacesLibrary.ProjectModel;
 
 namespace ZBSolutions
 {
-    internal static class Requests
+    public static class Requests
     {
         private static readonly object LockObject = new object();
 

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
@@ -151,8 +152,66 @@ namespace ZBSolutions
             }
         }
 
+        public void ZerionConnect(bool log = false)
+        {
+
+            string action = null;
+            getState:
+
+            try
+            {
+                action = _instance.HeGet(("button", "class", "_primary", "regexp", 0));
+            }
+            catch (Exception ex)
+            {
+                _project.L0g($"!W {ex.Message}");
+                return;
+            }
+
+            _project.L0g(action);
+
+            switch (action)
+            {
+                case "Add":
+                    _project.L0g($"adding {_instance.HeGet(("input:url", "fulltagname", "input:url", "text", 0), atr: "value")}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                    goto getState;
+                case "Close":
+                    _project.L0g($"added {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                    goto getState;
 
 
+                default:
+                    goto getState;
+
+            }
+
+
+        }
+
+        public string ZerionWaitTx(int deadline = 60, bool log = false)
+        {
+            DateTime functionStart = DateTime.Now;
+        check:
+
+            if ((DateTime.Now - functionStart).TotalSeconds > deadline) throw new Exception($"!W Deadline [{deadline}]s exeeded");
+
+
+            if (!_instance.ActiveTab.URL.Contains("chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/overview/history"))
+            {
+                Tab tab = _instance.NewTab("zw");
+                if (tab.IsBusy) tab.WaitDownloading();
+                _instance.ActiveTab.Navigate("chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/overview/history", "");
+
+            }
+            Thread.Sleep(2000);
+            if (!_instance.ActiveTab.FindElementByAttribute("*", "text", "Pending", "regexp", 0).IsVoid) goto check;
+            string tx0 = _instance.GetTx().GetTxHash();
+            _instance.CloseExtraTabs();
+            return tx0;
+
+        }
     }
 
 }

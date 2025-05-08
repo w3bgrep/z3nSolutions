@@ -100,7 +100,6 @@
     <Compile Include="Socials\Discord.cs" />
     <Compile Include="MethodExtensions\InstanceExtensions.cs" />
     <Compile Include="ISAFU.cs" />
-    <Compile Include="L0g.cs" />
     <Compile Include="CexApi\OKXApi.cs" />
     <Compile Include="StaticTools\OTP.cs" />
     <Compile Include="Sql\PostgreSQL.cs" />

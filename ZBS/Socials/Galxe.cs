@@ -90,7 +90,6 @@ namespace ZBSolutions.Socials
                 case "refUnComplete": return refUnComplete;
                 default: return tasksUnComplete;
             }
-            return null;
 
         }
 
