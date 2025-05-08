@@ -180,6 +180,10 @@ namespace ZBSolutions
                     _project.L0g($"added {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
                     _instance.HeClick(("button", "class", "_primary", "regexp", 0));
                     goto getState;
+                case "Connect":
+                    _project.L0g($"added {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                    goto getState;
 
 
                 default:
@@ -190,11 +194,11 @@ namespace ZBSolutions
 
         }
 
-        public string ZerionWaitTx(int deadline = 60, bool log = false)
+        public bool ZerionWaitTx(int deadline = 60, bool log = false)
         {
             DateTime functionStart = DateTime.Now;
         check:
-
+            bool result;
             if ((DateTime.Now - functionStart).TotalSeconds > deadline) throw new Exception($"!W Deadline [{deadline}]s exeeded");
 
 
@@ -206,10 +210,21 @@ namespace ZBSolutions
 
             }
             Thread.Sleep(2000);
-            if (!_instance.ActiveTab.FindElementByAttribute("*", "text", "Pending", "regexp", 0).IsVoid) goto check;
-            string tx0 = _instance.GetTx().GetTxHash();
+
+            var status = _instance.HeGet(("div", "style", "padding: 0px 16px;", "regexp", 0));
+
+
+
+            if (status.Contains("Pending")) goto check;
+            else if (status.Contains("Failed")) result = false;
+            else if (status.Contains("Execute")) result = true;
+            else
+            {
+                Log($"unknown status {status}");
+                goto check;
+            }
             _instance.CloseExtraTabs();
-            return tx0;
+            return result;
 
         }
     }
