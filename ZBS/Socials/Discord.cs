@@ -12,7 +12,6 @@ namespace ZBSolutions
     {
         protected readonly IZennoPosterProjectModel _project;
         protected readonly Instance _instance;
-        protected readonly L0g _log;
         protected readonly bool _logShow;
         protected readonly string _pass;
         protected readonly Sql _sql;
@@ -20,7 +19,6 @@ namespace ZBSolutions
         {
             _project = project;
             _instance = instance;
-            _log = new L0g(_project);
             _logShow = log;
             _sql = new Sql(_project);
         }
@@ -30,7 +28,7 @@ namespace ZBSolutions
             var stackFrame = new System.Diagnostics.StackFrame(1);
             var callingMethod = stackFrame.GetMethod();
             if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
-            _log.Send($"[ 👾  {callerName}] [{tolog}] ");
+            _project.L0g($"[ 👾  {callerName}] [{tolog}] ");
         }
 
 

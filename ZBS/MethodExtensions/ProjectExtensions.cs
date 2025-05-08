@@ -322,40 +322,6 @@ namespace ZBSolutions
             return version;
 
         }
-        public static string LeafPOST(this IZennoPosterProjectModel project, string url, string jsonBody, string proxy = "", bool log = false)
-        {
-            using (var request = new HttpRequest())
-            {
-                request.UserAgent = "Mozilla/5.0";
-                request.IgnoreProtocolErrors = true;
-                request.ConnectTimeout = 5000;
-
-                if (!string.IsNullOrEmpty(proxy))
-                {
-                    try
-                    {
-                        request.Proxy = ProxyClient.Parse(proxy.Contains("@") ? proxy : $"HTTP://{proxy}");
-                    }
-                    catch (Exception ex)
-                    {
-                        project.SendErrorToLog($"Ошибка прокси: {ex.Message}");
-                        throw;
-                    }
-                }
-
-                try
-                {
-                    HttpResponse httpResponse = request.Post(url, jsonBody, "application/json");
-                    return httpResponse.ToString();
-                }
-                catch (HttpException ex)
-                {
-                    project.SendErrorToLog($"Ошибка запроса: {ex.Message}");
-                    throw;
-                }
-            }
-        }
-
         public static void GetGlobalVars(this IZennoPosterProjectModel project)
         {
             try

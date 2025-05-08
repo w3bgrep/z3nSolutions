@@ -11,14 +11,12 @@ namespace ZBSolutions
     public class Sql
     {
         private readonly IZennoPosterProjectModel _project;
-        private readonly L0g _log;
         protected readonly string _dbMode;
         private readonly bool _logShow;
 
         public Sql(IZennoPosterProjectModel project, bool log = false)
         {
             _project = project;
-            _log = new L0g(_project);
             _dbMode = _project.Variables["DBmode"].Value;
             _logShow = log;
         }
@@ -262,10 +260,6 @@ namespace ZBSolutions
             return addrss;
 
         }
-
-
-
-
 
 
     }

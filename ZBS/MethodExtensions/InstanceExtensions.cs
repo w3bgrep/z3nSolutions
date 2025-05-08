@@ -562,12 +562,12 @@ namespace ZBSolutions
         public static void SetProxy(this Instance instance, string proxy, IZennoPosterProjectModel project)
 		{
 			long uTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds(); 
-			string ipLocal = GET($"http://api.ipify.org/");
+			string ipLocal = project.GET($"http://api.ipify.org/");
 
 			while (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - uTime < 60)
 			{
 				instance.SetProxy(proxy, true, true, true, true); Thread.Sleep(2000);
-				string ipProxy = GET($"http://api.ipify.org/",proxy);
+				string ipProxy = project.GET($"http://api.ipify.org/",proxy);
                 project.L0g($"local:[{ipLocal}]?proxyfied:[{ipProxy}]");
 				project.Variables["ip"].Value = ipProxy;
 				project.Variables["proxy"].Value = proxy;
@@ -578,8 +578,6 @@ namespace ZBSolutions
             throw new Exception("!W badProxy");
 		}
 
-
-  
 
     }
 

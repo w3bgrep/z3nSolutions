@@ -11,7 +11,6 @@ namespace ZBSolutions
     {
         protected readonly IZennoPosterProjectModel _project;
         protected readonly Instance _instance;
-        protected readonly L0g _log;
         protected readonly bool _logShow;
         protected readonly Sql _sql;
 
@@ -29,7 +28,6 @@ namespace ZBSolutions
             _project = project;
             _instance = instance;
             _sql = new Sql(_project);
-            _log = new L0g(_project);
             _logShow = log;
             
             LoadCreds();
@@ -76,7 +74,7 @@ namespace ZBSolutions
             while (string.IsNullOrEmpty(status))
             {
                 Thread.Sleep(5000);
-                _log.Send($"{DateTime.Now - start}s check... URLNow:[{_instance.ActiveTab.URL}]");
+                _project.L0g($"{DateTime.Now - start}s check... URLNow:[{_instance.ActiveTab.URL}]");
                 if (DateTime.Now > deadline) throw new Exception("timeout");
 
                 else if (!_instance.ActiveTab.FindElementByAttribute("*", "innertext", @"Caution:\s+This\s+account\s+is\s+temporarily\s+restricted", "regexp", 0).IsVoid)
@@ -96,7 +94,7 @@ namespace ZBSolutions
                     else
                     {
                         status = "mixed";
-                        _log.Send($"!W {status}. Detected  [{check}] instead [UserAvatar-Container-{login}] {DateTime.Now - start}");
+                        _project.L0g($"!W {status}. Detected  [{check}] instead [UserAvatar-Container-{login}] {DateTime.Now - start}");
                     }
                 }
                 else if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Something\\ went\\ wrong.\\ Try\\ reloading.", "regexp", 0).IsVoid)
@@ -106,7 +104,7 @@ namespace ZBSolutions
                     continue;
                 }
             }
-            _log.Send($"{status} {DateTime.Now - start}");
+            _project.L0g($"{status} {DateTime.Now - start}");
             return status;
         }
         private void XsetToken()
@@ -185,7 +183,7 @@ namespace ZBSolutions
             else if (status == "login" && tokenUsed)
             {
                 var login = Xlogin();
-                _log.Send($"{login}");
+                _project.L0g($"{login}");
                 Thread.Sleep(3000);
             }
             if (status == "restricted" || status == "suspended" || status == "emailCapcha" || status == "mixed" || status == "ok")
@@ -193,7 +191,7 @@ namespace ZBSolutions
                 _sql.Upd($"token = '{status}'", "twitter");
                 return status;
             }
-            _log.Send($"{status}");
+            _project.L0g($"{status}");
 
 
             goto check;

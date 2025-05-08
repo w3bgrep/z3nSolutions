@@ -17,10 +17,9 @@ namespace ZBSolutions
     {
         private readonly IZennoPosterProjectModel _project;
         private readonly string[] _apiKeys;
-
-        private readonly L0g _log;
-        private readonly bool _logShow;
         private readonly Sql _sql;
+
+        private readonly bool _logShow;
         private readonly string _apiKey;
         private readonly string _secretKey;
         private readonly string _passphrase;
@@ -28,7 +27,6 @@ namespace ZBSolutions
         {
             _project = project;
             _sql = new Sql(_project);
-            _log = new L0g(_project);
             _logShow = log;
             _apiKeys = OkxKeys();
             _apiKey = _apiKeys[0];
@@ -41,7 +39,7 @@ namespace ZBSolutions
             var stackFrame = new System.Diagnostics.StackFrame(1);
             var callingMethod = stackFrame.GetMethod();
             if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
-            _log.Send($"[ 💸  {callerName}] {toSend} ");
+            _project.L0g($"[ 💸  {callerName}] {toSend} ");
         }
         public string[] OkxKeys()
         {

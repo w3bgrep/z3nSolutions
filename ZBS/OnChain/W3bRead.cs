@@ -709,7 +709,7 @@ namespace ZBSolutions
 
             string url = $"https://celatone-api-prod.alleslabs.dev/v1/initia/{chain}/accounts/{address}/balances";
 
-            string jsonString = Requests.GET(url);
+            string jsonString = _project.GET(url);
 
             _project.L0g(jsonString, show: log);
             _project.Json.FromString(jsonString);

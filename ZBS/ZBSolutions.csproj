@@ -81,6 +81,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="OnChain\W3bWrite.cs" />
+    <Compile Include="Socials\Galxe.cs" />
     <Compile Include="Sql\TableSvc.cs" />
     <Compile Include="OnChain\W3bRead.cs" />
     <Compile Include="Wallets\Manager.cs" />
