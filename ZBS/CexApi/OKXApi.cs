@@ -340,7 +340,7 @@ namespace ZBSolutions
             string msg = response.msg;
             string code = response.code;
 
-            if (code != "0") throw new Exception("Err [{code}]; Сообщение [{msg}]");
+            if (code != "0") throw new Exception($"Err [{code}]; Сообщение [{msg}]");
             else
             {
                 CexLog($"Refueled {toAddress} for {amount} `b");

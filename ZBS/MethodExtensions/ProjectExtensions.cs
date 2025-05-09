@@ -14,6 +14,7 @@ using ZennoLab.InterfacesLibrary.ProjectModel;
 
 using Newtonsoft.Json.Linq;
 using Leaf.xNet;
+using System.Xml.Linq;
 
 
 
@@ -129,17 +130,20 @@ namespace ZBSolutions
 
             //project.L0g($"{rangeS}-{rangeE}\n{range}");
         }
-        public static bool SetGlobalVar(this IZennoPosterProjectModel project, bool log = false)
+        public static bool SetGlobalVar(this IZennoPosterProjectModel project, string nameSpase = null,  bool log = false)
         {
+
+            if (string.IsNullOrEmpty(nameSpase)) nameSpase = "ZenoBoosterSolutions";
+            var cleaned = new List<int>();
+            var notDeclared = new List<int>();
+            var busyAccounts = new List<string>();
+
+
             lock (LockObject)
             {
                 try
                 {
-                    var nameSpase = "w3tools";
-                    var cleaned = new List<int>();
-                    var notDeclared = new List<int>();
-                    //var busyAccounts = new List<int>();
-                    var busyAccounts = new List<string>();
+
                     for (int i = int.Parse(project.Variables["rangeStart"].Value); i <= int.Parse(project.Variables["rangeEnd"].Value); i++)
                     {
                         string threadKey = $"Thread{i}";
@@ -178,11 +182,11 @@ namespace ZBSolutions
                     {
                         try
                         {
-                            project.GlobalVariables.SetVariable("w3tools", currentThreadKey, project.Variables["projectName"].Value);
+                            project.GlobalVariables.SetVariable(nameSpase, currentThreadKey, project.Variables["projectName"].Value);
                         }
                         catch
                         {
-                            project.GlobalVariables["w3tools", currentThreadKey].Value = project.Variables["projectName"].Value;
+                            project.GlobalVariables[nameSpase, currentThreadKey].Value = project.Variables["projectName"].Value;
                         }
                         if (log) project.L0g($"Thread {currentThread} bound to {project.Variables["projectName"].Value}");
                         return true;
@@ -322,14 +326,17 @@ namespace ZBSolutions
             return version;
 
         }
-        public static void GetGlobalVars(this IZennoPosterProjectModel project)
+        public static void GetGlobalVars(this IZennoPosterProjectModel project, string nameSpase = null)
         {
+            if (string.IsNullOrEmpty(nameSpase)) nameSpase = "ZenoBoosterSolutions";
+            var cleaned = new List<int>();
+            var notDeclared = new List<int>();
+            var busyAccounts = new List<string>();
+
+
             try
             {
-                var nameSpase = "w3tools";
-                var cleaned = new List<int>();
-                var notDeclared = new List<int>();
-                var busyAccounts = new List<int>();
+
                 for (int i = int.Parse(project.Variables["rangeStart"].Value); i <= int.Parse(project.Variables["rangeEnd"].Value); i++)
                 {
                     string threadKey = $"Thread{i}";
@@ -338,7 +345,7 @@ namespace ZBSolutions
                         var globalVar = project.GlobalVariables[nameSpase, threadKey];
                         if (globalVar != null)
                         {
-                            if (!string.IsNullOrEmpty(globalVar.Value)) busyAccounts.Add(i);
+                            if (!string.IsNullOrEmpty(globalVar.Value)) busyAccounts.Add(i.ToString());
                             if (project.Variables["cleanGlobal"].Value == "True")
                             {
                                 globalVar.Value = string.Empty;

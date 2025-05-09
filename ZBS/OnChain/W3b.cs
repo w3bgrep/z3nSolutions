@@ -181,6 +181,20 @@ namespace ZBSolutions
                 throw new Exception("noRpcProvided");
             }
         }
+        public List<string> Rpc(string[] chains)
+        {
+            var resultList = new List<string>();
+            foreach (var cha in chains)
+            {
+                string chain = cha.ToLower().Trim();
+                if (_rpcs.TryGetValue(cha, out var url))
+                {
+                    resultList.Add(url);
+                }
+                else Log($"!W rpc for [{chain}] not found in dictionary");
+            }
+            return resultList;
+        }
         public string Address(string chainType)
         {
             chainType = chainType.ToLower().Trim();

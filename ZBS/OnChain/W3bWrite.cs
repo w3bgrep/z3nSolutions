@@ -170,7 +170,7 @@ namespace ZBSolutions
             }
             try
             {
-                var blockchain = new Blockchain(walletKey, chainId, chainRpc);
+                var blockchain = new Blockchain(_key, chainId, chainRpc);
                 string hash = blockchain.SendTransactionEIP1559(contractAddress, value, encodedData, gasLimit, maxFeePerGas, priorityFee).Result;
                 return hash;
             }

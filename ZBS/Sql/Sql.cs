@@ -226,7 +226,7 @@ namespace ZBSolutions
         }
         public string BinanceApiKeys(string tableName = "settings", string schemaName = "accounts")
         {
-            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
+            tableName = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
             return DbQ($"SELECT value FROM {tableName} WHERE var = 'settingsApiBinance';");
         }
         public string Ref(string refCode = null, bool log = false)
