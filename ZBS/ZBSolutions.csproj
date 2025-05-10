@@ -80,6 +80,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CexApi\Refuel.cs" />
     <Compile Include="OnChain\W3bWrite.cs" />
     <Compile Include="Socials\Galxe.cs" />
     <Compile Include="Sql\TableSvc.cs" />
