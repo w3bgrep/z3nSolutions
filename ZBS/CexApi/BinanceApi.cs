@@ -41,13 +41,11 @@ namespace ZBSolutions
         }
         public string[] BinanceKeys()
         {
-
-            string[] keys = _sql.BinanceApiKeys().Split(';');
-            var apiKey = keys[0];
-            var secretKey = keys[1];
-            var proxy = keys[2];
-
-            string[] result = new string[] { apiKey, secretKey, proxy };
+            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : null) + "settings";
+            var key = _sql.DbQ($"SELECT value FROM {table} WHERE var = ''binance_apikey';");
+            var secret = _sql.DbQ($"SELECT value FROM {table} WHERE var = ''binance_secret';");
+            var proxy = _sql.DbQ($"SELECT value FROM {table} WHERE var = 'binance_proxy';");
+            string[] result = new string[] { key, secret, proxy };
             return result;
         }
         private string MapNetwork(string chain, bool log)
