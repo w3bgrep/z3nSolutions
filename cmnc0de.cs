@@ -251,12 +251,12 @@ namespace w3tools //by @w3bgrep
 }
 
 
-    public class NetHttp
+    public class NetHttp2
     {
         private readonly IZennoPosterProjectModel _project;
         private readonly bool _logShow;
 
-        public NetHttp(IZennoPosterProjectModel project, bool log = false)
+        public NetHttp2(IZennoPosterProjectModel project, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             _project = project ?? throw new ArgumentNullException(nameof(project));

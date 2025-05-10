@@ -197,6 +197,83 @@ namespace ZBSolutions
             goto check;
         }
 
+        public void XAuth()
+        {
+            DateTime deadline = DateTime.Now.AddSeconds(60);
+        check:
+            if (DateTime.Now > deadline) throw new Exception("timeout");
+            _instance.HeClick(("button", "innertext", "Accept\\ all\\ cookies", "regexp", 0), deadline: 0, thr0w: false);
+            _instance.HeClick(("button", "data-testid", "xMigrationBottomBar", "regexp", 0), deadline: 0, thr0w: false);
+
+            string state = null;
+
+
+            if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Sorry, we could not find your account')]", 0).IsVoid) state = "NotFound";
+            else if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Your account is suspended')]", 0).IsVoid) state = "Suspended";
+            else if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Wrong password!')]", 0).IsVoid) state = "WrongPass";
+            else if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Oops,\\ something\\ went\\ wrong.\\ Please\\ try\\ again\\ later.", "regexp", 0).IsVoid) state = "SomethingWentWrong";
+            else if (!_instance.ActiveTab.FindElementByAttribute("*", "innertext", "Suspicious\\ login\\ prevented", "regexp", 0).IsVoid) state = "SuspiciousLogin";
+
+
+
+            else if (!_instance.ActiveTab.FindElementByAttribute("input:text", "autocomplete", "username", "text", 0).IsVoid) state = "InputLogin";
+            else if (!_instance.ActiveTab.FindElementByAttribute("input:password", "autocomplete", "current-password", "text", 0).IsVoid) state = "InputPass";
+            else if (!_instance.ActiveTab.FindElementByAttribute("input:text", "data-testid", "ocfEnterTextTextInput", "text", 0).IsVoid) state = "InputOTP";
+
+
+            else if (!_instance.ActiveTab.FindElementByAttribute("a", "data-testid", "login", "regexp", 0).IsVoid) state = "ClickLogin";
+            else if (!_instance.ActiveTab.FindElementByAttribute("li", "data-testid", "UserCell", "regexp", 0).IsVoid) state = "CheckUser";
+
+
+            _project.L0g(state);
+
+            switch (state)
+            {
+                case "NotFound":
+                case "Suspended":
+                case "SuspiciousLogin":
+                case "WrongPass":
+                    _sql.Upd($"status = '{state}'", "twitter");
+                    throw new Exception($"{state}");
+                case "ClickLogin":
+                    _instance.HeClick(("a", "data-testid", "login", "regexp", 0));
+                    goto check;
+                case "InputLogin":
+                    _instance.HeSet(("input:text", "autocomplete", "username", "text", 0), _login, deadline: 30);
+                    _instance.HeClick(("span", "innertext", "Next", "regexp", 1), "clickOut");
+                    goto check;
+                case "InputPass":
+                    _instance.HeSet(("input:password", "autocomplete", "current-password", "text", 0), _pass);
+                    _instance.HeClick(("button", "data-testid", "LoginForm_Login_Button", "regexp", 0), "clickOut");
+                    goto check;
+                case "InputOTP":
+                    _instance.HeSet(("input:text", "data-testid", "ocfEnterTextTextInput", "text", 0), OTP.Offline(_2fa));
+                    _instance.HeClick(("span", "innertext", "Next", "regexp", 1), "clickOut");
+                    goto check;
+                case "CheckUser":
+                    string userdata = _instance.HeGet(("li", "data-testid", "UserCell", "regexp", 0));
+                    if (userdata.Contains(_login))
+                    {
+                        _instance.HeClick(("button", "data-testid", "OAuth_Consent_Button", "regexp", 0));
+                        goto check;
+                    }
+                    else
+                    {
+                        throw new Exception("wrong account");
+                    }
+                default:
+                    _project.L0g($"unknown state [{state}]");
+                    break;
+
+            }
+
+            if (!_instance.ActiveTab.URL.Contains("x.com") && !_instance.ActiveTab.URL.Contains("twitter.com"))
+                _project.L0g("auth done");
+            else goto check;
+        }
+
+
+
         public static string GenerateTweet(IZennoPosterProjectModel project, string content, string bio = "", bool log = false)
         {
             project.Variables["api_response"].Value = "";

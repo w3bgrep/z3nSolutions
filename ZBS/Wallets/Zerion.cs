@@ -111,7 +111,7 @@ namespace ZBSolutions
             string active = null;
             try
             {
-                active = _instance.HeGet(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html\\#/wallet-select", "regexp", 0));
+                active = _instance.HeGet(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html\\#/wallet-select", "regexp", 0),deadline:2);
             }
             catch
             {
@@ -164,7 +164,7 @@ namespace ZBSolutions
             }
             catch (Exception ex)
             {
-                _project.L0g($"!W {ex.Message}");
+                _project.L0g($"No Wallet tab found. 0");
                 return;
             }
 
@@ -181,10 +181,13 @@ namespace ZBSolutions
                     _instance.HeClick(("button", "class", "_primary", "regexp", 0));
                     goto getState;
                 case "Connect":
-                    _project.L0g($"added {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                    _project.L0g($"connecting {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
                     _instance.HeClick(("button", "class", "_primary", "regexp", 0));
                     goto getState;
-
+                case "Sign":
+                    _project.L0g($"sign {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                    goto getState;
 
                 default:
                     goto getState;
