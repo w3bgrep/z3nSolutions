@@ -188,12 +188,16 @@ namespace ZBSolutions
             }
             if (status == "restricted" || status == "suspended" || status == "emailCapcha" || status == "mixed" || status == "ok")
             {
-                _sql.Upd($"token = '{status}'", "twitter");
+                _sql.Upd($"status = '{status}'", "twitter");
                 return status;
             }
-            _project.L0g($"{status}");
-
-
+            else if (status == "ok")
+            { 
+                XgetToken();
+                return status;
+            }
+            else
+                _project.L0g($"unknown {status}");
             goto check;
         }
 
