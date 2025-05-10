@@ -133,7 +133,7 @@ namespace ZBSolutions
         public static bool SetGlobalVar(this IZennoPosterProjectModel project, string nameSpase = null,  bool log = false)
         {
 
-            if (string.IsNullOrEmpty(nameSpase)) nameSpase = "ZenoBoosterSolutions";
+            if (string.IsNullOrEmpty(nameSpase)) nameSpase = "ZBS";
             var cleaned = new List<int>();
             var notDeclared = new List<int>();
             var busyAccounts = new List<string>();
@@ -204,7 +204,43 @@ namespace ZBSolutions
                 }
             }
         }
- 
+        public static void GetGlobalVars(this IZennoPosterProjectModel project, string nameSpase = null)
+        {
+            if (string.IsNullOrEmpty(nameSpase)) nameSpase = "ZenoBoosterSolutions";
+            var cleaned = new List<int>();
+            var notDeclared = new List<int>();
+            var busyAccounts = new List<string>();
+
+
+            try
+            {
+
+                for (int i = int.Parse(project.Variables["rangeStart"].Value); i <= int.Parse(project.Variables["rangeEnd"].Value); i++)
+                {
+                    string threadKey = $"Thread{i}";
+                    try
+                    {
+                        var globalVar = project.GlobalVariables[nameSpase, threadKey];
+                        if (globalVar != null)
+                        {
+                            if (!string.IsNullOrEmpty(globalVar.Value)) busyAccounts.Add(i.ToString());
+                            if (project.Variables["cleanGlobal"].Value == "True")
+                            {
+                                globalVar.Value = string.Empty;
+                                cleaned.Add(i);
+                            }
+                        }
+                        else notDeclared.Add(i);
+                    }
+                    catch { notDeclared.Add(i); }
+                }
+                if (project.Variables["cleanGlobal"].Value == "True") project.L0g($"GlobalVars cleaned: {string.Join(",", cleaned)}");
+                else project.Variables["busyAccounts"].Value = string.Join(",", busyAccounts);
+            }
+            catch (Exception ex) { project.L0g($"⚙  {ex.Message}"); }
+
+        }
+
         public static string MathVar(this IZennoPosterProjectModel project, string varName, int input)
         {
             project.Variables[$"{varName}"].Value = (int.Parse(project.Variables[$"{varName}"].Value) + input).ToString();
@@ -324,42 +360,6 @@ namespace ZBSolutions
             }
 
             return version;
-
-        }
-        public static void GetGlobalVars(this IZennoPosterProjectModel project, string nameSpase = null)
-        {
-            if (string.IsNullOrEmpty(nameSpase)) nameSpase = "ZenoBoosterSolutions";
-            var cleaned = new List<int>();
-            var notDeclared = new List<int>();
-            var busyAccounts = new List<string>();
-
-
-            try
-            {
-
-                for (int i = int.Parse(project.Variables["rangeStart"].Value); i <= int.Parse(project.Variables["rangeEnd"].Value); i++)
-                {
-                    string threadKey = $"Thread{i}";
-                    try
-                    {
-                        var globalVar = project.GlobalVariables[nameSpase, threadKey];
-                        if (globalVar != null)
-                        {
-                            if (!string.IsNullOrEmpty(globalVar.Value)) busyAccounts.Add(i.ToString());
-                            if (project.Variables["cleanGlobal"].Value == "True")
-                            {
-                                globalVar.Value = string.Empty;
-                                cleaned.Add(i);
-                            }
-                        }
-                        else notDeclared.Add(i);
-                    }
-                    catch { notDeclared.Add(i); }
-                }
-                if (project.Variables["cleanGlobal"].Value == "True") project.L0g($"GlobalVars cleaned: {string.Join(",", cleaned)}");
-                else project.Variables["busyAccounts"].Value = string.Join(",", busyAccounts);
-            }
-            catch (Exception ex) { project.L0g($"⚙  {ex.Message}"); }
 
         }
 

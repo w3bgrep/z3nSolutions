@@ -13,8 +13,7 @@ namespace ZBSolutions
         protected readonly IZennoPosterProjectModel _project;
         protected readonly bool _logShow;
         protected readonly Sql _sql;
-
-
+        protected readonly string _acc0;
         protected readonly Dictionary<string, string> _rpcs;
         protected readonly Dictionary<string, string> _adrs;
 
@@ -22,11 +21,28 @@ namespace ZBSolutions
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             _project = project;
+            _acc0 = Acc0();
             _sql = new Sql(_project);
             _logShow = log;
             _rpcs = LoadRPCs();
             _adrs = LoadAddresses();
         }
+
+        private string Acc0()
+        {
+            try
+            {
+                return int.TryParse(_project.Variables["acc0"].Value, out _)
+                    ? _project.Variables["acc0"].Value
+                    : "";
+            }
+            catch
+            {
+                Log("acc0 is empty `y");
+                return "";
+            }
+        }
+
         protected void Log(string tolog = "", [CallerMemberName] string callerName = "", bool log = false)
         {
             if (!_logShow && !log) return;
@@ -85,7 +101,11 @@ namespace ZBSolutions
         }
         private Dictionary<string, string> LoadAddresses(Dictionary<string, string> addresses = null)
         {
-            if (addresses == null)
+            if (string.IsNullOrEmpty(_acc0))
+            {
+                return new Dictionary<string, string>();
+            }
+            else if (addresses == null)
             {
                 addresses = _sql.GetAddresses();
             }

@@ -140,7 +140,7 @@ namespace ZBSolutions
             try
             {
                 while (_instance.ActiveTab.FindElementByAttribute("button", "class", "is_Button\\ ", "regexp", 0).IsVoid)
-                    _instance.HeClick(("path", "d", "M12 5v14", "text", 0), deadline: 2);
+                    _instance.HeClick(("path", "d", "M12 5v14", "text", 0));
 
                 var publicSOL = _instance.HeGet(("p", "class", "MuiTypography-root\\ MuiTypography-body1", "regexp", 0), "last");
                 _instance.HeClick(("button", "aria-label", "TabsNavigator,\\ back", "regexp", 0));

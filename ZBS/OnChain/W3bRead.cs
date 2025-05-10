@@ -8,21 +8,78 @@ using System.Threading;
 using Newtonsoft.Json.Linq;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using System.Text.RegularExpressions;
+using static NBitcoin.Scripting.OutputDescriptor;
 
 namespace ZBSolutions
 {
     public class W3bRead : W3b
     {
-        public readonly string _adrEvm;
+        public readonly string _adrEvm = null;
         public readonly string _defRpc;
-        public W3bRead(IZennoPosterProjectModel project, bool log = false)
+
+
+        public W3bRead(IZennoPosterProjectModel project, bool log = false, string adrEvm = null)
         : base(project, log)
         {
-            _adrEvm = Address("evm");
+              if (string.IsNullOrEmpty(adrEvm) && (!string.IsNullOrEmpty(_acc0))) 
+                _adrEvm = Address("evm");
             _defRpc = project.Variables["blockchainRPC"].Value;
         }
 
+        private string ChekAdr(string address)
+        {
+            if (string.IsNullOrEmpty(address)) address = _adrEvm;
+            if (string.IsNullOrEmpty(address)) throw new ArgumentException("!W address is nullOrEmpty");
+            return address;
+        }
 
+        //evm
+        public T ChainId<T>(string rpc = null, string proxy = null, bool log = false)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            if (string.IsNullOrEmpty(rpc)) rpc = _defRpc;
+
+            string jsonBody = @"{""jsonrpc"": ""2.0"",""method"": ""eth_chainId"",""params"": [],""id"": 1}";
+
+            string response;
+            using (var request = new HttpRequest())
+            {
+                request.UserAgent = "Mozilla/5.0";
+                request.IgnoreProtocolErrors = true;
+                request.ConnectTimeout = 5000;
+
+                if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
+                if (!string.IsNullOrEmpty(proxy))
+                {
+                    string[] proxyArray = proxy.Split(':');
+                    string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);
+                    request.Proxy = new HttpProxyClient(host, port, username, password);
+                }
+
+                try
+                {
+                    HttpResponse httpResponse = request.Post(rpc, jsonBody, "application/json");
+                    response = httpResponse.ToString();
+                }
+                catch (HttpException ex)
+                {
+                    _project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
+                    throw;
+                }
+            }
+
+            var json = JObject.Parse(response);
+            string hexResult = json["result"]?.ToString() ?? "0x0";
+            if (hexResult == "0x0")
+                return (T)Convert.ChangeType("0", typeof(T));
+
+            int chainId = Convert.ToInt32(hexResult.TrimStart('0', 'x'), 16);
+
+            if (typeof(T) == typeof(string))
+                return (T)Convert.ChangeType(chainId.ToString(), typeof(T));
+
+            return (T)Convert.ChangeType(chainId, typeof(T));
+        }
         public T GasPrice<T>(string rpc = null, string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -78,10 +135,11 @@ namespace ZBSolutions
                 return (T)Convert.ChangeType(gasGwei.ToString("0.######", CultureInfo.InvariantCulture), typeof(T));
             return (T)Convert.ChangeType(gasGwei, typeof(T));
         }
+ 
         public T NativeEVM<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            if (string.IsNullOrEmpty(address)) address = _adrEvm;
+            address = ChekAdr(address);
             if (string.IsNullOrEmpty(rpc)) rpc = _defRpc;
 
             string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_getBalance"", ""params"": [""{address}"", ""latest""], ""id"": 1 }}";
@@ -126,7 +184,7 @@ namespace ZBSolutions
         public T BalERC20<T>(string tokenContract, string rpc = null, string address = null, string tokenDecimal = "18", string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            if (string.IsNullOrEmpty(address)) address = _adrEvm;
+            address = ChekAdr(address);
             if (string.IsNullOrEmpty(rpc)) rpc = _defRpc;
 
             string data = "0x70a08231000000000000000000000000" + address.Replace("0x", "");
@@ -174,7 +232,7 @@ namespace ZBSolutions
         public T BalERC721<T>(string tokenContract, string rpc = null, string address = null, string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            if (string.IsNullOrEmpty(address)) address = _adrEvm;
+            address = ChekAdr(address);
             if (string.IsNullOrEmpty(rpc)) rpc = _defRpc;
 
             string functionSelector = "0x70a08231";
@@ -222,7 +280,7 @@ namespace ZBSolutions
         public T BalERC1155<T>(string tokenContract, string tokenId, string rpc = null, string address = null, string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            if (string.IsNullOrEmpty(address)) address = _adrEvm;
+            address = ChekAdr(address);
             if (string.IsNullOrEmpty(rpc)) rpc = _defRpc;
 
             string functionSelector = "0x00fdd58e";
@@ -272,55 +330,9 @@ namespace ZBSolutions
             else
                 throw new InvalidOperationException($"!W unsupported type {typeof(T)}");
         }
-        public T ChainId<T>(string rpc = null, string proxy = null, bool log = false)
-        {
-            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            if (string.IsNullOrEmpty(rpc)) rpc = _defRpc;
-
-            string jsonBody = @"{""jsonrpc"": ""2.0"",""method"": ""eth_chainId"",""params"": [],""id"": 1}";
-
-            string response;
-            using (var request = new HttpRequest())
-            {
-                request.UserAgent = "Mozilla/5.0";
-                request.IgnoreProtocolErrors = true;
-                request.ConnectTimeout = 5000;
-
-                if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
-                if (!string.IsNullOrEmpty(proxy))
-                {
-                    string[] proxyArray = proxy.Split(':');
-                    string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);
-                    request.Proxy = new HttpProxyClient(host, port, username, password);
-                }
-
-                try
-                {
-                    HttpResponse httpResponse = request.Post(rpc, jsonBody, "application/json");
-                    response = httpResponse.ToString();
-                }
-                catch (HttpException ex)
-                {
-                    _project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
-                    throw;
-                }
-            }
-
-            var json = JObject.Parse(response);
-            string hexResult = json["result"]?.ToString() ?? "0x0";
-            if (hexResult == "0x0")
-                return (T)Convert.ChangeType("0", typeof(T));
-
-            int chainId = Convert.ToInt32(hexResult.TrimStart('0', 'x'), 16);
-
-            if (typeof(T) == typeof(string))
-                return (T)Convert.ChangeType(chainId.ToString(), typeof(T));
-
-            return (T)Convert.ChangeType(chainId, typeof(T));
-        }
         public T NonceEVM<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
         {
-            if (string.IsNullOrEmpty(address)) address = _adrEvm;
+            address = ChekAdr(address);
             if (string.IsNullOrEmpty(rpc)) rpc = _defRpc;
 
             string jsonBody = $@"{{""jsonrpc"": ""2.0"",""method"": ""eth_getTransactionCount"",""params"": [""{address}"", ""latest""],""id"": 1}}";
@@ -364,6 +376,8 @@ namespace ZBSolutions
                 return (T)Convert.ChangeType(transactionCount.ToString(), typeof(T));
             return (T)Convert.ChangeType(transactionCount, typeof(T));
         }
+       
+        //spl
         public T NativeSOL<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -464,6 +478,8 @@ namespace ZBSolutions
             return (T)Convert.ChangeType(balance, typeof(T));
 
         }
+        
+        //move
         public T NativeSUI<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -561,6 +577,7 @@ namespace ZBSolutions
             return (T)Convert.ChangeType(balance, typeof(T));
 
         }
+ 
         public T NativeAPT<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -692,6 +709,7 @@ namespace ZBSolutions
             if (typeof(T) == typeof(string)) return FloorDecimal<T>(balance, int.Parse(octas));
             return (T)Convert.ChangeType(balance, typeof(T));
         }
+        //cosmos
         public T TokenInitia<T>(string address = null, string chain = "interwoven-1", string token = "uinit", bool log = false)
         {
             if (string.IsNullOrEmpty(address))
