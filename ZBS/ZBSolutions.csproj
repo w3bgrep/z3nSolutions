@@ -96,7 +96,7 @@
     <Compile Include="Socials\Google.cs" />
     <Compile Include="Starter.cs" />
     <Compile Include="StaticTools\Converter.cs" />
-    <Compile Include="StaticTools\Crypto.cs" />
+    <Compile Include="StaticTools\Cryptography.cs" />
     <Compile Include="Sql\DataImporter.cs" />
     <Compile Include="Socials\Discord.cs" />
     <Compile Include="MethodExtensions\InstanceExtensions.cs" />

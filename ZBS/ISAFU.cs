@@ -24,7 +24,7 @@ namespace ZBSolutions
             if (project.Variables["debug"].Value == "True") log = true;
             if (log) project.SendInfoToLog($"[SimpleSAFU.Encode] input: ['{toEncrypt}'] key: ['{project.Variables["cfgPin"].Value}']");
             if (string.IsNullOrEmpty(toEncrypt)) return string.Empty;
-            return Crypto.EncryptAES(toEncrypt, project.Variables["cfgPin"].Value, true);
+            return AES.EncryptAES(toEncrypt, project.Variables["cfgPin"].Value, true);
         }
 
         public string Decode(IZennoPosterProjectModel project, string toDecrypt, bool log)
@@ -34,7 +34,7 @@ namespace ZBSolutions
             if (string.IsNullOrEmpty(toDecrypt)) return string.Empty;
             try
             {
-                return Crypto.DecryptAES(toDecrypt, project.Variables["cfgPin"].Value, true);
+                return AES.DecryptAES(toDecrypt, project.Variables["cfgPin"].Value, true);
             }
             catch (Exception ex)
             {
