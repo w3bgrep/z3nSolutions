@@ -1,6 +1,9 @@
 ﻿
 
+using NBitcoin;
 using System;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace ZBSolutions
 {
@@ -15,7 +18,6 @@ namespace ZBSolutions
             }
             return text;
         }
-
         public static string GetTxHash(this string link)
         {
             string hash;
@@ -32,7 +34,62 @@ namespace ZBSolutions
 
             return hash;
         }
+        private static string DetectKeyType(this string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return null;
 
+            if (Regex.IsMatch(input, @"^[0-9a-fA-F]{64}$"))
+                return "key";
 
+            var words = input.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length == 12)
+                return "seed";
+            if (words.Length == 24)
+                return "seed";
+
+            return null;
+        }
+        public static string ToPubEvm(this string key)
+        {
+            string keyType = key.DetectKeyType();
+            var blockchain = new Blockchain();
+
+            if (keyType == "seed")
+            {
+                var mnemonicObj = new Mnemonic(key);
+                var hdRoot = mnemonicObj.DeriveExtKey();
+                var derivationPath = new NBitcoin.KeyPath("m/44'/60'/0'/0/0");
+                key = hdRoot.Derive(derivationPath).PrivateKey.ToHex();
+
+            }
+            return blockchain.GetAddressFromPrivateKey(key);
+        }
+        public static bool ChkAddress(this string shortAddress, string fullAddress)
+        {
+            if (string.IsNullOrEmpty(shortAddress) || string.IsNullOrEmpty(fullAddress))
+                return false;
+
+            if (!shortAddress.Contains("…") || shortAddress.Count(c => c == '…') != 1)
+                return false;
+
+            var parts = shortAddress.Split('…');
+            if (parts.Length != 2)
+                return false;
+
+            string prefix = parts[0];
+            string suffix = parts[1];
+
+            if (prefix.Length < 4 || suffix.Length < 2)
+                return false;
+
+            if (fullAddress.Length < prefix.Length + suffix.Length)
+                return false;
+
+            bool prefixMatch = fullAddress.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+            bool suffixMatch = fullAddress.EndsWith(suffix, StringComparison.OrdinalIgnoreCase);
+
+            return prefixMatch && suffixMatch;
+        }
     }
 }

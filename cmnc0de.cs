@@ -39,6 +39,7 @@ using Newtonsoft.Json.Linq;
 
 using ZBSolutions;
 using static ZBSolutions.InstanceExtensions;
+using NBitcoin;
 
 using System.Net;
 using System.Net.Http;
@@ -63,6 +64,77 @@ namespace w3tools //by @w3bgrep
         }
         }
     }
+
+public static class TestStatic
+{
+
+    private static string DetectKeyType(this string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return null;
+
+        if (Regex.IsMatch(input, @"^[0-9a-fA-F]{64}$"))
+            return "key";
+
+        var words = input.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length == 12)
+            return "seed";
+        if (words.Length == 24)
+            return "seed";
+
+        return null;
+    }
+    public static string ToPubEvm(this string key)
+    {
+        string keyType = key.DetectKeyType();
+        var blockchain = new Blockchain();
+
+        if (keyType == "seed")
+        {
+            var mnemonicObj = new Mnemonic(key);
+            var hdRoot = mnemonicObj.DeriveExtKey();
+            var derivationPath = new NBitcoin.KeyPath("m/44'/60'/0'/0/0");
+            key = hdRoot.Derive(derivationPath).PrivateKey.ToHex();
+
+        }
+        return blockchain.GetAddressFromPrivateKey(key);
+    }
+
+
+    public static bool ChkAddress(this string shortAddress, string fullAddress)
+    {
+        if (string.IsNullOrEmpty(shortAddress) || string.IsNullOrEmpty(fullAddress))
+            return false;
+
+        if (!shortAddress.Contains("…") || shortAddress.Count(c => c == '…') != 1)
+            return false;
+
+        var parts = shortAddress.Split('…');
+        if (parts.Length != 2)
+            return false;
+
+        string prefix = parts[0]; 
+        string suffix = parts[1]; 
+
+        if (prefix.Length < 4 || suffix.Length < 2)
+            return false;
+
+        if (fullAddress.Length < prefix.Length + suffix.Length)
+            return false;
+
+        bool prefixMatch = fullAddress.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+        bool suffixMatch = fullAddress.EndsWith(suffix, StringComparison.OrdinalIgnoreCase);
+
+        bool result = prefixMatch && suffixMatch;
+        
+        //project.L0g($"[{shortAddress}]?[{fullAddress}] {result} [{prefixMatch}]?[{suffixMatch}]");
+        return result;
+    }
+}
+
+
+
+
     public class Url
     {
         private readonly Instance _instance;
@@ -251,12 +323,12 @@ namespace w3tools //by @w3bgrep
 }
 
 
-    public class NetHttp2
+    public class Test
     {
         private readonly IZennoPosterProjectModel _project;
         private readonly bool _logShow;
 
-        public NetHttp2(IZennoPosterProjectModel project, bool log = false)
+        public Test(IZennoPosterProjectModel project, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             _project = project ?? throw new ArgumentNullException(nameof(project));
@@ -269,204 +341,491 @@ namespace w3tools //by @w3bgrep
             _project.L0g($"[ 🌍 {callerName}] [{message}]");
         }       
 
-        public string GET(string url, WebProxy proxy = null, [CallerMemberName] string callerName = "")
+        public decimal UsdToToken(string tiker, decimal usdAmount, bool log = false)
         {
-            try
-            {
-                
-                var handler = new HttpClientHandler
-                {
-                    Proxy = proxy,
-                    UseProxy = proxy != null
-                };
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            var restApi = new OKXApi(_project);
 
-                using (var client = new HttpClient(handler))
-                {
-                    client.Timeout = TimeSpan.FromSeconds(15);
-                    HttpResponseMessage response = client.GetAsync(url).GetAwaiter().GetResult();
-                    response.EnsureSuccessStatusCode();
-
-                    string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                    Log($"{result}",callerName);
-                    return result.Trim();
-                }
-            }
-            catch (HttpRequestException e)
-            {
-                Log($"!W [GET] RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxy != null ? proxy.Address?.ToString() : "noProxy")})");
-                return $"Ошибка: {e.Message}";
-            }
-            catch (Exception e)
-            {
-                Log($"!W [GET] UnknownErr: [{e.Message}] url:[{url}] (proxy: {(proxy != null ? proxy.Address?.ToString() : "noProxy")})");
-                return $"Ошибка: {e.Message}";
-            }
-        }
-
-        public string POST(string url, string body, string proxyString = "", bool parseJson = false, Dictionary<string, string> headers = null, [CallerMemberName] string callerName = "", bool throwOnFail = false)
-        {
-            try
-            {
-                WebProxy proxy = ParseProxy(proxyString);
-                var handler = new HttpClientHandler
-                {
-                    Proxy = proxy,
-                    UseProxy = proxy != null
-                };
-
-                using (var client = new HttpClient(handler))
-                {
-                    client.Timeout = TimeSpan.FromSeconds(15);
-                    var content = new StringContent(body, Encoding.UTF8, "application/json");
-
-                    StringBuilder headersString = new StringBuilder();
-                    headersString.AppendLine("[debugRequestHeaders]:");
-
-                    string defaultUserAgent = _project.Profile.UserAgent;//"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-                    if (headers == null || !headers.ContainsKey("User-Agent"))
-                    {
-                        client.DefaultRequestHeaders.Add("User-Agent", defaultUserAgent);
-                        headersString.AppendLine($"User-Agent: {defaultUserAgent} (default)");
-                    }
-
-                    if (headers != null)
-                    {
-                        foreach (var header in headers)
-                        {
-                            client.DefaultRequestHeaders.Add(header.Key, header.Value);
-                            headersString.AppendLine($"{header.Key}: {header.Value}");
-                        }
-                    }
-
-                    headersString.AppendLine($"Content-Type: application/json; charset=UTF-8");
-                    //Log(headersString.ToString(), callerName);
-
-                    Log(body);
-
-                    HttpResponseMessage response = client.PostAsync(url, content).GetAwaiter().GetResult();
-                    response.EnsureSuccessStatusCode();
-
-                    StringBuilder responseHeadersString = new StringBuilder();
-                    responseHeadersString.AppendLine("[debugResponseHeaders]:");
-                    foreach (var header in response.Headers)
-                    {
-                        var value = string.Join(", ", header.Value);
-                        responseHeadersString.AppendLine($"{header.Key}: {value}");
-                    }
-                    //Log(responseHeadersString.ToString(), callerName);
-
-                    string cookies = "";
-                    if (response.Headers.TryGetValues("Set-Cookie", out var cookieValues))
-                    {
-                        cookies = cookieValues.Aggregate((a, b) => a + "; " + b);
-                        Log("Set-Cookie found: " + cookies, callerName);
-                    }
-
-                    try
-                    {
-                        _project.Variables["debugCookies"].Value = cookies;
-                    }
-                    catch { }
-
-                    string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                    if (parseJson)
-                    {
-                        _project.Json.FromString(result);
-                    }
-                    Log(result);
-                    if (parseJson) _project.Json.FromString(result);
-                    return result.Trim();
-                }
-            }
-            catch (HttpRequestException e)
-            {
-                Log($"!W RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")})", callerName);
-                if(throwOnFail) throw;
-                return "";
-            }
-            catch (Exception e)
-            {
-                Log($"!W UnknownErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")})", callerName);
-                if(throwOnFail) throw;
-                return "";
-            }
-        }
-
-        public WebProxy ParseProxy(string proxyString, [CallerMemberName] string callerName = "")
-        {
-            if (string.IsNullOrEmpty(proxyString))
-            {
-                Log("Прокси не указан", callerName, true);
-                return null;
-            }
-            try
-            {
-                WebProxy proxy = new WebProxy();
-
-                if (proxyString.Contains("//")) proxyString = proxyString.Split('/')[2];
-
-                if (proxyString.Contains("@")) // Прокси с авторизацией (login:pass@proxy:port)
-                {
-                    string[] parts = proxyString.Split('@');
-                    string credentials = parts[0];
-                    string proxyHost = parts[1];
-
-                    proxy.Address = new Uri("http://" + proxyHost);
-                    string[] creds = credentials.Split(':');
-                    proxy.Credentials = new NetworkCredential(creds[0], creds[1]);
-
-                    Log($"proxy set:{proxyHost}", callerName);
-                }
-                else // Прокси без авторизации (proxy:port)
-                {
-                    proxy.Address = new Uri("http://" + proxyString);
-                    Log($"proxy set: ip:{proxyString}", callerName);
-                }
-
-                return proxy;
-            }
-            catch (Exception e)
-            {
-                Log($"Ошибка настройки прокси: {e.Message}", callerName, true);
-                return null;
-            }
-        }
-
-        public void CheckProxy(string url = "http://api.ipify.org/" , string proxyString = null)
-        {
-			if (string.IsNullOrEmpty(proxyString)) proxyString = _project.Variables["proxy"].Value;
-            WebProxy proxy = ParseProxy(proxyString);
-
-            string ipWithoutProxy = GET(url, null);
-
-            string ipWithProxy = "notSet";
-            if (proxy != null)
-            {
-                ipWithProxy = GET(url, proxy);
-            }
-            else
-            {
-                ipWithProxy = "noProxy";
-            }
-
-            Log($"local: {ipWithoutProxy}, proxified: {ipWithProxy}");
-
-            if (ipWithProxy != ipWithoutProxy && !ipWithProxy.StartsWith("Ошибка") && ipWithProxy != "Прокси не настроен")
-            {
-               Log($"Succsessfuly proxified: {ipWithProxy}");
-            }
-            else if (ipWithProxy.StartsWith("Ошибка") || ipWithProxy == "Прокси не настроен")
-            {
-                Log($"!W proxy error: {ipWithProxy}");
-            }
-            else
-            {
-                Log($"!W ip still same. Proxy was not applyed");
-            }
+            tiker = tiker.ToUpper();
+            decimal price = restApi.OKXPrice<decimal>($"{tiker}-USDT");
+            decimal tokenAmount = usdAmount / price;
+            return tokenAmount;
         }
 
 
     }
+
+
+
+
+   public class Test2
+    {
+        private readonly IZennoPosterProjectModel _project;
+        private readonly W3bRead _w3b;
+        private readonly Sql _sql;
+        private readonly Starter _starter;
+        private readonly IZennoList _accounts;//List<string> _accounts;
+
+        public Test2(IZennoPosterProjectModel project, bool log = false)
+        {
+            _project = project ?? throw new ArgumentNullException(nameof(project));
+            _w3b = new W3bRead(project, log);
+            _sql = new Sql(project, log);
+            _starter = new Starter(project, log);
+            _accounts = project.Lists["accs"];
+        }
+
+        public void ProcessAccounts(string mode)
+        {
+            if (_accounts.Count == 0)
+            {
+                HandleNoAccounts();
+                return;
+            }
+
+            switch (mode)
+            {
+                case "CheckBalance":
+                    ProcessCheckBalance();
+                    break;
+                case "Cooldown":
+                case "TopUp":
+                    ProcessRandomAccount(mode);
+                    break;
+                default:
+                    throw new ArgumentException($"Неизвестный режим: {mode}");
+            }
+        }
+
+        private void ProcessCheckBalance()
+        {
+            while (_accounts.Count > 0)
+            {
+                string account = _accounts[0];
+                _accounts.RemoveAt(0);
+                ProcessSingleAccount(account, updateNative: true);
+            }
+
+            Log("TimeToChill", thr0w: true);
+        }
+
+        private void ProcessRandomAccount(string mode)
+        {
+            if (mode == "TopUp")
+            {
+                _accounts.Clear();
+                _accounts.AddRange(_project.Variables["range"].Value.Split(','));
+            }
+
+            var random = new Random();
+            while (_accounts.Count > 0)
+            {
+                int randomIndex = random.Next(0, _accounts.Count);
+                string account = _accounts[randomIndex];
+                _accounts.RemoveAt(randomIndex);
+
+                if (!ProcessSingleAccount(account, checkBalance: true, isCooldown: mode == "Cooldown"))
+                {
+                    continue;
+                }
+
+                if (!_project.SetGlobalVar())
+                {
+                    continue;
+                }
+
+                SetProfilePath(account);
+                Log($"running: [acc{account}] accs left: [{_accounts.Count}]");
+                return; 
+            }
+
+            HandleNoAccounts();
+        }
+
+        private bool ProcessSingleAccount(string account, bool updateNative = false, bool checkBalance = false, bool isCooldown = false)
+        {
+            _project.Variables["acc0"].Value = account;
+
+            // if (!_project.SetGlobalVar())
+            // {
+            //     return false;
+            // }
+
+            string adrMove = _sql.Get("move", "blockchain_public");
+            if (updateNative)
+            {
+                string nativeMOVE = _w3b.NativeAPT<string>("https://mainnet.movementnetwork.xyz/v1", adrMove, log: true);
+                _sql.Upd($"move = {nativeMOVE}", "native");
+                _sql.Upd($"native = '{nativeMOVE}'");
+                return true;
+            }
+
+            if (checkBalance)
+            {
+                decimal nativeMOVE = _w3b.NativeAPT<decimal>("https://mainnet.movementnetwork.xyz/v1", adrMove, log: true);
+                if (isCooldown)
+                {
+                    return nativeMOVE != 0; 
+                }
+                return nativeMOVE <= 0; 
+            }
+
+            return true;
+        }
+
+        private void SetProfilePath(string account)
+        {
+            string settingsFolder = _project.Variables["settingsZenFolder"].Value;
+            _project.Variables["pathProfileFolder"].Value = $"{settingsFolder}accounts\\profilesFolder\\{account}";
+        }
+
+        private void HandleNoAccounts()
+        {
+            _project.Variables["noAccsToDo"].Value = "True";
+            _project.Variables["acc0"].Value = "";
+            _project.SendToLog("♻ noAccoutsAvaliable", LogType.Info, true, LogColor.Turquoise);
+            throw new Exception("TimeToChill");
+        }
+
+        private void Log(string message, bool thr0w = false)
+        {
+            _project.L0g(message, thr0w: thr0w);
+        }
+    }
+
+
+
+public class ZerionWallet2 : Wlt
+{
+    protected readonly string _extId = "klghhnkeealcohjjanjjdaeeggmfmlpl";
+    protected readonly string _popupUrl = "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html#";
+    protected readonly string _sidepanelUrl = "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#";
+    protected readonly string _importPage = "/get-started/import";
+    protected readonly string _selectPage = "/wallet-select";
+    protected readonly string _historyPage = "/overview/history";
+    protected readonly string _fileName;
+    protected readonly string _publicFromKey;
+    protected readonly string _publicFromSeed;
+
+    public ZerionWallet2(IZennoPosterProjectModel project, Instance instance, bool log = false, string key = null, string seed = null)
+        : base(project, instance, log)
+    {
+        _fileName = "Zerion1.21.3.crx";
+        _key = KeyCheck(key);
+        _seed = SeedCheck(seed);
+        _publicFromKey = _key.ToPubEvm();
+        _publicFromSeed = _seed.ToPubEvm();
+    }
+
+    private string KeyCheck(string key)
+    {
+        if (string.IsNullOrEmpty(key))
+            key = Decrypt(KeyT.secp256k1);
+        if (string.IsNullOrEmpty(key))
+            throw new Exception("emptykey");
+        return key;
+    }
+    private string SeedCheck(string seed)
+    {
+        if (string.IsNullOrEmpty(seed))
+            seed = Decrypt(KeyT.bip39);
+        if (string.IsNullOrEmpty(seed))
+            throw new Exception("emptykey");
+        return seed;
+    }
+
+
+    public void Go(string page = null, string mode = "sidepanel")
+    {
+        string sourseLink;
+        string method;
+        if ( mode == "sidepanel") sourseLink = _sidepanelUrl;
+        else sourseLink = _popupUrl;
+
+        switch (page)
+        {
+            case "import":
+                method = _importPage;
+                break;
+            case "select":
+                method = _selectPage;
+                break;
+            case "history":
+                method = _historyPage;
+                break; 
+            default:
+                method = null; 
+                break;  
+        }
+        
+        _instance.ActiveTab.Navigate(sourseLink + method, "");
+    }
+
+    public void Add(string source = "seed", bool log = false)
+    {
+
+        if (!_instance.ActiveTab.URL.Contains(_importPage)) Go("import");
+            
+        if (source == "pkey") source = _key;
+        else if (source == "seed") source = _seed;
+
+        _instance.HeSet(("seedOrPrivateKey","name"),source);
+        _instance.HeClick(("button", "innertext", "Import", "regexp", 0));
+        _instance.HeSet(("input:password", "fulltagname", "input:password", "text", 0), _pass);
+        _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+        try{
+            _instance.HeClick(("button", "class", "_option", "regexp", 0));
+            _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+            _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+        }
+        catch{}
+
+    }
+
+    public void Select(string addressToUse = "key")
+    {
+        if (addressToUse == "key" ) addressToUse  = _publicFromKey; 
+        else if (addressToUse == "seed" ) addressToUse  = _publicFromSeed; 
+        go:
+        Go("select");
+        Thread.Sleep(1000);
+        var wallets = _instance.ActiveTab.FindElementsByAttribute("button", "class", "_wallet", "regexp").ToList();
+
+        foreach (HtmlElement wallet in wallets)
+        {
+            string masked = "";
+            string balance = "";
+            string ens = "";
+
+            if (wallet.InnerHtml.Contains("M18 21a2.9 2.9 0 0 1-2.125-.875A2.9 2.9 0 0 1 15 18q0-1.25.875-2.125A2.9 2.9 0 0 1 18 15a3.1 3.1 0 0 1 .896.127 1.5 1.5 0 1 0 1.977 1.977Q21 17.525 21 18q0 1.25-.875 2.125A2.9 2.9 0 0 1 18 21")) continue;
+            if (wallet.InnerText.Contains("·") )
+            {
+                ens = wallet.InnerText.Split('\n')[0].Split('·')[0];
+                masked = wallet.InnerText.Split('\n')[0].Split('·')[1];
+                balance = wallet.InnerText.Split('\n')[1].Trim();
+                
+            }
+            else
+            {
+                masked = wallet.InnerText.Split('\n')[0];
+                balance = wallet.InnerText.Split('\n')[1];
+            }
+            masked = masked.Trim();
+
+            Log($"[{masked}]{masked.ChkAddress(addressToUse)}[{addressToUse}]");
+            
+            if(masked.ChkAddress(addressToUse)) 
+            {
+               _instance.HeClick(wallet);
+               return; 
+            }              
+        }
+        Log("address not found");
+        Add("seed");
+        goto go;
+
+
+    }
+
+
+
+
+
+
+    public void ZerionLnch(string fileName = null, bool log = false)
+    {
+        if (string.IsNullOrEmpty(fileName)) fileName = _fileName;
+
+        var em = _instance.UseFullMouseEmulation;
+        _instance.UseFullMouseEmulation = false;
+
+        if (Install(_extId, fileName)) ZerionImport(log: log);
+        else
+        {
+            ZerionUnlock(log: false);
+            ZerionCheck(log: log);
+        }
+        _instance.CloseExtraTabs();
+        _instance.UseFullMouseEmulation = em;
+    }
+
+    public bool ZerionImport(string source = "pkey", string refCode = null, bool log = false)
+    {
+        
+        if (string.IsNullOrWhiteSpace(refCode))
+        {
+            refCode = _sql.DbQ(@"SELECT referralCode
+            FROM projects.zerion
+            WHERE referralCode != '_' 
+            AND TRIM(referralCode) != ''
+            ORDER BY RANDOM()
+            LIMIT 1;");
+        }
+
+        var inputRef = true;
+        _instance.HeClick(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\?windowType=tab&appMode=onboarding#/onboarding/import", "regexp", 0));
+        if (source == "pkey")
+        {
+            _instance.HeClick(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\?windowType=tab&appMode=onboarding#/onboarding/import/private-key", "regexp", 0));
+            string key = _key;
+            _instance.ActiveTab.FindElementByName("key").SetValue(key, "Full", false);
+        }
+        else if (source == "seed")
+        {
+            _instance.HeClick(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\?windowType=tab&appMode=onboarding#/onboarding/import/mnemonic", "regexp", 0));
+            string seedPhrase = _seed;
+            int index = 0;
+            foreach (string word in seedPhrase.Split(' '))
+            {
+                _instance.ActiveTab.FindElementById($"word-{index}").SetValue(word, "Full", false);
+                index++;
+            }
+        }
+        _instance.HeClick(("button", "innertext", "Import\\ wallet", "regexp", 0));
+        _instance.HeSet(("input:password", "fulltagname", "input:password", "text", 0), _pass);
+        _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+        _instance.HeSet(("input:password", "fulltagname", "input:password", "text", 0), _pass);
+        _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+        if (inputRef)
+        {
+            _instance.HeClick(("button", "innertext", "Enter\\ Referral\\ Code", "regexp", 0));
+            _instance.HeSet((("referralCode", "name")), refCode);
+            _instance.HeClick(("button", "class", "_regular", "regexp", 0));
+        }
+        return true;
+    }
+
+    public void ZerionUnlock(bool log = false)
+    {
+        _instance.ActiveTab.Navigate("chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/overview", "");
+
+        string active = null;
+        try
+        {
+            active = _instance.HeGet(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html\\#/wallet-select", "regexp", 0),deadline:2);
+        }
+        catch
+        {
+            _instance.HeSet(("input:password", "fulltagname", "input:password", "text", 0), _pass);
+            _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+            active = _instance.HeGet(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html\\#/wallet-select", "regexp", 0));
+        }
+        Log(active, log: log);
+    }
+
+    public string ZerionCheck(bool log = false)
+    {
+        if (_instance.ActiveTab.URL != "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/overview")
+            _instance.ActiveTab.Navigate("chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/overview", "");
+
+        var active = _instance.HeGet(("div", "class", "_uitext_", "regexp", 0));
+        var balance = _instance.HeGet(("div", "class", "_uitext_", "regexp", 1));
+        var pnl = _instance.HeGet(("div", "class", "_uitext_", "regexp", 2));
+
+        Log($"{active} {balance} {pnl}", log: log);
+        return active;
+    }
+
+    public bool ZerionApprove(bool log = false)
+    {
+
+        try
+        {
+            var button = _instance.HeGet(("button", "class", "_primary", "regexp", 0));
+            Log(button, log: log);
+            _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Log($"!W {ex.Message}", log: log);
+            throw;
+        }
+    }
+
+    public void ZerionConnect(bool log = false)
+    {
+
+        string action = null;
+        getState:
+
+        try
+        {
+            action = _instance.HeGet(("button", "class", "_primary", "regexp", 0));
+        }
+        catch (Exception ex)
+        {
+            _project.L0g($"No Wallet tab found. 0");
+            return;
+        }
+
+        _project.L0g(action);
+
+        switch (action)
+        {
+            case "Add":
+                _project.L0g($"adding {_instance.HeGet(("input:url", "fulltagname", "input:url", "text", 0), atr: "value")}");
+                _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                goto getState;
+            case "Close":
+                _project.L0g($"added {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                goto getState;
+            case "Connect":
+                _project.L0g($"connecting {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                goto getState;
+            case "Sign":
+                _project.L0g($"sign {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                goto getState;
+
+            default:
+                goto getState;
+
+        }
+
+
+    }
+
+    public bool ZerionWaitTx(int deadline = 60, bool log = false)
+    {
+        DateTime functionStart = DateTime.Now;
+    check:
+        bool result;
+        if ((DateTime.Now - functionStart).TotalSeconds > deadline) throw new Exception($"!W Deadline [{deadline}]s exeeded");
+
+
+        if (!_instance.ActiveTab.URL.Contains("chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/overview/history"))
+        {
+            Tab tab = _instance.NewTab("zw");
+            if (tab.IsBusy) tab.WaitDownloading();
+            _instance.ActiveTab.Navigate("chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/overview/history", "");
+
+        }
+        Thread.Sleep(2000);
+
+        var status = _instance.HeGet(("div", "style", "padding: 0px 16px;", "regexp", 0));
+
+
+
+        if (status.Contains("Pending")) goto check;
+        else if (status.Contains("Failed")) result = false;
+        else if (status.Contains("Execute")) result = true;
+        else
+        {
+            Log($"unknown status {status}");
+            goto check;
+        }
+        _instance.CloseExtraTabs();
+        return result;
+
+    }
+}
+
+
+
+
 
 
 

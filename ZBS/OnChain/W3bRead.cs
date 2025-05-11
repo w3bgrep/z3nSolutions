@@ -766,6 +766,17 @@ namespace ZBSolutions
 
         }
 
+        public decimal UsdToToken(string tiker, decimal usdAmount, bool log = false)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            var restApi = new OKXApi(_project);
+
+            tiker = tiker.ToUpper();
+            decimal price = restApi.OKXPrice<decimal>($"{tiker}-USDT");
+            decimal tokenAmount = usdAmount / price;
+            return tokenAmount;
+        }
+
         public bool WaitTransaction(string rpc = null, string hash = null, int deadline = 60, string proxy = "", bool log = false)
         {
             if (string.IsNullOrEmpty(hash)) hash = _project.Variables["blockchainHash"].Value;
