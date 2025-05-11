@@ -12,16 +12,24 @@ namespace ZBSolutions
 {
     public class ZerionWallet : Wlt
     {
-        protected readonly string _extId;
+        protected readonly string _extId = "klghhnkeealcohjjanjjdaeeggmfmlpl";
+        protected readonly string _popupUrl = "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html#";
+        protected readonly string _sidepanelUrl = "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#";
+        protected readonly string _importPage = "/get-started/import";
+        protected readonly string _selectPage = "/wallet-select";
+        protected readonly string _historyPage = "/overview/history";
         protected readonly string _fileName;
+        protected readonly string _publicFromKey;
+        protected readonly string _publicFromSeed;
 
         public ZerionWallet(IZennoPosterProjectModel project, Instance instance, bool log = false, string key = null, string seed = null)
             : base(project, instance, log)
         {
-            _extId = "klghhnkeealcohjjanjjdaeeggmfmlpl";
             _fileName = "Zerion1.21.3.crx";
             _key = KeyCheck(key);
             _seed = SeedCheck(seed);
+            _publicFromKey = _key.ToPubEvm();
+            _publicFromSeed = _seed.ToPubEvm();
         }
 
         private string KeyCheck(string key)
@@ -40,6 +48,101 @@ namespace ZBSolutions
                 throw new Exception("emptykey");
             return seed;
         }
+
+
+        public void Go(string page = null, string mode = "sidepanel")
+        {
+            string sourseLink;
+            string method;
+            if (mode == "sidepanel") sourseLink = _sidepanelUrl;
+            else sourseLink = _popupUrl;
+
+            switch (page)
+            {
+                case "import":
+                    method = _importPage;
+                    break;
+                case "select":
+                    method = _selectPage;
+                    break;
+                case "history":
+                    method = _historyPage;
+                    break;
+                default:
+                    method = null;
+                    break;
+            }
+
+            _instance.ActiveTab.Navigate(sourseLink + method, "");
+        }
+        public void Add(string source = "seed", bool log = false)
+        {
+
+            if (!_instance.ActiveTab.URL.Contains(_importPage)) Go("import");
+
+            if (source == "pkey") source = _key;
+            else if (source == "seed") source = _seed;
+
+            _instance.HeSet(("seedOrPrivateKey", "name"), source);
+            _instance.HeClick(("button", "innertext", "Import", "regexp", 0));
+            _instance.HeSet(("input:password", "fulltagname", "input:password", "text", 0), _pass);
+            _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+            try
+            {
+                _instance.HeClick(("button", "class", "_option", "regexp", 0));
+                _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+            }
+            catch { }
+
+        }
+        public void Select(string addressToUse = "key")
+        {
+            if (addressToUse == "key") addressToUse = _publicFromKey;
+            else if (addressToUse == "seed") addressToUse = _publicFromSeed;
+            go:
+            Go("select");
+            Thread.Sleep(1000);
+            var wallets = _instance.ActiveTab.FindElementsByAttribute("button", "class", "_wallet", "regexp").ToList();
+
+            foreach (HtmlElement wallet in wallets)
+            {
+                string masked = "";
+                string balance = "";
+                string ens = "";
+
+                if (wallet.InnerHtml.Contains("M18 21a2.9 2.9 0 0 1-2.125-.875A2.9 2.9 0 0 1 15 18q0-1.25.875-2.125A2.9 2.9 0 0 1 18 15a3.1 3.1 0 0 1 .896.127 1.5 1.5 0 1 0 1.977 1.977Q21 17.525 21 18q0 1.25-.875 2.125A2.9 2.9 0 0 1 18 21")) continue;
+                if (wallet.InnerText.Contains("·"))
+                {
+                    ens = wallet.InnerText.Split('\n')[0].Split('·')[0];
+                    masked = wallet.InnerText.Split('\n')[0].Split('·')[1];
+                    balance = wallet.InnerText.Split('\n')[1].Trim();
+
+                }
+                else
+                {
+                    masked = wallet.InnerText.Split('\n')[0];
+                    balance = wallet.InnerText.Split('\n')[1];
+                }
+                masked = masked.Trim();
+
+                Log($"[{masked}]{masked.ChkAddress(addressToUse)}[{addressToUse}]");
+
+                if (masked.ChkAddress(addressToUse))
+                {
+                    _instance.HeClick(wallet);
+                    return;
+                }
+            }
+            Log("address not found");
+            Add("seed");
+            goto go;
+
+
+        }
+
+
+
 
         public void ZerionLnch(string fileName = null, bool log = false)
         {
@@ -106,7 +209,8 @@ namespace ZBSolutions
 
         public void ZerionUnlock(bool log = false)
         {
-            _instance.ActiveTab.Navigate("chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/overview", "");
+            Go();
+            //_instance.ActiveTab.Navigate("chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/overview", "");
 
             string active = null;
             try
@@ -151,7 +255,6 @@ namespace ZBSolutions
                 throw;
             }
         }
-
         public void ZerionConnect(bool log = false)
         {
 
@@ -196,7 +299,6 @@ namespace ZBSolutions
 
 
         }
-
         public bool ZerionWaitTx(int deadline = 60, bool log = false)
         {
             DateTime functionStart = DateTime.Now;
