@@ -175,8 +175,7 @@ namespace ZBSolutions
         check:
 
             if (DateTime.Now > deadline) throw new Exception("timeout");
-            _instance.HeClick(("button", "innertext", "Accept\\ all\\ cookies", "regexp", 0), deadline: 0, thr0w: false);
-            _instance.HeClick(("button", "data-testid", "xMigrationBottomBar", "regexp", 0), deadline: 0, thr0w: false);
+
             var status = XcheckState(log: true);
 
             if (status == "login" && !tokenUsed)
@@ -197,7 +196,10 @@ namespace ZBSolutions
                 return status;
             }
             else if (status == "ok")
-            { 
+            {
+                _instance.HeClick(("button", "innertext", "Accept\\ all\\ cookies", "regexp", 0), deadline: 0, thr0w: false);
+                _instance.HeClick(("button", "data-testid", "xMigrationBottomBar", "regexp", 0), deadline: 0, thr0w: false);
+
                 XgetToken();
                 return status;
             }

@@ -213,7 +213,7 @@ namespace ZBSolutions
             string tablename;
             string schema = "projects.";
             if (_project.Variables["DBmode"].Value == "PostgreSQL") tablename = schema + projectName.ToLower();
-            else tablename = "_" + projectName.ToLower();
+            else tablename = projectName.ToLower();
             _project.Variables["projectTable"].Value = tablename;
 
             _project.SetRange();
