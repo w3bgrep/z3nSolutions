@@ -2,6 +2,7 @@
 
 using NBitcoin;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -91,5 +92,25 @@ namespace ZBSolutions
 
             return prefixMatch && suffixMatch;
         }
+
+        public static Dictionary<string, string> ParseCreds(this string data, string format)
+        {
+            var parsedData = new Dictionary<string, string>();
+
+            if (string.IsNullOrWhiteSpace(format) || string.IsNullOrWhiteSpace(data))
+                return parsedData;
+
+            string[] formatParts = format.Split(':');
+            string[] dataParts = data.Split(':');
+
+            for (int i = 0; i < formatParts.Length && i < dataParts.Length; i++)
+            {
+                string key = formatParts[i].Trim('{', '}').Trim();
+                if (!string.IsNullOrEmpty(key))
+                    parsedData[key] = dataParts[i].Trim();
+            }
+            return parsedData;
+        }
+
     }
 }

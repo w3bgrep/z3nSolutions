@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using Newtonsoft.Json.Linq;
 using Leaf.xNet;
+
 
 namespace ZBSolutions
 {
@@ -172,6 +175,8 @@ namespace ZBSolutions
         check:
 
             if (DateTime.Now > deadline) throw new Exception("timeout");
+            _instance.HeClick(("button", "innertext", "Accept\\ all\\ cookies", "regexp", 0), deadline: 0, thr0w: false);
+            _instance.HeClick(("button", "data-testid", "xMigrationBottomBar", "regexp", 0), deadline: 0, thr0w: false);
             var status = XcheckState(log: true);
 
             if (status == "login" && !tokenUsed)
@@ -276,7 +281,38 @@ namespace ZBSolutions
             else goto check;
         }
 
+        public void UpdXCreds(Dictionary<string, string> data)
+        {
+            var fields = new Dictionary<string, string>
+            {
+                { "LOGIN", data.ContainsKey("LOGIN") ? data["LOGIN"].Replace("'", "''") : "" },
+                { "PASSWORD", data.ContainsKey("PASSWORD") ? data["PASSWORD"].Replace("'", "''") : "" },
+                { "EMAIL", data.ContainsKey("EMAIL") ? data["EMAIL"].Replace("'", "''") : "" },
+                { "EMAIL_PASSWORD", data.ContainsKey("EMAIL_PASSWORD") ? data["EMAIL_PASSWORD"].Replace("'", "''") : "" },
+                //{ "TOKEN", data.ContainsKey("TOKEN") ? data["TOKEN"].Replace("'", "''") : "" },
 
+                { "TOKEN", data.ContainsKey("TOKEN") ? (data["TOKEN"].Contains('=') ? data["TOKEN"].Split('=').Last().Replace("'", "''") : data["TOKEN"].Replace("'", "''")) : "" },
+
+                { "CODE2FA", data.ContainsKey("CODE2FA") ? (data["CODE2FA"].Contains('/') ? data["CODE2FA"].Split('/').Last().Replace("'", "''") : data["CODE2FA"].Replace("'", "''")) : "" },
+                { "RECOVERY_SEED", data.ContainsKey("RECOVERY_SEED") ? data["RECOVERY_SEED"].Replace("'", "''") : "" }
+            };
+
+            var _sql = new Sql(_project);
+            try
+            {
+                _sql.Upd($@"token = '{fields["TOKEN"]}', 
+                login = '{fields["LOGIN"]}', 
+                password = '{fields["PASSWORD"]}', 
+                code2fa = '{fields["CODE2FA"]}', 
+                emaillogin = '{fields["EMAIL"]}', 
+                emailpass = '{fields["EMAIL_PASSWORD"]}', 
+                recovery2fa = '{fields["RECOVERY_SEED"]}'", "twitter");
+            }
+            catch (Exception ex)
+            {
+                _project.L0g("!W{ex.Message}");
+            }
+        }
 
         public static string GenerateTweet(IZennoPosterProjectModel project, string content, string bio = "", bool log = false)
         {
@@ -369,6 +405,12 @@ namespace ZBSolutions
                 throw;
             }
         }
+
+
+
+
+
+
 
 
     }

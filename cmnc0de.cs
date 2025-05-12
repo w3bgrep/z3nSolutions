@@ -280,11 +280,60 @@ public static class TestStatic
         {
             if (!_logShow && !forceLog) return;
             _project.L0g($"[ 🌍 {callerName}] [{message}]");
-        }       
+        }
 
 
-        
+        public Dictionary<string, string> ParseCreds(string format, string data)
+        {
+            var parsedData = new Dictionary<string, string>();
 
+            if (string.IsNullOrWhiteSpace(format) || string.IsNullOrWhiteSpace(data))
+                return parsedData;
+
+            string[] formatParts = format.Split(':');
+            string[] dataParts = data.Split(':');
+
+            for (int i = 0; i < formatParts.Length && i < dataParts.Length; i++)
+            {
+                string key = formatParts[i].Trim('{', '}').Trim();
+                if (!string.IsNullOrEmpty(key))
+                    parsedData[key] = dataParts[i].Trim();
+            }
+            return parsedData;
+        }  
+
+        public void UpdXCreds(Dictionary<string, string> data)
+        {
+            var fields = new Dictionary<string, string>
+            {
+                { "LOGIN", data.ContainsKey("LOGIN") ? data["LOGIN"].Replace("'", "''") : "" },
+                { "PASSWORD", data.ContainsKey("PASSWORD") ? data["PASSWORD"].Replace("'", "''") : "" },
+                { "EMAIL", data.ContainsKey("EMAIL") ? data["EMAIL"].Replace("'", "''") : "" },
+                { "EMAIL_PASSWORD", data.ContainsKey("EMAIL_PASSWORD") ? data["EMAIL_PASSWORD"].Replace("'", "''") : "" },
+                //{ "TOKEN", data.ContainsKey("TOKEN") ? data["TOKEN"].Replace("'", "''") : "" },
+
+                { "TOKEN", data.ContainsKey("TOKEN") ? (data["TOKEN"].Contains('=') ? data["TOKEN"].Split('=').Last().Replace("'", "''") : data["TOKEN"].Replace("'", "''")) : "" },
+
+                { "CODE2FA", data.ContainsKey("CODE2FA") ? (data["CODE2FA"].Contains('/') ? data["CODE2FA"].Split('/').Last().Replace("'", "''") : data["CODE2FA"].Replace("'", "''")) : "" },
+                { "RECOVERY_SEED", data.ContainsKey("RECOVERY_SEED") ? data["RECOVERY_SEED"].Replace("'", "''") : "" }
+            };
+
+            var _sql = new Sql(_project);
+            try
+            {
+                _sql.Upd($@"token = '{fields["TOKEN"]}', 
+                login = '{fields["LOGIN"]}', 
+                password = '{fields["PASSWORD"]}', 
+                code2fa = '{fields["CODE2FA"]}', 
+                emaillogin = '{fields["EMAIL"]}', 
+                emailpass = '{fields["EMAIL_PASSWORD"]}', 
+                recovery2fa = '{fields["RECOVERY_SEED"]}'","twitter");
+            }
+            catch (Exception ex)
+            {
+                _project.L0g("!W{ex.Message}");
+            }
+        }     
     }
 
 
