@@ -191,11 +191,11 @@ namespace ZBSolutions
             _project.L0g($"[ 🌍 {callerName}] [{message}]");
         }
 
-        public string GET(string url, WebProxy proxy = null, [CallerMemberName] string callerName = "")
+        public string GET(string url, string proxyString = "", bool parseJson = false, [CallerMemberName] string callerName = "")
         {
             try
             {
-
+                WebProxy proxy = ParseProxy(proxyString);
                 var handler = new HttpClientHandler
                 {
                     Proxy = proxy,
@@ -209,23 +209,27 @@ namespace ZBSolutions
                     response.EnsureSuccessStatusCode();
 
                     string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    if (parseJson)
+                    {
+                        _project.Json.FromString(result);
+                    }
                     Log($"{result}", callerName);
                     return result.Trim();
                 }
             }
             catch (HttpRequestException e)
             {
-                Log($"!W [GET] RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxy != null ? proxy.Address?.ToString() : "noProxy")})");
+                Log($"!W [GET] RequestErr: [{e.Message}] url:[{url}] (proxy: {proxyString})");
                 return $"Ошибка: {e.Message}";
             }
             catch (Exception e)
             {
-                Log($"!W [GET] UnknownErr: [{e.Message}] url:[{url}] (proxy: {(proxy != null ? proxy.Address?.ToString() : "noProxy")})");
+                Log($"!W [GET] UnknownErr: [{e.Message}] url:[{url}] (proxy: {proxyString})");
                 return $"Ошибка: {e.Message}";
             }
         }
 
-        public string POST(string url, string body, string proxyString = "", bool parseJson = false, Dictionary<string, string> headers = null, [CallerMemberName] string callerName = "", bool throwOnFail = false)
+        public string POST(string url, string body, string proxyString = "", Dictionary<string, string> headers = null, bool parseJson = false, [CallerMemberName] string callerName = "", bool throwOnFail = false)
         {
             try
             {
@@ -261,7 +265,6 @@ namespace ZBSolutions
                     }
 
                     headersString.AppendLine($"Content-Type: application/json; charset=UTF-8");
-                    //Log(headersString.ToString(), callerName);
 
                     Log(body);
 
@@ -275,7 +278,6 @@ namespace ZBSolutions
                         var value = string.Join(", ", header.Value);
                         responseHeadersString.AppendLine($"{header.Key}: {value}");
                     }
-                    //Log(responseHeadersString.ToString(), callerName);
 
                     string cookies = "";
                     if (response.Headers.TryGetValues("Set-Cookie", out var cookieValues))
@@ -364,7 +366,7 @@ namespace ZBSolutions
             string ipWithProxy = "notSet";
             if (proxy != null)
             {
-                ipWithProxy = GET(url, proxy);
+                ipWithProxy = GET(url, proxyString);
             }
             else
             {

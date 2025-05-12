@@ -140,7 +140,22 @@ namespace ZBSolutions
 
 
         }
+        public bool Sign(bool log = false)
+        {
 
+            try
+            {
+                var button = _instance.HeGet(("button", "class", "_primary", "regexp", 0));
+                Log(button, log: log);
+                _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log($"!W {ex.Message}", log: log);
+                throw;
+            }
+        }
 
 
 
@@ -288,6 +303,10 @@ namespace ZBSolutions
                     _instance.HeClick(("button", "class", "_primary", "regexp", 0));
                     goto getState;
                 case "Sign":
+                    _project.L0g($"sign {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                    goto getState;
+                case "Sign In":
                     _project.L0g($"sign {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
                     _instance.HeClick(("button", "class", "_primary", "regexp", 0));
                     goto getState;
