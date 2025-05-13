@@ -18,20 +18,37 @@ namespace ZBSolutions
         private string _pid;
         private dynamic _allMail;
         private Dictionary<string, string> _headers;
-
         private readonly NetHttp _h;
         public DMail(IZennoPosterProjectModel project, string key = null, bool log = false)
-        : base(project, key:key, log:log)
-        {          
+        : base(project, key: key, log: log)
+        {
             _key = Key(key);
             _h = new NetHttp(project, true);
         }
 
+        private string Key(string key = null)
+        {
+            if (string.IsNullOrEmpty(key))
+            {
+                string encryptedkey = _sql.Get("secp256k1", "accounts.blockchain_private");
+                key = SAFU.Decode(_project, encryptedkey);
+            }
+
+            if (string.IsNullOrEmpty(key))
+            {
+                Log("!W key is null or empty");
+                throw new Exception("emptykey");
+            }
+            ;
+            return key;
+
+        }
         public string Auth()
         {
 
             var signer = new EthereumMessageSigner();
             string key = _key;
+            Log(key);
             string wallet = _key.ToPubEvm();
             string time = string.Format("{0:yyyy-MM-dd HH:mm:ss}", DateTime.Now);
 
@@ -50,21 +67,21 @@ namespace ZBSolutions
 
             // Create JObject for the message
             var message = new JObject
-            {
-                { "Message", "SIGN THIS MESSAGE TO LOGIN TO THE INTERNET COMPUTER" },
-                { "APP NAME", "dmail" },
-                { "ADDRESS", wallet },
-                { "NONCE", nonce },
-                { "CURRENT TIME", time }
-            };
+        {
+            { "Message", "SIGN THIS MESSAGE TO LOGIN TO THE INTERNET COMPUTER" },
+            { "APP NAME", "dmail" },
+            { "ADDRESS", wallet },
+            { "NONCE", nonce },
+            { "CURRENT TIME", time }
+        };
 
             var data = new JObject
-            {
-                { "message", message },
-                { "signature", sign },
-                { "wallet_name", "metamask" },
-                { "chain_id", 1 }
-            };
+        {
+            { "message", message },
+            { "signature", sign },
+            { "wallet_name", "metamask" },
+            { "chain_id", 1 }
+        };
 
             string body = JsonConvert.SerializeObject(data);
 
@@ -88,28 +105,27 @@ namespace ZBSolutions
 
 
             _headers = new Dictionary<string, string>
-            {
-                { "dm-encstring", encstring },
-                { "dm-pid",pid }
-            };
+        {
+            { "dm-encstring", encstring },
+            { "dm-pid",pid }
+        };
 
             return $"{encstring}|{pid}";
 
 
         }
-
         public dynamic GetAll()
         {
 
             var pageInfo = new JObject {
-                { "page", 1 },
-                { "pageSize", 20 }
-            };
+            { "page", 1 },
+            { "pageSize", 20 }
+        };
             var data = new JObject {
-                { "dm_folder", "inbox" },
-                { "store_type", "mail" },
-                { "pageInfo", pageInfo }
-            };
+            { "dm_folder", "inbox" },
+            { "store_type", "mail" },
+            { "pageInfo", pageInfo }
+        };
 
 
             string getMsgsBody = JsonConvert.SerializeObject(data);
@@ -124,7 +140,6 @@ namespace ZBSolutions
             return allMailObj;
 
         }
-
         public Dictionary<string, string> ReadMsg(int index = 0, dynamic mail = null, bool markAsRead = true)
         {
             if (mail == null) mail = _allMail;
@@ -141,45 +156,44 @@ namespace ZBSolutions
 
 
             var message = new Dictionary<string, string>
-            {
-                { "sender", sender },
-                { "date", date },
-                { "subj", subj },
-                { "html", html },
-                { "dm_scid", dm_scid },
-                { "dm_smid", dm_smid },
-            };
+        {
+            { "sender", sender },
+            { "date", date },
+            { "subj", subj },
+            { "html", html },
+            { "dm_scid", dm_scid },
+            { "dm_smid", dm_smid },
+        };
             if (markAsRead) MarkAsRead(index, dm_scid, dm_smid);
-            return message; 
+            return message;
         }
-
         public void MarkAsRead(int index = 0, string dm_scid = null, string dm_smid = null)
         {
             var status = new JObject {
-                {"dm_is_read", 1 }
-            };
+            {"dm_is_read", 1 }
+        };
 
             if (string.IsNullOrEmpty(dm_scid) || string.IsNullOrEmpty(dm_smid))
             {
                 var MessageData = ReadMsg(index);
-                MessageData.TryGetValue("dm_scid",out dm_scid);
+                MessageData.TryGetValue("dm_scid", out dm_scid);
                 MessageData.TryGetValue("dm_smid", out dm_smid);
             }
 
 
             var info = new JArray {
-                new JObject {
-                    {"dm_cid", dm_scid},
-                    {"dm_mid", dm_smid},
-                    {"dm_foldersource", "inbox"}
-                }
-            };
+            new JObject {
+                {"dm_cid", dm_scid},
+                {"dm_mid", dm_smid},
+                {"dm_foldersource", "inbox"}
+            }
+        };
 
             var data = new JObject {
-                {"status", status},
-                {"mail_info_list", info},
-                {"store_type", "mail"}
-            };
+            {"status", status},
+            {"mail_info_list", info},
+            {"store_type", "mail"}
+        };
 
             string body = JsonConvert.SerializeObject(data);
             string makeRead = _h.POST("https://icp.dmail.ai/api/node/v6/dmail/inbox_all/update_by_bulk", body, headers: _headers, parse: false);
@@ -188,4 +202,6 @@ namespace ZBSolutions
 
 
     }
+
+
 }
