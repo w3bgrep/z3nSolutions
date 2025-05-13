@@ -200,7 +200,7 @@ namespace ZBSolutions
             }
         }
 
-        public string GET(string url, string proxyString = "", bool parse = false, [CallerMemberName] string callerName = "")
+        public string GET(string url, string proxyString = "", Dictionary<string, string> headers = null, bool parse = false, [CallerMemberName] string callerName = "")
         {
             try
             {
@@ -214,8 +214,49 @@ namespace ZBSolutions
                 using (var client = new HttpClient(handler))
                 {
                     client.Timeout = TimeSpan.FromSeconds(15);
+
+                    StringBuilder headersString = new StringBuilder();
+                    headersString.AppendLine("[debugRequestHeaders]:");
+
+                    string defaultUserAgent = _project.Profile.UserAgent; // Same as in POST
+                    if (headers == null || !headers.ContainsKey("User-Agent"))
+                    {
+                        client.DefaultRequestHeaders.Add("User-Agent", defaultUserAgent);
+                        headersString.AppendLine($"User-Agent: {defaultUserAgent} (default)");
+                    }
+
+                    if (headers != null)
+                    {
+                        foreach (var header in headers)
+                        {
+                            client.DefaultRequestHeaders.Add(header.Key, header.Value);
+                            headersString.AppendLine($"{header.Key}: {header.Value}");
+                        }
+                    }
+
                     HttpResponseMessage response = client.GetAsync(url).GetAwaiter().GetResult();
                     response.EnsureSuccessStatusCode();
+
+                    StringBuilder responseHeadersString = new StringBuilder();
+                    responseHeadersString.AppendLine("[debugResponseHeaders]:");
+                    foreach (var header in response.Headers)
+                    {
+                        var value = string.Join(", ", header.Value);
+                        responseHeadersString.AppendLine($"{header.Key}: {value}");
+                    }
+
+                    string cookies = "";
+                    if (response.Headers.TryGetValues("Set-Cookie", out var cookieValues))
+                    {
+                        cookies = cookieValues.Aggregate((a, b) => a + "; " + b);
+                        Log("Set-Cookie found: " + cookies, callerName);
+                    }
+
+                    try
+                    {
+                        _project.Variables["debugCookies"].Value = cookies;
+                    }
+                    catch { }
 
                     string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                     if (parse) ParseJson(result);
@@ -225,12 +266,12 @@ namespace ZBSolutions
             }
             catch (HttpRequestException e)
             {
-                Log($"!W [GET] RequestErr: [{e.Message}] url:[{url}] (proxy: {proxyString})");
+                Log($"!W [GET] RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")})", callerName);
                 return $"Ошибка: {e.Message}";
             }
             catch (Exception e)
             {
-                Log($"!W [GET] UnknownErr: [{e.Message}] url:[{url}] (proxy: {proxyString})");
+                Log($"!W [GET] UnknownErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")})", callerName);
                 return $"Ошибка: {e.Message}";
             }
         }

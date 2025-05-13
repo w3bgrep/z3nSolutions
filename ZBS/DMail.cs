@@ -19,12 +19,25 @@ namespace ZBSolutions
         private dynamic _allMail;
         private Dictionary<string, string> _headers;
         private readonly NetHttp _h;
+
+        private readonly string _getNonce = "https://icp.dmail.ai/api/node/v6/dmail/auth/generate_nonce";
+        private readonly string _postVerifySign = "https://icp.dmail.ai/api/node/v6/dmail/auth/evm_verify_signature";
+        private readonly string _postRead = "https://icp.dmail.ai/api/node/v6/dmail/inbox_all/read_by_page_with_content";
+        private readonly string _postWrite = "https://icp.dmail.ai/api/node/v6/dmail/inbox_all/update_by_bulk";
+      
+
         public DMail(IZennoPosterProjectModel project, string key = null, bool log = false)
         : base(project, key: key, log: log)
         {
             _key = Key(key);
             _h = new NetHttp(project, true);
         }
+
+        public void dPost(string url, string body)
+        { }
+        public void dGet(string url)
+        { }
+
 
         private string Key(string key = null)
         {
@@ -198,7 +211,23 @@ namespace ZBSolutions
             string body = JsonConvert.SerializeObject(data);
             string makeRead = _h.POST("https://icp.dmail.ai/api/node/v6/dmail/inbox_all/update_by_bulk", body, headers: _headers, parse: false);
         }
+        public string GetUnread(int index = 0, bool parse = false)
+        {
+            string url = "https://icp.dmail.ai/api/node/v6/dmail/inbox_all/update_by_bulk";
 
+            var pageInfo = new Global.ZennoLab.Json.Linq.JObject {
+                { "page", 1 },
+                { "pageSize", 20 }
+            };
+            var data = new Global.ZennoLab.Json.Linq.JObject {
+                { "dm_folder", "inbox" },
+                { "store_type", "mail" },
+                { "pageInfo", pageInfo }
+            };
+            string body = Global.ZennoLab.Json.JsonConvert.SerializeObject(data);
+            string GetUnread = _h.POST(url, body, headers: _headers, parse: parse);
+            return GetUnread;
+        }
 
 
     }

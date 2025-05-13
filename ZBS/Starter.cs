@@ -9,6 +9,7 @@ using ZennoLab.InterfacesLibrary.ProjectModel;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
+using System.Reflection;
 
 
 namespace ZBSolutions
@@ -261,15 +262,32 @@ namespace ZBSolutions
             }
             catch (Exception ex) { }
         }
+        //private void Logo(string author)
+        //{
+        //    string name = _project.ExecuteMacro(_project.Name).Split('.')[0];
+        //    if (author != "") author = $" script author: @{author}";
+        //    string logo = $@"using ZennoposterBoosterSolutions;
+        //    ┌by─┐					
+        //    │    w3bgrep			
+        //    └─→┘
+        //                ► init {name} ░▒▓█ {author}";
+        //    _project.SendInfoToLog(logo, true);
+        //}
+
         private void Logo(string author)
         {
+            // Получаем версию сборки
+            string version = Assembly.GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                ?.InformationalVersion ?? "Unknown";
+
             string name = _project.ExecuteMacro(_project.Name).Split('.')[0];
             if (author != "") author = $" script author: @{author}";
-            string logo = $@"using ZennoposterBoosterSolutions;
+            string logo = $@"using ZennoposterBoosterSolutions v{version};
             ┌by─┐					
             │    w3bgrep			
             └─→┘
-                        ► init {name} ░▒▓█ {author}";
+                        ► init {name} ░▒▓█  {author}";
             _project.SendInfoToLog(logo, true);
         }
 
