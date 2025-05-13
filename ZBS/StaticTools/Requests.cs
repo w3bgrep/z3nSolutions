@@ -209,10 +209,8 @@ namespace ZBSolutions
                     response.EnsureSuccessStatusCode();
 
                     string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                    if (parseJson)
-                    {
-                        _project.Json.FromString(result);
-                    }
+                    if (parseJson) try { _project.Json.FromString(result); } catch { }
+                    
                     Log($"{result}", callerName);
                     return result.Trim();
                 }
@@ -293,12 +291,9 @@ namespace ZBSolutions
                     catch { }
 
                     string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                    if (parseJson)
-                    {
-                        _project.Json.FromString(result);
-                    }
+
                     Log(result);
-                    if (parseJson) _project.Json.FromString(result);
+                    if (parseJson) try { _project.Json.FromString(result); } catch { }
                     return result.Trim();
                 }
             }
@@ -315,14 +310,13 @@ namespace ZBSolutions
                 return "";
             }
         }
-
         public WebProxy ParseProxy(string proxyString, [CallerMemberName] string callerName = "")
         {
             if (string.IsNullOrEmpty(proxyString))
             {
-                Log("Прокси не указан", callerName, true);
                 return null;
             }
+            if (proxyString == "+") proxyString = _project.Variables["proxy"].Value;
             try
             {
                 WebProxy proxy = new WebProxy();
@@ -355,7 +349,6 @@ namespace ZBSolutions
                 return null;
             }
         }
-
         public void CheckProxy(string url = "http://api.ipify.org/", string proxyString = null)
         {
             if (string.IsNullOrEmpty(proxyString)) proxyString = _project.Variables["proxy"].Value;

@@ -6,6 +6,9 @@ using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using Newtonsoft.Json.Linq;
 using Leaf.xNet;
+using Nethereum.Contracts.Standards.ENS.ETHRegistrarController.ContractDefinition;
+using System.Runtime.CompilerServices;
+using static System.Net.Mime.MediaTypeNames;
 
 
 namespace ZBSolutions
@@ -35,6 +38,15 @@ namespace ZBSolutions
             
             LoadCreds();
 
+        }
+
+        protected void Log(string tolog = "", [CallerMemberName] string callerName = "", bool log = false)
+        {
+            if (!_logShow && !log) return;
+            var stackFrame = new System.Diagnostics.StackFrame(1);
+            var callingMethod = stackFrame.GetMethod();
+            if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
+            _project.L0g($"[ 💠  {callerName}] [{tolog}] ");
         }
 
         private string LoadCreds()
@@ -316,9 +328,9 @@ namespace ZBSolutions
             }
         }
 
-        public static string GenerateTweet(IZennoPosterProjectModel project, string content, string bio = "", bool log = false)
+        public string GenerateTweet(string content, string bio = "", bool log = false)
         {
-            project.Variables["api_response"].Value = "";
+            _project.Variables["api_response"].Value = "";
 
             var requestBody = new
             {
@@ -351,9 +363,9 @@ namespace ZBSolutions
             string[] headers = new string[]
             {
                 "Content-Type: application/json",
-                $"Authorization: Bearer {project.Variables["settingsApiPerplexity"].Value}"
+                $"Authorization: Bearer {_project.Variables["settingsApiPerplexity"].Value}"
             };
-
+            gen:
             string response;
             using (var request = new HttpRequest())
             {
@@ -377,43 +389,159 @@ namespace ZBSolutions
                 }
                 catch (HttpException ex)
                 {
-                    project.SendErrorToLog($"Ошибка HTTP-запроса: {ex.Message}, Status: {ex.Status}");
+                    Log($"Ошибка HTTP-запроса: {ex.Message}, Status: {ex.Status}");
                     throw;
                 }
             }
+            
+            _project.Variables["api_response"].Value = response;
 
-            project.Variables["api_response"].Value = response;
-
-            if (log)
-            {
-                project.SendInfoToLog($"Full response: {response}");
-            }
+            Log($"Full response: {response}");
 
             try
             {
                 var jsonResponse = Newtonsoft.Json.Linq.JObject.Parse(response);
                 string tweetText = jsonResponse["choices"][0]["message"]["content"].ToString();
-
-                if (log)
+                if (tweetText.Length > 220)
                 {
-                    project.SendInfoToLog($"Generated tweet: {tweetText}");
+                    Log($"tweet is over 220sym `y");
+                    goto gen;
                 }
-
+                
+                Log($"tweet: {tweetText}");
                 return tweetText; 
             }
             catch (Exception ex)
             {
-                project.SendErrorToLog($"Error parsing response: {ex.Message}");
+                Log($"!W Error parsing response: {ex.Message}");
                 throw;
             }
         }
 
 
+        public void ParseProfile()
+        {
+            _instance.HeClick(("*", "data-testid", "AppTabBar_Profile_Link", "regexp", 0));
 
 
+            string json = _instance.HeGet(("*", "data-testid", "UserProfileSchema-test", "regexp", 0));
+
+            var jo = JObject.Parse(json);
+            var main = jo["mainEntity"];
+
+            string dateCreated = jo["dateCreated"].ToString();
+            string id = main["identifier"].ToString();
+
+            string username = main["additionalName"].ToString();
+            string description = main["description"].ToString();
+            string givenName = main["givenName"].ToString();
+            string homeLocation = main["homeLocation"]["name"].ToString();
+
+            string ava = main["image"]["contentUrl"].ToString();
+            string banner = main["image"]["thumbnailUrl"].ToString();
+
+            var interactionStatistic = main["interactionStatistic"];
+
+            string Followers = interactionStatistic[0]["userInteractionCount"].ToString();
+            string Following = interactionStatistic[1]["userInteractionCount"].ToString();
+            string Tweets = interactionStatistic[2]["userInteractionCount"].ToString();
+
+            _sql.Upd($@"dateCreated = '{dateCreated}',
+                        id = '{id}',
+                        username = '{username}',
+                        description = '{description}',
+                        givenName = '{givenName}',
+                        homeLocation = '{homeLocation}',
+                        ava = '{ava}',
+                        banner = '{banner}',
+                        Followers = '{Followers}',
+                        Following = '{Following}',
+                        Tweets = '{Tweets}',
+                        ");
+
+        }
+
+        public void ParseSecured()
+        {
+
+            _instance.ActiveTab.Navigate("https://x.com/settings/your_twitter_data/account", "");
+
+        scan:
+            try
+            {
+                _instance.HeSet(("current_password", "name"), _pass, deadline: 1);
+                _instance.HeClick(("button", "innertext", "Confirm", "regexp", 0));
+            }
+            catch { }
+            var tIdList = _instance.ActiveTab.FindElementsByAttribute("*", "data-testid", ".", "regexp").ToList();
+
+            if (tIdList.Count < 50)
+            {
+                Thread.Sleep(3000);
+                goto scan;
+            }
+
+            string email = null;
+            string phone = null;
+            string creation = null;
+            string country = null;
+            string lang = null;
+            string gender = null;
+            string birth = null;
 
 
+            foreach (HtmlElement he in tIdList)
+            {
+                string pName = null;
+                string pValue = null;
+                string testid = he.GetAttribute("data-testid");
+                string href = he.GetAttribute("href");
+                string text = he.InnerText;
 
-
+                switch (testid)
+                {
+                    case "account-creation":
+                        pName = text.Split('\n')[0];
+                        pValue = text.Replace(pName, "").Replace("\n", " ").Trim();
+                        creation = pValue;
+                        continue;
+                    case "pivot":
+                        pName = text.Split('\n')[0];
+                        pValue = text.Replace(pName, "").Replace("\n", " ").Trim();
+                        switch (pName)
+                        {
+                            case "Phone":
+                                phone = pValue;
+                                break;
+                            case "Email":
+                                email = pValue;
+                                break;
+                            case "Country":
+                                country = pValue;
+                                break;
+                            case "Languages":
+                                lang = pValue;
+                                break;
+                            case "Gender":
+                                gender = pValue;
+                                break;
+                            case "Birth date":
+                                birth = pValue;
+                                break;
+                        }
+                        continue;
+                    default:
+                        continue;
+                }
+            }
+            _sql.Upd($@"creation = '{creation}',
+                        email = '{email}',
+                        phone = '{phone}',
+                        country = '{country}',
+                        lang = '{lang}',
+                        gender = '{gender}',
+                        birth = '{birth}',
+                        ");
+        }
     }
 }

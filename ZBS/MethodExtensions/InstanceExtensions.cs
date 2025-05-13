@@ -157,8 +157,12 @@ namespace ZBSolutions
                 Thread.Sleep(500);
             }
         }
-        public static void HeClick(this Instance instance, object obj, string method = "", int deadline = 10, int delay = 1, string comment = "", bool thr0w = true)
+        public static void HeClick(this Instance instance, object obj, string method = "", int deadline = 10, int delay = 1, string comment = "", bool thr0w = true, int emu = 0)
         {
+            bool emuSnap = instance.UseFullMouseEmulation;
+            if (emu > 0) instance.UseFullMouseEmulation = true;
+            if (emu < 0) instance.UseFullMouseEmulation = false;
+            
             DateTime functionStart = DateTime.Now;
             string lastExceptionMessage = "";
 
@@ -175,11 +179,13 @@ namespace ZBSolutions
                     HtmlElement he = instance.GetHe(obj, method);
                     Thread.Sleep(delay * 1000);
                     he.RiseEvent("click", instance.EmulationLevel);
+                    instance.UseFullMouseEmulation = emuSnap;
                     break;
                 }
                 catch (Exception ex)
                 {
                     lastExceptionMessage = ex.Message;
+                    instance.UseFullMouseEmulation = emuSnap;
                 }
                 Thread.Sleep(500);
             }
@@ -188,6 +194,7 @@ namespace ZBSolutions
             {
                 if ((DateTime.Now - functionStart).TotalSeconds > deadline)
                 {
+                    instance.UseFullMouseEmulation = emuSnap;
                     if (thr0w) throw new TimeoutException($"{comment} not found in {deadline}s: {lastExceptionMessage}");
                     else return;
                 }
@@ -202,6 +209,7 @@ namespace ZBSolutions
                     }
                     catch
                     {
+                        instance.UseFullMouseEmulation = emuSnap;
                         break;
                     }
                 }
