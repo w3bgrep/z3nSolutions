@@ -40,7 +40,7 @@ namespace ZBSolutions
             _read = new W3bRead(project);
         }
 
-        private string Key(string key = null) 
+        public string Key(string key = null) 
         {
             if (string.IsNullOrEmpty(key))
             {

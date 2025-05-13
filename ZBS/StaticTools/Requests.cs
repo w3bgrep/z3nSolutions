@@ -21,6 +21,7 @@ using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.Enums.Http;
 using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
+using System.Security.Policy;
 
 namespace ZBSolutions
 {
@@ -136,8 +137,6 @@ namespace ZBSolutions
                 }
             }
         }
-
-
         public static void TgReport(this IZennoPosterProjectModel project)
         {
             string time = project.ExecuteMacro(DateTime.Now.ToString("MM-dd HH:mm"));
@@ -191,7 +190,17 @@ namespace ZBSolutions
             _project.L0g($"[ 🌍 {callerName}] [{message}]");
         }
 
-        public string GET(string url, string proxyString = "", bool parseJson = false, [CallerMemberName] string callerName = "")
+        protected void ParseJson(string json)
+        {
+            try {
+                _project.Json.FromString(json);
+            }
+            catch (Exception ex) {
+                Log($"[!W {ex.Message}] [{json}]");
+            }
+        }
+
+        public string GET(string url, string proxyString = "", bool parse = false, [CallerMemberName] string callerName = "")
         {
             try
             {
@@ -209,8 +218,7 @@ namespace ZBSolutions
                     response.EnsureSuccessStatusCode();
 
                     string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                    if (parseJson) try { _project.Json.FromString(result); } catch { }
-                    
+                    if (parse) ParseJson(result);
                     Log($"{result}", callerName);
                     return result.Trim();
                 }
@@ -227,7 +235,7 @@ namespace ZBSolutions
             }
         }
 
-        public string POST(string url, string body, string proxyString = "", Dictionary<string, string> headers = null, bool parseJson = false, [CallerMemberName] string callerName = "", bool throwOnFail = false)
+        public string POST(string url, string body, string proxyString = "", Dictionary<string, string> headers = null, bool parse = false, [CallerMemberName] string callerName = "", bool throwOnFail = false)
         {
             try
             {
@@ -240,7 +248,7 @@ namespace ZBSolutions
 
                 using (var client = new HttpClient(handler))
                 {
-                    client.Timeout = TimeSpan.FromSeconds(15);
+                    client.Timeout = TimeSpan.FromSeconds(30);
                     var content = new System.Net.Http.StringContent(body, Encoding.UTF8, "application/json");
 
                     StringBuilder headersString = new StringBuilder();
@@ -293,7 +301,7 @@ namespace ZBSolutions
                     string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
 
                     Log(result);
-                    if (parseJson) try { _project.Json.FromString(result); } catch { }
+                    if (parse) ParseJson(result);
                     return result.Trim();
                 }
             }
@@ -384,10 +392,6 @@ namespace ZBSolutions
 
 
     }
-
-
-
-
 
 
 

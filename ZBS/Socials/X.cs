@@ -460,7 +460,6 @@ namespace ZBSolutions
                         ");
 
         }
-
         public void ParseSecured()
         {
 
