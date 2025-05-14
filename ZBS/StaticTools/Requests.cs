@@ -395,8 +395,167 @@ namespace ZBSolutions
                 return "";
             }
         }
-  
-        
+        public string PUT(string url, string body = "", string proxyString = "", Dictionary<string, string> headers = null, bool parse = false, [CallerMemberName] string callerName = "")
+        {
+            try
+            {
+                WebProxy proxy = ParseProxy(proxyString);
+                var handler = new HttpClientHandler
+                {
+                    Proxy = proxy,
+                    UseProxy = proxy != null
+                };
+
+                using (var client = new HttpClient(handler))
+                {
+                    client.Timeout = TimeSpan.FromSeconds(30);
+                    var content = string.IsNullOrEmpty(body) ? null : new System.Net.Http.StringContent(body, Encoding.UTF8, "application/json");
+
+                    StringBuilder headersString = new StringBuilder();
+                    headersString.AppendLine("[debugRequestHeaders]:");
+
+                    string defaultUserAgent = _project.Profile.UserAgent;
+                    if (headers == null || !headers.ContainsKey("User-Agent"))
+                    {
+                        client.DefaultRequestHeaders.Add("User-Agent", defaultUserAgent);
+                        headersString.AppendLine($"User-Agent: {defaultUserAgent} (default)");
+                    }
+
+                    if (headers != null)
+                    {
+                        foreach (var header in headers)
+                        {
+                            client.DefaultRequestHeaders.Add(header.Key, header.Value);
+                            headersString.AppendLine($"{header.Key}: {header.Value}");
+                        }
+                    }
+
+                    if (content != null)
+                    {
+                        headersString.AppendLine($"Content-Type: application/json; charset=UTF-8");
+                        Log(body, callerName);
+                    }
+
+                    HttpResponseMessage response = client.PutAsync(url, content).GetAwaiter().GetResult();
+                    response.EnsureSuccessStatusCode();
+
+                    StringBuilder responseHeadersString = new StringBuilder();
+                    responseHeadersString.AppendLine("[debugResponseHeaders]:");
+                    foreach (var header in response.Headers)
+                    {
+                        var value = string.Join(", ", header.Value);
+                        responseHeadersString.AppendLine($"{header.Key}: {value}");
+                    }
+
+                    string cookies = "";
+                    if (response.Headers.TryGetValues("Set-Cookie", out var cookieValues))
+                    {
+                        cookies = cookieValues.Aggregate((a, b) => a + "; " + b);
+                        Log("Set-Cookie found: " + cookies, callerName);
+                    }
+
+                    try
+                    {
+                        _project.Variables["debugCookies"].Value = cookies;
+                    }
+                    catch { }
+
+                    string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    Log(result, callerName);
+                    if (parse) ParseJson(result);
+                    return result.Trim();
+                }
+            }
+            catch (HttpRequestException e)
+            {
+                Log($"!W RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")})", callerName);
+                return $"Ошибка: {e.Message}";
+            }
+            catch (Exception e)
+            {
+                Log($"!W UnknownErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")})", callerName);
+                return $"Ошибка: {e.Message}";
+            }
+        }
+        public string DELETE(string url, string proxyString = "", Dictionary<string, string> headers = null, [CallerMemberName] string callerName = "")
+        {
+
+            string debugHeaders = null;
+            try
+            {
+                WebProxy proxy = ParseProxy(proxyString);
+                var handler = new HttpClientHandler
+                {
+                    Proxy = proxy,
+                    UseProxy = proxy != null
+                };
+
+                using (var client = new HttpClient(handler))
+                {
+                    client.Timeout = TimeSpan.FromSeconds(30);
+
+                    StringBuilder headersString = new StringBuilder();
+                    headersString.AppendLine("[debugRequestHeaders]:");
+
+                    string defaultUserAgent = _project.Profile.UserAgent;
+                    if (headers == null || !headers.ContainsKey("User-Agent"))
+                    {
+                        client.DefaultRequestHeaders.Add("User-Agent", defaultUserAgent);
+                        headersString.AppendLine($"User-Agent: {defaultUserAgent} (default)");
+                    }
+
+                    if (headers != null)
+                    {
+                        foreach (var header in headers)
+                        {
+                            client.DefaultRequestHeaders.Add(header.Key, header.Value);
+                            headersString.AppendLine($"{header.Key}: {header.Value}");
+                            debugHeaders += $"{header.Key}: {header.Value}";
+                        }
+                    }
+
+                    HttpResponseMessage response = client.DeleteAsync(url).GetAwaiter().GetResult();
+                    response.EnsureSuccessStatusCode();
+
+                    StringBuilder responseHeadersString = new StringBuilder();
+                    responseHeadersString.AppendLine("[debugResponseHeaders]:");
+                    foreach (var header in response.Headers)
+                    {
+                        var value = string.Join(", ", header.Value);
+                        responseHeadersString.AppendLine($"{header.Key}: {value}");
+                    }
+
+                    string cookies = "";
+                    if (response.Headers.TryGetValues("Set-Cookie", out var cookieValues))
+                    {
+                        cookies = cookieValues.Aggregate((a, b) => a + "; " + b);
+                        Log("Set-Cookie found: " + cookies, callerName);
+                    }
+
+                    try
+                    {
+                        _project.Variables["debugCookies"].Value = cookies;
+                    }
+                    catch { }
+
+                    string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    Log(result, callerName);
+                    return result.Trim();
+                }
+            }
+            catch (HttpRequestException e)
+            {
+                Log($"!W [DELETE] RequestErr: [{e.Message}] url:[{url}] (proxy: {proxyString}), Headers\n{debugHeaders.Trim()}", callerName);
+                return $"Ошибка: {e.Message}";
+            }
+            catch (Exception e)
+            {
+                Log($"!W [DELETE] UnknownErr: [{e.Message}] url:[{url}] (proxy: {proxyString}) Headers\n{debugHeaders.Trim()}", callerName);
+                return $"Ошибка: {e.Message}";
+            }
+        }
+
+
         public void CheckProxy(string url = "http://api.ipify.org/", string proxyString = null)
         {
             if (string.IsNullOrEmpty(proxyString)) proxyString = _project.Variables["proxy"].Value;

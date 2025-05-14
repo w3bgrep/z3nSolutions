@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
-
+using Newtonsoft.Json.Linq;
 namespace ZBSolutions
 {
     public class Discord
@@ -15,14 +15,16 @@ namespace ZBSolutions
         protected readonly bool _logShow;
         protected readonly string _pass;
         protected readonly Sql _sql;
+        protected readonly NetHttp _http;
         public Discord(IZennoPosterProjectModel project, Instance instance, bool log = false)
         {
             _project = project;
             _instance = instance;
             _logShow = log;
             _sql = new Sql(_project);
+            _http = new NetHttp(_project);
         }
-        public void DsLog(string tolog = "", [CallerMemberName] string callerName = "", bool log = false)
+        public void Log(string tolog = "", [CallerMemberName] string callerName = "", bool log = false)
         {
             if (!_logShow && !log) return;
             var stackFrame = new System.Diagnostics.StackFrame(1);
@@ -31,7 +33,73 @@ namespace ZBSolutions
             _project.L0g($"[ 👾  {callerName}] [{tolog}] ");
         }
 
+        public bool ManageRole(string botToken, string guildId, string roleName, string userId, bool assignRole, [CallerMemberName] string callerName = "")
+        {
+            try
+            {
+                // Заголовки для авторизации
+                var headers = new Dictionary<string, string>
+        {
+            { "Authorization", $"Bot {botToken}" },
+            { "User-Agent", "DiscordBot/1.0" } // Явно задаём User-Agent, чтобы Discord не блочил
+        };
+                Log($"Заголовки для запроса: {string.Join(", ", headers.Select(h => $"{h.Key}: {h.Value}"))}", callerName);
 
+                // 1. Получаем список ролей сервера, чтобы найти ID роли по имени
+                string rolesUrl = $"https://discord.com/api/v10/guilds/{guildId}/roles";
+                Log($"Отправляем GET: {rolesUrl}", callerName);
+                string rolesResponse = _http.GET(rolesUrl, headers: headers, callerName: callerName);
+
+                Log($"Ответ от GET: {rolesResponse}", callerName);
+                if (rolesResponse.StartsWith("Ошибка"))
+                {
+                    Log($"!W Не удалось получить роли сервера: {rolesResponse}", callerName, true);
+                    return false;
+                }
+
+                // Парсим JSON для поиска роли
+                JArray roles = JArray.Parse(rolesResponse);
+                var role = roles.FirstOrDefault(r => r["name"].ToString().Equals(roleName, StringComparison.OrdinalIgnoreCase));
+                if (role == null)
+                {
+                    Log($"!W Роль с именем '{roleName}' не найдена на сервере", callerName, true);
+                    return false;
+                }
+                string roleId = role["id"].ToString();
+                Log($"Найдена роль: {roleName} (ID: {roleId})", callerName);
+
+                // 2. Формируем URL для выдачи или удаления роли
+                string url = $"https://discord.com/api/v10/guilds/{guildId}/members/{userId}/roles/{roleId}";
+
+                // 3. Выполняем запрос в зависимости от assignRole
+                string result;
+                if (assignRole)
+                {
+                    Log($"Отправляем PUT: {url}", callerName);
+                    result = _http.PUT(url, "", proxyString: null, headers: headers, callerName: callerName);
+                }
+                else
+                {
+                    Log($"Отправляем DELETE: {url}", callerName);
+                    result = _http.DELETE(url, proxyString: null, headers: headers, callerName: callerName);
+                }
+
+                Log($"Ответ от {(assignRole ? "PUT" : "DELETE")}: {result}", callerName);
+                if (result.StartsWith("Ошибка"))
+                {
+                    Log($"!W Не удалось {(assignRole ? "выдать" : "удалить")} роль: {result}", callerName, true);
+                    return false;
+                }
+
+                Log($"{(assignRole ? "Роль успешно выдана" : "Роль успешно удалена")}: {roleName} для пользователя {userId}", callerName);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Log($"!W Ошибка при управлении ролью: [{e.Message}]", callerName, true);
+                return false;
+            }
+        }
 
 
         private void DSsetToken()
@@ -86,7 +154,7 @@ namespace ZBSolutions
                 if (!_instance.ActiveTab.FindElementByAttribute("section", "aria-label", "User\\ area", "regexp", 0).IsVoid) state = "logged";
             }
 
-            DsLog( state);
+            Log( state);
 
 
             if (state == "login" && !tokenUsed)
@@ -106,7 +174,7 @@ namespace ZBSolutions
                     goto start;
                 }
                 else if (login == "capcha")
-                    DsLog( "!W capcha");
+                    Log( "!W capcha");
                 _instance.UseFullMouseEmulation = emu;
                 state = "capcha";
             }
@@ -115,7 +183,7 @@ namespace ZBSolutions
             {
                 state = _instance.ActiveTab.FindElementByAttribute("div", "class", "avatarWrapper__", "regexp", 0).FirstChild.GetAttribute("aria-label");
                 
-                DsLog( state);
+                Log( state);
                 var token = DSgetToken();
                 _sql.Upd($"token = '{token}', status = 'ok'", "discord");
                // DSupdateDb($"token = '{token}', status = 'ok'");
