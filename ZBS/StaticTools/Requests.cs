@@ -29,7 +29,6 @@ namespace ZBSolutions
     {
         private static readonly object LockObject = new object();
 
-
         public static string GET(this IZennoPosterProjectModel project, string url, string proxy = "", bool log = false, bool parseJson = false)
         {
             string response;
@@ -165,9 +164,6 @@ namespace ZBSolutions
             else project.SendToLog(toLog.Trim(), LogType.Info, true, LogColor.Green);
         }
 
-
-
-
     }
 
 
@@ -189,7 +185,6 @@ namespace ZBSolutions
             if (!_logShow && !forceLog) return;
             _project.L0g($"[ 🌍 {callerName}] [{message}]");
         }
-
         protected void ParseJson(string json)
         {
             try {
@@ -199,9 +194,50 @@ namespace ZBSolutions
                 Log($"[!W {ex.Message}] [{json}]");
             }
         }
+        public WebProxy ParseProxy(string proxyString, [CallerMemberName] string callerName = "")
+        {
+            if (string.IsNullOrEmpty(proxyString))
+            {
+                return null;
+            }
+            if (proxyString == "+") proxyString = _project.Variables["proxy"].Value;
+            try
+            {
+                WebProxy proxy = new WebProxy();
+
+                if (proxyString.Contains("//")) proxyString = proxyString.Split('/')[2];
+
+                if (proxyString.Contains("@")) // Прокси с авторизацией (login:pass@proxy:port)
+                {
+                    string[] parts = proxyString.Split('@');
+                    string credentials = parts[0];
+                    string proxyHost = parts[1];
+
+                    proxy.Address = new Uri("http://" + proxyHost);
+                    string[] creds = credentials.Split(':');
+                    proxy.Credentials = new NetworkCredential(creds[0], creds[1]);
+
+                    Log($"proxy set:{proxyHost}", callerName);
+                }
+                else // Прокси без авторизации (proxy:port)
+                {
+                    proxy.Address = new Uri("http://" + proxyString);
+                    Log($"proxy set: ip:{proxyString}", callerName);
+                }
+
+                return proxy;
+            }
+            catch (Exception e)
+            {
+                Log($"Ошибка настройки прокси: {e.Message}", callerName, true);
+                return null;
+            }
+        }
+
 
         public string GET(string url, string proxyString = "", Dictionary<string, string> headers = null, bool parse = false, [CallerMemberName] string callerName = "")
         {
+            string debugHeaders = null;
             try
             {
                 WebProxy proxy = ParseProxy(proxyString);
@@ -231,6 +267,7 @@ namespace ZBSolutions
                         {
                             client.DefaultRequestHeaders.Add(header.Key, header.Value);
                             headersString.AppendLine($"{header.Key}: {header.Value}");
+                            debugHeaders += $"{header.Key}: {header.Value}";
                         }
                     }
 
@@ -266,16 +303,15 @@ namespace ZBSolutions
             }
             catch (HttpRequestException e)
             {
-                Log($"!W [GET] RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")})", callerName);
+                Log($"!W [GET] RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")}), Headers\n{debugHeaders.Trim()}", callerName);
                 return $"Ошибка: {e.Message}";
             }
             catch (Exception e)
             {
-                Log($"!W [GET] UnknownErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")})", callerName);
+                Log($"!W [GET] UnknownErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")}) Headers\n{debugHeaders.Trim()}", callerName);
                 return $"Ошибка: {e.Message}";
             }
         }
-
         public string POST(string url, string body, string proxyString = "", Dictionary<string, string> headers = null, bool parse = false, [CallerMemberName] string callerName = "", bool throwOnFail = false)
         {
             try
@@ -359,45 +395,8 @@ namespace ZBSolutions
                 return "";
             }
         }
-        public WebProxy ParseProxy(string proxyString, [CallerMemberName] string callerName = "")
-        {
-            if (string.IsNullOrEmpty(proxyString))
-            {
-                return null;
-            }
-            if (proxyString == "+") proxyString = _project.Variables["proxy"].Value;
-            try
-            {
-                WebProxy proxy = new WebProxy();
-
-                if (proxyString.Contains("//")) proxyString = proxyString.Split('/')[2];
-
-                if (proxyString.Contains("@")) // Прокси с авторизацией (login:pass@proxy:port)
-                {
-                    string[] parts = proxyString.Split('@');
-                    string credentials = parts[0];
-                    string proxyHost = parts[1];
-
-                    proxy.Address = new Uri("http://" + proxyHost);
-                    string[] creds = credentials.Split(':');
-                    proxy.Credentials = new NetworkCredential(creds[0], creds[1]);
-
-                    Log($"proxy set:{proxyHost}", callerName);
-                }
-                else // Прокси без авторизации (proxy:port)
-                {
-                    proxy.Address = new Uri("http://" + proxyString);
-                    Log($"proxy set: ip:{proxyString}", callerName);
-                }
-
-                return proxy;
-            }
-            catch (Exception e)
-            {
-                Log($"Ошибка настройки прокси: {e.Message}", callerName, true);
-                return null;
-            }
-        }
+  
+        
         public void CheckProxy(string url = "http://api.ipify.org/", string proxyString = null)
         {
             if (string.IsNullOrEmpty(proxyString)) proxyString = _project.Variables["proxy"].Value;

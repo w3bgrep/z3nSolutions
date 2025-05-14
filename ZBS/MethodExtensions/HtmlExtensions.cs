@@ -5,7 +5,7 @@ using ZXing;
 
 namespace ZBS
 {
-    internal static class HtmlExtensions
+    public static class HtmlExtensions
     {
         public static string DecodeQr(HtmlElement element)
         {

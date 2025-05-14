@@ -8,6 +8,8 @@ using ZennoLab.InterfacesLibrary.ProjectModel;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Dynamic;
+using System.Reflection;
+using System.Security.Policy;
 
 namespace ZBSolutions
 {
@@ -20,43 +22,18 @@ namespace ZBSolutions
         private Dictionary<string, string> _headers;
         private readonly NetHttp _h;
 
-        private readonly string _getNonce = "https://icp.dmail.ai/api/node/v6/dmail/auth/generate_nonce";
-        private readonly string _postVerifySign = "https://icp.dmail.ai/api/node/v6/dmail/auth/evm_verify_signature";
         private readonly string _postRead = "https://icp.dmail.ai/api/node/v6/dmail/inbox_all/read_by_page_with_content";
         private readonly string _postWrite = "https://icp.dmail.ai/api/node/v6/dmail/inbox_all/update_by_bulk";
-      
+
 
         public DMail(IZennoPosterProjectModel project, string key = null, bool log = false)
-        : base(project, key: key, log: log)
+            : base(project, key: key, log: log)
         {
             _key = Key(key);
             _h = new NetHttp(project, true);
+            CheckAuth();
         }
-
-        public void dPost(string url, string body)
-        { }
-        public void dGet(string url)
-        { }
-
-
-        private string Key(string key = null)
-        {
-            if (string.IsNullOrEmpty(key))
-            {
-                string encryptedkey = _sql.Get("secp256k1", "accounts.blockchain_private");
-                key = SAFU.Decode(_project, encryptedkey);
-            }
-
-            if (string.IsNullOrEmpty(key))
-            {
-                Log("!W key is null or empty");
-                throw new Exception("emptykey");
-            }
-            ;
-            return key;
-
-        }
-        public string Auth()
+        public void Auth()
         {
 
             var signer = new EthereumMessageSigner();
@@ -80,21 +57,21 @@ namespace ZBSolutions
 
             // Create JObject for the message
             var message = new JObject
-        {
-            { "Message", "SIGN THIS MESSAGE TO LOGIN TO THE INTERNET COMPUTER" },
-            { "APP NAME", "dmail" },
-            { "ADDRESS", wallet },
-            { "NONCE", nonce },
-            { "CURRENT TIME", time }
-        };
+            {
+                { "Message", "SIGN THIS MESSAGE TO LOGIN TO THE INTERNET COMPUTER" },
+                { "APP NAME", "dmail" },
+                { "ADDRESS", wallet },
+                { "NONCE", nonce },
+                { "CURRENT TIME", time }
+            };
 
             var data = new JObject
-        {
-            { "message", message },
-            { "signature", sign },
-            { "wallet_name", "metamask" },
-            { "chain_id", 1 }
-        };
+            {
+                { "message", message },
+                { "signature", sign },
+                { "wallet_name", "metamask" },
+                { "chain_id", 1 }
+            };
 
             string body = JsonConvert.SerializeObject(data);
 
@@ -104,6 +81,8 @@ namespace ZBSolutions
             dynamic data_dic = JsonConvert.DeserializeObject<System.Dynamic.ExpandoObject>(get_verify_json);
             string encstring = data_dic.data.token;
             string pid = data_dic.data.pid;
+            Log($"{encstring} {pid}");
+
 
             try
             {
@@ -112,33 +91,78 @@ namespace ZBSolutions
             }
             catch { }
 
-            Log($"{encstring} {pid}");
-
-            _encstring = encstring; _pid = pid;
+            _encstring = encstring;
+            _pid = pid;
 
 
             _headers = new Dictionary<string, string>
-        {
-            { "dm-encstring", encstring },
-            { "dm-pid",pid }
-        };
-
-            return $"{encstring}|{pid}";
-
+            {
+                { "dm-encstring", encstring },
+                { "dm-pid",pid }
+            };
 
         }
+        public void CheckAuth()
+        {
+            if (!string.IsNullOrEmpty(_pid) && !string.IsNullOrEmpty(_encstring)) goto setHeaders;
+
+            try //from project
+            {
+                _pid = _project.Variables["pid"].Value;
+                _encstring = _project.Variables["encstring"].Value;
+                if (!string.IsNullOrEmpty(_pid) && !string.IsNullOrEmpty(_encstring)) goto setHeaders;
+                throw new Exception("noAuthDataFound");
+            }
+            catch (Exception e)
+            {
+                Log($"!W {e.Message}");
+            }
+
+            try //login
+            {
+                Auth();
+                if (!string.IsNullOrEmpty(_pid) && !string.IsNullOrEmpty(_encstring)) goto setHeaders;
+                throw new Exception("noAuthDataAfterLogin WTF?");
+            }
+            catch (Exception e)
+            {
+                Log($"!W {e.Message}");
+            }
+
+        setHeaders:
+            if (string.IsNullOrEmpty(_pid) || string.IsNullOrEmpty(_encstring)) throw new Exception("enpty creds WTF?");
+
+            _headers = new Dictionary<string, string>
+            {
+                { "dm-encstring", _encstring },
+                { "dm-pid",_pid }
+            };
+
+        }
+        private string Key(string key = null)
+        {
+            if (string.IsNullOrEmpty(key))
+            {
+                string encryptedkey = _sql.Get("secp256k1", "accounts.blockchain_private");
+                key = SAFU.Decode(_project, encryptedkey);
+            }
+            if (string.IsNullOrEmpty(key)) throw new Exception("emptykey");
+            return key;
+        }
+        
+        
         public dynamic GetAll()
         {
 
             var pageInfo = new JObject {
-            { "page", 1 },
-            { "pageSize", 20 }
-        };
+        { "page", 1 },
+        { "pageSize", 20 }
+    };
             var data = new JObject {
-            { "dm_folder", "inbox" },
-            { "store_type", "mail" },
-            { "pageInfo", pageInfo }
-        };
+        { "dm_folder", "inbox" },
+        { "store_type", "mail" },
+        { "pageInfo", pageInfo }
+    };
 
 
             string getMsgsBody = JsonConvert.SerializeObject(data);
@@ -153,9 +177,18 @@ namespace ZBSolutions
             return allMailObj;
 
         }
-        public Dictionary<string, string> ReadMsg(int index = 0, dynamic mail = null, bool markAsRead = true)
+        public Dictionary<string, string> ReadMsg(int index = 0, dynamic mail = null, bool markAsRead = true, bool trash = true)
         {
-            if (mail == null) mail = _allMail;
+            if (mail == null)
+                try
+                {
+                    mail = _allMail; 
+                }
+                catch 
+                {
+                    GetAll();
+                    mail = _allMail;
+                }
 
             string sender = mail[index].dm_salias.ToString();
             string date = mail[index].dm_date.ToString();
@@ -169,22 +202,90 @@ namespace ZBSolutions
 
 
             var message = new Dictionary<string, string>
-        {
-            { "sender", sender },
-            { "date", date },
-            { "subj", subj },
-            { "html", html },
-            { "dm_scid", dm_scid },
-            { "dm_smid", dm_smid },
-        };
+            {
+                { "sender", sender },
+                { "date", date },
+                { "subj", subj },
+                { "html", html },
+                { "dm_scid", dm_scid },
+                { "dm_smid", dm_smid },
+            };
             if (markAsRead) MarkAsRead(index, dm_scid, dm_smid);
+            if (trash) Trash(index, dm_scid, dm_smid);
             return message;
+        }
+
+        public string GetUnread(bool parse = false, string key = null)
+        {
+            CheckAuth();
+            string url = $"https://icp.dmail.ai/api2/v2/credits/getUsedMailInfo?pid={_pid}";
+            Log(url);
+            string GetUnread = _h.GET(url, headers: _headers, parse: true);
+            if (!string.IsNullOrEmpty(key))
+            {
+                dynamic unrd = JsonConvert.DeserializeObject<ExpandoObject>(GetUnread);
+                string[] fields = { "mail_unread_count", "message_unread_count", "not_read_count", "used_total_size" };
+                if (fields.Contains(key))
+                {
+                    var dataDict = (IDictionary<string, object>)unrd.data;
+                    return dataDict[key].ToString();
+                }
+                Log($"!W no object with key [{key}] in json [{GetUnread}]");
+                return string.Empty;
+            }
+
+            return GetUnread;
+
+        }
+        public void Trash(int index = 0, string dm_scid = null, string dm_smid = null)
+        {
+
+            if (string.IsNullOrEmpty(dm_scid) || string.IsNullOrEmpty(dm_smid))
+            {
+                try
+                {
+                    var MessageData = ReadMsg(index);
+                    MessageData.TryGetValue("dm_scid", out dm_scid);
+                    MessageData.TryGetValue("dm_smid", out dm_smid);
+                }
+                catch
+                {
+                    GetAll();
+                    var MessageData = ReadMsg(index);
+                    MessageData.TryGetValue("dm_scid", out dm_scid);
+                    MessageData.TryGetValue("dm_smid", out dm_smid);
+                }
+            }
+
+            var status = new JObject {
+                {"dm_folder", "trashs"}
+            };
+
+            var info = new JArray {
+                new JObject {
+                    {"dm_cid", dm_scid},
+                    {"dm_mid", dm_smid},
+                    {"dm_foldersource", "inbox"}
+                }
+            };
+
+            var data = new JObject {
+                {"status", status},
+                {"mail_info_list", info},
+                {"store_type", "mail"}
+            };
+
+
+            string body = JsonConvert.SerializeObject(data);
+            _h.POST("https://icp.dmail.ai/api/node/v6/dmail/inbox_all/update_by_bulk", body, headers: _headers, parse: false);
+
         }
         public void MarkAsRead(int index = 0, string dm_scid = null, string dm_smid = null)
         {
-            var status = new JObject {
-            {"dm_is_read", 1 }
-        };
+            var status = new JObject
+            {
+                {"dm_is_read", 1 }
+            };
 
             if (string.IsNullOrEmpty(dm_scid) || string.IsNullOrEmpty(dm_smid))
             {
@@ -193,41 +294,26 @@ namespace ZBSolutions
                 MessageData.TryGetValue("dm_smid", out dm_smid);
             }
 
+            var info = new JArray
+            {
+                new JObject {
+                    {"dm_cid", dm_scid},
+                    {"dm_mid", dm_smid},
+                    {"dm_foldersource", "inbox"}
+                }
+            };
 
-            var info = new JArray {
-            new JObject {
-                {"dm_cid", dm_scid},
-                {"dm_mid", dm_smid},
-                {"dm_foldersource", "inbox"}
-            }
-        };
-
-            var data = new JObject {
-            {"status", status},
-            {"mail_info_list", info},
-            {"store_type", "mail"}
-        };
+            var data = new JObject
+            {
+                {"status", status},
+                {"mail_info_list", info},
+                {"store_type", "mail"}
+            };
 
             string body = JsonConvert.SerializeObject(data);
-            string makeRead = _h.POST("https://icp.dmail.ai/api/node/v6/dmail/inbox_all/update_by_bulk", body, headers: _headers, parse: false);
+            _h.POST("https://icp.dmail.ai/api/node/v6/dmail/inbox_all/update_by_bulk", body, headers: _headers, parse: false);
         }
-        public string GetUnread(int index = 0, bool parse = false)
-        {
-            string url = "https://icp.dmail.ai/api/node/v6/dmail/inbox_all/update_by_bulk";
 
-            var pageInfo = new Global.ZennoLab.Json.Linq.JObject {
-                { "page", 1 },
-                { "pageSize", 20 }
-            };
-            var data = new Global.ZennoLab.Json.Linq.JObject {
-                { "dm_folder", "inbox" },
-                { "store_type", "mail" },
-                { "pageInfo", pageInfo }
-            };
-            string body = Global.ZennoLab.Json.JsonConvert.SerializeObject(data);
-            string GetUnread = _h.POST(url, body, headers: _headers, parse: parse);
-            return GetUnread;
-        }
 
 
     }
