@@ -435,7 +435,14 @@ namespace ZBSolutions
                 instance.ActiveTab.KeyEvent("v", "press", "ctrl");
             }
         }
-
+        public static void Go(this Instance instance, string url, bool strict = false)
+        {
+            bool go = false;
+            string current = instance.ActiveTab.URL;
+            if (strict) if (current != url) go = true;
+            if (!strict) if (current.Contains(url)) go = true;
+            if (go) instance.ActiveTab.Navigate(url, "");
+        }
 
         //cookies
         public static string GetCookies(this Instance instance, IZennoPosterProjectModel project, string domainFilter = "")
@@ -630,6 +637,9 @@ namespace ZBSolutions
             project.L0g( "!W badProxy");
             throw new Exception("!W badProxy");
 		}
+
+
+
 
 
     }

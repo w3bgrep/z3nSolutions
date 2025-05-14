@@ -9,6 +9,7 @@ using Leaf.xNet;
 using Nethereum.Contracts.Standards.ENS.ETHRegistrarController.ContractDefinition;
 using System.Runtime.CompilerServices;
 using static System.Net.Mime.MediaTypeNames;
+using System.Reflection;
 
 
 namespace ZBSolutions
@@ -418,7 +419,6 @@ namespace ZBSolutions
             }
         }
 
-
         public void ParseProfile()
         {
             _instance.HeClick(("*", "data-testid", "AppTabBar_Profile_Link", "regexp", 0));
@@ -459,8 +459,21 @@ namespace ZBSolutions
                         Tweets = '{Tweets}',
                         ");
 
+
+            try{
+                var toFill = _project.Lists["editProfile"];
+                toFill.Clear();
+
+                if (description == "") toFill.Add("description");
+                if (homeLocation == "") toFill.Add("homeLocation");
+                if (ava == "https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png") toFill.Add("ava");
+                if (banner == "https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png") toFill.Add("banner");
+
+            }
+            catch { }
+
         }
-        public void ParseSecured()
+        public void ParseSecurity()
         {
 
             _instance.ActiveTab.Navigate("https://x.com/settings/your_twitter_data/account", "");
@@ -541,6 +554,19 @@ namespace ZBSolutions
                         gender = '{gender}',
                         birth = '{birth}',
                         ");
+
+
+            try
+            {
+                var emails = _sql.Get("gmail, icloud, firstmail", "mail_public");
+                var address = _sql.Get("evm", "blockchain_public");
+                var toFill = _project.Lists["editSecurity"];
+                toFill.Clear();
+                
+                if (!emails.Contains(email) || !email.Contains(address)) toFill.Add("email");
+
+            }
+            catch { }
         }
     }
 }
