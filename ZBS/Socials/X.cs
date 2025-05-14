@@ -203,7 +203,17 @@ namespace ZBSolutions
                 _project.L0g($"{login}");
                 Thread.Sleep(3000);
             }
-            if (status == "restricted" || status == "suspended" || status == "emailCapcha" || status == "mixed" || status == "ok")
+            else if (status == "mixed")
+            {
+                _instance.CloseAllTabs();
+                _instance.ClearCookie("x.com");
+                _instance.ClearCache("x.com");
+                _instance.ClearCookie("twitter.com");
+                _instance.ClearCache("twitter.com");
+                goto check;
+
+            }
+            if (status == "restricted" || status == "suspended" || status == "emailCapcha")
             {
                 _sql.Upd($"status = '{status}'", "twitter");
                 return status;
