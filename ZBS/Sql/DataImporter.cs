@@ -8,7 +8,6 @@ using ZennoLab.InterfacesLibrary.ProjectModel;
 
 namespace ZBSolutions
 {
-
     public class DataImporter
     {
         private readonly IZennoPosterProjectModel _project;
@@ -1352,7 +1351,7 @@ namespace ZBSolutions
 
             System.Windows.Forms.Label messageLabel = new System.Windows.Forms.Label();
             messageLabel.Text = "Db data will be overwritten!\nContinue?";
-            messageLabel.Font = new System.Drawing.Font("Consolas", 15, System.Drawing.FontStyle.Bold); 
+            messageLabel.Font = new System.Drawing.Font("Consolas", 15, System.Drawing.FontStyle.Underline); 
             messageLabel.ForeColor = System.Drawing.Color.White;
             messageLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             messageLabel.AutoSize = true;
