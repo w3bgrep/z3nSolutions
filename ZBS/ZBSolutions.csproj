@@ -81,7 +81,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CexApi\Refuel.cs" />
-    <Compile Include="DMail.cs" />
+    <Compile Include="OnChain\DMail.cs" />
     <Compile Include="MethodExtensions\DictionaryExtentions.cs" />
     <Compile Include="OnChain\W3bWrite.cs" />
     <Compile Include="Socials\Galxe.cs" />
@@ -96,13 +96,13 @@
     <Compile Include="Wallets\MetaMask.cs" />
     <Compile Include="Wallets\Razor.cs" />
     <Compile Include="Socials\Google.cs" />
-    <Compile Include="Starter.cs" />
+    <Compile Include="StaticTools\Starter.cs" />
     <Compile Include="StaticTools\Converter.cs" />
     <Compile Include="StaticTools\Cryptography.cs" />
     <Compile Include="Sql\DataImporter.cs" />
     <Compile Include="Socials\Discord.cs" />
     <Compile Include="MethodExtensions\InstanceExtensions.cs" />
-    <Compile Include="ISAFU.cs" />
+    <Compile Include="StaticTools\ISAFU.cs" />
     <Compile Include="CexApi\OKXApi.cs" />
     <Compile Include="StaticTools\OTP.cs" />
     <Compile Include="Sql\PostgreSQL.cs" />
