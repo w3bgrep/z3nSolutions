@@ -1,4 +1,5 @@
 ﻿
+using Nethereum.ABI.CompilationMetadata;
 using Nethereum.Signer;
 using System;
 using System.Collections.Generic;
@@ -14,13 +15,18 @@ namespace ZBSolutions
         protected readonly string _dbMode;
         private readonly bool _logShow;
 
+        protected bool _pstgr = false;
+        protected string _tableName = string.Empty;
+        protected string _schemaName = string.Empty;
+
         public Sql(IZennoPosterProjectModel project, bool log = false)
         {
             _project = project;
+            _pstgr = _project.Variables["DBmode"].Value == "PostgreSQL" ? true : false;
             _dbMode = _project.Variables["DBmode"].Value;
             _logShow = log;
         }
-        public void SqlLog(string query, string response = null, bool log = false)
+        public void Log(string query, string response = null, bool log = false)
         {
             if (!_logShow && !log) return;
             string dbMode = _project.Variables["DBmode"].Value;
@@ -38,6 +44,39 @@ namespace ZBSolutions
             }
             _project.L0g(toLog);
         }
+
+        public string TblName(string tableName, bool name = true)
+        {
+            string schemaName = "projects";
+            if (_dbMode == "PostgreSQL")
+            {
+                if (tableName.Contains("."))
+                {
+                    schemaName = tableName.Split('.')[0];
+                    tableName = tableName.Split('.')[1];
+                }
+                else if (tableName.Contains("_"))
+                {
+                    schemaName = tableName.Split('_')[0];
+                    tableName = tableName.Split('_')[1];
+                }
+
+            }
+            else if (_dbMode == "SQLite")
+            {
+                if (tableName.Contains(".")) tableName = tableName.Replace(".", "_");
+            }
+
+            _tableName = tableName;
+            _schemaName = schemaName;
+
+            if (name) return tableName;
+            else return schemaName;
+        }
+
+
+
+
         public string DbQ(string query, bool log = false, bool throwOnEx = false)
         {
             string dbMode = _project.Variables["DBmode"].Value;
@@ -51,7 +90,7 @@ namespace ZBSolutions
                 }
                 catch (Exception ex)
                 {
-                    SqlLog($"!W Err:[{ex.Message}]. Q:[{query}]");
+                    Log($"!W Err:[{ex.Message}]. Q:[{query}]");
                     if (throwOnEx) throw;
                 }
             }
@@ -62,12 +101,12 @@ namespace ZBSolutions
                 }
                 catch (Exception ex)
                 {
-                    SqlLog($"!W Err:[{ex.Message}]. Q:[{query}]");
+                    Log($"!W Err:[{ex.Message}]. Q:[{query}]");
                     if (throwOnEx) throw;
                 }
             }
             else throw new Exception($"unknown DBmode: {dbMode}");
-            SqlLog(query, result, log: log);
+            Log(query, result, log: log);
             return result;
         }
         public void MkTable(Dictionary<string, string> tableStructure, string tableName = null, bool strictMode = false, bool insertData = false, string host = "localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "", string schemaName = "projects", bool log = false)
@@ -104,6 +143,35 @@ namespace ZBSolutions
             DbQ($@"UPDATE {tableName} SET {toUpd} WHERE acc0 = {_project.Variables["acc0"].Value};", log: log, throwOnEx: throwOnEx);
 
         }
+
+        public void Upd(Dictionary<string, string> toWrite, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true)
+        {
+            if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
+            TblName(tableName);
+            foreach (KeyValuePair<string, string> pair in toWrite)
+            {
+                string key = pair.Key.Replace("'", "''");
+                string value = pair.Value.Replace("'", "''");
+                Upd(value,_tableName,last:last);
+            }
+
+        }
+
+        public void Write(Dictionary<string, string> toWrite, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true)
+        {
+            if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;        
+            
+            TblName(tableName);
+            foreach (KeyValuePair<string, string> pair in toWrite)
+            {               
+                string key = pair.Key.Replace("'", "''");
+                string value = pair.Value.Replace("'", "''");
+                string query = $@"INSERT INTO {_tableName} (key, value) VALUES ('{key}', '{value}')
+	                  ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;";
+                DbQ(query,log:log);
+            }
+
+        }
         public string Get(string toGet, string tableName = null, bool log = false, bool throwOnEx = false)
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
@@ -112,7 +180,6 @@ namespace ZBSolutions
             var Q = $@"SELECT {toGet.Trim().TrimEnd(',')} from {tableName} WHERE acc0 = {_project.Variables["acc0"].Value};";
             return DbQ(Q, log: log, throwOnEx: throwOnEx);
         }
-
         public string GetColumns(string tableName, string schemaName = "accounts", bool log = false)
         {
             string Q; string name;
@@ -126,8 +193,6 @@ namespace ZBSolutions
             else Q = $@"SELECT name FROM pragma_table_info('{name}')";
             return DbQ(Q, log: log).Replace("\n", ", ").Trim(',').Trim();
         }
-
-
         public string KeyEVM(string tableName = "blockchain_private", string schemaName = "accounts")
         {
             string table = (_dbMode == "PostgreSQL" ? $"{schemaName}." : "") + tableName;

@@ -14,8 +14,8 @@ namespace ZBSolutions
 
         private readonly IZennoPosterProjectModel _project;
 
-        protected readonly string _tableName;
-        protected readonly string _schemaName;
+        //protected readonly string _tableName;
+        //protected readonly string _schemaName;
         private readonly bool _logShow;
 
 
@@ -31,23 +31,23 @@ namespace ZBSolutions
             _logShow = log;
 
         }
-        private void Log(string query, string response = null, bool log = false)
-        {
-            if (!_logShow && !log) return;
-            string dbMode = _project.Variables["DBmode"].Value;
-            string toLog = null;
+        //private void Log(string query, string response = null, bool log = false)
+        //{
+        //    if (!_logShow && !log) return;
+        //    string dbMode = _project.Variables["DBmode"].Value;
+        //    string toLog = null;
 
-            if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
-            {
-                toLog += $"[ ▼ {dbMode}]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]";
-                if (!string.IsNullOrEmpty(response)) toLog += $"\n          [{response.Replace('\n', '|')}]";
-            }
-            else
-            {
-                toLog += $"[ ▲ {dbMode}]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]";
-            }
-            _project.L0g(toLog);
-        }
+        //    if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
+        //    {
+        //        toLog += $"[ ▼ {dbMode}]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]";
+        //        if (!string.IsNullOrEmpty(response)) toLog += $"\n          [{response.Replace('\n', '|')}]";
+        //    }
+        //    else
+        //    {
+        //        toLog += $"[ ▲ {dbMode}]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]";
+        //    }
+        //    _project.L0g(toLog);
+        //}
         private bool CreateIfNotExist(Dictionary<string, string> tableStructure)
         {
             string tableName = _tableName;
@@ -90,13 +90,13 @@ namespace ZBSolutions
                     string column = col.Trim();
                     if (!tableStructure.ContainsKey(column))
                     {
-                        SqlLog($"[{col}] ! in [{keys}] ");
+                        Log($"[{col}] ! in [{keys}] ");
                         columnsToRemove.Add(column);
                     }
                 }
 
                 var ToRemove = string.Join("|", columnsToRemove);
-                SqlLog(ToRemove);
+                Log(ToRemove);
 
                 foreach (var column in columnsToRemove)
                 {

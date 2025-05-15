@@ -81,6 +81,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CexApi\Refuel.cs" />
+    <Compile Include="Sql\DbManager.cs" />
+    <Compile Include="F0rms.cs" />
     <Compile Include="OnChain\DMail.cs" />
     <Compile Include="MethodExtensions\DictionaryExtentions.cs" />
     <Compile Include="OnChain\W3bWrite.cs" />

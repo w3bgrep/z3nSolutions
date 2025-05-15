@@ -638,7 +638,20 @@ namespace ZBSolutions
             throw new Exception("!W badProxy");
 		}
 
+        public static void Stargate(this Instance instance, string srcChain, string dstChain, string srcToken = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", string dstToken = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE")
+        {
 
+            string url = "https://stargate.finance/bridge?" + $"srcChain={srcChain}" + $"&srcToken={srcToken}" + $"&dstChain={dstChain}" + $"&dstToken={dstToken}";
+            instance.ActiveTab.Navigate(url, "");
+
+        }
+        public static void Relay(this Instance instance, string fromChainId, string to, string toCurrency = "0x0000000000000000000000000000000000000000", string fromCurrency = "0x0000000000000000000000000000000000000000")
+        {
+
+            string url = $"https://relay.link/bridge/{to}?fromChainId={fromChainId}&toCurrency={toCurrency}&fromCurrency={fromCurrency}";
+            instance.ActiveTab.Navigate(url, "");
+
+        }
 
 
 
