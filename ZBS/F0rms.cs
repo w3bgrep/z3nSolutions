@@ -16,7 +16,9 @@ namespace ZBSolutions
             _project = project;
         }
 
-        public Dictionary<string, string> Get1x1(string title = "InputSomeStrings")
+        public Dictionary<string, string> GetLinesByKey(
+            string keycolumn = "input Column Name",
+            string title = "Input data line per line")
         {
             var result = new Dictionary<string, string>();
             // Создание формы
@@ -38,7 +40,7 @@ namespace ZBSolutions
             columnInput.Left = 10;
             columnInput.Top = 30;
             columnInput.Width = 50;//form.ClientSize.Width - 20;
-            columnInput.Text = "key ";//_project.Variables["addressType"].Value; // Предполагаем, что переменная существует
+            columnInput.Text = keycolumn;//_project.Variables["addressType"].Value; // Предполагаем, что переменная существует
             form.Controls.Add(columnInput);
 
             System.Windows.Forms.Label addressLabel = new System.Windows.Forms.Label();
@@ -104,7 +106,8 @@ namespace ZBSolutions
                 {
 
                     string key = (i + 1).ToString();
-                    string value = $"{columnName} = '{line}'";
+                    //string value = $"{columnName} = '{line}'";
+                    string value = $"{keycolumn} = '{line.Replace("'", "''")}'";
 
                     _project.SendInfoToLog($"k [{i}], val = [{value}]", false);
                     result.Add(key, value);
@@ -121,11 +124,12 @@ namespace ZBSolutions
 
         public Dictionary<string, string> GetKeyValuePairs(
             int quantity,
-            System.Collections.Generic.List<string> keyPlaceholders = null,
-            System.Collections.Generic.List<string> valuePlaceholders = null,
-            string title = "Input Key-Value Pairs", bool prepareUpd = true)
+            List<string> keyPlaceholders = null,
+            List<string> valuePlaceholders = null,
+            string title = "Input Key-Value Pairs",
+            bool prepareUpd = true)
         {
-            var result = new System.Collections.Generic.Dictionary<string, string>();
+            var result = new Dictionary<string, string>();
 
             // Создание формы
             System.Windows.Forms.Form form = new System.Windows.Forms.Form();
@@ -305,6 +309,150 @@ namespace ZBSolutions
 
             return result;
         }
+
+        public Dictionary<string, bool> GetKeyBoolPairs(
+            int quantity,
+            List<string> keyPlaceholders = null,
+            List<string> valuePlaceholders = null,
+            string title = "Input Key-Bool Pairs",
+            bool prepareUpd = true)
+        {
+            var result = new System.Collections.Generic.Dictionary<string, bool>();
+
+            // Создание формы
+            System.Windows.Forms.Form form = new System.Windows.Forms.Form();
+            form.Text = title;
+            form.Width = 600;
+            form.Height = 40 + quantity * 35; // Адаптивная высота в зависимости от количества полей
+            form.TopMost = true;
+            form.Location = new System.Drawing.Point(108, 108);
+
+            // Список для хранения текстовых полей и чекбоксов
+            var keyLabels = new System.Windows.Forms.Label[quantity];
+            var keyTextBoxes = new System.Windows.Forms.TextBox[quantity];
+            var valueCheckBoxes = new System.Windows.Forms.CheckBox[quantity];
+
+            int currentTop = 5;
+            int labelWidth = 40;
+            int keyBoxWidth = 40;
+            int checkBoxWidth = 370; // Ширина для чекбокса (для выравнивания)
+            int spacing = 5;
+
+            // Создаём поля для ключей и чекбоксов
+            for (int i = 0; i < quantity; i++)
+            {
+                // Метка для ключа
+                System.Windows.Forms.Label keyLabel = new System.Windows.Forms.Label();
+
+                string keyDefault = keyPlaceholders != null && i < keyPlaceholders.Count && !string.IsNullOrEmpty(keyPlaceholders[i]) ? keyPlaceholders[i] : $"key{i + 1}";
+                keyLabel.Text = keyDefault; //
+                //keyTextBoxes[i] = keyDefault;
+                //keyLabel.Text = $"Key:";
+                keyLabel.AutoSize = true;
+                keyLabel.Left = 5;
+                keyLabel.Top = currentTop + 5; // Смещение для центрирования
+                form.Controls.Add(keyLabel);
+                keyLabels[i] = keyLabel;
+
+                // Поле для ключа
+                System.Windows.Forms.TextBox keyTextBox = new System.Windows.Forms.TextBox();
+                keyTextBox.Left = keyLabel.Left + labelWidth + spacing;
+                keyTextBox.Top = currentTop;
+                keyTextBox.Width = keyBoxWidth;
+
+
+                // Чекбокс для значения
+                System.Windows.Forms.CheckBox valueCheckBox = new System.Windows.Forms.CheckBox();
+                valueCheckBox.Left = keyTextBox.Left + keyBoxWidth + spacing + 10;
+                valueCheckBox.Top = currentTop;
+                valueCheckBox.Width = checkBoxWidth;
+                string valueDefault = valuePlaceholders != null && i < valuePlaceholders.Count && !string.IsNullOrEmpty(valuePlaceholders[i]) ? valuePlaceholders[i] : $"Option{i + 1}";
+                valueCheckBox.Text = valueDefault; // Текст чекбокса для удобства
+                valueCheckBox.Checked = false; // По умолчанию выключен
+
+
+                // Метка для чекбокса
+                System.Windows.Forms.Label valueLabel = new System.Windows.Forms.Label();
+                valueLabel.Text = $"";
+                valueLabel.AutoSize = true;
+                valueLabel.Left = valueLabel.Left + labelWidth + spacing;
+
+                valueLabel.Top = currentTop + 5; // Смещение для центрирования
+                form.Controls.Add(valueLabel);
+
+
+
+                form.Controls.Add(valueCheckBox);
+                valueCheckBoxes[i] = valueCheckBox;
+
+                currentTop += valueCheckBox.Height + spacing;
+            }
+
+            // Кнопка "OK"
+            System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
+            okButton.Text = "OK";
+            okButton.Width = form.ClientSize.Width - 20;
+            okButton.Height = 25;
+            okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
+            okButton.Top = currentTop + 10;
+            okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
+            form.Controls.Add(okButton);
+
+            // Адаптируем высоту формы
+            int requiredHeight = okButton.Top + okButton.Height + 40;
+            if (form.Height < requiredHeight)
+            {
+                form.Height = requiredHeight;
+            }
+
+            form.Load += (s, e) => { form.Location = new System.Drawing.Point(108, 108); };
+            form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
+
+            // Показываем форму
+            form.ShowDialog();
+
+            if (form.DialogResult != System.Windows.Forms.DialogResult.OK)
+            {
+                _project.SendInfoToLog("Input cancelled by user", true);
+                return null;
+            }
+
+            // Формируем словарь
+            int lineCount = 0;
+            for (int i = 0; i < quantity; i++)
+            {
+                string key = keyLabels[i].Text.ToLower().Trim();
+                bool value = valueCheckBoxes[i].Checked;
+
+                if (string.IsNullOrEmpty(key))
+                {
+                    //_project.SendWarningToLog($"Pair {i + 1} skipped: empty key");
+                    continue;
+                }
+
+                try
+                {
+                    string dictKey = prepareUpd ? (i + 1).ToString() : key;
+                    result.Add(dictKey, value);
+                    //_project.SendInfoToLog($"Added to dictionary: [{dictKey}] = [{value}]", false);
+                    lineCount++;
+                }
+                catch (System.Exception ex)
+                {
+                    _project.SendWarningToLog($"Error adding pair {i + 1}: {ex.Message}");
+                }
+            }
+
+            if (lineCount == 0)
+            {
+                _project.SendWarningToLog("No valid key-value pairs entered");
+                return null;
+            }
+
+            return result;
+        }
+
+
     }
 
 

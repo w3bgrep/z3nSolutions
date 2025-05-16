@@ -24,7 +24,8 @@ namespace ZBSolutions
     public static class ProjectExtensions
     {
         private static readonly object LockObject = new object();
- 
+        
+
         public static void L0g(this IZennoPosterProjectModel project, string toLog, [CallerMemberName] string callerName = "", bool show = true, bool thr0w = false ,bool toZp = true)
         {
             if (!show) return;
@@ -246,8 +247,11 @@ namespace ZBSolutions
             project.Variables[$"{varName}"].Value = (int.Parse(project.Variables[$"{varName}"].Value) + input).ToString();
             return project.Variables[$"{varName}"].Value;
         }
- 
-        
+        public static void acc0w(this IZennoPosterProjectModel project, object acc0)
+        {
+            project.Variables["acc0"].Value = acc0?.ToString() ?? string.Empty;
+        }
+
         public static void Sleep(this IZennoPosterProjectModel project, int min, int max)
         {
             Random rnd = new Random();

@@ -1,12 +1,12 @@
 
 
-
 #region using
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
+using ZennoLab.InterfacesLibrary;
 using ZBSolutions;
 using NBitcoin;
 
@@ -18,7 +18,10 @@ namespace w3tools //by @w3bgrep
     public static class TestStatic
 {
 
-
+    public static void acc0w(this IZennoPosterProjectModel project, object acc0)
+    {
+        project.Variables["acc0"].Value = acc0?.ToString() ?? string.Empty;
+    }
 }
 
 
@@ -182,10 +185,161 @@ namespace w3tools //by @w3bgrep
     }
 }
     
+    public class DbManager2 : Sql
+    {
+        protected bool _logShow = false;
+        //protected bool _pstgr = false;
+        //protected string _tableName = string.Empty;
+        //protected string _schemaName = string.Empty;
+
+        protected readonly int _rangeEnd;
+
+        public DbManager2(IZennoPosterProjectModel project, bool log = false)
+            : base(project, log: log)
+        {
+            _logShow = log;
+            _pstgr = _dbMode == "PostgreSQL" ? true : false;
+            _rangeEnd = int.TryParse(project.Variables["rangeEnd"].Value, out int rangeEnd) && rangeEnd > 0 ? rangeEnd : 10;
+
+        }
+        
+        
+        public void CreateShemas(string[] schemas)
+        {
+            if (!_pstgr) return;
+            foreach (string name in schemas) DbQ($"CREATE SCHEMA IF NOT EXISTS {name};");
+        }
+        public bool TblExist(string tblName)
+        {
+            TblName(tblName);
+            string resp = null;
+            if (_pstgr) resp = DbQ($"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}';");
+            else resp = DbQ($"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='{_tableName}';");
+            if (resp == "0" || resp == string.Empty) return false;
+            else return true;
+        }
+        public bool ClmnExist(string tblName, string clmnName)
+        {
+            TblName(tblName);
+            string resp = null;
+            if (_pstgr)
+                resp = DbQ($@"SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}' AND lower(column_name) = lower('{clmnName}');")?.Trim();
+            else
+                resp = DbQ($"SELECT COUNT(*) FROM pragma_table_info('{_tableName}') WHERE name='{clmnName}';");
+            if (resp == "0" || resp == string.Empty) return false;
+            else return true;
+
+        }
+        public List<string> TblColumns(string tblName)
+        {
+            TblName(tblName);
+            if (_dbMode == "PostgreSQL")
+                return DbQ($@"SELECT column_name FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}';", true)
+                    .Split('\n')
+                    .Select(s => s.Trim())
+                    .ToList();
+            else
+                return DbQ($"SELECT name FROM pragma_table_info('{_tableName}');")
+                    .Split('\n')
+                    .Select(s => s.Trim())
+                    .ToList();
+        }
+
+        public void ClmnAdd(string tblName, string clmnName, string defaultValue = "TEXT DEFAULT \"\"")
+        {
+            TblName(tblName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+            var current = TblColumns(tblName);
+            if (!current.Contains(clmnName))
+            {
+                DbQ($@"ALTER TABLE {_tableName} ADD COLUMN {clmnName} {defaultValue};", true);
+            }
+
+        }
+        public void ClmnAdd(string tblName, Dictionary<string, string> tableStructure)
+        {
+            TblName(tblName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+
+            var current = TblColumns(tblName);
+            Log(string.Join(",", current));
+            foreach (var column in tableStructure)
+            {
+                var keyWd = column.Key.Trim();
+                if (!current.Contains(keyWd))
+                {
+                    Log($"CLMNADD [{keyWd}] not in  [{string.Join(",", current)}] ");
+                    DbQ($@"ALTER TABLE {_tableName} ADD COLUMN {keyWd} {column.Value};", true);
+                }
+            }
+        }
+        public void ClmnDrop(string tblName, string clmnName)
+        {
+            TblName(tblName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+
+            var current = TblColumns(tblName);
+            if (current.Contains(clmnName))
+            {
+                string cascade = (_pstgr) ? " CASCADE" : null;
+                DbQ($@"ALTER TABLE {_tableName} DROP COLUMN {clmnName}{cascade};", true);
+            }
+        }
+        public void ClmnDrop(string tblName, Dictionary<string, string> tableStructure)
+        {
+            TblName(tblName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+            var current = TblColumns(tblName);
+
+            foreach (var column in tableStructure)
+            {
+                if (!current.Contains(column.Key))
+                {
+                    string cascade = _dbMode == "PostgreSQL" ? " CASCADE" : null;
+                    DbQ($@"ALTER TABLE {_tableName} DROP COLUMN {column.Key}{cascade};", true);
+                }
+            }
+        }
+        public void TblAdd(string tblName, Dictionary<string, string> tableStructure)
+        {
+            Log("TBLADD");
+            TblName(tblName);
+            if (TblExist(tblName)) return;
+            if (_pstgr) DbQ($@" CREATE TABLE {_schemaName}.{_tableName} ( {string.Join(", ", tableStructure.Select(kvp => $"\"{kvp.Key}\" {kvp.Value.Replace("AUTOINCREMENT", "SERIAL")}"))} );");
+            else DbQ($"CREATE TABLE {_tableName} (" + string.Join(", ", tableStructure.Select(kvp => $"{kvp.Key} {kvp.Value}")) + ");");
+        }
+        public void AddRange(string tblName, int range = 108)
+        {
+            TblName(tblName);
+
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+            int current = int.Parse(DbQ($@"SELECT COALESCE(MAX(acc0), 0) FROM {_tableName};"));
+            Log(current.ToString());
+            Log(_rangeEnd.ToString());
+            for (int currentAcc0 = current + 1; currentAcc0 <= _rangeEnd; currentAcc0++)
+            {
+                DbQ($@"INSERT INTO {_tableName} (acc0) VALUES ({currentAcc0}) ON CONFLICT DO NOTHING;");
+            }
+
+        }
+
+
+    }
+
+
+
+
+
+
+    
     public class DBuilder : DbManager
     {
         private readonly IZennoPosterProjectModel _project;
         private readonly F0rms _f0rm;
+        private readonly F0rms2 _f0rm2;
+
+        private string _acc0;
+
         public DBuilder(IZennoPosterProjectModel project, bool log = false)
             : base(project, log: log)
         {
@@ -193,7 +347,8 @@ namespace w3tools //by @w3bgrep
             _logShow = log;
             _pstgr = _dbMode == "PostgreSQL" ? true : false;
             _f0rm = new F0rms(_project);
-            
+            _f0rm2 = new F0rms2(_project);
+            //_acc0 = _project.Variables[acc0];
             //_rangeEnd = int.TryParse(project.Variables["rangeEnd"].Value, out int rangeEnd) && rangeEnd > 0 ? rangeEnd : 10;
 
         }
@@ -345,7 +500,127 @@ namespace w3tools //by @w3bgrep
             return (data, selectedFormat);
         }
    
-      
+
+        public string[]  DefaultColumns(schema tableSchem)
+        {
+ 
+            switch (tableSchem)
+            {
+
+                case schema.public_blockchain:
+                case schema.public_native:
+                case schema.public_deposits:
+                    return new string[] { };
+                case schema.private_google:
+                    return new string[] {"cookies", "login", "pass", "otpsecret", "otpbackup", "recovery_mail", "recovery_phone" };
+                case schema.private_twitter:
+                    return new string[] { "cookies", "token", "login", "pass", "otpsecret", "otpbackup", "email", "email_pass" };;
+                case schema.private_discord:
+                    return new string[]  { "token", "login", "pass", "otpsecret", "otpbackup", "email", "email_pass", "recovery_phone" };
+                 case schema.private_github:
+                    return new string[]  { "cookies", "token", "login", "pass", "otpsecret", "otpbackup", "email", "email_pass" };
+                case schema.private_blockchain:
+                    return new string[] { "secp256k1", "base58", "bip39" };
+
+                case schema.private_settings:
+                    return new string[] { "value" };
+                case schema.private_api:
+                    return new string[] { "apikey", "apisecret", "passphrase", "proxy" };
+                case schema.private_profile:
+                    return new string[] { "proxy", "cookies", "webgl", "zbid" };
+
+
+                case schema.public_profile:
+                    return new string[] { "username", "bio", "brsr_score" };
+
+                case schema.public_rpc:
+                   return new string[] { "rpc", "explorer", "explorer_api" };
+
+
+
+                case schema.public_google:
+                    return new string[] { "status", "last" };
+                case schema.public_twitter:
+                    return new string[] { "status", "last", "id", "following", "followers", "creation", "givenname", "description", "lang", "birth", "country", "gender", "homelocation", };
+                case schema.public_discord:
+                    return new string[] { "status", "last", "username", "servers", "roles" };
+
+
+                default:
+                    throw new Exception("no schema");
+
+
+            }
+
+
+            if (primary != "acc0") primaryType = "TEXT PRIMARY KEY";
+            tableStructure.Add(primary, primaryType);
+
+            foreach (string name in toFill)
+            {
+                if (!tableStructure.ContainsKey(name)) tableStructure.Add(name, defaultColumn);
+            }
+            return tableStructure;
+
+
+
+
+        }
+
+        public Dictionary<string, string> LoadSchema(schema tableSchem)
+        {
+            var tableStructure = new Dictionary<string, string>();
+
+            string primary = "acc0";
+            string primaryType = "INTEGER PRIMARY KEY";
+            var toFill = new List<string>();
+            string defaultColumn = "TEXT DEFAULT ''";
+
+
+
+            switch (tableSchem)
+            {
+
+                case schema.private_twitter:
+                case schema.private_google:
+                case schema.private_discord:
+
+                case schema.public_google:
+                case schema.public_twitter:
+                case schema.public_discord:
+
+                case schema.private_blockchain:
+                case schema.public_blockchain:
+                case schema.public_native:
+                case schema.public_deposits:
+
+                case schema.private_profile:
+                case schema.public_profile:
+                    foreach (string column in DefaultColumns(tableSchem)) toFill.Add(column);
+                    break;
+
+                case schema.private_settings:
+                case schema.private_api:
+                case schema.public_rpc:
+                    primary = "key";
+                    foreach (string column in DefaultColumns(tableSchem)) toFill.Add(column);
+                    break;
+
+                default:
+                    throw new Exception("no schema");
+
+            }
+
+
+            if (primary != "acc0") primaryType = "TEXT PRIMARY KEY";
+            tableStructure.Add(primary, primaryType);
+
+            foreach (string name in toFill)
+            {
+                if (!tableStructure.ContainsKey(name)) tableStructure.Add(name, defaultColumn);
+            }
+            return tableStructure;
+        }     
 
         private string ImportData(string tableName,  string[] availableFields, Dictionary<string, string> columnMapping, string formTitle = "title", string message = "Select format (one field per box):",int startFrom = 1)
         {
@@ -537,6 +812,7 @@ namespace w3tools //by @w3bgrep
             
             var mapping = new Dictionary<string, string>();
             
+            Log($"mapping {tableSchem}");
             switch (tableSchem)
             {
 
@@ -601,12 +877,15 @@ namespace w3tools //by @w3bgrep
                     return;
                 
                 case schema.private_profile:
-                    string[] fieldsPvPf = new string[] { "PROXY", "" };
-                    mapping = new Dictionary<string, string>
-                    {
-                        { "PROXY", "proxy" },
-                    };
-                    ImportData("profile", fieldsPvPf, mapping, "Import proxy ", message: "Proxy format: http://login1:pass1@111.111.111.111:1111");
+                   var profile = _f0rm2.Get1x1("proxy", "input proxy, don't change key!");
+                   Upd (profile,tableSchem.ToString());
+
+                    // string[] fieldsPvPf = new string[] { "PROXY", "" };
+                    // mapping = new Dictionary<string, string>
+                    // {
+                    //     { "PROXY", "proxy" },
+                    // };
+                    // ImportData("profile", fieldsPvPf, mapping, "Import proxy ", message: "Proxy format: http://login1:pass1@111.111.111.111:1111");
                     return;
 
                 case schema.private_blockchain:
@@ -642,12 +921,23 @@ namespace w3tools //by @w3bgrep
                     
                     var settings = _f0rm.GetKeyValuePairs(phK.Count(), phK,phV,"input settings",prepareUpd:false);
                     Write(settings,tableSchem.ToString());
+                    return;
+
+                //case schema.private_profile:
+  
+
+                    
+                   // var profile = _f0rm.Get1x1("input profile data",prepareUpd:true);
+                   // Upd(profile,tableSchem.ToString());
+
+
+
 
                     //ImportDepositAddresses();
-                    return;
+                  //  return;
 
                 default:
-                    return;
+                    throw new Exception($"no schema [{tableSchem}]");
 
             }
 
@@ -1033,85 +1323,214 @@ namespace w3tools //by @w3bgrep
             return lineCount.ToString();
         }
 
-        public void ImportSettings(string message = "input data please", int width = 600, int height = 400)
-        {
-            _project.SendInfoToLog($"Opening variables input dialog: {message}", true);
+        
 
+    }
+
+    public class F0rms2
+    {
+        private readonly IZennoPosterProjectModel _project;
+
+        public F0rms2(IZennoPosterProjectModel project)
+        {
+            _project = project;
+        }
+
+        public Dictionary<string, bool> GetKeyBoolPairs(
+            int quantity,
+            List<string> keyPlaceholders = null,
+            List<string> valuePlaceholders = null,
+            string title = "Input Key-Bool Pairs",
+            bool prepareUpd = true)
+        {
+            var result = new System.Collections.Generic.Dictionary<string, bool>();
+
+            // Создание формы
             System.Windows.Forms.Form form = new System.Windows.Forms.Form();
-            form.Text = message;
-            form.Width = width;
-            form.Height = height;
+            form.Text = title;
+            form.Width = 600;
+            form.Height = 40 + quantity * 35; // Адаптивная высота в зависимости от количества полей
             form.TopMost = true;
             form.Location = new System.Drawing.Point(108, 108);
 
-            // Массив с именами переменных и плейсхолдерами
-            (string varName, string placeholder)[] variableNames = new (string, string)[]
-            {
-                ("settingsApiFirstMail", "API First Mail для доступа к переадресованной почте"),
-                ("settingsApiPerplexity", "API perplexity для запросов к AI (например прогрева твиттера)"),
-                ("settingsDsInviteOwn", "Инвайт на свой сервер"),
-                ("settingsDsOwnServer", "ID канала с инвайтами на вашем сервере"),
-                ("settingsFmailLogin", "Логин от общего ящика для форвардов на FirstMail"),
-                ("settingsFmailPass", "Пароль от общего ящика для форвардов на FirstMail"),
-                ("settingsTgLogGroup", "Id группы для логов в Telegram. Формат {-1002000000009}"),
-                ("settingsTgLogToken", "Токен Telegram логгера"),
-                ("settingsTgLogTopic", "Id топика в группе для логов. 0 - если нет топиков"),
-                ("settingsTgMailGroup", "Id группы с переадресованной почтой в Telegram. Формат {-1002000000009}"),
-                ("settingsZenFolder", "Путь к папке с профилями и причастным данным. Формат: {F:\\farm\\}"),
-                ("settingsApiBinance", "Данные для вывода с Binance. Формат: {API_KEY;SECRET_KEY;PROXY}")
-            };
-
-            var textBoxes = new Dictionary<string, System.Windows.Forms.TextBox>();
+            // Список для хранения текстовых полей и чекбоксов
+            var keyLabels = new System.Windows.Forms.Label[quantity];
+            var keyTextBoxes = new System.Windows.Forms.TextBox[quantity];
+            var valueCheckBoxes = new System.Windows.Forms.CheckBox[quantity];
 
             int currentTop = 5;
-            int labelWidth = 150;
-            int textBoxWidth = 400;
+            int labelWidth = 40;
+            int keyBoxWidth = 40;
+            int checkBoxWidth = 370; // Ширина для чекбокса (для выравнивания)
             int spacing = 5;
 
-            foreach (var (varName, placeholder) in variableNames)
+            // Создаём поля для ключей и чекбоксов
+            for (int i = 0; i < quantity; i++)
             {
-                System.Windows.Forms.Label label = new System.Windows.Forms.Label();
-                label.Text = varName + ":";
-                label.AutoSize = true;
-                label.Left = 5;
-                label.Top = currentTop;
-                form.Controls.Add(label);
+                // Метка для ключа
+                System.Windows.Forms.Label keyLabel = new System.Windows.Forms.Label();
 
-                System.Windows.Forms.TextBox textBox = new System.Windows.Forms.TextBox();
-                textBox.Left = label.Left + labelWidth + spacing;
-                textBox.Top = currentTop;
-                textBox.Width = textBoxWidth;
-                textBox.Text = _project.Variables[varName].Value;
+                string keyDefault = keyPlaceholders != null && i < keyPlaceholders.Count && !string.IsNullOrEmpty(keyPlaceholders[i]) ? keyPlaceholders[i] : $"key{i + 1}";
+                keyLabel.Text = keyDefault; //
+                //keyTextBoxes[i] = keyDefault;
+                //keyLabel.Text = $"Key:";
+                keyLabel.AutoSize = true;
+                keyLabel.Left = 5;
+                keyLabel.Top = currentTop + 5; // Смещение для центрирования
+                form.Controls.Add(keyLabel);
+                keyLabels[i] = keyLabel;
 
-                // Установка плейсхолдера
-                if (string.IsNullOrEmpty(textBox.Text)) // Если поле пустое, показываем плейсхолдер
-                {
-                    textBox.Text = placeholder;
-                    textBox.ForeColor = System.Drawing.Color.Gray;
-                }
-                textBox.Enter += (s, e) => { if (textBox.Text == placeholder) { textBox.Text = ""; textBox.ForeColor = System.Drawing.Color.Black; } };
-                textBox.Leave += (s, e) => { if (string.IsNullOrEmpty(textBox.Text)) { textBox.Text = placeholder; textBox.ForeColor = System.Drawing.Color.Gray; } };
+                // Поле для ключа
+                System.Windows.Forms.TextBox keyTextBox = new System.Windows.Forms.TextBox();
+                keyTextBox.Left = keyLabel.Left + labelWidth + spacing;
+                keyTextBox.Top = currentTop;
+                keyTextBox.Width = keyBoxWidth;
 
-                form.Controls.Add(textBox);
 
-                textBoxes[varName] = textBox;
-                currentTop += textBox.Height + spacing;
+                // Чекбокс для значения
+                System.Windows.Forms.CheckBox valueCheckBox = new System.Windows.Forms.CheckBox();
+                valueCheckBox.Left = keyTextBox.Left + keyBoxWidth + spacing + 10;
+                valueCheckBox.Top = currentTop;
+                valueCheckBox.Width = checkBoxWidth;
+                string valueDefault = valuePlaceholders != null && i < valuePlaceholders.Count && !string.IsNullOrEmpty(valuePlaceholders[i]) ? valuePlaceholders[i] : $"Option{i + 1}";    
+                valueCheckBox.Text = valueDefault; // Текст чекбокса для удобства
+                valueCheckBox.Checked = false; // По умолчанию выключен
+
+
+                // Метка для чекбокса
+                System.Windows.Forms.Label valueLabel = new System.Windows.Forms.Label();
+                valueLabel.Text = $"";
+                valueLabel.AutoSize = true;
+                valueLabel.Left = valueLabel.Left + labelWidth + spacing;
+                
+                valueLabel.Top = currentTop + 5; // Смещение для центрирования
+                form.Controls.Add(valueLabel);
+
+
+
+                form.Controls.Add(valueCheckBox);
+                valueCheckBoxes[i] = valueCheckBox;
+
+                currentTop += valueCheckBox.Height + spacing;
             }
 
+            // Кнопка "OK"
             System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
             okButton.Text = "OK";
-            okButton.Width = 50;
+            okButton.Width = form.ClientSize.Width - 20;
             okButton.Height = 25;
             okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
             okButton.Top = currentTop + 10;
             okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
             form.Controls.Add(okButton);
 
+            // Адаптируем высоту формы
             int requiredHeight = okButton.Top + okButton.Height + 40;
             if (form.Height < requiredHeight)
             {
                 form.Height = requiredHeight;
             }
+
+            form.Load += (s, e) => { form.Location = new System.Drawing.Point(108, 108); };
+            form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
+
+            // Показываем форму
+            form.ShowDialog();
+
+            if (form.DialogResult != System.Windows.Forms.DialogResult.OK)
+            {
+                _project.SendInfoToLog("Input cancelled by user", true);
+                return null;
+            }
+
+            // Формируем словарь
+            int lineCount = 0;
+            for (int i = 0; i < quantity; i++)
+            {
+                string key = keyLabels[i].Text.ToLower().Trim();
+                bool value = valueCheckBoxes[i].Checked;
+
+                if (string.IsNullOrEmpty(key))
+                {
+                    //_project.SendWarningToLog($"Pair {i + 1} skipped: empty key");
+                    continue;
+                }
+
+                try
+                {
+                    string dictKey = prepareUpd ? (i + 1).ToString() : key;
+                    result.Add(dictKey, value);
+                    //_project.SendInfoToLog($"Added to dictionary: [{dictKey}] = [{value}]", false);
+                    lineCount++;
+                }
+                catch (System.Exception ex)
+                {
+                    _project.SendWarningToLog($"Error adding pair {i + 1}: {ex.Message}");
+                }
+            }
+
+            if (lineCount == 0)
+            {
+                _project.SendWarningToLog("No valid key-value pairs entered");
+                return null;
+            }
+
+            return result;
+        }
+
+
+        public Dictionary<string, string> Get1x1(string keycolumn = "input Column Name",string title = "Input data line per line")
+        {
+            var result = new Dictionary<string, string>();
+            // Создание формы
+            System.Windows.Forms.Form form = new System.Windows.Forms.Form();
+            form.Text = title;
+            form.Width = 420;
+            form.Height = 700;
+            form.TopMost = true;
+            form.Location = new System.Drawing.Point(108, 108);
+
+            System.Windows.Forms.Label columnLabel = new System.Windows.Forms.Label();
+            columnLabel.Text = "input string for key here (it will be lowered)";
+            columnLabel.AutoSize = true;
+            columnLabel.Left = 10;
+            columnLabel.Top = 10;
+            form.Controls.Add(columnLabel);
+
+            System.Windows.Forms.TextBox columnInput = new System.Windows.Forms.TextBox();
+            columnInput.Left = 10;
+            columnInput.Top = 30;
+            columnInput.Width = 50;//form.ClientSize.Width - 20;
+            columnInput.Text = keycolumn;//_project.Variables["addressType"].Value; // Предполагаем, что переменная существует
+            form.Controls.Add(columnInput);
+
+            System.Windows.Forms.Label addressLabel = new System.Windows.Forms.Label();
+            addressLabel.Text = "Input strings (will be devided by \\n):";
+            addressLabel.AutoSize = true;
+            addressLabel.Left = 10;
+            addressLabel.Top = 60;
+            form.Controls.Add(addressLabel);
+
+            System.Windows.Forms.TextBox addressInput = new System.Windows.Forms.TextBox();
+            addressInput.Left = 10;
+            addressInput.Top = 80;
+            addressInput.Width = form.ClientSize.Width - 20;
+            addressInput.Multiline = true;
+            addressInput.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+            addressInput.MaxLength = 1000000;
+            form.Controls.Add(addressInput);
+
+            // Кнопка "OK"
+            System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
+            okButton.Text = "OK";
+            okButton.Width = form.ClientSize.Width - 20;
+            okButton.Height = 25;
+            okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
+            okButton.Top = form.ClientSize.Height - okButton.Height - 5;
+            okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
+            form.Controls.Add(okButton);
+            addressInput.Height = okButton.Top - addressInput.Top - 5;
+
             form.Load += (s, e) => { form.Location = new System.Drawing.Point(108, 108); };
 
             form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
@@ -1121,29 +1540,50 @@ namespace w3tools //by @w3bgrep
             if (form.DialogResult != System.Windows.Forms.DialogResult.OK)
             {
                 _project.SendInfoToLog("Import cancelled by user", true);
-                return;
+                return null;
             }
 
-            string tableName = "settings";
-            foreach (var (varName, placeholder) in variableNames)
+            if (string.IsNullOrEmpty(columnInput.Text) || string.IsNullOrEmpty(addressInput.Text))
             {
-                string newValue = textBoxes[varName].Text;
-                if (newValue == placeholder) newValue = ""; // Если текст — это плейсхолдер, считаем поле пустым
-                _project.Variables[varName].Value = newValue;
-                _project.SendInfoToLog($"Updated variable {varName}: {newValue}", true);
+                _project.SendWarningToLog("Column name or addresses cannot be empty");
+                return null;
+            }
 
-                if (!string.IsNullOrEmpty(newValue))
+            string columnName = columnInput.Text.ToLower().Trim();
+
+            string[] lines = addressInput.Text.Trim().Split('\n');
+            int lineCount = 0;
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                string line = lines[i].Trim();
+                if (string.IsNullOrWhiteSpace(line))
                 {
-                    string escapedValue = newValue.Replace("'", "''");
-                    DbQ($"INSERT OR REPLACE INTO {_tableName} (var, value) VALUES ('{varName}', '{escapedValue}');");
-                    //_sql.DbQ($"INSERT OR REPLACE INTO {tableName} (var, value) VALUES ('{varName}', '{escapedValue}');");
-                    _project.SendInfoToLog($"Inserted into {tableName}: {varName} = {newValue}", true);
+                    _project.SendWarningToLog($"Line {i} is empty");
+                    continue;
+                }
+
+                try
+                {
+
+                    string key = (i + 1).ToString();
+                    //string value = $"{columnName} = '{line}'";
+                    string value = $"{keycolumn} = '{line.Replace("'", "''")}'";
+
+                    _project.SendInfoToLog($"k [{i}], val = [{value}]", false);
+                    result.Add(key, value);
+                    lineCount++;
+                }
+                catch (Exception ex)
+                {
+
                 }
             }
+
+            return result;
         }
 
 
     }
-
 
 }

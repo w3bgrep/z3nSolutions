@@ -129,10 +129,16 @@ namespace ZBSolutions
             else throw new Exception($"unknown DBmode: {dbMode}");
             return;
         }
-        public void Upd(string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true)
+        public void Upd(string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, object acc = null )
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
-            if (_dbMode == "PostgreSQL" && !tableName.Contains(".")) tableName = "accounts." + tableName;
+            if (acc != null) _project.acc0w(acc);
+
+            TblName(tableName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+
+            //if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
+            //if (_dbMode == "PostgreSQL" && !tableName.Contains(".")) tableName = "accounts." + tableName;
 
             string[] keywords = { "blockchain", "browser", "cex_deps", "native", "profile", "settings" };
             if (keywords.Any(keyword => tableName.Contains(keyword))) last = false;
@@ -140,7 +146,7 @@ namespace ZBSolutions
 
             if (last) toUpd = toUpd + $", last = '{DateTime.UtcNow.ToString("MM-ddTHH:mm")}'";
 
-            DbQ($@"UPDATE {tableName} SET {toUpd} WHERE acc0 = {_project.Variables["acc0"].Value};", log: log, throwOnEx: throwOnEx);
+            DbQ($@"UPDATE {_tableName} SET {toUpd} WHERE acc0 = {_project.Variables["acc0"].Value};", log: log, throwOnEx: throwOnEx);
 
         }
 
