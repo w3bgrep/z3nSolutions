@@ -107,7 +107,7 @@ namespace ZBSolutions
 
                     string key = (i + 1).ToString();
                     //string value = $"{columnName} = '{line}'";
-                    string value = $"{keycolumn} = '{line.Replace("'", "''")}'";
+                    string value = $"{columnName} = '{line.Replace("'", "''")}'";
 
                     _project.SendInfoToLog($"k [{i}], val = [{value}]", false);
                     result.Add(key, value);

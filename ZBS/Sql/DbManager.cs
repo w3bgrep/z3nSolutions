@@ -47,7 +47,7 @@ namespace ZBSolutions
             : base(project, log: log)
         {
             _logShow = log;
-            _pstgr = _dbMode == "PostgreSQL" ? true : false;
+            //_pstgr = _dbMode == "PostgreSQL" ? true : false;
             _rangeEnd = int.TryParse(project.Variables["rangeEnd"].Value, out int rangeEnd) && rangeEnd > 0 ? rangeEnd : 10;
 
         }

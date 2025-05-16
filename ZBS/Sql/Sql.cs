@@ -90,7 +90,7 @@ namespace ZBSolutions
                 }
                 catch (Exception ex)
                 {
-                    Log($"!W Err:[{ex.Message}]. Q:[{query}]");
+                    Log($"!W Err:[{ex.Message}]. debug:\n{query}");
                     if (throwOnEx) throw;
                 }
             }
@@ -101,7 +101,7 @@ namespace ZBSolutions
                 }
                 catch (Exception ex)
                 {
-                    Log($"!W Err:[{ex.Message}]. Q:[{query}]");
+                    Log($"!W Err:[{ex.Message}]. debug:\n{query}");
                     if (throwOnEx) throw;
                 }
             }

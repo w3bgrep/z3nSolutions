@@ -345,7 +345,7 @@ namespace w3tools //by @w3bgrep
         {
             _project = project;
             _logShow = log;
-            _pstgr = _dbMode == "PostgreSQL" ? true : false;
+            //_pstgr = _dbMode == "PostgreSQL" ? true : false;
             _f0rm = new F0rms(_project);
             _f0rm2 = new F0rms2(_project);
             //_acc0 = _project.Variables[acc0];
@@ -507,18 +507,19 @@ namespace w3tools //by @w3bgrep
             switch (tableSchem)
             {
 
-                case schema.public_blockchain:
                 case schema.public_native:
                 case schema.public_deposits:
                     return new string[] { };
                 case schema.private_google:
-                    return new string[] {"cookies", "login", "pass", "otpsecret", "otpbackup", "recovery_mail", "recovery_phone" };
+                    return new string[] {"cookies", "login", "pass", "otpsecret", "otpbackup", "recovery_email", "recovery_phone" };
                 case schema.private_twitter:
-                    return new string[] { "cookies", "token", "login", "pass", "otpsecret", "otpbackup", "email", "email_pass" };;
+                    return new string[] { "cookies", "token", "login", "pass", "otpsecret", "otpbackup", "email", "email_pass" };
                 case schema.private_discord:
                     return new string[]  { "token", "login", "pass", "otpsecret", "otpbackup", "email", "email_pass", "recovery_phone" };
-                 case schema.private_github:
+                case schema.private_github:
                     return new string[]  { "cookies", "token", "login", "pass", "otpsecret", "otpbackup", "email", "email_pass" };
+                case schema.public_blockchain:
+                    return new string[] { "evm_pk", "sol_pk", "apt_pk","evm_seed" };
                 case schema.private_blockchain:
                     return new string[] { "secp256k1", "base58", "bip39" };
 
@@ -614,8 +615,8 @@ namespace w3tools //by @w3bgrep
             int lineCount = 0;
 
             int rangeEnd = _rangeEnd;
-            var acc0 = _project.Variables["acc0"];
-            acc0.Value = startFrom.ToString();
+            //var acc0 = _project.Variables["acc0"];
+            //acc0.Value = startFrom.ToString();
 
 
             var formFont = new System.Drawing.Font("Iosevka", 10 ); //System.Drawing.FontStyle.Bold
@@ -742,19 +743,6 @@ namespace w3tools //by @w3bgrep
                     _project.SendWarningToLog($"Line {acc0unt} is empty", false);
                     continue;
                 }
-                if (formTitle.Contains("proxy"))
-                {
-                    try
-                    {
-                        string dbQuery = $@"UPDATE {_tableName} SET proxy = '{line.Replace("'", "''")}' WHERE acc0 = {acc0unt};";
-                        DbQ(dbQuery, true);
-                        lineCount++;
-                    }
-                    catch (Exception ex)
-                    {
-                        _project.SendWarningToLog($"Error processing line {acc0unt}: {ex.Message}", false);
-                    }
-                }
                 else
                 {
                     string[] data_parts = line.Split(':');
@@ -776,13 +764,15 @@ namespace w3tools //by @w3bgrep
 
                     try
                     {
-                        string dbQuery = $@"UPDATE {_tableName} SET {string.Join(", ", queryParts)} WHERE acc0 = {acc0};";
-                        DbQ(dbQuery, true);
+                        
+                        Upd(string.Join(", ", queryParts),_tableName,last:false,acc:acc0unt);
+                        //string dbQuery = $@"UPDATE {_tableName} SET {string.Join(", ", queryParts)} WHERE acc0 = {acc0};";
+                        //DbQ(dbQuery, true);
                         lineCount++;
                     }
                     catch (Exception ex)
                     {
-                        _project.SendWarningToLog($"Error processing line {acc0}: {ex.Message}", false);
+                        _project.SendWarningToLog($"Error processing line {acc0unt}: {ex.Message}", false);
                     }
                 }
             }
@@ -862,9 +852,8 @@ namespace w3tools //by @w3bgrep
                     return;
                 
                 case schema.private_profile:
-                   var profile = _f0rm2.Get1x1("proxy", "input proxy, don't change key!");
-                   Upd (profile,tableSchem.ToString());
-
+                    var profile = _f0rm2.Get1x1("proxy", "input proxy, don't change key!");
+                    Upd (profile,tableSchem.ToString());
                     return;
 
                 case schema.private_blockchain:
@@ -872,6 +861,12 @@ namespace w3tools //by @w3bgrep
                     ImportKeys("evm");
                     ImportKeys("sol");
                     return;
+
+                case schema.public_blockchain:            
+                    var addresses = _f0rm.GetLinesByKey("evm", "Change tiker_sourse (ex. evm_pk|sol_pk|apt_seed)");
+                    Upd (addresses,tableSchem.ToString());
+                    return;
+
 
                 case schema.public_deposits:
                     ImportDepositAddresses();
@@ -904,19 +899,19 @@ namespace w3tools //by @w3bgrep
 
                 case schema.private_api:
                     phK = new List<string> { "apikey", "apisecret", "proxy", };
-                    var toWrite = _f0rm2.GetKeyValueString(phK.Count(), phK,null,"input binance api");                 
+                    var toWrite = _f0rm.GetKeyValueString(phK.Count(), phK,null,"input binance api");                 
                     UpdTxt (toWrite,tableSchem.ToString(),"binance");
                     
                     phK = new List<string> { "apikey", "apisecret", "passphrase", };
-                    toWrite = _f0rm2.GetKeyValueString(phK.Count(), phK,null,"input okx api");                 
+                    toWrite = _f0rm.GetKeyValueString(phK.Count(), phK,null,"input okx api");                 
                     UpdTxt (toWrite,tableSchem.ToString(),"okx");
  
                     phK = new List<string> { "apikey", "apisecret", "passphrase", };
-                    toWrite = _f0rm2.GetKeyValueString(phK.Count(), phK,null,"input firstmail login as apisecret)");                 
+                    toWrite = _f0rm.GetKeyValueString(phK.Count(), phK,null,"input firstmail login as apisecret)");                 
                     UpdTxt (toWrite,tableSchem.ToString(),"firstmail"); 
  
                     phK = new List<string> { "apikey",  };
-                    toWrite = _f0rm2.GetKeyValueString(phK.Count(), phK,null,"input perplexity api");                 
+                    toWrite = _f0rm.GetKeyValueString(phK.Count(), phK,null,"input perplexity api");                 
                     UpdTxt (toWrite,tableSchem.ToString(),"perplexity"); 
  
                     return;
@@ -1055,7 +1050,6 @@ namespace w3tools //by @w3bgrep
 
             return lines.Length.ToString();
         }
-        
         public string ImportAddresses(int startFrom = 1)
         {
             string tablename = "public_blockchain";
@@ -1181,6 +1175,8 @@ namespace w3tools //by @w3bgrep
             string tablename = "public_deposits";
             TblName(tablename);
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+
+            _project.L0g($"{_tableName} `b");
             int rangeEnd = _rangeEnd;
             var acc0 = _project.Variables["acc0"];
             acc0.Value = startFrom.ToString();
@@ -1271,6 +1267,9 @@ namespace w3tools //by @w3bgrep
             string CEX = cexInput.Text.ToLower();
             string columnName = $"{CEX}_{CHAIN}";
 
+            _project.L0g($"{_tableName} `lb");
+
+
             var tableStructure = new Dictionary<string, string>
             {
                 {"acc0", "INTEGER PRIMARY KEY"},
@@ -1278,11 +1277,14 @@ namespace w3tools //by @w3bgrep
             };
             ClmnAdd(_tableName, tableStructure);
 
+            _project.L0g($"{_tableName} `g");
+
             string[] lines = addressInput.Text.Trim().Split('\n');
             int lineCount = 0;
 
             for (int acc0index = startFrom; acc0index <= lines.Length; acc0index++) 
             {
+                _project.L0g($"{_tableName} `y");
                 string line = lines[acc0index - 1].Trim();
                 if (string.IsNullOrWhiteSpace(line))
                 {
@@ -1558,7 +1560,7 @@ namespace w3tools //by @w3bgrep
 
                     string key = (i + 1).ToString();
                     //string value = $"{keycolumn} = '{line}'";
-                    string value = $"{keycolumn} = '{line.Replace("'", "''")}'";
+                    string value = $"{columnName} = '{line.Replace("'", "''")}'";
 
                     _project.SendInfoToLog($"k [{i}], val = [{value}]", false);
                     result.Add(key, value);
@@ -1573,151 +1575,7 @@ namespace w3tools //by @w3bgrep
             return result;
         }
 
-        public string GetKeyValueString(
-            int quantity,
-            List<string> keyPlaceholders = null,
-            List<string> valuePlaceholders = null,
-            string title = "Input Key-Value Pairs")
-        {
-            // Создание формы
-            System.Windows.Forms.Form form = new System.Windows.Forms.Form();
-            form.Text = title;
-            form.Width = 600;
-            form.Height = 40 + quantity * 35; // Адаптивная высота
-            form.TopMost = true;
-            form.Location = new System.Drawing.Point(108, 108);
-
-            // Список для хранения текстовых полей
-            var keyTextBoxes = new System.Windows.Forms.TextBox[quantity];
-            var valueTextBoxes = new System.Windows.Forms.TextBox[quantity];
-
-            int currentTop = 5;
-            int labelWidth = 40;
-            int keyBoxWidth = 100;
-            int valueBoxWidth = 370;
-            int spacing = 5;
-
-            // Создаём поля для ключей и значений
-            for (int i = 0; i < quantity; i++)
-            {
-                // Метка для ключа
-                System.Windows.Forms.Label keyLabel = new System.Windows.Forms.Label();
-                keyLabel.Text = $"Key:";
-                keyLabel.AutoSize = true;
-                keyLabel.Left = 5;
-                keyLabel.Top = currentTop + 5;
-                form.Controls.Add(keyLabel);
-
-                // Поле для ключа
-                System.Windows.Forms.TextBox keyTextBox = new System.Windows.Forms.TextBox();
-                keyTextBox.Left = keyLabel.Left + labelWidth + spacing;
-                keyTextBox.Top = currentTop;
-                keyTextBox.Width = keyBoxWidth;
-
-                string keyDefault = keyPlaceholders != null && i < keyPlaceholders.Count && !string.IsNullOrEmpty(keyPlaceholders[i]) 
-                    ? keyPlaceholders[i] 
-                    : $"key{i + 1}";
-                keyTextBox.Text = keyDefault;
-                form.Controls.Add(keyTextBox);
-                keyTextBoxes[i] = keyTextBox;
-
-                // Метка для значения
-                System.Windows.Forms.Label valueLabel = new System.Windows.Forms.Label();
-                valueLabel.Text = $"Value:";
-                valueLabel.AutoSize = true;
-                valueLabel.Left = keyTextBox.Left + keyBoxWidth + spacing + 10;
-                valueLabel.Top = currentTop + 5;
-                form.Controls.Add(valueLabel);
-
-                // Поле для значения
-                System.Windows.Forms.TextBox valueTextBox = new System.Windows.Forms.TextBox();
-                valueTextBox.Left = valueLabel.Left + labelWidth + spacing;
-                valueTextBox.Top = currentTop;
-                valueTextBox.Width = valueBoxWidth;
-
-                // Установка плейсхолдера
-                string placeholder = valuePlaceholders != null && i < valuePlaceholders.Count ? valuePlaceholders[i] : "";
-                if (!string.IsNullOrEmpty(placeholder))
-                {
-                    valueTextBox.Text = placeholder;
-                    valueTextBox.ForeColor = System.Drawing.Color.Gray;
-                    valueTextBox.Enter += (s, e) => { if (valueTextBox.Text == placeholder) { valueTextBox.Text = ""; valueTextBox.ForeColor = System.Drawing.Color.Black; } };
-                    valueTextBox.Leave += (s, e) => { if (string.IsNullOrEmpty(valueTextBox.Text)) { valueTextBox.Text = placeholder; valueTextBox.ForeColor = System.Drawing.Color.Gray; } };
-                }
-
-                form.Controls.Add(valueTextBox);
-                valueTextBoxes[i] = valueTextBox;
-
-                currentTop += valueTextBox.Height + spacing;
-            }
-
-            // Кнопка "OK"
-            System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
-            okButton.Text = "OK";
-            okButton.Width = form.ClientSize.Width - 20;
-            okButton.Height = 25;
-            okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
-            okButton.Top = currentTop + 10;
-            okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
-            form.Controls.Add(okButton);
-
-            // Адаптируем высоту формы
-            int requiredHeight = okButton.Top + okButton.Height + 40;
-            if (form.Height < requiredHeight)
-            {
-                form.Height = requiredHeight;
-            }
-
-            form.Load += (s, e) => { form.Location = new System.Drawing.Point(108, 108); };
-            form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
-
-            // Показываем форму
-            form.ShowDialog();
-
-            if (form.DialogResult != System.Windows.Forms.DialogResult.OK)
-            {
-                _project.SendInfoToLog("Input cancelled by user", true);
-                return null;
-            }
-
-            // Формируем строку
-            var pairs = new List<string>();
-            int lineCount = 0;
-
-            for (int i = 0; i < quantity; i++)
-            {
-                string key = keyTextBoxes[i].Text.ToLower().Trim();
-                string value = valueTextBoxes[i].Text.Trim();
-                string placeholder = valuePlaceholders != null && i < valuePlaceholders.Count ? valuePlaceholders[i] : "";
-
-                if (string.IsNullOrEmpty(key) || string.IsNullOrWhiteSpace(value) || value == placeholder)
-                {
-                    _project.SendWarningToLog($"Pair {i + 1} skipped: empty key or value");
-                    continue;
-                }
-
-                try
-                {
-                    string pair = $"{key}='{value.Replace("'", "''")}'";
-                    pairs.Add(pair);
-                    _project.SendInfoToLog($"Added pair: {pair}", false);
-                    lineCount++;
-                }
-                catch (System.Exception ex)
-                {
-                    _project.SendWarningToLog($"Error adding pair {i + 1}: {ex.Message}");
-                }
-            }
-
-            if (lineCount == 0)
-            {
-                _project.SendWarningToLog("No valid key-value pairs entered");
-                return null;
-            }
-
-            // Объединяем пары в строку
-            return string.Join(", ", pairs);
-        }
+        
         }
 
 }
