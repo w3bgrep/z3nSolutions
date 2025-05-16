@@ -52,7 +52,7 @@ namespace ZBSolutions
 
         private string LoadCreds()
         {
-            string[] xCreds = _sql.Get(" status, token, login, password, code2fa, emailLogin, emailPass", "twitter").Split('|');
+            string[] xCreds = _sql.Get(" status, token, login, password, otpsecret, email, emailpass", "private_twitter").Split('|');
             _status = xCreds[0];
             _token  = xCreds[1];
             _login = xCreds[2];
@@ -140,7 +140,7 @@ namespace ZBSolutions
                 i++;
             }
             _project.Variables["twitterTOKEN"].Value = token;
-            _sql.Upd($"token = '{token}'", "twitter");
+            _sql.Upd($"token = '{token}'", "private_twitter");
             return token;
         }
         private string Xlogin()

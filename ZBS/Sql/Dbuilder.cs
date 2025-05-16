@@ -22,153 +22,7 @@ namespace ZBSolutions
             _f0rm = new F0rms(_project);
         }
 
-        public (Dictionary<int, object> data, List<string> selectedFormat) CollectInputData(string tableName, string formTitle, string[] availableFields, string message = "Select format (one field per box):")
-        {
-
-            var formFont = new System.Drawing.Font("Iosevka", 10); //System.Drawing.FontStyle.Bold
-            System.Windows.Forms.Form form = new System.Windows.Forms.Form();
-            form.Text = formTitle;
-            form.Width = 800;
-            form.Height = 700;
-            form.BackColor = System.Drawing.Color.DarkGray;
-            form.TopMost = true;
-            form.Location = new System.Drawing.Point(108, 108);
-
-            List<string> selectedFormat = new List<string>();
-            System.Windows.Forms.TextBox formatDisplay = new System.Windows.Forms.TextBox();
-            System.Windows.Forms.TextBox dataInput = new System.Windows.Forms.TextBox();
-
-            System.Windows.Forms.Label formatLabel = new System.Windows.Forms.Label();
-            formatLabel.Font = new System.Drawing.Font("Iosevka", 10, System.Drawing.FontStyle.Bold);
-            formatLabel.Text = message;
-            formatLabel.AutoSize = true;
-            formatLabel.Left = 10;
-            formatLabel.Top = 10;
-
-            form.Controls.Add(formatLabel);
-
-            System.Windows.Forms.ComboBox[] formatComboBoxes = new System.Windows.Forms.ComboBox[availableFields.Length - 1];
-            int spacing = 5;
-            int totalSpacing = spacing * (formatComboBoxes.Length - 1);
-            int comboWidth = (form.ClientSize.Width - 20 - totalSpacing) / formatComboBoxes.Length;
-            for (int i = 0; i < formatComboBoxes.Length; i++)
-            {
-                formatComboBoxes[i] = new System.Windows.Forms.ComboBox();
-                formatComboBoxes[i].DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-                formatComboBoxes[i].Font = formFont;
-                formatComboBoxes[i].Items.AddRange(availableFields);
-                formatComboBoxes[i].SelectedIndex = 0;
-                formatComboBoxes[i].Left = 10 + i * (comboWidth + spacing);
-                formatComboBoxes[i].Top = 30;
-                formatComboBoxes[i].Width = comboWidth;
-                formatComboBoxes[i].SelectedIndexChanged += (s, e) =>
-                {
-                    selectedFormat.Clear();
-                    foreach (var combo in formatComboBoxes)
-                    {
-                        if (!string.IsNullOrEmpty(combo.SelectedItem?.ToString()))
-                            selectedFormat.Add(combo.SelectedItem.ToString());
-                    }
-                    formatDisplay.Text = string.Join(":", selectedFormat);
-                };
-                form.Controls.Add(formatComboBoxes[i]);
-            }
-
-            formatDisplay.Left = 10;
-            formatDisplay.Top = 60;
-            formatDisplay.Font = new System.Drawing.Font("Iosevka", 11, System.Drawing.FontStyle.Bold);
-            formatDisplay.BackColor = System.Drawing.Color.Black;
-            formatDisplay.ForeColor = System.Drawing.Color.White;
-            formatDisplay.Width = form.ClientSize.Width - 20;
-            formatDisplay.ReadOnly = true;
-
-            form.Controls.Add(formatDisplay);
-
-            System.Windows.Forms.Label dataLabel = new System.Windows.Forms.Label();
-            dataLabel.Text = "Input data (one per line, matching format):";
-            dataLabel.Font = formFont;
-            dataLabel.AutoSize = true;
-            dataLabel.Left = 10;
-            dataLabel.Top = 90;
-            form.Controls.Add(dataLabel);
-
-            dataInput.Left = 10;
-            dataInput.Top = 110;
-            dataInput.Width = form.ClientSize.Width - 20;
-            dataInput.Multiline = true;
-            dataInput.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            dataInput.BackColor = System.Drawing.Color.Black;
-            dataInput.ForeColor = System.Drawing.Color.White;
-            form.Controls.Add(dataInput);
-
-            System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
-            okButton.Text = "OK";
-            okButton.Font = new System.Drawing.Font("Iosevka", 10, System.Drawing.FontStyle.Bold);
-            okButton.BackColor = System.Drawing.Color.Black;
-            okButton.ForeColor = System.Drawing.Color.LightGreen;
-            okButton.Width = form.ClientSize.Width - 10;
-            okButton.Height = 25;
-            okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
-            okButton.Top = form.ClientSize.Height - okButton.Height - 5;
-            okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
-            form.Controls.Add(okButton);
-            dataInput.Height = okButton.Top - dataInput.Top - 5;
-
-            form.Load += (s, e) => { form.Location = new System.Drawing.Point(108, 108); };
-            form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
-
-            form.ShowDialog();
-            if (form.DialogResult != System.Windows.Forms.DialogResult.OK)
-            {
-                _project.SendInfoToLog($"Import to {tableName} cancelled by user", true);
-                return (null, null);
-            }
-
-            selectedFormat.Clear();
-            foreach (var combo in formatComboBoxes)
-            {
-                if (!string.IsNullOrEmpty(combo.SelectedItem?.ToString()))
-                    selectedFormat.Add(combo.SelectedItem.ToString());
-            }
-
-            if (string.IsNullOrEmpty(dataInput.Text) || selectedFormat.Count == 0)
-            {
-                _project.SendWarningToLog("Data or format cannot be empty");
-                return (null, null);
-            }
-
-            string[] lines = dataInput.Text.Trim().Split('\n');
-            _project.SendInfoToLog($"Parsing [{lines.Length}] {tableName} data lines", true);
-
-            Dictionary<int, object> data = new Dictionary<int, object>();
-            for (int acc0 = 1; acc0 <= lines.Length; acc0++)
-            {
-                string line = lines[acc0 - 1].Trim();
-                if (string.IsNullOrWhiteSpace(line))
-                {
-                    _project.SendWarningToLog($"Line {acc0} is empty", false);
-                    continue;
-                }
-
-                if (formTitle.Contains("proxy"))
-                {
-                    data[acc0] = line;
-                }
-                else
-                {
-                    string[] data_parts = line.Split(':');
-                    Dictionary<string, string> parsed_data = new Dictionary<string, string>();
-                    for (int i = 0; i < selectedFormat.Count && i < data_parts.Length; i++)
-                    {
-                        parsed_data[selectedFormat[i]] = data_parts[i].Trim();
-                    }
-                    data[acc0] = parsed_data;
-                }
-            }
-
-            return (data, selectedFormat);
-        }
-
+        
         public string[] DefaultColumns(schema tableSchem)
         {
 
@@ -179,13 +33,13 @@ namespace ZBSolutions
                 case schema.public_deposits:
                     return new string[] { };
                 case schema.private_google:
-                    return new string[] { "cookies", "login", "password", "otpsecret", "otpbackup", "recoveryemail", "recovery_phone" };
+                    return new string[] { "status", "cookies", "login", "password", "otpsecret", "otpbackup", "recoveryemail", "recovery_phone" };
                 case schema.private_twitter:
-                    return new string[] { "cookies", "token", "login", "password", "otpsecret", "otpbackup", "email", "emailpass" };
+                    return new string[] { "status", "cookies", "token", "login", "password", "otpsecret", "otpbackup", "email", "emailpass" };
                 case schema.private_discord:
-                    return new string[] { "token", "login", "password", "otpsecret", "otpbackup", "email", "emailpass", "recovery_phone" };
+                    return new string[] { "status", "token", "login", "password", "otpsecret", "otpbackup", "email", "emailpass", "recovery_phone" };
                 case schema.private_github:
-                    return new string[] { "cookies", "token", "login", "password", "otpsecret", "otpbackup", "email", "emailpass" };
+                    return new string[] { "status", "cookies", "token", "login", "password", "otpsecret", "otpbackup", "email", "emailpass" };
                 case schema.public_blockchain:
                     return new string[] { "evm_pk", "sol_pk", "apt_pk", "evm_seed" };
                 case schema.private_blockchain:

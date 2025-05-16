@@ -1,11 +1,10 @@
 ﻿using System;
-
+using System.Diagnostics;
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Threading;
-
 using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
-using System.Diagnostics;
 
 namespace ZBSolutions
 {
@@ -23,6 +22,7 @@ namespace ZBSolutions
         protected string _2fa;
         protected string _recoveryMail;
         protected string _recoveryCodes;
+        protected string _cookies;
 
         public Google(IZennoPosterProjectModel project, Instance instance, bool log = false)
         {
@@ -50,13 +50,14 @@ namespace ZBSolutions
         private string LoadCreds()
         {
 
-            string[] Creds = _sql.Get("status, login, password, code2FA, recoveryEmail, recovery2FA", "google").Split('|');
+            string[] Creds = _sql.Get("status,  login, password, otpsecret, recoveryemail, otpbackup, cookies", "google").Split('|');
             _status = Creds[0];
             _login = Creds[1];
             _pass = Creds[2];
             _2fa = Creds[3];
             _recoveryMail = Creds[4];
             _recoveryCodes = Creds[5];
+            _cookies = Creds[6];
             try
             {
                 _project.Variables["googleSTATUS"].Value = _status;
@@ -65,8 +66,12 @@ namespace ZBSolutions
                 _project.Variables["google2FACODE"].Value = _2fa;
                 _project.Variables["googleSECURITY_MAIL"].Value = _recoveryMail;
                 _project.Variables["googleBACKUP_CODES"].Value = _recoveryCodes;
+                _project.Variables["googleCOOKIES"].Value = _cookies;
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Log(ex.Message);
+            }
             Log(_status);
             return _status;
 
