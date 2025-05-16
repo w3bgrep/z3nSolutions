@@ -1,5 +1,6 @@
 ﻿
 using Nethereum.ABI.CompilationMetadata;
+using Nethereum.Contracts.QueryHandlers.MultiCall;
 using Nethereum.Signer;
 using System;
 using System.Collections.Generic;
@@ -129,6 +130,8 @@ namespace ZBSolutions
             else throw new Exception($"unknown DBmode: {dbMode}");
             return;
         }
+ 
+        
         public void Upd(string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, object acc = null )
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
@@ -156,20 +159,24 @@ namespace ZBSolutions
             DbQ($@"UPDATE {_tableName} SET {toUpd} WHERE key = '{key}';", log: log, throwOnEx: throwOnEx);
 
         }
-
         public void Upd(Dictionary<string, string> toWrite, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, bool byKey = false)
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
             TblName(tableName);
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+
+            int dicSize = toWrite.Count;
+            AddRange(_tableName, dicSize);
+
             foreach (KeyValuePair<string, string> pair in toWrite)
             {
                 string key = pair.Key;
                 string value = pair.Value;
                 Upd(value,_tableName,last:last, acc: key);
             }
-
         }
+ 
+ 
         public void Write(Dictionary<string, string> toWrite, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true)
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;        
@@ -186,6 +193,8 @@ namespace ZBSolutions
             }
 
         }
+
+
         public string Get(string toGet, string tableName = null, bool log = false, bool throwOnEx = false)
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
@@ -207,6 +216,161 @@ namespace ZBSolutions
             else Q = $@"SELECT name FROM pragma_table_info('{name}')";
             return DbQ(Q, log: log).Replace("\n", ", ").Trim(',').Trim();
         }
+
+        public void CreateShemas(string[] schemas)
+        {
+            if (!_pstgr) return;
+            foreach (string name in schemas) DbQ($"CREATE SCHEMA IF NOT EXISTS {name};");
+        }
+        public bool TblExist(string tblName)
+        {
+            TblName(tblName);
+            string resp = null;
+            if (_pstgr) resp = DbQ($"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}';");
+            else resp = DbQ($"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='{_tableName}';");
+            if (resp == "0" || resp == string.Empty) return false;
+            else return true;
+        }
+        public bool ClmnExist(string tblName, string clmnName)
+        {
+            TblName(tblName);
+            string resp = null;
+            if (_pstgr)
+                resp = DbQ($@"SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}' AND lower(column_name) = lower('{clmnName}');")?.Trim();
+            else
+                resp = DbQ($"SELECT COUNT(*) FROM pragma_table_info('{_tableName}') WHERE name='{clmnName}';");
+            if (resp == "0" || resp == string.Empty) return false;
+            else return true;
+
+        }
+        public List<string> TblColumns(string tblName)
+        {
+            var result = new List<string>();
+            TblName(tblName);
+            if (_dbMode == "PostgreSQL")
+                result = DbQ($@"SELECT column_name FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}';", true)
+                    .Split('\n')
+                    .Select(s => s.Trim())
+                    .ToList();
+            else
+                result = DbQ($"SELECT name FROM pragma_table_info('{_tableName}');")
+                    .Split('\n')
+                    .Select(s => s.Trim())
+                    .ToList();
+            if (_dbMode == "PostgreSQL") _tableName = $"{_schemaName}.{_tableName}";
+            return result;
+        }
+
+        public void ClmnAdd(string tblName, string clmnName, string defaultValue = "TEXT DEFAULT \"\"")
+        {
+            TblName(tblName);
+            var current = TblColumns(tblName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+
+            if (!current.Contains(clmnName))
+            {
+                DbQ($@"ALTER TABLE {_tableName} ADD COLUMN {clmnName} {defaultValue};", true);
+            }
+
+        }
+        public void ClmnAdd(string tblName, Dictionary<string, string> tableStructure)
+        {
+            TblName(tblName);
+            var current = TblColumns(tblName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+
+            Log(string.Join(",", current));
+            foreach (var column in tableStructure)
+            {
+                var keyWd = column.Key.Trim();
+                if (!current.Contains(keyWd))
+                {
+                    Log($"CLMNADD [{keyWd}] not in  [{string.Join(",", current)}] ");
+                    DbQ($@"ALTER TABLE {_tableName} ADD COLUMN {keyWd} {column.Value};", true);
+                }
+            }
+        }
+        public void ClmnDrop(string tblName, string clmnName)
+        {
+            TblName(tblName);
+            var current = TblColumns(tblName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+
+            if (current.Contains(clmnName))
+            {
+                string cascade = (_pstgr) ? " CASCADE" : null;
+                DbQ($@"ALTER TABLE {_tableName} DROP COLUMN {clmnName}{cascade};", true);
+            }
+        }
+        public void ClmnDrop(string tblName, Dictionary<string, string> tableStructure)
+        {
+            TblName(tblName);
+            var current = TblColumns(tblName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+
+            foreach (var column in tableStructure)
+            {
+                if (!current.Contains(column.Key))
+                {
+                    string cascade = _dbMode == "PostgreSQL" ? " CASCADE" : null;
+                    DbQ($@"ALTER TABLE {_tableName} DROP COLUMN {column.Key}{cascade};", true);
+                }
+            }
+        }
+
+        public void ClmnPrune(string tblName, Dictionary<string, string> tableStructure)
+        {
+
+            TblName(tblName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+
+            var current = TblColumns(tblName);
+
+            // Перебираем столбцы таблицы
+            foreach (var column in current)
+            {
+                // Если столбец отсутствует в ключах tableStructure
+                if (!tableStructure.ContainsKey(column))
+                {
+                    Log($"[{column}] not in tableStructure keys, dropping");
+                    string cascade = _pstgr ? " CASCADE" : "";
+                    DbQ($@"ALTER TABLE {_tableName} DROP COLUMN {column}{cascade};", true);
+                }
+            }
+        }
+
+        public void TblAdd(string tblName, Dictionary<string, string> tableStructure)
+        {
+            TblName(tblName);
+            if (TblExist(tblName)) return;
+            if (_pstgr) DbQ($@" CREATE TABLE {_schemaName}.{_tableName} ( {string.Join(", ", tableStructure.Select(kvp => $"\"{kvp.Key}\" {kvp.Value.Replace("AUTOINCREMENT", "SERIAL")}"))} );");
+            else DbQ($"CREATE TABLE {_tableName} (" + string.Join(", ", tableStructure.Select(kvp => $"{kvp.Key} {kvp.Value}")) + ");");
+        }
+        public void AddRange(string tblName, int range = 0)
+        {
+            if (range == 0)
+                try
+                {
+                    range = int.Parse(_project.Variables["rangeEnd"].Value);
+                }
+                catch
+                {
+                    range = 108;
+                }
+
+            TblName(tblName);
+
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+            int current = int.Parse(DbQ($@"SELECT COALESCE(MAX(acc0), 0) FROM {_tableName};"));
+            Log(current.ToString());
+            Log(range.ToString());
+            for (int currentAcc0 = current + 1; currentAcc0 <= range; currentAcc0++)
+            {
+                DbQ($@"INSERT INTO {_tableName} (acc0) VALUES ({currentAcc0}) ON CONFLICT DO NOTHING;");
+            }
+
+        }
+
         public string KeyEVM(string tableName = "blockchain_private", string schemaName = "accounts")
         {
             string table = (_dbMode == "PostgreSQL" ? $"{schemaName}." : "") + tableName;

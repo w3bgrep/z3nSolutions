@@ -1,388 +1,31 @@
-
-
-#region using
+﻿using NBitcoin;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using ZennoLab.CommandCenter;
+using System.Text;
+using System.Threading.Tasks;
 using ZennoLab.InterfacesLibrary.ProjectModel;
-using ZennoLab.InterfacesLibrary;
-using ZBSolutions;
-using NBitcoin;
 
-#endregion
-
-namespace w3tools //by @w3bgrep
+namespace ZBSolutions
 {
-
-    public static class TestStatic
-{
-
-    public static void acc0w(this IZennoPosterProjectModel project, object acc0)
-    {
-        project.Variables["acc0"].Value = acc0?.ToString() ?? string.Empty;
-    }
-}
-
-
-	public class DatabaseTransfer
-{
-    private readonly Sql _sql;
-    private readonly IZennoPosterProjectModel _project;
-
-    public DatabaseTransfer(IZennoPosterProjectModel project)
-    {
-        _project = project;
-        _sql = new Sql(project,true);
-    }
-
-    public void TransferTables(string[] tableNames = null)
-    {
-        _project.Variables["DBmode"].Value = "SQLite";
-        
-		if (tableNames == null){
-			    string tablesQuery = "SELECT name FROM sqlite_master WHERE type='table';";
-        		string tablesResult = _sql.DbQ(tablesQuery,true);
-				tableNames = tablesResult.Split('\n');
-			}
-        
-        for (int i = 0; i < tableNames.Length; i++)
-        {
-            string tableName = tableNames[i];
-            _project.L0g(tableName);
-            if (tableName == "")  continue;
-
-            if (tableName.StartsWith("_"))
-            {
-                string newTableName = tableName.Substring(1).ToLower();
-                string targetSchema = "projects";               
-                CopyTable(tableName, targetSchema, newTableName);
-            }
-			else if (tableName.StartsWith("farm"))
-            {
-                string newTableName = tableName.Substring(4).ToLower();
-                string targetSchema = "projects";            
-                CopyTable(tableName, targetSchema, newTableName);
-            }
-            else if (tableName.StartsWith("acc"))
-            {
-                string newTableName = tableName.Substring(3).ToLower();
-                string targetSchema = "accounts";            
-                CopyTable(tableName, targetSchema, newTableName);
-            }
-        }
-    }
-
-    private void CopyTable(string sourceTable, string targetSchema, string targetTable)
-    {
-        _project.Variables["DBmode"].Value = "SQLite";
-        
-        string columnsQuery = $"PRAGMA table_info('{sourceTable}');";
-        string columnsResult = _sql.DbQ(columnsQuery,true);
-		
-        
-        string[] columnRows = columnsResult.Split('\n');
-        string columnNames = "";
-        
-        for (int i = 0; i < columnRows.Length; i++)
-        {
-            if (columnRows[i] == "")
-            {
-                continue;
-            }
-            
-            // Каждая строка содержит данные в формате cid|name|type|notnull|dflt_value|pk
-            string[] columnData = columnRows[i].Split('|');
-            string columnName = columnData[1];
-            
-            if (columnNames != "")
-            {
-                columnNames += ", ";
-            }
-            columnNames += columnName;
-        }
-
-        string selectQuery = $"SELECT {columnNames} FROM {sourceTable};";
-		_project.L0g(selectQuery);
-        string dataResult = _sql.DbQ(selectQuery);
-        
-        _project.Variables["DBmode"].Value = "PostgreSQL";
-        
-		string createTableQuery = $"CREATE TABLE IF NOT EXISTS {targetSchema}.{targetTable} (";
-		string[] columns = columnNames.Split(',');
-		for (int i = 0; i < columns.Length; i++)
-		{
-			if (i > 0)
-			{
-				createTableQuery += ", ";
-			}
-			string columnName = columns[i].Trim();
-			// Если столбец называется "acc0", задаем тип INTEGER, иначе TEXT
-			if (columnName == "acc0")
-			{
-				createTableQuery += columnName + " INTEGER PRIMARY KEY";
-			}
-			else
-			{
-				createTableQuery += columnName + " TEXT";
-			}
-		}
-		createTableQuery += ");";
-		_sql.DbQ(createTableQuery);
-
-		// Если есть данные, вставляем их
-		if (dataResult != "")
-		{
-			string[] dataRows = dataResult.Split('\n');
-			
-			// Обрабатываем каждую строку данных
-			for (int i = 0; i < dataRows.Length; i++)
-			{
-				if (dataRows[i] == "")
-				{
-					continue;
-				}
-				
-				// Формируем запрос на вставку
-				string insertQuery = $"INSERT INTO {targetSchema}.{targetTable} ({columnNames}) VALUES (";
-				string[] rowValues = dataRows[i].Split('|');
-				
-				for (int j = 0; j < rowValues.Length; j++)
-				{
-					if (j > 0)
-					{
-						insertQuery += ", ";
-					}
-					string columnName = columns[j].Trim();
-					string value = rowValues[j];
-					
-					// Для столбца acc0 не добавляем кавычки, так как это INTEGER
-					if (columnName == "acc0")
-					{
-						// Если значение пустое, вставляем NULL
-						if (value == "")
-						{
-							insertQuery += "NULL";
-						}
-						else
-						{
-							insertQuery += value;
-						}
-					}
-					else
-					{
-						// Для текстовых столбцов экранируем значения
-						value = value.Replace("'", "''");
-						insertQuery += $"'{value}'";
-					}
-				}
-				insertQuery += ");";
-				
-				// Выполняем вставку
-				_sql.DbQ(insertQuery);
-			}
-		}
-    }
-}
-    
-    public class DbManager2 : Sql
-    {
-        protected bool _logShow = false;
-        //protected bool _pstgr = false;
-        //protected string _tableName = string.Empty;
-        //protected string _schemaName = string.Empty;
-
-        protected readonly int _rangeEnd;
-
-        public DbManager2(IZennoPosterProjectModel project, bool log = false)
-            : base(project, log: log)
-        {
-            _logShow = log;
-            _pstgr = _dbMode == "PostgreSQL" ? true : false;
-            _rangeEnd = int.TryParse(project.Variables["rangeEnd"].Value, out int rangeEnd) && rangeEnd > 0 ? rangeEnd : 10;
-
-        }
-        
-        
-        public void CreateShemas(string[] schemas)
-        {
-            if (!_pstgr) return;
-            foreach (string name in schemas) DbQ($"CREATE SCHEMA IF NOT EXISTS {name};");
-        }
-        public bool TblExist(string tblName)
-        {
-            TblName(tblName);
-            string resp = null;
-            if (_pstgr) resp = DbQ($"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}';");
-            else resp = DbQ($"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='{_tableName}';");
-            if (resp == "0" || resp == string.Empty) return false;
-            else return true;
-        }
-        public bool ClmnExist(string tblName, string clmnName)
-        {
-            TblName(tblName);
-            string resp = null;
-            if (_pstgr)
-                resp = DbQ($@"SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}' AND lower(column_name) = lower('{clmnName}');")?.Trim();
-            else
-                resp = DbQ($"SELECT COUNT(*) FROM pragma_table_info('{_tableName}') WHERE name='{clmnName}';");
-            if (resp == "0" || resp == string.Empty) return false;
-            else return true;
-
-        }
-        public List<string> TblColumns(string tblName)
-        {
-            var result = new List<string>();
-            TblName(tblName);
-            if (_dbMode == "PostgreSQL")
-                result = DbQ($@"SELECT column_name FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}';", true)
-                    .Split('\n')
-                    .Select(s => s.Trim())
-                    .ToList();
-            else
-                result = DbQ($"SELECT name FROM pragma_table_info('{_tableName}');")
-                    .Split('\n')
-                    .Select(s => s.Trim())
-                    .ToList();
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-            return result;
-        }
-
-        public void ClmnAdd(string tblName, string clmnName, string defaultValue = "TEXT DEFAULT \"\"")
-        {
-            TblName(tblName);
-            var current = TblColumns(tblName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-            if (!current.Contains(clmnName))
-            {
-                DbQ($@"ALTER TABLE {_tableName} ADD COLUMN {clmnName} {defaultValue};", true);
-            }
-
-        }
-        public void ClmnAdd(string tblName, Dictionary<string, string> tableStructure)
-        {
-            TblName(tblName);
-            var current = TblColumns(tblName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-            Log(string.Join(",", current));
-            foreach (var column in tableStructure)
-            {
-                var keyWd = column.Key.Trim();
-                if (!current.Contains(keyWd))
-                {
-                    Log($"CLMNADD [{keyWd}] not in  [{string.Join(",", current)}] ");
-                    DbQ($@"ALTER TABLE {_tableName} ADD COLUMN {keyWd} {column.Value};", true);
-                }
-            }
-        }
-        public void ClmnDrop(string tblName, string clmnName)
-        {
-            TblName(tblName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-
-            var current = TblColumns(tblName);
-            if (current.Contains(clmnName))
-            {
-                string cascade = (_pstgr) ? " CASCADE" : null;
-                DbQ($@"ALTER TABLE {_tableName} DROP COLUMN {clmnName}{cascade};", true);
-            }
-        }
-        // public void ClmnDrop(string tblName, Dictionary<string, string> tableStructure)
-        // {
-        //     TblName(tblName);
-        //     if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-        //     var current = TblColumns(tblName);
-
-        //     foreach (var column in tableStructure)
-        //     {
-                
-        //         if (!current.Contains(column.Key))
-        //         {
-        //             Log($"[{column.Key}] not in [{current}]")
-        //             string cascade = _pstgr ? " CASCADE" : null;
-        //             DbQ($@"ALTER TABLE {_tableName} DROP COLUMN {column.Key}{cascade};", true);
-        //         }
-        //     }
-        // }
-        public void ClmnPrune(string tblName, Dictionary<string, string> tableStructure)
-        {
-            
-            TblName(tblName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-            
-            var current = TblColumns(tblName);
-
-            // Перебираем столбцы таблицы
-            foreach (var column in current)
-            {
-                // Если столбец отсутствует в ключах tableStructure
-                if (!tableStructure.ContainsKey(column))
-                {
-                    Log($"[{column}] not in tableStructure keys, dropping");
-                    string cascade = _pstgr ? " CASCADE" : "";
-                    DbQ($@"ALTER TABLE {_tableName} DROP COLUMN {column}{cascade};", true);
-                }
-            }
-        }
-
-
-        public void TblAdd(string tblName, Dictionary<string, string> tableStructure)
-        {
-            Log("TBLADD");
-            TblName(tblName);
-            if (TblExist(tblName)) return;
-            if (_pstgr) DbQ($@" CREATE TABLE {_schemaName}.{_tableName} ( {string.Join(", ", tableStructure.Select(kvp => $"\"{kvp.Key}\" {kvp.Value.Replace("AUTOINCREMENT", "SERIAL")}"))} );");
-            else DbQ($"CREATE TABLE {_tableName} (" + string.Join(", ", tableStructure.Select(kvp => $"{kvp.Key} {kvp.Value}")) + ");");
-        }
-        public void AddRange(string tblName, int range = 108)
-        {
-            TblName(tblName);
-
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-            int current = int.Parse(DbQ($@"SELECT COALESCE(MAX(acc0), 0) FROM {_tableName};"));
-            Log(current.ToString());
-            Log(_rangeEnd.ToString());
-            for (int currentAcc0 = current + 1; currentAcc0 <= _rangeEnd; currentAcc0++)
-            {
-                DbQ($@"INSERT INTO {_tableName} (acc0) VALUES ({currentAcc0}) ON CONFLICT DO NOTHING;");
-            }
-
-        }
-
-
-    }
-
-
-
-
-
-
-    
-    public class DBuilder : DbManager
+    public class DBuilder : Sql
     {
         private readonly IZennoPosterProjectModel _project;
         private readonly F0rms _f0rm;
-        //private readonly F0rms2 _f0rm2;
-
         private string _acc0;
 
         public DBuilder(IZennoPosterProjectModel project, bool log = false)
             : base(project, log: log)
         {
             _project = project;
-            _logShow = log;
-            //_pstgr = _dbMode == "PostgreSQL" ? true : false;
+           
             _f0rm = new F0rms(_project);
-           // _f0rm2 = new F0rms2(_project);
-            //_acc0 = _project.Variables[acc0];
-            //_rangeEnd = int.TryParse(project.Variables["rangeEnd"].Value, out int rangeEnd) && rangeEnd > 0 ? rangeEnd : 10;
-
         }
 
         public (Dictionary<int, object> data, List<string> selectedFormat) CollectInputData(string tableName, string formTitle, string[] availableFields, string message = "Select format (one field per box):")
         {
-            
-            var formFont = new System.Drawing.Font("Iosevka", 10 ); //System.Drawing.FontStyle.Bold
+
+            var formFont = new System.Drawing.Font("Iosevka", 10); //System.Drawing.FontStyle.Bold
             System.Windows.Forms.Form form = new System.Windows.Forms.Form();
             form.Text = formTitle;
             form.Width = 800;
@@ -396,7 +39,7 @@ namespace w3tools //by @w3bgrep
             System.Windows.Forms.TextBox dataInput = new System.Windows.Forms.TextBox();
 
             System.Windows.Forms.Label formatLabel = new System.Windows.Forms.Label();
-            formatLabel.Font = new System.Drawing.Font("Iosevka", 10, System.Drawing.FontStyle.Bold );
+            formatLabel.Font = new System.Drawing.Font("Iosevka", 10, System.Drawing.FontStyle.Bold);
             formatLabel.Text = message;
             formatLabel.AutoSize = true;
             formatLabel.Left = 10;
@@ -433,12 +76,12 @@ namespace w3tools //by @w3bgrep
 
             formatDisplay.Left = 10;
             formatDisplay.Top = 60;
-            formatDisplay.Font = new System.Drawing.Font("Iosevka", 11, System.Drawing.FontStyle.Bold );
+            formatDisplay.Font = new System.Drawing.Font("Iosevka", 11, System.Drawing.FontStyle.Bold);
             formatDisplay.BackColor = System.Drawing.Color.Black;
-            formatDisplay.ForeColor = System.Drawing.Color.White;  
+            formatDisplay.ForeColor = System.Drawing.Color.White;
             formatDisplay.Width = form.ClientSize.Width - 20;
             formatDisplay.ReadOnly = true;
-     
+
             form.Controls.Add(formatDisplay);
 
             System.Windows.Forms.Label dataLabel = new System.Windows.Forms.Label();
@@ -460,9 +103,9 @@ namespace w3tools //by @w3bgrep
 
             System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
             okButton.Text = "OK";
-            okButton.Font = new System.Drawing.Font("Iosevka", 10, System.Drawing.FontStyle.Bold );
+            okButton.Font = new System.Drawing.Font("Iosevka", 10, System.Drawing.FontStyle.Bold);
             okButton.BackColor = System.Drawing.Color.Black;
-            okButton.ForeColor = System.Drawing.Color.LightGreen; 
+            okButton.ForeColor = System.Drawing.Color.LightGreen;
             okButton.Width = form.ClientSize.Width - 10;
             okButton.Height = 25;
             okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
@@ -525,11 +168,10 @@ namespace w3tools //by @w3bgrep
 
             return (data, selectedFormat);
         }
-   
 
-        public string[]  DefaultColumns(schema tableSchem)
+        public string[] DefaultColumns(schema tableSchem)
         {
- 
+
             switch (tableSchem)
             {
 
@@ -537,15 +179,15 @@ namespace w3tools //by @w3bgrep
                 case schema.public_deposits:
                     return new string[] { };
                 case schema.private_google:
-                    return new string[] {"cookies", "login", "password", "otpsecret", "otpbackup", "recoveryemail", "recovery_phone" };
+                    return new string[] { "cookies", "login", "password", "otpsecret", "otpbackup", "recoveryemail", "recovery_phone" };
                 case schema.private_twitter:
                     return new string[] { "cookies", "token", "login", "password", "otpsecret", "otpbackup", "email", "emailpass" };
                 case schema.private_discord:
-                    return new string[]  { "token", "login", "password", "otpsecret", "otpbackup", "email", "emailpass", "recovery_phone" };
+                    return new string[] { "token", "login", "password", "otpsecret", "otpbackup", "email", "emailpass", "recovery_phone" };
                 case schema.private_github:
-                    return new string[]  { "cookies", "token", "login", "password", "otpsecret", "otpbackup", "email", "emailpass" };
+                    return new string[] { "cookies", "token", "login", "password", "otpsecret", "otpbackup", "email", "emailpass" };
                 case schema.public_blockchain:
-                    return new string[] { "evm_pk", "sol_pk", "apt_pk","evm_seed" };
+                    return new string[] { "evm_pk", "sol_pk", "apt_pk", "evm_seed" };
                 case schema.private_blockchain:
                     return new string[] { "secp256k1", "base58", "bip39" };
 
@@ -561,7 +203,7 @@ namespace w3tools //by @w3bgrep
                     return new string[] { "nickname", "bio", "brsr_score" };
 
                 case schema.public_rpc:
-                   return new string[] { "rpc", "explorer", "explorer_api" };
+                    return new string[] { "rpc", "explorer", "explorer_api" };
 
 
 
@@ -632,20 +274,20 @@ namespace w3tools //by @w3bgrep
                 if (!tableStructure.ContainsKey(name)) tableStructure.Add(name, defaultColumn);
             }
             return tableStructure;
-        }     
+        }
 
-        private string ImportData(string tableName,  string[] availableFields, Dictionary<string, string> columnMapping, string formTitle = "title", string message = "Select format (one field per box):",int startFrom = 1)
+        private string ImportData(string tableName, string[] availableFields, Dictionary<string, string> columnMapping, string formTitle = "title", string message = "Select format (one field per box):", int startFrom = 1)
         {
             TblName(tableName);
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
             int lineCount = 0;
 
-            int rangeEnd = _rangeEnd;
+            //int rangeEnd = _rangeEnd;
             //var acc0 = _project.Variables["acc0"];
             //acc0.Value = startFrom.ToString();
 
 
-            var formFont = new System.Drawing.Font("Iosevka", 10 ); //System.Drawing.FontStyle.Bold
+            var formFont = new System.Drawing.Font("Iosevka", 10); //System.Drawing.FontStyle.Bold
             System.Windows.Forms.Form form = new System.Windows.Forms.Form();
             form.Text = formTitle;
             form.Width = 800;
@@ -659,7 +301,7 @@ namespace w3tools //by @w3bgrep
             System.Windows.Forms.TextBox dataInput = new System.Windows.Forms.TextBox();
 
             System.Windows.Forms.Label formatLabel = new System.Windows.Forms.Label();
-            formatLabel.Font = new System.Drawing.Font("Iosevka", 10, System.Drawing.FontStyle.Bold );
+            formatLabel.Font = new System.Drawing.Font("Iosevka", 10, System.Drawing.FontStyle.Bold);
             formatLabel.Text = message;
             formatLabel.AutoSize = true;
             formatLabel.Left = 10;
@@ -696,12 +338,12 @@ namespace w3tools //by @w3bgrep
 
             formatDisplay.Left = 10;
             formatDisplay.Top = 60;
-            formatDisplay.Font = new System.Drawing.Font("Iosevka", 11, System.Drawing.FontStyle.Bold );
+            formatDisplay.Font = new System.Drawing.Font("Iosevka", 11, System.Drawing.FontStyle.Bold);
             formatDisplay.BackColor = System.Drawing.Color.Black;
-            formatDisplay.ForeColor = System.Drawing.Color.White;  
+            formatDisplay.ForeColor = System.Drawing.Color.White;
             formatDisplay.Width = form.ClientSize.Width - 20;
             formatDisplay.ReadOnly = true;
-     
+
             form.Controls.Add(formatDisplay);
 
             System.Windows.Forms.Label dataLabel = new System.Windows.Forms.Label();
@@ -723,9 +365,9 @@ namespace w3tools //by @w3bgrep
 
             System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
             okButton.Text = "OK";
-            okButton.Font = new System.Drawing.Font("Iosevka", 10, System.Drawing.FontStyle.Bold );
+            okButton.Font = new System.Drawing.Font("Iosevka", 10, System.Drawing.FontStyle.Bold);
             okButton.BackColor = System.Drawing.Color.Black;
-            okButton.ForeColor = System.Drawing.Color.LightGreen; 
+            okButton.ForeColor = System.Drawing.Color.LightGreen;
             okButton.Width = form.ClientSize.Width - 10;
             okButton.Height = 25;
             okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
@@ -790,8 +432,8 @@ namespace w3tools //by @w3bgrep
 
                     try
                     {
-                        
-                        Upd(string.Join(", ", queryParts),_tableName,last:false,acc:acc0unt);
+
+                        Upd(string.Join(", ", queryParts), _tableName, last: false, acc: acc0unt);
                         //string dbQuery = $@"UPDATE {_tableName} SET {string.Join(", ", queryParts)} WHERE acc0 = {acc0};";
                         //DbQ(dbQuery, true);
                         lineCount++;
@@ -807,19 +449,18 @@ namespace w3tools //by @w3bgrep
             return lineCount.ToString();
         }
 
-        
         public string ImportKeys(string keyType, int startFrom = 1)
         {
-            
+
             TblName("private_blockchain");
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-            int rangeEnd = _rangeEnd +1 ;
+            //int rangeEnd = _rangeEnd + 1;
             var acc0 = _project.Variables["acc0"];
             acc0.Value = startFrom.ToString();
 
             var blockchain = new Blockchain();
 
-            var formFont = new System.Drawing.Font("Iosevka", 10 ); //System.Drawing.FontStyle.Bold
+            var formFont = new System.Drawing.Font("Iosevka", 10); //System.Drawing.FontStyle.Bold
 
             // Создание формы
             System.Windows.Forms.Form form = new System.Windows.Forms.Form();
@@ -870,7 +511,7 @@ namespace w3tools //by @w3bgrep
             if (string.IsNullOrEmpty(dataInput.Text))
             {
                 _project.SendWarningToLog("Input could not be empty");
-                return "0"; 
+                return "0";
             }
 
             string[] lines = dataInput.Text.Trim().Split('\n');
@@ -880,21 +521,21 @@ namespace w3tools //by @w3bgrep
             {
                 string key = lines[i].Trim();
                 if (string.IsNullOrWhiteSpace(key)) continue;
-                _project.acc0w(i+1);
+                _project.acc0w(i + 1);
                 try
                 {
                     switch (keyType)
                     {
                         case "seed":
                             string encodedSeed = SAFU.Encode(_project, key);
-                            Upd($"bip39 = '{encodedSeed}'",_tableName);
+                            Upd($"bip39 = '{encodedSeed}'", _tableName);
                             break;
 
                         case "evm":
                             string privateKey;
                             string address;
 
-                            if (key.Split(' ').Length > 1) 
+                            if (key.Split(' ').Length > 1)
                             {
                                 var mnemonicObj = new Mnemonic(key);
                                 var hdRoot = mnemonicObj.DeriveExtKey();
@@ -937,7 +578,7 @@ namespace w3tools //by @w3bgrep
             string tablename = "public_blockchain";
             TblName(tablename);
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-            int rangeEnd = _rangeEnd;
+            //int rangeEnd = _rangeEnd;
             var acc0 = _project.Variables["acc0"];
             acc0.Value = startFrom.ToString();
 
@@ -1025,7 +666,7 @@ namespace w3tools //by @w3bgrep
             string[] lines = addressInput.Text.Trim().Split('\n');
             int lineCount = 0;
 
-            for (int i = 0; i < lines.Length && int.Parse(acc0.Value) <= rangeEnd; i++)
+            for (int i = 0; i < lines.Length; i++)
             {
                 string address = lines[i].Trim();
                 if (string.IsNullOrWhiteSpace(address))
@@ -1038,7 +679,7 @@ namespace w3tools //by @w3bgrep
                 try
                 {
                     _project.SendInfoToLog($"Processing acc0 = {acc0.Value}, address = '{address}'", false);
-                    Upd($"{columnName} = '{address}'",_tableName, last:false);
+                    Upd($"{columnName} = '{address}'", _tableName, last: false);
                     acc0.Value = (int.Parse(acc0.Value) + 1).ToString();
                     lineCount++;
                 }
@@ -1059,7 +700,7 @@ namespace w3tools //by @w3bgrep
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
             _project.L0g($"{_tableName} `b");
-            int rangeEnd = _rangeEnd;
+            //int rangeEnd = _rangeEnd;
             var acc0 = _project.Variables["acc0"];
             acc0.Value = startFrom.ToString();
 
@@ -1167,7 +808,7 @@ namespace w3tools //by @w3bgrep
             string[] lines = addressInput.Text.Trim().Split('\n');
             int lineCount = 0;
 
-            for (int acc0index = startFrom; acc0index <= lines.Length; acc0index++) 
+            for (int acc0index = startFrom; acc0index <= lines.Length; acc0index++)
             {
                 _project.L0g($"{_tableName} `y");
                 string line = lines[acc0index - 1].Trim();
@@ -1180,7 +821,7 @@ namespace w3tools //by @w3bgrep
                 try
                 {
                     acc0.Value = acc0index.ToString();
-                    Upd($"{columnName} = '{line}'",_tableName, last:false);
+                    Upd($"{columnName} = '{line}'", _tableName, last: false);
                     // _sql.DbQ($@"UPDATE {table} SET
                     //         {columnName} = '{line}'
                     //         WHERE acc0 = {acc0};");
@@ -1195,14 +836,14 @@ namespace w3tools //by @w3bgrep
 
             _project.SendInfoToLog($"[{lineCount}] strings added to [{_tableName}]", true);
             return lineCount.ToString();
-        }      
+        }
 
-        public void MapAndImport (schema tableSchem,int startFrom = 1)
-        {        
+        public void MapAndImport(schema tableSchem, int startFrom = 1)
+        {
             _project.Variables["acc0"].Value = startFrom.ToString();
-            
+
             var mapping = new Dictionary<string, string>();
-            
+
             Log($"mapping {tableSchem}");
             switch (tableSchem)
             {
@@ -1246,7 +887,7 @@ namespace w3tools //by @w3bgrep
                         { "2FA_BACKUP", "otpbackup" }
                     };
                     ImportData(tableSchem.ToString(), googleFields, googleMapping, "Import Google Data");
-                    return;                
+                    return;
 
                 case schema.public_mail:
                     string[] fieldsPbMl = new string[] { "ICLOUD", "" };
@@ -1254,19 +895,19 @@ namespace w3tools //by @w3bgrep
                     {
                         { "ICLOUD", "icloud" },
                     };
-                    ImportData("google", fieldsPbMl, mapping, "Import Icloud");  
+                    ImportData("google", fieldsPbMl, mapping, "Import Icloud");
                     return;
- 
+
                 case schema.public_profile:
                     var nicknames = _f0rm.GetLinesByKey("nickname", "input data, don't change key!");
-                    Upd (nicknames,tableSchem.ToString());
+                    Upd(nicknames, tableSchem.ToString());
                     var bio = _f0rm.GetLinesByKey("bio", "input data, don't change key!");
-                    Upd (bio,tableSchem.ToString());
+                    Upd(bio, tableSchem.ToString());
                     return;
-                
+
                 case schema.private_profile:
                     var proxy = _f0rm.GetLinesByKey("proxy", "input proxy, don't change key!");
-                    Upd (proxy,tableSchem.ToString());
+                    Upd(proxy, tableSchem.ToString());
                     return;
 
                 case schema.private_blockchain:
@@ -1280,17 +921,17 @@ namespace w3tools //by @w3bgrep
                     return;
 
                 case schema.private_settings:
-                    var phK = new List<string> { 
+                    var phK = new List<string> {
                         "discord_invite",
                         "discord_hub",
-                        "tg_logger_token",	
+                        "tg_logger_token",
                         "tg_logger_group",
                         "tg_logger_topic",
                         "profiles_folder"
                         };
 
 
-                    var phV = new List<string> { 
+                    var phV = new List<string> {
                         "Инвайт на свой сервер",
                         "ID канала с инвайтами на вашем сервере",
                         "Токен Telegram логгера",
@@ -1299,28 +940,28 @@ namespace w3tools //by @w3bgrep
                         "Путь к папке с профилями и причастным данным. Формат: {F:\\farm\\}"
                         };
 
-                    
-                    var settings = _f0rm.GetKeyValuePairs(phK.Count(), phK,phV,"input settings",prepareUpd:false);
-                    Write(settings,tableSchem.ToString());
+
+                    var settings = _f0rm.GetKeyValuePairs(phK.Count(), phK, phV, "input settings", prepareUpd: false);
+                    Write(settings, tableSchem.ToString());
                     return;
 
                 case schema.private_api:
                     phK = new List<string> { "apikey", "apisecret", "proxy", };
-                    var toWrite = _f0rm.GetKeyValueString(phK.Count(), phK,null,"input binance api");                 
-                    UpdTxt (toWrite,tableSchem.ToString(),"binance");
-                    
+                    var toWrite = _f0rm.GetKeyValueString(phK.Count(), phK, null, "input binance api");
+                    UpdTxt(toWrite, tableSchem.ToString(), "binance");
+
                     phK = new List<string> { "apikey", "apisecret", "passphrase", };
-                    toWrite = _f0rm.GetKeyValueString(phK.Count(), phK,null,"input okx api");                 
-                    UpdTxt (toWrite,tableSchem.ToString(),"okx");
- 
+                    toWrite = _f0rm.GetKeyValueString(phK.Count(), phK, null, "input okx api");
+                    UpdTxt(toWrite, tableSchem.ToString(), "okx");
+
                     phK = new List<string> { "apikey", "apisecret", "passphrase", };
-                    toWrite = _f0rm.GetKeyValueString(phK.Count(), phK,null,"input firstmail login as apisecret)");                 
-                    UpdTxt (toWrite,tableSchem.ToString(),"firstmail"); 
- 
-                    phK = new List<string> { "apikey",  };
-                    toWrite = _f0rm.GetKeyValueString(phK.Count(), phK,null,"input perplexity api");                 
-                    UpdTxt (toWrite,tableSchem.ToString(),"perplexity"); 
- 
+                    toWrite = _f0rm.GetKeyValueString(phK.Count(), phK, null, "input firstmail login as apisecret)");
+                    UpdTxt(toWrite, tableSchem.ToString(), "firstmail");
+
+                    phK = new List<string> { "apikey", };
+                    toWrite = _f0rm.GetKeyValueString(phK.Count(), phK, null, "input perplexity api");
+                    UpdTxt(toWrite, tableSchem.ToString(), "perplexity");
+
                     return;
 
                 case schema.public_rpc:
@@ -1329,8 +970,8 @@ namespace w3tools //by @w3bgrep
                 case schema.public_twitter:
                 case schema.public_discord:
                 case schema.public_blockchain:
-                   Log($"{tableSchem.ToString()} is for manual fill or not compoulsary");
-                    
+                    Log($"{tableSchem.ToString()} is for manual fill or not compoulsary");
+
                     return;
 
 
@@ -1412,10 +1053,10 @@ namespace w3tools //by @w3bgrep
 
         public void RenameColumns(string tblName, Dictionary<string, string> renameMap)
         {
-            Log($"{_tableName } {tblName} {_pstgr}`b");
+            Log($"{_tableName} {tblName} {_pstgr}`b");
             TblName(tblName);
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-            Log($"{_tableName } {tblName}  {_pstgr} `lb");
+            Log($"{_tableName} {tblName}  {_pstgr} `lb");
             var currentColumns = TblColumns(tblName);
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
             Log($"{_tableName} `g");
@@ -1424,7 +1065,7 @@ namespace w3tools //by @w3bgrep
                 string oldName = pair.Key;
                 string newName = pair.Value;
 
-                
+
                 if (!currentColumns.Contains(oldName))
                 {
                     _project.SendWarningToLog($"Column [{oldName}] not found in table {_tableName}");
@@ -1448,19 +1089,14 @@ namespace w3tools //by @w3bgrep
             }
         }
 
+        public void Execute()
+        {
 
+
+
+
+
+        }
 
     }
-
-
-
-
-
-
-
-
-
-
-
-
 }
