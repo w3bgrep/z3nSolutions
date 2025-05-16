@@ -1092,6 +1092,74 @@ namespace ZBSolutions
         public void Execute()
         {
 
+            var phK = new List<string> {
+                "private_settings",
+                "private_profile",
+                "private_blockchain",
+                "private_api",
+
+                "private_google",
+                "private_twitter",
+                "private_discord",
+
+                "public_blockchain",
+                "public_native",
+                "public_deposits",
+                "public_profile",
+                "public_rpc",
+
+                "public_google",
+                "public_twitter",
+                "public_discord",
+                };
+
+
+             var phV = new List<string> {
+                "Folders, loggers & etc. general settings",
+                "Proxy, cookies, webgl",
+                "Blockchain keys, seeds, etc. ",
+                "Api keys ",
+
+                "Google Credentials",
+                "Twitter Credentials",
+                "Discord Credentials",
+
+                "Blockchain addresses",
+                "Balancees",
+                "CEX deposit addresses",
+                "Username, bio, pfp, etc.",
+                "Custom RPC & Explorers list",
+
+                "Google Stats",
+                "Twitter Stats",
+                "Discord Stats",
+                };
+
+
+            var import = _f0rm.GetKeyBoolPairs(phK.Count(), phK, phV, "check boxes to import", prepareUpd: false);
+
+            foreach (KeyValuePair<string, bool> pair in import)
+            {
+                string tablename = pair.Key;
+                bool execute = pair.Value;
+
+                var table = Enum.TryParse<schema>(pair.Key, true, out var parsed) ? parsed : default;
+                if (!Enum.IsDefined(typeof(schema), table)) throw new Exception($"Error: '{tablename}' is not a valid schema value. Valid values: {string.Join(", ", Enum.GetNames(typeof(schema)))}");
+
+                if (execute)
+                {
+                    var dic = LoadSchema(table);
+                    TblAdd(tablename, dic);
+                    try
+                    {
+                        AddRange(tablename);
+                    }
+                    catch { }
+                    MapAndImport(table);
+
+                }
+            }
+
 
 
 
