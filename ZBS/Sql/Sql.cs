@@ -198,9 +198,10 @@ namespace ZBSolutions
         public string Get(string toGet, string tableName = null, bool log = false, bool throwOnEx = false)
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
-            if (_dbMode == "PostgreSQL" && !tableName.Contains(".")) tableName = "accounts." + tableName;
+            TblName(tableName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
-            var Q = $@"SELECT {toGet.Trim().TrimEnd(',')} from {tableName} WHERE acc0 = {_project.Variables["acc0"].Value};";
+            var Q = $@"SELECT {toGet.Trim().TrimEnd(',')} from {_tableName} WHERE acc0 = {_project.Variables["acc0"].Value};";
             return DbQ(Q, log: log, throwOnEx: throwOnEx);
         }
         public string GetColumns(string tableName, string schemaName = "accounts", bool log = false)
