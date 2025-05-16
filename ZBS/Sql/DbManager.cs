@@ -37,17 +37,12 @@ namespace ZBSolutions
     public class DbManager : Sql
     {
         protected bool _logShow = false;
-        //protected bool _pstgr = false;
-        //protected string _tableName = string.Empty;
-        //protected string _schemaName = string.Empty;
-
         protected readonly int _rangeEnd;
 
         public DbManager(IZennoPosterProjectModel project, bool log = false)
             : base(project, log: log)
         {
             _logShow = log;
-            //_pstgr = _dbMode == "PostgreSQL" ? true : false;
             _rangeEnd = int.TryParse(project.Variables["rangeEnd"].Value, out int rangeEnd) && rangeEnd > 0 ? rangeEnd : 10;
 
         }
@@ -96,8 +91,9 @@ namespace ZBSolutions
         public void ClmnAdd(string tblName, string clmnName, string defaultValue = "TEXT DEFAULT \"\"")
         {
             TblName(tblName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
             var current = TblColumns(tblName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+
             if (!current.Contains(clmnName))
             {
                 DbQ($@"ALTER TABLE {_tableName} ADD COLUMN {clmnName} {defaultValue};", true);
@@ -107,9 +103,9 @@ namespace ZBSolutions
         public void ClmnAdd(string tblName, Dictionary<string, string> tableStructure)
         {
             TblName(tblName);
+            var current = TblColumns(tblName);
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
-            var current = TblColumns(tblName);
             Log(string.Join(",", current));
             foreach (var column in tableStructure)
             {
@@ -124,9 +120,9 @@ namespace ZBSolutions
         public void ClmnDrop(string tblName, string clmnName)
         {
             TblName(tblName);
+            var current = TblColumns(tblName);
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
-            var current = TblColumns(tblName);
             if (current.Contains(clmnName))
             {
                 string cascade = (_pstgr) ? " CASCADE" : null;
@@ -136,8 +132,8 @@ namespace ZBSolutions
         public void ClmnDrop(string tblName, Dictionary<string, string> tableStructure)
         {
             TblName(tblName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
             var current = TblColumns(tblName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
             foreach (var column in tableStructure)
             {
@@ -150,7 +146,6 @@ namespace ZBSolutions
         }
         public void TblAdd(string tblName, Dictionary<string, string> tableStructure)
         {
-            Log("TBLADD");
             TblName(tblName);
             if (TblExist(tblName)) return;
             if (_pstgr) DbQ($@" CREATE TABLE {_schemaName}.{_tableName} ( {string.Join(", ", tableStructure.Select(kvp => $"\"{kvp.Key}\" {kvp.Value.Replace("AUTOINCREMENT", "SERIAL")}"))} );");

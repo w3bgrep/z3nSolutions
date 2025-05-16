@@ -233,6 +233,7 @@ namespace w3tools //by @w3bgrep
         public List<string> TblColumns(string tblName)
         {
             TblName(tblName);
+
             if (_dbMode == "PostgreSQL")
                 return DbQ($@"SELECT column_name FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}';", true)
                     .Split('\n')
@@ -248,8 +249,8 @@ namespace w3tools //by @w3bgrep
         public void ClmnAdd(string tblName, string clmnName, string defaultValue = "TEXT DEFAULT \"\"")
         {
             TblName(tblName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
             var current = TblColumns(tblName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
             if (!current.Contains(clmnName))
             {
                 DbQ($@"ALTER TABLE {_tableName} ADD COLUMN {clmnName} {defaultValue};", true);
@@ -259,9 +260,8 @@ namespace w3tools //by @w3bgrep
         public void ClmnAdd(string tblName, Dictionary<string, string> tableStructure)
         {
             TblName(tblName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-
             var current = TblColumns(tblName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
             Log(string.Join(",", current));
             foreach (var column in tableStructure)
             {
@@ -332,11 +332,11 @@ namespace w3tools //by @w3bgrep
 
 
     
-    public class DBuilder : DbManager
+    public class DBuilder : DbManager2
     {
         private readonly IZennoPosterProjectModel _project;
         private readonly F0rms _f0rm;
-        private readonly F0rms2 _f0rm2;
+        //private readonly F0rms2 _f0rm2;
 
         private string _acc0;
 
@@ -347,7 +347,7 @@ namespace w3tools //by @w3bgrep
             _logShow = log;
             //_pstgr = _dbMode == "PostgreSQL" ? true : false;
             _f0rm = new F0rms(_project);
-            _f0rm2 = new F0rms2(_project);
+           // _f0rm2 = new F0rms2(_project);
             //_acc0 = _project.Variables[acc0];
             //_rangeEnd = int.TryParse(project.Variables["rangeEnd"].Value, out int rangeEnd) && rangeEnd > 0 ? rangeEnd : 10;
 
@@ -852,7 +852,7 @@ namespace w3tools //by @w3bgrep
                     return;
                 
                 case schema.private_profile:
-                    var profile = _f0rm2.Get1x1("proxy", "input proxy, don't change key!");
+                    var profile = _f0rm.GetLinesByKey("proxy", "input proxy, don't change key!");
                     Upd (profile,tableSchem.ToString());
                     return;
 
@@ -1267,6 +1267,7 @@ namespace w3tools //by @w3bgrep
             string CEX = cexInput.Text.ToLower();
             string columnName = $"{CEX}_{CHAIN}";
 
+            _project.L0g($"{_pstgr} `p");
             _project.L0g($"{_tableName} `lb");
 
 
@@ -1276,6 +1277,8 @@ namespace w3tools //by @w3bgrep
                 {columnName, "TEXT DEFAULT ''"}
             };
             ClmnAdd(_tableName, tableStructure);
+
+            _project.L0g($"{_pstgr} `p");
 
             _project.L0g($"{_tableName} `g");
 
@@ -1316,266 +1319,15 @@ namespace w3tools //by @w3bgrep
 
     }
 
-    public class F0rms2
-    {
-        private readonly IZennoPosterProjectModel _project;
-
-        public F0rms2(IZennoPosterProjectModel project)
-        {
-            _project = project;
-        }
-
-        public Dictionary<string, bool> GetKeyBoolPairs(
-            int quantity,
-            List<string> keyPlaceholders = null,
-            List<string> valuePlaceholders = null,
-            string title = "Input Key-Bool Pairs",
-            bool prepareUpd = true)
-        {
-            var result = new System.Collections.Generic.Dictionary<string, bool>();
-
-            // Создание формы
-            System.Windows.Forms.Form form = new System.Windows.Forms.Form();
-            form.Text = title;
-            form.Width = 600;
-            form.Height = 40 + quantity * 35; // Адаптивная высота в зависимости от количества полей
-            form.TopMost = true;
-            form.Location = new System.Drawing.Point(108, 108);
-
-            // Список для хранения текстовых полей и чекбоксов
-            var keyLabels = new System.Windows.Forms.Label[quantity];
-            var keyTextBoxes = new System.Windows.Forms.TextBox[quantity];
-            var valueCheckBoxes = new System.Windows.Forms.CheckBox[quantity];
-
-            int currentTop = 5;
-            int labelWidth = 40;
-            int keyBoxWidth = 40;
-            int checkBoxWidth = 370; // Ширина для чекбокса (для выравнивания)
-            int spacing = 5;
-
-            // Создаём поля для ключей и чекбоксов
-            for (int i = 0; i < quantity; i++)
-            {
-                // Метка для ключа
-                System.Windows.Forms.Label keyLabel = new System.Windows.Forms.Label();
-
-                string keyDefault = keyPlaceholders != null && i < keyPlaceholders.Count && !string.IsNullOrEmpty(keyPlaceholders[i]) ? keyPlaceholders[i] : $"key{i + 1}";
-                keyLabel.Text = keyDefault; //
-                //keyTextBoxes[i] = keyDefault;
-                //keyLabel.Text = $"Key:";
-                keyLabel.AutoSize = true;
-                keyLabel.Left = 5;
-                keyLabel.Top = currentTop + 5; // Смещение для центрирования
-                form.Controls.Add(keyLabel);
-                keyLabels[i] = keyLabel;
-
-                // Поле для ключа
-                System.Windows.Forms.TextBox keyTextBox = new System.Windows.Forms.TextBox();
-                keyTextBox.Left = keyLabel.Left + labelWidth + spacing;
-                keyTextBox.Top = currentTop;
-                keyTextBox.Width = keyBoxWidth;
-
-
-                // Чекбокс для значения
-                System.Windows.Forms.CheckBox valueCheckBox = new System.Windows.Forms.CheckBox();
-                valueCheckBox.Left = keyTextBox.Left + keyBoxWidth + spacing + 10;
-                valueCheckBox.Top = currentTop;
-                valueCheckBox.Width = checkBoxWidth;
-                string valueDefault = valuePlaceholders != null && i < valuePlaceholders.Count && !string.IsNullOrEmpty(valuePlaceholders[i]) ? valuePlaceholders[i] : $"Option{i + 1}";    
-                valueCheckBox.Text = valueDefault; // Текст чекбокса для удобства
-                valueCheckBox.Checked = false; // По умолчанию выключен
-
-
-                // Метка для чекбокса
-                System.Windows.Forms.Label valueLabel = new System.Windows.Forms.Label();
-                valueLabel.Text = $"";
-                valueLabel.AutoSize = true;
-                valueLabel.Left = valueLabel.Left + labelWidth + spacing;
-                
-                valueLabel.Top = currentTop + 5; // Смещение для центрирования
-                form.Controls.Add(valueLabel);
 
 
 
-                form.Controls.Add(valueCheckBox);
-                valueCheckBoxes[i] = valueCheckBox;
-
-                currentTop += valueCheckBox.Height + spacing;
-            }
-
-            // Кнопка "OK"
-            System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
-            okButton.Text = "OK";
-            okButton.Width = form.ClientSize.Width - 20;
-            okButton.Height = 25;
-            okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
-            okButton.Top = currentTop + 10;
-            okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
-            form.Controls.Add(okButton);
-
-            // Адаптируем высоту формы
-            int requiredHeight = okButton.Top + okButton.Height + 40;
-            if (form.Height < requiredHeight)
-            {
-                form.Height = requiredHeight;
-            }
-
-            form.Load += (s, e) => { form.Location = new System.Drawing.Point(108, 108); };
-            form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
-
-            // Показываем форму
-            form.ShowDialog();
-
-            if (form.DialogResult != System.Windows.Forms.DialogResult.OK)
-            {
-                _project.SendInfoToLog("Input cancelled by user", true);
-                return null;
-            }
-
-            // Формируем словарь
-            int lineCount = 0;
-            for (int i = 0; i < quantity; i++)
-            {
-                string key = keyLabels[i].Text.ToLower().Trim();
-                bool value = valueCheckBoxes[i].Checked;
-
-                if (string.IsNullOrEmpty(key))
-                {
-                    //_project.SendWarningToLog($"Pair {i + 1} skipped: empty key");
-                    continue;
-                }
-
-                try
-                {
-                    string dictKey = prepareUpd ? (i + 1).ToString() : key;
-                    result.Add(dictKey, value);
-                    //_project.SendInfoToLog($"Added to dictionary: [{dictKey}] = [{value}]", false);
-                    lineCount++;
-                }
-                catch (System.Exception ex)
-                {
-                    _project.SendWarningToLog($"Error adding pair {i + 1}: {ex.Message}");
-                }
-            }
-
-            if (lineCount == 0)
-            {
-                _project.SendWarningToLog("No valid key-value pairs entered");
-                return null;
-            }
-
-            return result;
-        }
 
 
-        public Dictionary<string, string> Get1x1(string keycolumn = "input Column Name",string title = "Input data line per line")
-        {
-            var result = new Dictionary<string, string>();
-            // Создание формы
-            
-            keycolumn = keycolumn.Trim().ToLower(); 
-            
-            System.Windows.Forms.Form form = new System.Windows.Forms.Form();
-            form.Text = title;
-            form.Width = 420;
-            form.Height = 700;
-            form.TopMost = true;
-            form.Location = new System.Drawing.Point(108, 108);
 
-            System.Windows.Forms.Label columnLabel = new System.Windows.Forms.Label();
-            columnLabel.Text = "input string for key here (it will be lowered)";
-            columnLabel.AutoSize = true;
-            columnLabel.Left = 10;
-            columnLabel.Top = 10;
-            form.Controls.Add(columnLabel);
 
-            System.Windows.Forms.TextBox columnInput = new System.Windows.Forms.TextBox();
-            columnInput.Left = 10;
-            columnInput.Top = 30;
-            columnInput.Width = 50;//form.ClientSize.Width - 20;
-            columnInput.Text = keycolumn;//_project.Variables["addressType"].Value; // Предполагаем, что переменная существует
-            form.Controls.Add(columnInput);
 
-            System.Windows.Forms.Label addressLabel = new System.Windows.Forms.Label();
-            addressLabel.Text = "Input strings (will be devided by \\n):";
-            addressLabel.AutoSize = true;
-            addressLabel.Left = 10;
-            addressLabel.Top = 60;
-            form.Controls.Add(addressLabel);
 
-            System.Windows.Forms.TextBox addressInput = new System.Windows.Forms.TextBox();
-            addressInput.Left = 10;
-            addressInput.Top = 80;
-            addressInput.Width = form.ClientSize.Width - 20;
-            addressInput.Multiline = true;
-            addressInput.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            addressInput.MaxLength = 1000000;
-            form.Controls.Add(addressInput);
 
-            // Кнопка "OK"
-            System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
-            okButton.Text = "OK";
-            okButton.Width = form.ClientSize.Width - 20;
-            okButton.Height = 25;
-            okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
-            okButton.Top = form.ClientSize.Height - okButton.Height - 5;
-            okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
-            form.Controls.Add(okButton);
-            addressInput.Height = okButton.Top - addressInput.Top - 5;
-
-            form.Load += (s, e) => { form.Location = new System.Drawing.Point(108, 108); };
-
-            form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
-
-            form.ShowDialog();
-
-            if (form.DialogResult != System.Windows.Forms.DialogResult.OK)
-            {
-                _project.SendInfoToLog("Import cancelled by user", true);
-                return null;
-            }
-
-            if (string.IsNullOrEmpty(columnInput.Text) || string.IsNullOrEmpty(addressInput.Text))
-            {
-                _project.SendWarningToLog("Column name or addresses cannot be empty");
-                return null;
-            }
-
-            string columnName = columnInput.Text.ToLower().Trim();
-
-            string[] lines = addressInput.Text.Trim().Split('\n');
-            int lineCount = 0;
-
-            for (int i = 0; i < lines.Length; i++)
-            {
-                string line = lines[i].Trim();
-                if (string.IsNullOrWhiteSpace(line))
-                {
-                    _project.SendWarningToLog($"Line {i} is empty");
-                    continue;
-                }
-
-                try
-                {
-
-                    string key = (i + 1).ToString();
-                    //string value = $"{keycolumn} = '{line}'";
-                    string value = $"{columnName} = '{line.Replace("'", "''")}'";
-
-                    _project.SendInfoToLog($"k [{i}], val = [{value}]", false);
-                    result.Add(key, value);
-                    lineCount++;
-                }
-                catch (Exception ex)
-                {
-
-                }
-            }
-
-            return result;
-        }
-
-        
-        }
 
 }
