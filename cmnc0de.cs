@@ -553,16 +553,6 @@ namespace w3tools //by @w3bgrep
             }
 
 
-            if (primary != "acc0") primaryType = "TEXT PRIMARY KEY";
-            tableStructure.Add(primary, primaryType);
-
-            foreach (string name in toFill)
-            {
-                if (!tableStructure.ContainsKey(name)) tableStructure.Add(name, defaultColumn);
-            }
-            return tableStructure;
-
-
 
 
         }
@@ -1483,6 +1473,9 @@ namespace w3tools //by @w3bgrep
         {
             var result = new Dictionary<string, string>();
             // Создание формы
+            
+            keycolumn = keycolumn.Trim().ToLower(); 
+            
             System.Windows.Forms.Form form = new System.Windows.Forms.Form();
             form.Text = title;
             form.Width = 420;
@@ -1567,7 +1560,7 @@ namespace w3tools //by @w3bgrep
                 {
 
                     string key = (i + 1).ToString();
-                    //string value = $"{columnName} = '{line}'";
+                    //string value = $"{keycolumn} = '{line}'";
                     string value = $"{keycolumn} = '{line.Replace("'", "''")}'";
 
                     _project.SendInfoToLog($"k [{i}], val = [{value}]", false);

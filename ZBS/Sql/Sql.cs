@@ -137,9 +137,6 @@ namespace ZBSolutions
             TblName(tableName);
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
-            //if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
-            //if (_dbMode == "PostgreSQL" && !tableName.Contains(".")) tableName = "accounts." + tableName;
-
             string[] keywords = { "blockchain", "browser", "cex_deps", "native", "profile", "settings" };
             if (keywords.Any(keyword => tableName.Contains(keyword))) last = false;
             toUpd = toUpd.Trim().TrimEnd(',');
@@ -154,11 +151,12 @@ namespace ZBSolutions
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
             TblName(tableName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
             foreach (KeyValuePair<string, string> pair in toWrite)
             {
-                string key = pair.Key.Replace("'", "''");
-                string value = pair.Value.Replace("'", "''");
-                Upd(value,_tableName,last:last);
+                string key = pair.Key;//.Replace("'", "''");
+                string value = pair.Value;//.Replace("'", "''");
+                Upd(value,_tableName,last:last, acc: key);
             }
 
         }
