@@ -146,21 +146,30 @@ namespace ZBSolutions
             DbQ($@"UPDATE {_tableName} SET {toUpd} WHERE acc0 = {_project.Variables["acc0"].Value};", log: log, throwOnEx: throwOnEx);
 
         }
+        public void UpdTxt(string toUpd, string tableName, string key, bool log = false, bool throwOnEx = false)
+        {
+            TblName(tableName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
-        public void Upd(Dictionary<string, string> toWrite, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true)
+            toUpd = toUpd.Trim().TrimEnd(',');
+            DbQ($@"INSERT INTO {_tableName} (key) VALUES ('{key}') ON CONFLICT DO NOTHING;");
+            DbQ($@"UPDATE {_tableName} SET {toUpd} WHERE key = '{key}';", log: log, throwOnEx: throwOnEx);
+
+        }
+
+        public void Upd(Dictionary<string, string> toWrite, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, bool byKey = false)
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
             TblName(tableName);
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
             foreach (KeyValuePair<string, string> pair in toWrite)
             {
-                string key = pair.Key;//.Replace("'", "''");
-                string value = pair.Value;//.Replace("'", "''");
+                string key = pair.Key;
+                string value = pair.Value;
                 Upd(value,_tableName,last:last, acc: key);
             }
 
         }
-
         public void Write(Dictionary<string, string> toWrite, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true)
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;        
