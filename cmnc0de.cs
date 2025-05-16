@@ -903,19 +903,19 @@ namespace w3tools //by @w3bgrep
                     return;
 
                 case schema.private_api:
-                    phK = new List<string> { "api", "apisecret", "proxy", };
+                    phK = new List<string> { "apikey", "apisecret", "proxy", };
                     var toWrite = _f0rm2.GetKeyValueString(phK.Count(), phK,null,"input binance api");                 
                     UpdTxt (toWrite,tableSchem.ToString(),"binance");
                     
-                    phK = new List<string> { "api", "apisecret", "passphrase", };
+                    phK = new List<string> { "apikey", "apisecret", "passphrase", };
                     toWrite = _f0rm2.GetKeyValueString(phK.Count(), phK,null,"input okx api");                 
                     UpdTxt (toWrite,tableSchem.ToString(),"okx");
  
-                    phK = new List<string> { "api", "apisecret", "passphrase", };
+                    phK = new List<string> { "apikey", "apisecret", "passphrase", };
                     toWrite = _f0rm2.GetKeyValueString(phK.Count(), phK,null,"input firstmail login as apisecret)");                 
                     UpdTxt (toWrite,tableSchem.ToString(),"firstmail"); 
  
-                    phK = new List<string> { "api",  };
+                    phK = new List<string> { "apikey",  };
                     toWrite = _f0rm2.GetKeyValueString(phK.Count(), phK,null,"input perplexity api");                 
                     UpdTxt (toWrite,tableSchem.ToString(),"perplexity"); 
  
