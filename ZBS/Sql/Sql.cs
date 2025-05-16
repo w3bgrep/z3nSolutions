@@ -175,6 +175,7 @@ namespace ZBSolutions
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;        
             
             TblName(tableName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
             foreach (KeyValuePair<string, string> pair in toWrite)
             {               
                 string key = pair.Key.Replace("'", "''");
