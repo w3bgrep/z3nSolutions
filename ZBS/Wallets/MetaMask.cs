@@ -241,7 +241,7 @@ namespace ZBSolutions
 
         public string MetaMaskChkAddress(bool skipCheck = false, bool log = false)
         {
-            string expectedAddress = new W3b(_project).Address("evm");
+            string expectedAddress = new Sql(_project).Address("evm");
             Log("Checking MetaMask wallet address", log: log);
 
             try

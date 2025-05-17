@@ -36,7 +36,7 @@ namespace ZBSolutions
         : base(project, log)
         {
             _key = Key(key);
-            _adrEvm = Address("evm");
+            _adrEvm = _sql.Address("evm");
             _read = new W3bRead(project);
         }
 
@@ -286,7 +286,7 @@ namespace ZBSolutions
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
-            string key = _sql.KeyEVM();
+            string key = _sql.Key("EVM");
 
             string abi = @"[{""inputs"":[{""name"":""spender"",""type"":""address""},{""name"":""amount"",""type"":""uint256""}],""name"":""approve"",""outputs"":[{""name"":"""",""type"":""bool""}],""stateMutability"":""nonpayable"",""type"":""function""}]";
 
@@ -353,7 +353,7 @@ namespace ZBSolutions
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
-            string key = _sql.KeyEVM();
+            string key = _sql.Key("EVM");
 
             string abi = @"[{""inputs"":[],""name"":""deposit"",""outputs"":[],""stateMutability"":""payable"",""type"":""function""}]";
 
@@ -394,7 +394,7 @@ namespace ZBSolutions
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
-            string key = _sql.KeyEVM();
+            string key = _sql.Key("EVM" );
 
             string txHash = null;
 

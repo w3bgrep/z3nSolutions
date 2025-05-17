@@ -278,6 +278,8 @@ namespace ZBSolutions
         {
             TblName(tblName);
             var current = TblColumns(tblName);
+            
+            TblName(tblName);
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
             Log(string.Join(",", current));
@@ -339,7 +341,6 @@ namespace ZBSolutions
                 }
             }
         }
-
         public void TblAdd(string tblName, Dictionary<string, string> tableStructure)
         {
             TblName(tblName);
@@ -372,58 +373,31 @@ namespace ZBSolutions
 
         }
 
-        public string KeyEVM(string tableName = "blockchain_private", string schemaName = "accounts")
+        public string Proxy()
         {
-            string table = (_dbMode == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
-            var resp = DbQ($"SELECT secp256k1 FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
-            return SAFU.Decode(_project, resp);
-        }
-        public string KeySOL(string tableName = "blockchain_private", string schemaName = "accounts")
-        {
-            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
-            var resp = DbQ($"SELECT base58 FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
-            return SAFU.Decode(_project, resp);
-        }
-        public string Seed(string tableName = "blockchain_private", string schemaName = "accounts")
-        {
-            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
-            var resp = DbQ($"SELECT bip39 FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
-            return SAFU.Decode(_project, resp);
-        }
-        public string AdrEvm(string tableName = "blockchain_public", string schemaName = "accounts")
-        {
-            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
-            var resp = DbQ($"SELECT evm FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
-            _project.Variables["addressEvm"].Value = resp; return resp;
-        }
-        public string AdrSol(string tableName = "blockchain_public", string schemaName = "accounts")
-        {
-            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
-            var resp = DbQ($"SELECT sol FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
-            _project.Variables["addressSol"].Value = resp; return resp;
-        }
-        public string Proxy(string tableName = "profile", string schemaName = "accounts")
-        {
-            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
-            var resp = DbQ($"SELECT proxy FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
+            TblName("private_profile");
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+            var resp = Get("proxy", _tableName);
             _project.Variables["proxy"].Value = resp;
             try { _project.Variables["proxyLeaf"].Value = resp.Replace("//", "").Replace("@", ":"); } catch { }
             return resp;
         }
-        public string Bio(string tableName = "profile", string schemaName = "accounts")
+        public string Bio()
         {
-
-            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
-            var resp = DbQ($@"SELECT nickname, bio FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value};");
+            TblName("public_profile"); if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+            var resp = DbQ($@"SELECT nickname, bio FROM {_tableName} WHERE acc0 = {_project.Variables["acc0"].Value};");
             string[] respData = resp.Split('|');
             _project.Variables["accNICKNAME"].Value = respData[0].Trim();
             _project.Variables["accBIO"].Value = respData[1].Trim();
             return resp;
         }
-        public string Settings(string tableName = "settings", string schemaName = "accounts")
+        public string Settings()
         {
-            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
-            return DbQ($"SELECT var, value FROM {table}");
+
+            TblName("private_settings");  if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+
+            var resp = DbQ($"SELECT var, value FROM {_tableName}");
+            return resp;
         }
         public string Email(string tableName = "google", string schemaName = "accounts")
         {
@@ -441,16 +415,18 @@ namespace ZBSolutions
         }
         public string Discord(string tableName = "discord", string schemaName = "accounts")
         {
-            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
-            var resp = DbQ($@"SELECT status, token, login, password, code2FA, username, servers FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value};");
+
+                TblName("private_discord");
+                if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+                var resp = Get("status, token, login, password, otpsecret", _tableName);
+
             string[] discordData = resp.Split('|');
             _project.Variables["discordSTATUS"].Value = discordData[0].Trim();
             _project.Variables["discordTOKEN"].Value = discordData[1].Trim();
             _project.Variables["discordLOGIN"].Value = discordData[2].Trim();
             _project.Variables["discordPASSWORD"].Value = discordData[3].Trim();
             _project.Variables["discord2FACODE"].Value = discordData[4].Trim();
-            _project.Variables["discordUSERNAME"].Value = discordData[5].Trim();
-            _project.Variables["discordSERVERS"].Value = discordData[6].Trim();
+
             return _project.Variables["discordSTATUS"].Value;
         }
         public string Google(string tableName = "google", string schemaName = "accounts")
@@ -489,9 +465,9 @@ namespace ZBSolutions
         {
             var addrss = new Dictionary<string, string>();
 
-            if (string.IsNullOrEmpty(chains)) chains = GetColumns("blockchain_public");
+            if (string.IsNullOrEmpty(chains)) chains = GetColumns("public_blockchain");
             string[] tikers = chains.Replace(" ","").Split(',');
-            string[] addresses = Get(chains, "blockchain_public").Replace(" ", "").Split('|');
+            string[] addresses = Get(chains, "public_blockchain").Replace(" ", "").Split('|');
 
 
             for (int i = 0; i < tikers.Length; i++)
@@ -506,10 +482,60 @@ namespace ZBSolutions
         }
 
 
+        public string Address(string chainType = "evm")
+        {
+            chainType = chainType.ToLower().Trim();
+
+            TblName("public_blockchain");
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+            var resp = Get(chainType, _tableName);
+
+            try
+            {
+                chainType = chainType.ToUpper();
+                _project.Variables[$"address{chainType}"].Value = resp;
+            }
+            catch { }
+            return resp;
+
+        }
+        public string Key(string chainType = "evm")
+        {
+            chainType = chainType.ToLower().Trim();
+            TblName("private_blockchain");
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+
+            switch (chainType)
+            {
+                case "evm":
+                    chainType = "secp256k1";
+                    break;
+                case "sol":
+                    chainType = "base58";
+                    break;
+                case "seed":
+                    chainType = "bip39";
+                    break;
+                //case "pkFromSeed":
+                  //  chainType = "bip39";
+                    //break;
+                default:
+                    throw new Exception("unexpected input. Use (evm|sol|seed|pkFromSeed)");
+            }
+            
+            var resp = Get(chainType, _tableName);
+            var decoded = SAFU.Decode(_project, resp);
+            return decoded;
+
+        }
+
+        
+
+
     }
 
 
-    
 
-    
+
+
 }

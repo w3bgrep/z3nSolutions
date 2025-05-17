@@ -1,8 +1,11 @@
 ﻿
 
 using NBitcoin;
+using Newtonsoft.Json;
+using System.Numerics;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -66,6 +69,29 @@ namespace ZBSolutions
             }
             return blockchain.GetAddressFromPrivateKey(key);
         }
+
+        public static string[] TxToString(this string txJson)
+        {
+            dynamic txData = JsonConvert.DeserializeObject<System.Dynamic.ExpandoObject>(txJson);
+
+            string gas = $"{txData.gas}";
+            string value = $"{txData.value}";
+            string sender = $"{txData.from}";
+            string recipient = $"{txData.to}";
+            string data = $"{txData.data}";
+           
+            BigInteger gasWei = BigInteger.Parse("0" + gas.TrimStart('0', 'x'), NumberStyles.AllowHexSpecifier);
+            decimal gasGwei = (decimal)gasWei / 1000000000m;
+            string gwei = gasGwei.ToString().Replace(',','.');
+
+            return new string[] { gas, value, sender, data, recipient, gwei };
+
+
+        }
+
+
+
+
         public static bool ChkAddress(this string shortAddress, string fullAddress)
         {
             if (string.IsNullOrEmpty(shortAddress) || string.IsNullOrEmpty(fullAddress))

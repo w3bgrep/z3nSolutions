@@ -25,7 +25,7 @@ namespace ZBSolutions
             _sql = new Sql(_project);
             _logShow = log;
             _rpcs = LoadRPCs();
-            _adrs = LoadAddresses();
+            //_adrs = LoadAddresses();
         }
 
         private string Acc0()
@@ -42,7 +42,6 @@ namespace ZBSolutions
                 return "";
             }
         }
-
         protected void Log(string tolog = "", [CallerMemberName] string callerName = "", bool log = false)
         {
             if (!_logShow && !log) return;
@@ -51,7 +50,6 @@ namespace ZBSolutions
             if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
             _project.L0g($"[ 💠  {callerName}] [{tolog}] ");
         }
-
         protected void Log(string address, string balance, string rpc, string contract = null, [CallerMemberName] string callerName = "", bool log = false)
         {
             if (!_logShow && !log) return;
@@ -112,6 +110,7 @@ namespace ZBSolutions
             return addresses;
 
         }
+
         protected string HexToString(string hexValue, string convert = "")
         {
             try
@@ -215,18 +214,6 @@ namespace ZBSolutions
             }
             return resultList;
         }
-        public string Address(string chainType)
-        {
-            chainType = chainType.ToLower().Trim();
-            if (_adrs.TryGetValue(chainType, out var rpc))
-            {
-                return rpc;
-            }
-            else
-            {
-                Log($"!W rpc for [{chainType}] not found in dictionary");
-                throw new Exception("noRpcProvided");
-            }
-        }
+
     }
 }

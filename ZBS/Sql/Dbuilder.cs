@@ -8,6 +8,32 @@ using ZennoLab.InterfacesLibrary.ProjectModel;
 
 namespace ZBSolutions
 {
+    public enum schema
+    {
+        private_blockchain,
+        private_twitter,
+        private_discord,
+        private_google,
+        private_github,
+        private_api,
+        private_settings,
+        private_profile,
+
+        public_blockchain,
+        public_deposits,
+        public_native,
+        public_mail,
+        public_twitter,
+        public_profile,
+        public_github,
+        public_discord,
+        public_google,
+        public_browser,
+        public_rpc,
+
+        project
+    }
+
     public class DBuilder : Sql
     {
         private readonly IZennoPosterProjectModel _project;
@@ -33,13 +59,13 @@ namespace ZBSolutions
                 case schema.public_deposits:
                     return new string[] { };
                 case schema.private_google:
-                    return new string[] { "status", "cookies", "login", "password", "otpsecret", "otpbackup", "recoveryemail", "recovery_phone" };
+                    return new string[] { "status","last", "cookies", "login", "password", "otpsecret", "otpbackup", "recoveryemail", "recovery_phone" };
                 case schema.private_twitter:
-                    return new string[] { "status", "cookies", "token", "login", "password", "otpsecret", "otpbackup", "email", "emailpass" };
+                    return new string[] { "status", "last", "cookies", "token", "login", "password", "otpsecret", "otpbackup", "email", "emailpass" };
                 case schema.private_discord:
-                    return new string[] { "status", "token", "login", "password", "otpsecret", "otpbackup", "email", "emailpass", "recovery_phone" };
+                    return new string[] { "status", "last", "token", "login", "password", "otpsecret", "otpbackup", "email", "emailpass", "recovery_phone" };
                 case schema.private_github:
-                    return new string[] { "status", "cookies", "token", "login", "password", "otpsecret", "otpbackup", "email", "emailpass" };
+                    return new string[] { "status", "last", "cookies", "token", "login", "password", "otpsecret", "otpbackup", "email", "emailpass" };
                 case schema.public_blockchain:
                     return new string[] { "evm_pk", "sol_pk", "apt_pk", "evm_seed" };
                 case schema.private_blockchain:
@@ -59,8 +85,8 @@ namespace ZBSolutions
                 case schema.public_rpc:
                     return new string[] { "rpc", "explorer", "explorer_api" };
 
-
-
+                case schema.public_mail:
+                    return new string[] { "google", "icloud","firstmail" };
                 case schema.public_google:
                     return new string[] { "status", "last" };
                 case schema.public_twitter:
@@ -104,6 +130,7 @@ namespace ZBSolutions
 
                 case schema.private_profile:
                 case schema.public_profile:
+                case schema.public_mail:
                     foreach (string column in DefaultColumns(tableSchem)) toFill.Add(column);
                     break;
 
@@ -744,12 +771,8 @@ namespace ZBSolutions
                     return;
 
                 case schema.public_mail:
-                    string[] fieldsPbMl = new string[] { "ICLOUD", "" };
-                    mapping = new Dictionary<string, string>
-                    {
-                        { "ICLOUD", "icloud" },
-                    };
-                    ImportData("google", fieldsPbMl, mapping, "Import Icloud");
+                    var icloud = _f0rm.GetLinesByKey("icloud", "input data, don't change key!");
+                    Upd(icloud, tableSchem.ToString());
                     return;
 
                 case schema.public_profile:
@@ -961,6 +984,7 @@ namespace ZBSolutions
                 "public_deposits",
                 "public_profile",
                 "public_rpc",
+                "public_mail",
 
                 "public_google",
                 "public_twitter",
@@ -983,6 +1007,7 @@ namespace ZBSolutions
                 "CEX deposit addresses",
                 "Username, bio, pfp, etc.",
                 "Custom RPC & Explorers list",
+                "All emails",
 
                 "Google Stats",
                 "Twitter Stats",

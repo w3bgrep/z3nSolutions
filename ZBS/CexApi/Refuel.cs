@@ -48,7 +48,7 @@ namespace ZBSolutions.CexApi
         private string ChekAdr(string address)
         {
             if (!string.IsNullOrEmpty(address)) return address;
-            else if (string.IsNullOrEmpty(address)) address = _sql.AdrEvm();
+            else if (string.IsNullOrEmpty(address)) address = _sql.Address("EVM");
             if (!string.IsNullOrEmpty(address)) return address;
             throw new ArgumentException("!W address is nullOrEmpty");
         }

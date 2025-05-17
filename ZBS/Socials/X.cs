@@ -563,13 +563,13 @@ namespace ZBSolutions
                         lang = '{lang}',
                         gender = '{gender}',
                         birth = '{birth}',
-                        ");
+                        ","public_twitter");
 
 
             try
             {
-                var emails = _sql.Get("gmail, icloud, firstmail", "mail_public");
-                var address = _sql.Get("evm", "blockchain_public");
+                var emails = _sql.Get("gmail, icloud, firstmail", "public_mail");
+                var address = _sql.Address("evm");
                 var toFill = _project.Lists["editSecurity"];
                 toFill.Clear();
                 

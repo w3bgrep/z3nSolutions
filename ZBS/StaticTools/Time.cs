@@ -18,15 +18,7 @@ namespace ZBSolutions
             }
         }
 
-        public static int TimeElapsed(IZennoPosterProjectModel project, string varName = "varSessionId")
-        {
-            var start = project.Variables[$"{varName}"].Value;
-            long currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            long startTime = long.Parse(start);
-            int difference = (int)(currentTime - startTime);
 
-            return difference;
-        }
         public static string cd(object input = null, string o = "unix")
         {
             DateTime utcNow = DateTime.UtcNow;

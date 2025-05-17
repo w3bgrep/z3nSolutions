@@ -54,7 +54,7 @@ namespace ZBSolutions
             Log("initProfile");
             _project.Variables["instancePort"].Value = _instance.Port.ToString();
             
-            var webGlData = _sql.Get("webGL", "profile");
+            var webGlData = _sql.Get("webgl", "private_profile");
             _instance.SetDisplay(webGlData, _project);
 
             var proxy = _sql.Proxy();
@@ -73,7 +73,7 @@ namespace ZBSolutions
                 Log($"!W Fail to set cookies from file {cookiePath}");
                 try
                 {
-                    var cookies = _sql.Get("cookies", "profile");
+                    var cookies = _sql.Get("cookies", "private_profile");
                     _instance.SetCookie(cookies);
                 }
                 catch (Exception Ex)
@@ -85,9 +85,16 @@ namespace ZBSolutions
             }
             if (!_skipCheck)
             {
-                var tableName = "browser";
+                BrowserScanCheck();
+            } 
 
-                var tableStructure = new Dictionary<string, string>
+        }
+        private void BrowserScanCheck()
+        {
+
+            var tableName = "browser";
+
+            var tableStructure = new Dictionary<string, string>
                 {
                     {"acc0", "INTEGER PRIMARY KEY"},
                     {"score", "TEXT DEFAULT '_'"},
@@ -103,22 +110,20 @@ namespace ZBSolutions
 
                 };
 
-                if (_project.Variables["DBmode"].Value == "PostgreSQL")
-                    tableName = $"accounts.{tableName}";
-                if (_project.Variables["makeTable"].Value == "True")
-                    _sql.MkTable(tableStructure, tableName, log: _logShow);
+            if (_project.Variables["DBmode"].Value == "PostgreSQL")
+                tableName = $"accounts.{tableName}";
+            if (_project.Variables["makeTable"].Value == "True")
+                _sql.MkTable(tableStructure, tableName, log: _logShow);
 
-                BrowserScanCheck();
 
-            } 
 
-        }
-        private void BrowserScanCheck()
-        {
+
+
+
+
             bool set = false;
             string timezoneOffset = "";
             string timezoneName = "";
-            var tableName = "browser";
 
             while (true)
             {
@@ -134,7 +139,7 @@ namespace ZBSolutions
                     if (toParse.Contains(varName))
                     {
                         try { varValue = text.Split('\n')[2]; } catch { Thread.Sleep(2000); continue; }
-                        _sql.Upd($"{varName} = '{varValue}'", tableName);
+                        //_sql.Upd($"{varName} = '{varValue}'", tableName);
                     }
                 }
 
@@ -262,21 +267,10 @@ namespace ZBSolutions
             }
             catch (Exception ex) { }
         }
-        //private void Logo(string author)
-        //{
-        //    string name = _project.ExecuteMacro(_project.Name).Split('.')[0];
-        //    if (author != "") author = $" script author: @{author}";
-        //    string logo = $@"using ZennoposterBoosterSolutions;
-        //    ┌by─┐					
-        //    │    w3bgrep			
-        //    └─→┘
-        //                ► init {name} ░▒▓█ {author}";
-        //    _project.SendInfoToLog(logo, true);
-        //}
+
 
         private void Logo(string author)
         {
-            // Получаем версию сборки
             string version = Assembly.GetExecutingAssembly()
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                 ?.InformationalVersion ?? "Unknown";

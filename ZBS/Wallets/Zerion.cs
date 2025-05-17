@@ -1,7 +1,10 @@
 ﻿using NBitcoin;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Numerics;
+using Newtonsoft.Json;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -142,6 +145,44 @@ namespace ZBSolutions
         }
         public bool Sign(bool log = false)
         {
+            var urlNow = _instance.ActiveTab.URL;
+            try {
+
+                var type = "null";
+                var data = "null";
+                var origin = "null";
+
+                var parts = urlNow.Split('?').ToList();
+
+                foreach (string part in parts)
+                {
+                    //project.SendInfoToLog(part);
+                    if (part.StartsWith("windowType"))
+                    {
+                        type = part.Split('=')[1];
+                    }
+                    if (part.StartsWith("origin"))
+                    {
+                        origin = part.Split('=')[1];
+                        data = part.Split('=')[2];
+                        data = data.Split('&')[0].Trim();
+                    }
+
+                }
+                dynamic txData = JsonConvert.DeserializeObject<System.Dynamic.ExpandoObject>(data);
+                var gas = txData.gas.ToString();
+                var value = txData.gas.ToString();
+                var sender = txData.gas.ToString();
+                var recipient = txData.gas.ToString();
+                var datastring = $"{txData.data}";
+
+
+                BigInteger gasWei = BigInteger.Parse("0" + gas.TrimStart('0', 'x'), NumberStyles.AllowHexSpecifier);
+                decimal gasGwei = (decimal)gasWei / 1000000000m;
+                Log($"Sending {datastring} to {recipient}, gas: {gasGwei}");
+
+            }
+            catch { }
 
             try
             {

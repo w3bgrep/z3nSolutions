@@ -14,7 +14,7 @@ namespace ZBSolutions
 {
     public class W3bRead : W3b
     {
-        public readonly string _adrEvm = null;
+        public readonly string _adrEvm;
         public readonly string _defRpc;
 
 
@@ -22,8 +22,8 @@ namespace ZBSolutions
         : base(project, log)
         {
               if (string.IsNullOrEmpty(adrEvm) && (!string.IsNullOrEmpty(_acc0))) 
-                _adrEvm = Address("evm");
-            _defRpc = project.Variables["blockchainRPC"].Value;
+               _adrEvm = _sql.Address("evm");
+               _defRpc = project.Variables["blockchainRPC"].Value;
         }
 
         private string ChekAdr(string address)
@@ -381,7 +381,7 @@ namespace ZBSolutions
         public T NativeSOL<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            if (string.IsNullOrEmpty(address)) address = Address("sol");
+            if (string.IsNullOrEmpty(address)) address = _sql.Address("sol");
             if (string.IsNullOrEmpty(rpc)) rpc = "https://api.mainnet-beta.solana.com";
 
             string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""getBalance"", ""params"": [""{address}""], ""id"": 1 }}";
@@ -429,7 +429,7 @@ namespace ZBSolutions
         public T TokenSPL<T>(string tokenMint, string address = null, int floor = 0, string rpc = null, string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            if (string.IsNullOrEmpty(address)) address = Address("sol");
+            if (string.IsNullOrEmpty(address)) address = _sql.Address("sol");
             if (string.IsNullOrEmpty(rpc)) rpc = "https://api.mainnet-beta.solana.com";
 
             string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""getTokenAccountsByOwner"", ""params"": [""{address}"", {{""mint"": ""{tokenMint}""}}, {{""encoding"": ""jsonParsed""}}], ""id"": 1 }}";
@@ -483,11 +483,7 @@ namespace ZBSolutions
         public T NativeSUI<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            if (string.IsNullOrEmpty(address))
-            {
-                string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : "") + "blockchain_public";
-                address = _sql.DbQ($"SELECT sui FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
-            }
+            if (string.IsNullOrEmpty(address)) address = _sql.Address("sui");
             if (string.IsNullOrEmpty(rpc)) rpc = "https://fullnode.mainnet.sui.io";
 
             string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""suix_getBalance"", ""params"": [""{address}"", ""0x2::sui::SUI""], ""id"": 1 }}";
@@ -582,12 +578,7 @@ namespace ZBSolutions
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 
-            if (string.IsNullOrEmpty(address))
-            {
-                string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : "") + "blockchain_public";
-                address = _sql.DbQ($"SELECT apt FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value}");
-            }
-
+            if (string.IsNullOrEmpty(address)) address = _sql.Address("apt");
             if (string.IsNullOrEmpty(rpc))
                 rpc = "https://fullnode.mainnet.aptoslabs.com/v1";
 

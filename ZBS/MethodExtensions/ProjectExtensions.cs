@@ -1,20 +1,16 @@
-﻿using System;
+﻿using Leaf.xNet;
+using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
-
-using System.Linq;
-using System.Threading;
-using System.IO;
-
 using System.Globalization;
-
+using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Xml.Linq;
 using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
-
-
-using Newtonsoft.Json.Linq;
-using Leaf.xNet;
-using System.Xml.Linq;
+using static Global.Env.EnvironmentVariables;
 
 
 
@@ -98,6 +94,7 @@ namespace ZBSolutions
             if (thr0w) throw new Exception($"{formated}");
 
         }
+
 
         public static void SetRange(this IZennoPosterProjectModel project, string accRange = null, bool log = false)
         {
@@ -241,7 +238,6 @@ namespace ZBSolutions
             catch (Exception ex) { project.L0g($"⚙  {ex.Message}"); }
 
         }
-
         public static string MathVar(this IZennoPosterProjectModel project, string varName, int input)
         {
             project.Variables[$"{varName}"].Value = (int.Parse(project.Variables[$"{varName}"].Value) + input).ToString();
@@ -251,17 +247,20 @@ namespace ZBSolutions
         {
             project.Variables["acc0"].Value = acc0?.ToString() ?? string.Empty;
         }
-
         public static void Sleep(this IZennoPosterProjectModel project, int min, int max)
         {
             Random rnd = new Random();
             Thread.Sleep(rnd.Next(min, max) * 1000);
         }
-        public static void Sleep(this IZennoPosterProjectModel project, int max = 1)
+        public static int TimeElapsed(this IZennoPosterProjectModel project, string varName = "varSessionId")
         {
-            Thread.Sleep( max * 1000);
-        }
+            var start = project.Variables[$"{varName}"].Value;
+            long currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            long startTime = long.Parse(start);
+            int difference = (int)(currentTime - startTime);
 
+            return difference;
+        }
         public static string InputBox(string message = "input data please", int width = 600, int height = 600)
         {
 
@@ -288,7 +287,6 @@ namespace ZBSolutions
             form.ShowDialog();
             return smsBox.Text;
         }
-
         public static T Age<T>(this IZennoPosterProjectModel project)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -337,8 +335,6 @@ namespace ZBSolutions
             return (T)Convert.ChangeType(value, typeof(T));
 
         }
-
-
         public static string GetExtVer(this IZennoPosterProjectModel project, string extId)
         {
             string securePrefsPath = project.Variables["pathProfileFolder"].Value + @"\Default\Secure Preferences";
@@ -366,6 +362,32 @@ namespace ZBSolutions
             return version;
 
         }
+
+        public static void TimeOut(this IZennoPosterProjectModel project, int min = 30)
+        {
+            if (project.TimeElapsed() > 60 * min) throw new Exception("GlobalTimeout");
+        }
+        public static void DeadLine(this IZennoPosterProjectModel project, int sec = 0)
+        {
+            if (sec != 0)
+            {
+                var start = project.Variables[$"t0"].Value;
+                long currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                long startTime = long.Parse(start);
+                int difference = (int)(currentTime - startTime);
+                if (difference > sec) throw new Exception("Timeout");
+
+            }
+            else 
+            {
+                project.Variables["t0"].Value = (DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString();
+            }
+        }
+
+
+
+
+
 
 
     }
