@@ -235,9 +235,16 @@ namespace ZBSolutions
         }
 
 
-        public string GET(string url, string proxyString = "", Dictionary<string, string> headers = null, bool parse = false, [CallerMemberName] string callerName = "")
+        public string GET(
+            string url,
+            string proxyString = "",
+            Dictionary<string,
+                string> headers = null,
+            bool parse = false,
+            [CallerMemberName] string callerName = "",
+            bool throwOnFail = false)
         {
-            string debugHeaders = null;
+            string debugHeaders = string.Empty;
             try
             {
                 WebProxy proxy = ParseProxy(proxyString);
@@ -303,17 +310,28 @@ namespace ZBSolutions
             }
             catch (HttpRequestException e)
             {
-                Log($"!W [GET] RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")}), Headers\n{debugHeaders.Trim()}", callerName);
-                return $"Ошибка: {e.Message}";
+                Log($"[GET] SERVER Err: [{e.Message}] url:[{url}] (proxy: {(proxyString)}), Headers\n{debugHeaders.Trim()}", callerName);
+                if (throwOnFail) throw;
+
+                return string.Empty;
             }
             catch (Exception e)
             {
-                Log($"!W [GET] UnknownErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")}) Headers\n{debugHeaders.Trim()}", callerName);
-                return $"Ошибка: {e.Message}";
+                Log($"!W [GET] RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString)}) Headers\n{debugHeaders.Trim()}", callerName);
+                if (throwOnFail) throw;
+
+                return string.Empty;
             }
         }
-        public string POST(string url, string body, string proxyString = "", Dictionary<string, string> headers = null, bool parse = false, [CallerMemberName] string callerName = "", bool throwOnFail = false)
-        {
+        public string POST(
+            string url,
+            string body,
+            string proxyString = "",
+            Dictionary<string, string> headers = null,
+            bool parse = false,
+            [CallerMemberName] string callerName = "",
+            bool throwOnFail = false)        {
+            string debugHeaders = string.Empty;
             try
             {
                 WebProxy proxy = ParseProxy(proxyString);
@@ -344,6 +362,7 @@ namespace ZBSolutions
                         {
                             client.DefaultRequestHeaders.Add(header.Key, header.Value);
                             headersString.AppendLine($"{header.Key}: {header.Value}");
+                            debugHeaders += $"{header.Key}: {header.Value}";
                         }
                     }
 
@@ -384,16 +403,18 @@ namespace ZBSolutions
             }
             catch (HttpRequestException e)
             {
-                Log($"!W RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")})", callerName);
+                Log($"[POST] SERVER Err: [{e.Message}] url:[{url}] (proxy: {(proxyString)}), Headers\n{debugHeaders.Trim()}", callerName);
                 if (throwOnFail) throw;
-                return "";
+                return string.Empty;
             }
             catch (Exception e)
             {
-                Log($"!W UnknownErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")})", callerName);
+                Log($"!W [POST] RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString)}) Headers\n{debugHeaders.Trim()}", callerName);
                 if (throwOnFail) throw;
-                return "";
+                return string.Empty;
             }
+
+
         }
         public string PUT(string url, string body = "", string proxyString = "", Dictionary<string, string> headers = null, bool parse = false, [CallerMemberName] string callerName = "")
         {
