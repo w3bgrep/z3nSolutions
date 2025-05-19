@@ -422,10 +422,11 @@ namespace ZBSolutions
             }
         }
 
-        public static void CloseExtraTabs(this Instance instance)
+        public static void CloseExtraTabs(this Instance instance, bool blank = false)
         {
             for (; ; ) { try { instance.AllTabs[1].Close(); Thread.Sleep(1000); } catch { break; } }
             Thread.Sleep(1000);
+            if (blank)instance.ActiveTab.Navigate("about:blank", "");
         }
 
         public static void CtrlV(this Instance instance, string ToPaste)

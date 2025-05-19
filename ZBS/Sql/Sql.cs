@@ -129,9 +129,7 @@ namespace ZBSolutions
             }
             else throw new Exception($"unknown DBmode: {dbMode}");
             return;
-        }
- 
-        
+        }       
         public void Upd(string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, object acc = null )
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;

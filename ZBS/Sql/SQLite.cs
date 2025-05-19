@@ -29,7 +29,9 @@ namespace ZBSolutions
             }
             catch (Exception ex)
             {
-                project.SendToLog($"{ex.Message}", LogType.Warning);
+                //project.SendToLog($"{ex.Message}", LogType.Warning);
+
+                project.L0g($"!W Err:[{ex.Message}]. debug:\n{query}");
                 if (!ignoreErrors) throw ;
                 return string.Empty;
             }

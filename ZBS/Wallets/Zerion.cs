@@ -53,8 +53,11 @@ namespace ZBSolutions
         }
 
 
-        public void Go(string page = null, string mode = "sidepanel")
+        public void Go(string page = null, string mode = "sidepanel", bool newtab = false)
         {
+            if (newtab) { Tab tab2 = _instance.NewTab("zw"); }
+
+
             string sourseLink;
             string method;
             if (mode == "sidepanel") sourseLink = _sidepanelUrl;
@@ -139,6 +142,8 @@ namespace ZBSolutions
             }
             Log("address not found");
             Add("seed");
+
+            _instance.CloseExtraTabs(true);
             goto go;
 
 
@@ -198,7 +203,10 @@ namespace ZBSolutions
             }
         }
 
+        public void Refresh()
+        {
 
+        }
 
         public void ZerionLnch(string fileName = null, bool log = false)
         {

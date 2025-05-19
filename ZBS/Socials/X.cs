@@ -456,17 +456,17 @@ namespace ZBSolutions
             string Following = interactionStatistic[1]["userInteractionCount"].ToString();
             string Tweets = interactionStatistic[2]["userInteractionCount"].ToString();
 
-            _sql.Upd($@"dateCreated = '{dateCreated}',
+            _sql.Upd($@"datecreated = '{dateCreated}',
                         id = '{id}',
                         username = '{username}',
                         description = '{description}',
-                        givenName = '{givenName}',
+                        givenname = '{givenName}',
                         homeLocation = '{homeLocation}',
                         ava = '{ava}',
                         banner = '{banner}',
-                        Followers = '{Followers}',
-                        Following = '{Following}',
-                        Tweets = '{Tweets}',
+                        followers = '{Followers}',
+                        following = '{Following}',
+                        tweets = '{Tweets}',
                         ");
 
 

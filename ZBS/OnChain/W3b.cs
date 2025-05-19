@@ -12,7 +12,7 @@ namespace ZBSolutions
     {
         protected readonly IZennoPosterProjectModel _project;
         protected readonly bool _logShow;
-        protected readonly Sql _sql;
+        public readonly Sql _sql;
         protected readonly string _acc0;
         protected readonly Dictionary<string, string> _rpcs;
         protected readonly Dictionary<string, string> _adrs;
