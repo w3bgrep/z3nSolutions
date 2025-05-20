@@ -597,6 +597,100 @@ namespace ZBSolutions
             // Объединяем пары в строку
             return string.Join(", ", pairs);
         }
+
+
+        public string GetSelectedItem(
+        List<string> items,
+        string title = "Select an Item",
+        string labelText = "Select:")
+        {
+            // Проверка входных данных
+            if (items == null || items.Count == 0)
+            {
+                _project.SendWarningToLog("No items provided for selection");
+                return null;
+            }
+
+            // Создание формы
+            System.Windows.Forms.Form form = new System.Windows.Forms.Form();
+            form.Text = title;
+            form.Width = 600;
+            form.Height = 120; // Фиксированная высота для одного выпадающего списка
+            form.TopMost = true;
+            form.Location = new System.Drawing.Point(108, 108);
+
+            int currentTop = 5;
+            int labelWidth = 40;
+            int comboBoxWidth = 500;
+            int spacing = 5;
+
+            // Метка
+            System.Windows.Forms.Label label = new System.Windows.Forms.Label();
+            label.Text = labelText;
+            label.AutoSize = true;
+            label.Left = 5;
+            label.Top = currentTop + 5; // Смещение для центрирования
+            form.Controls.Add(label);
+
+            // Выпадающий список
+            System.Windows.Forms.ComboBox comboBox = new System.Windows.Forms.ComboBox();
+            comboBox.Left = label.Left + labelWidth + spacing;
+            comboBox.Top = currentTop;
+            comboBox.Width = comboBoxWidth;
+            comboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList; // Только выбор из списка
+            comboBox.Items.AddRange(items.ToArray());
+            comboBox.SelectedIndex = 0; // Выбираем первый элемент по умолчанию
+            form.Controls.Add(comboBox);
+
+            currentTop += comboBox.Height + spacing;
+
+            // Кнопка "OK"
+            System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
+            okButton.Text = "OK";
+            okButton.Width = form.ClientSize.Width - 20;
+            okButton.Height = 25;
+            okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
+            okButton.Top = currentTop + 10;
+            okButton.Click += (s, e) => { form.DialogResult = System.Windows.Forms.DialogResult.OK; form.Close(); };
+            form.Controls.Add(okButton);
+
+            // Адаптируем высоту формы
+            int requiredHeight = okButton.Top + okButton.Height + 40;
+            if (form.Height < requiredHeight)
+            {
+                form.Height = requiredHeight;
+            }
+
+            form.Load += (s, e) => { form.Location = new System.Drawing.Point(108, 108); };
+            form.FormClosing += (s, e) => { if (form.DialogResult != System.Windows.Forms.DialogResult.OK) form.DialogResult = System.Windows.Forms.DialogResult.Cancel; };
+
+            // Показываем форму
+            form.ShowDialog();
+
+            if (form.DialogResult != System.Windows.Forms.DialogResult.OK)
+            {
+                _project.SendInfoToLog("Selection cancelled by user", true);
+                return null;
+            }
+
+            // Получаем выбранный элемент
+            string selectedItem = comboBox.SelectedItem?.ToString();
+            if (string.IsNullOrEmpty(selectedItem))
+            {
+                _project.SendWarningToLog("No item selected");
+                return null;
+            }
+
+            _project.SendInfoToLog($"Selected item: {selectedItem}", false);
+            return selectedItem;
+        }
+
+
+
+
+
+
+
     }
 
 

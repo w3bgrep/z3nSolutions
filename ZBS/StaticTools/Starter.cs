@@ -216,11 +216,11 @@ namespace ZBSolutions
             string[] vars = { "cfgPin", "DBsqltPath" };
             CheckVars(vars);
 
-            string tablename;
-            string schema = "projects.";
-            if (_project.Variables["DBmode"].Value == "PostgreSQL") tablename = schema + projectName.ToLower();
-            else tablename = projectName.ToLower();
-            _project.Variables["projectTable"].Value = tablename;
+            //string tablename;
+            //string schema = "projects.";
+            //if (_project.Variables["DBmode"].Value == "PostgreSQL") tablename = schema + projectName.ToLower();
+            //else tablename = projectName.ToLower();
+            _project.Variables["projectTable"].Value = "projects_" + projectName;
 
             _project.SetRange();
             SAFU.Initialize(_project);

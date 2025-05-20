@@ -1,15 +1,17 @@
-﻿using System;
+﻿using Nethereum.Contracts.QueryHandlers.MultiCall;
+using Newtonsoft.Json.Linq;
+using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using ZennoLab.CommandCenter;
+using ZennoLab.InterfacesLibrary.Enums.Browser;
+using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using ZennoLab.Macros;
-using ZennoLab.InterfacesLibrary.Enums.Browser;
 using static ZBSolutions.Requests;
-using Newtonsoft.Json.Linq;
-using System.Text.RegularExpressions;
-using System.CodeDom;
 
 
 namespace ZBSolutions
@@ -572,7 +574,6 @@ namespace ZBSolutions
             }
         }
 
-
         public static void SetDisplay(this Instance instance, string webGl, IZennoPosterProjectModel project)
         {
 
@@ -619,7 +620,6 @@ namespace ZBSolutions
             }
 
         }
-
         public static void SetProxy(this Instance instance, string proxy, IZennoPosterProjectModel project)
 		{
 			long uTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds(); 
@@ -638,6 +638,27 @@ namespace ZBSolutions
             project.L0g( "!W badProxy");
             throw new Exception("!W badProxy");
 		}
+        public static List<string> ParseWebGl(this Instance instance, string vendor, int qnt, IZennoPosterProjectModel project)
+        {
+            var result = new List<string>();
+            instance.CanvasRenderMode = CanvasMode.Allow;
+            while (result.Count < qnt)
+            {
+                try { instance.Launch(BrowserType.Firefox45, false); } catch { }
+                instance.Launch(BrowserType.Chromium, false);
+                string webglData = instance.WebGLPreferences.Save();
+                if (webglData.Contains(vendor))
+                {
+                    result.Add(webglData);
+                    project.L0g($" {result.Count}/{qnt} strings added");
+                }
+
+            }
+            instance.CanvasRenderMode = CanvasMode.Block;
+            return result;
+
+        }
+        
 
         public static void Stargate(this Instance instance, string srcChain, string dstChain, string srcToken = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", string dstToken = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE")
         {
@@ -653,6 +674,7 @@ namespace ZBSolutions
             instance.ActiveTab.Navigate(url, "");
 
         }
+
 
 
 

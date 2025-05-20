@@ -130,7 +130,18 @@ namespace ZBSolutions
             else throw new Exception($"unknown DBmode: {dbMode}");
             return;
         }       
-        public void Upd(string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, object acc = null )
+        public void UpdTxt(string toUpd, string tableName, string key, bool log = false, bool throwOnEx = false)
+        {
+            TblName(tableName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+
+            toUpd = toUpd.Trim().TrimEnd(',');
+            DbQ($@"INSERT INTO {_tableName} (key) VALUES ('{key}') ON CONFLICT DO NOTHING;");
+            DbQ($@"UPDATE {_tableName} SET {toUpd} WHERE key = '{key}';", log: log, throwOnEx: throwOnEx);
+
+        }
+
+        public void Upd(string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, object acc = null)
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
             if (acc != null) _project.acc0w(acc);
@@ -147,16 +158,7 @@ namespace ZBSolutions
             DbQ($@"UPDATE {_tableName} SET {toUpd} WHERE acc0 = {_project.Variables["acc0"].Value};", log: log, throwOnEx: throwOnEx);
 
         }
-        public void UpdTxt(string toUpd, string tableName, string key, bool log = false, bool throwOnEx = false)
-        {
-            TblName(tableName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
-            toUpd = toUpd.Trim().TrimEnd(',');
-            DbQ($@"INSERT INTO {_tableName} (key) VALUES ('{key}') ON CONFLICT DO NOTHING;");
-            DbQ($@"UPDATE {_tableName} SET {toUpd} WHERE key = '{key}';", log: log, throwOnEx: throwOnEx);
-
-        }
         public void Upd(Dictionary<string, string> toWrite, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, bool byKey = false)
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
@@ -173,8 +175,26 @@ namespace ZBSolutions
                 Upd(value,_tableName,last:last, acc: key);
             }
         }
- 
- 
+
+        public void Upd(List<string> toWrite, string columnName, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, bool byKey = false)
+        {
+            if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
+            TblName(tableName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+
+            int dicSize = toWrite.Count;
+            AddRange(_tableName, dicSize);
+
+            int key = 1;
+            foreach (string valToWrite in toWrite)
+            {
+
+                Upd($"{columnName} = '{valToWrite.Replace("'", "''")}'", _tableName, last: last, acc: key);
+                key++;
+            }
+        }
+
+
         public void Write(Dictionary<string, string> toWrite, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true)
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;        
@@ -394,7 +414,7 @@ namespace ZBSolutions
 
             TblName("private_settings");  if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
-            var resp = DbQ($"SELECT var, value FROM {_tableName}");
+            var resp = DbQ($"SELECT key, value FROM {_tableName}");
             return resp;
         }
         public string Email(string tableName = "google", string schemaName = "accounts")

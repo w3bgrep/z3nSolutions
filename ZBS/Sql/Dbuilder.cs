@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 
 namespace ZBSolutions
@@ -37,18 +38,31 @@ namespace ZBSolutions
     public class DBuilder : Sql
     {
         private readonly IZennoPosterProjectModel _project;
+        protected readonly Instance _instance;
         private readonly F0rms _f0rm;
         private string _acc0;
+        private int _range = 108;
 
-        public DBuilder(IZennoPosterProjectModel project, bool log = false)
+        public DBuilder(IZennoPosterProjectModel project, Instance instance, bool log = false)
             : base(project, log: log)
         {
-            _project = project;
-           
+            _instance = instance;
+            _project = project;         
             _f0rm = new F0rms(_project);
+            try { _range = int.Parse(_project.Variables["rangeEnd"].Value); } catch { }
         }
 
-        
+        public DBuilder(IZennoPosterProjectModel project, bool log = false)
+          : base(project, log: log)
+        {
+            _project = project;
+            _f0rm = new F0rms(_project);
+            try { _range = int.Parse(_project.Variables["rangeEnd"].Value); } catch { }
+        }
+
+
+
+
         public string[] DefaultColumns(schema tableSchem)
         {
 
@@ -772,19 +786,39 @@ namespace ZBSolutions
 
                 case schema.public_mail:
                     var icloud = _f0rm.GetLinesByKey("icloud", "input data, don't change key!");
-                    Upd(icloud, tableSchem.ToString());
+                    Upd(icloud, tableSchem.ToString(),last:false);
                     return;
 
                 case schema.public_profile:
                     var nicknames = _f0rm.GetLinesByKey("nickname", "input data, don't change key!");
                     Upd(nicknames, tableSchem.ToString());
                     var bio = _f0rm.GetLinesByKey("bio", "input data, don't change key!");
-                    Upd(bio, tableSchem.ToString());
+                    Upd(bio, tableSchem.ToString(),last: false);
                     return;
 
                 case schema.private_profile:
                     var proxy = _f0rm.GetLinesByKey("proxy", "input proxy, don't change key!");
-                    Upd(proxy, tableSchem.ToString());
+                    if (proxy.Count != 0)
+                    {
+                        Upd(proxy, tableSchem.ToString(), last: false);
+                    }
+                    else Log("!W empty input");
+
+                    var vendors = new List<string> {
+                     "NVIDIA",
+                     "AMD",
+                     "Intel",
+                     };
+
+                    var vendor = _f0rm.GetSelectedItem(vendors);
+
+                    if (!string.IsNullOrEmpty(vendor))
+                    {
+                        var webGl = _instance.ParseWebGl(vendor, _range, _project);
+                        Upd(webGl, "webgl", tableSchem.ToString(), last: false);
+                    }
+                    else Log("!W empty input");
+
                     return;
 
                 case schema.private_blockchain:
@@ -810,7 +844,7 @@ namespace ZBSolutions
 
                     var phV = new List<string> {
                         "Инвайт на свой сервер",
-                        "ID канала с инвайтами на вашем сервере",
+                        "ссылка на канал с инвайтами на вашем сервере",
                         "Токен Telegram логгера",
                         "Id группы для логов в Telegram. Формат {-1002000000009}",
                         "Id топика в группе для логов. 0 - если нет топиков",

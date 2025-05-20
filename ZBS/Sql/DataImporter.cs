@@ -50,7 +50,7 @@ namespace ZBSolutions
             if (import.Contains("icloud")) ImportIcloud();
             if (import.Contains("twitter")) ImportTwitter();
             if (import.Contains("discord")) ImportDiscord();
-
+            
             if (import.Contains("nickname")) ImportNickname();
             if (import.Contains("bio")) ImportBio();
 
@@ -927,7 +927,6 @@ namespace ZBSolutions
             string schemaName = _project.Variables["DBmode"].Value == "PostgreSQL" ? $"{_schema}." : "";
             string table = schemaName + tableName;
 
-            // Создание формы для выбора вендора
             System.Windows.Forms.Form form = new System.Windows.Forms.Form();
             form.Text = "Import WebGL Data";
             form.Width = 420;
