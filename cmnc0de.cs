@@ -51,6 +51,23 @@ using System.Diagnostics;
 using System.Reflection;
 
 
+using Leaf.xNet;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Text;
+using System.Numerics;
+
+using System.Threading;
+using System.Threading.Tasks;
+using ZennoLab.CommandCenter;
+using ZennoLab.InterfacesLibrary.ProjectModel;
+using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
+using Nethereum.Model;
+using static Leaf.xNet.Services.Cloudflare.CloudflareBypass;
+
 
 
 #endregion
@@ -66,392 +83,406 @@ namespace w3tools //by @w3bgrep
 
 }
 
-public class Starter2
-{
-    protected readonly IZennoPosterProjectModel _project;
-    protected readonly Instance _instance;
-    protected readonly bool _logShow;
-    protected readonly string _pass;
-    protected readonly Sql _sql;
-    protected readonly bool _skipCheck;
-    public Starter2(IZennoPosterProjectModel project, Instance instance, bool log = false)
-    {
-        _project = project;
-        _sql = new Sql(_project);
-        _logShow = log;
-        _instance = instance;
-        _skipCheck = project.Variables["skipBrowserScan"].Value == "True";
-    }
-    public Starter2(IZennoPosterProjectModel project, bool log = false)
-    {
-        _project = project;
-        _logShow = log;
-        _sql = new Sql(_project);
-        _skipCheck = project.Variables["skipBrowserScan"].Value == "True";
-    }
+ public class W3bWrite2 : W3b
+ {
+     private readonly string _key;
+     private readonly string _adrEvm;
+     private readonly W3bRead _read;
+     public W3bWrite2(IZennoPosterProjectModel project,string key = null, bool log = false)
+     : base(project, log)
+     {
+         _key = Key(key);
+         _adrEvm = _key.ToPubEvm();//_sql.Address("evm");
+         _read = new W3bRead(project);
+     }
 
-    private void Log(string tolog = "", [CallerMemberName] string callerName = "", bool log = false)
-    {
-        if (!_logShow && !log) return;
+     private string Key(string key = null) 
+     {
+         if (string.IsNullOrEmpty(key))
+         {
+             string encryptedkey = _sql.Key("evm");
+         }
 
-        var stackFrame = new StackFrame(1);
-        var callingMethod = stackFrame.GetMethod();
-        if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
-        _project.L0g($"[ ▶  {callerName}] [{tolog}] ");
-    }
-    public void StartBrowser()
-    {
-        Log("initProfile");
-        _project.Variables["instancePort"].Value = _instance.Port.ToString();
-        
-        var webGlData = _sql.Get("webgl", "private_profile");
-        
-        _instance.SetDisplay(webGlData, _project);
+         if (string.IsNullOrEmpty(key)) 
+         {
+             Log("!W key is null or empty");
+             throw new Exception("emptykey");
+         };
+         return key;
 
-        var proxy = _sql.Get("proxy", "private_profile");
-        _project.Variables["proxy"].Value = proxy;
-        try { _project.Variables["proxyLeaf"].Value = proxy.Replace("//", "").Replace("@", ":"); } catch { }
-        //return proxy;
-        _instance.SetProxy(proxy, _project);
-
-        var cookiePath = $"{_project.Variables["profiles_folder"].Value}accounts\\cookies\\{_project.Variables["acc0"].Value}.json";
-        _project.Variables["pathCookies"].Value = cookiePath;
-
-        try
-        {
-            var cookies = File.ReadAllText(cookiePath);
-            _instance.SetCookie(cookies);
-        }
-        catch 
-        {
-            Log($"!W Fail to set cookies from file {cookiePath}");
-            try
-            {
-                var cookies = _sql.Get("cookies", "private_profile");
-                _instance.SetCookie(cookies);
-            }
-            catch (Exception Ex)
-                {
-                Log($"!E Fail to set cookies from db Err. {Ex.Message}");
-
-            }
-
-        }
-        if (!_skipCheck)
-        {
-            BrowserScanCheck();
-        } 
-
-    }
-    private void BrowserScanCheck()
-    {
-
-        var tableName = "browser";
-
-        var tableStructure = new Dictionary<string, string>
-            {
-                {"acc0", "INTEGER PRIMARY KEY"},
-                {"score", "TEXT DEFAULT '_'"},
-                {"WebGL", "TEXT DEFAULT '_'"},
-                {"WebGLReport", "INTEGER DEFAULT 0"},
-                {"UnmaskedRenderer", "TEXT DEFAULT '_'"},
-                {"Audio", "TEXT DEFAULT '_'"},
-                {"ClientRects", "TEXT DEFAULT '_'"},
-                {"WebGPUReport", "TEXT DEFAULT '_'"},
-                {"Fonts", "TEXT DEFAULT '_'"},
-                {"TimeZoneBasedonIP", "TEXT DEFAULT '_'"},
-                {"TimeFromIP", "TEXT DEFAULT '_'"},
-
-            };
-
-        if (_project.Variables["DBmode"].Value == "PostgreSQL")
-            tableName = $"accounts.{tableName}";
-        if (_project.Variables["makeTable"].Value == "True")
-            _sql.MkTable(tableStructure, tableName, log: _logShow);
+     }
 
 
+     public string SendLegacy(string chainRpc, string contractAddress, string encodedData, decimal value, string walletKey, int speedup = 1)
+     {
+         var web3 = new Nethereum.Web3.Web3(chainRpc);
+
+         var chainIdTask = web3.Eth.ChainId.SendRequestAsync();
+         chainIdTask.Wait();
+         int chainId = (int)chainIdTask.Result.Value;
+
+         string fromAddress = new Nethereum.Signer.EthECKey(walletKey).GetPublicAddress();
+
+         BigInteger _value = (BigInteger)(value * 1000000000000000000m);
+
+         BigInteger gasLimit = 0;
+         BigInteger gasPrice = 0;
+
+         try
+         {
+             var gasPriceTask = web3.Eth.GasPrice.SendRequestAsync();
+             gasPriceTask.Wait();
+             BigInteger baseGasPrice = gasPriceTask.Result.Value / 100 + gasPriceTask.Result.Value;
+             gasPrice = baseGasPrice / 100 * speedup + gasPriceTask.Result.Value;
+         }
+         catch (Exception ex)
+         {
+             throw new Exception($"Fail get gasPrice: {ex.Message}");
+         }
+
+         try
+         {
+             var transactionInput = new Nethereum.RPC.Eth.DTOs.TransactionInput
+             {
+                 To = contractAddress,
+                 From = fromAddress,
+                 Data = encodedData,
+                 Value = new Nethereum.Hex.HexTypes.HexBigInteger(_value),
+                 GasPrice = new Nethereum.Hex.HexTypes.HexBigInteger(gasPrice)
+             };
+
+             var gasEstimateTask = web3.Eth.Transactions.EstimateGas.SendRequestAsync(transactionInput);
+             gasEstimateTask.Wait();
+             var gasEstimate = gasEstimateTask.Result;
+             gasLimit = gasEstimate.Value + (gasEstimate.Value / 2);
+         }
+         catch (AggregateException ae)
+         {
+             if (ae.InnerException is Nethereum.JsonRpc.Client.RpcResponseException rpcEx)
+             {
+                 var error = $"Err: {rpcEx.RpcError.Code}, Msg: {rpcEx.RpcError.Message}, Errdata: {rpcEx.RpcError.Data}";
+                 throw new Exception($"RpcErr : {error}");
+             }
+             throw;
+         }
+
+         try
+         {
+             var blockchain = new Blockchain(walletKey, chainId, chainRpc);
+             string hash = blockchain.SendTransaction(contractAddress, value, encodedData, gasLimit, gasPrice).Result;
+             return hash;
+         }
+         catch (Exception ex)
+         {
+             throw new Exception($"Send fail: {ex.Message}");
+         }
+     }
+     public string Send1559(string chainRpc, string contractAddress, string encodedData, decimal value, string walletKey, int speedup = 1)
+     {
+         var web3 = new Nethereum.Web3.Web3(chainRpc);
+         var chainIdTask = web3.Eth.ChainId.SendRequestAsync(); chainIdTask.Wait();
+         int chainId = (int)chainIdTask.Result.Value;
+         string fromAddress = new Nethereum.Signer.EthECKey(walletKey).GetPublicAddress();
+         //
+         BigInteger _value = (BigInteger)(value * 1000000000000000000m);
+         //
+         BigInteger gasLimit = 0; BigInteger priorityFee = 0; BigInteger maxFeePerGas = 0; BigInteger baseGasPrice = 0;
+         try
+         {
+             var gasPriceTask = web3.Eth.GasPrice.SendRequestAsync(); gasPriceTask.Wait();
+             baseGasPrice = gasPriceTask.Result.Value / 100 + gasPriceTask.Result.Value;
+             priorityFee = baseGasPrice / 100 * speedup + gasPriceTask.Result.Value;
+             maxFeePerGas = baseGasPrice / 100 * speedup + gasPriceTask.Result.Value;
+         }
+         catch (Exception ex) { throw new Exception($"failedEstimateGas: {ex.Message}"); }
+
+         try
+         {
+             var transactionInput = new Nethereum.RPC.Eth.DTOs.TransactionInput
+             {
+                 To = contractAddress,
+                 From = fromAddress,
+                 Data = encodedData,
+                 Value = new Nethereum.Hex.HexTypes.HexBigInteger((BigInteger)_value),
+                 MaxPriorityFeePerGas = new Nethereum.Hex.HexTypes.HexBigInteger(priorityFee),
+                 MaxFeePerGas = new Nethereum.Hex.HexTypes.HexBigInteger(maxFeePerGas),
+                 Type = new Nethereum.Hex.HexTypes.HexBigInteger(2)
+             };
+
+             var gasEstimateTask = web3.Eth.Transactions.EstimateGas.SendRequestAsync(transactionInput);
+             gasEstimateTask.Wait();
+             var gasEstimate = gasEstimateTask.Result;
+             gasLimit = gasEstimate.Value + (gasEstimate.Value / 2);
+         }
+         catch (AggregateException ae)
+         {
+             if (ae.InnerException is Nethereum.JsonRpc.Client.RpcResponseException rpcEx)
+             {
+                 var error = $"Code: {rpcEx.RpcError.Code}, Message: {rpcEx.RpcError.Message}, Data: {rpcEx.RpcError.Data}";
+                 throw new Exception($"FailedSimulate RPC Error: {error}");
+             }
+             throw;
+         }
+         try
+         {
+             var blockchain = new Blockchain(_key, chainId, chainRpc);
+             string hash = blockchain.SendTransactionEIP1559(contractAddress, value, encodedData, gasLimit, maxFeePerGas, priorityFee).Result;
+             return hash;
+         }
+         catch (Exception ex)
+         {
+             throw new Exception($"FailedSend: {ex.Message}");
+         }
+     }
+
+
+     public string GzTarget(GZto destination, bool log = false)
+     {
+         // 0x010066 Sepolia | 0x01019e Soneum | 0x01000e BNB | 0x0100f0 Gravity | 0x010169 Zero
+
+         switch (destination)
+         {
+             case GZto.Sepolia:
+                 return "0x010066";
+             case GZto.Soneum:
+                 return "0x01019e";
+             case GZto.BNB:
+                 return "0x01000e";
+             case GZto.Gravity:
+                 return "0x0100f0";
+             case GZto.Zero:
+                 return "0x010169";
+
+             default:
+                 return "null";
+         }
+
+     }
+
+     public string GZ(string chainTo, decimal value, string rpc = null, bool log = false) 
+
+     {
+
+          // 0x010066 Sepolia | 0x01019e Soneum | 0x01000e BNB | 0x0100f0 Gravity | 0x010169 Zero
+         string txHash = null;
+         Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+         Random rnd = new Random();
+         var accountAddress = _adrEvm;
+         string key = _key;
+
+         if (string.IsNullOrEmpty(rpc))
+         {
+             string chainList = @"https://mainnet.era.zksync.io,
+	https://linea-rpc.publicnode.com,
+	https://arb1.arbitrum.io/rpc,
+	https://optimism-rpc.publicnode.com,
+	https://scroll.blockpi.network/v1/rpc/public,
+	https://rpc.taiko.xyz,
+	https://base.blockpi.network/v1/rpc/public,
+	https://rpc.zora.energy";
+
+
+             bool found = false;
+             foreach (string RPC in chainList.Split(','))
+             {
+                 rpc = RPC.Trim();
+                 var native = _read.NativeEVM<decimal>(rpc);
+                 var required = value + 0.00015m;
+                 if (native > required)
+                 {
+                     _project.L0g($"CHOSEN: rpc:[{rpc}] native:[{native}]");
+                     found = true; break;
+                 }
+                 if (log) Log($"rpc:[{rpc}] native:[{native}] lower than [{required}]");
+                 Thread.Sleep(1000);
+             }
+
+
+             if (!found)
+             {
+                 return $"fail: no balance over {value}ETH found by all Chains";
+             }
+         }
+
+         else
+         {
+             var native = _read.NativeEVM<decimal>(rpc);
+             if (log) Log($"rpc:[{rpc}] native:[{native}]");
+             if (native < value + 0.0002m)
+             {
+                 return $"fail: no balance over {value}ETH found on {rpc}";
+             }
+         }
+         string[] types = { };
+         object[] values = { };
+
+
+         try
+         {
+             string dataEncoded = chainTo;//0x010066 for Sepolia | 0x01019e Soneum | 0x01000e BNB
+             txHash = Send1559(
+                 rpc,
+                 "0x391E7C679d29bD940d63be94AD22A25d25b5A604",//gazZipContract
+                 dataEncoded,
+                 value,  // value в ETH
+                 key,
+                 3   // speedup %
+             );
+             Thread.Sleep(1000);
+             _project.Variables["blockchainHash"].Value = txHash;
+         }
+         catch (Exception ex) { _project.SendWarningToLog($"{ex.Message}", true); throw; }
+
+         if (log) Log(txHash);
+         _read.WaitTransaction(rpc, txHash);
+         return txHash;
+     }
+     public string Approve(string contract, string spender, string amount, string rpc = "")
+     {
+         Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+         if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
+         string key = _sql.Key("EVM");
+
+         string abi = @"[{""inputs"":[{""name"":""spender"",""type"":""address""},{""name"":""amount"",""type"":""uint256""}],""name"":""approve"",""outputs"":[{""name"":"""",""type"":""bool""}],""stateMutability"":""nonpayable"",""type"":""function""}]";
+
+         string txHash = null;
+
+         string[] types = { "address", "uint256" };
+         BigInteger amountValue;
+
+
+         if (amount.ToLower() == "max")
+         {
+             amountValue = BigInteger.Parse("115792089237316195423570985008687907853269984665640564039457584007913129639935"); // max uint256
+         }
+         else if (amount.ToLower() == "cancel")
+         {
+             amountValue = BigInteger.Zero;
+         }
+         else
+         {
+             try
+             {
+                 amountValue = BigInteger.Parse(amount);
+                 if (amountValue < 0)
+                     throw new ArgumentException("Amount cannot be negative");
+             }
+             catch (Exception ex)
+             {
+                 throw new Exception($"Failed to parse amount '{amount}': {ex.Message}");
+             }
+         }
+
+         object[] values = { spender, amountValue };
+
+         try
+         {
+             txHash = SendLegacy(
+                 rpc,
+                 contract,
+                 ZBSolutions.Encoder.EncodeTransactionData(abi, "approve", types, values),
+                 0,
+                 key,
+                 3
+             );
+             try
+             {
+                 _project.Variables["blockchainHash"].Value = txHash;
+             }
+             catch (Exception ex)
+             {
+                 Log($"!W:{ex.Message}");
+             }
+
+         }
+         catch (Exception ex)
+         {
+             Log($"!W:{ex.Message}");
+             throw;
+         }
+
+         Log($"[APPROVE] {contract} for spender {spender} with amount {amount}...");
+         return txHash;
+     }
+     public string WrapNative(string contract, decimal value, string rpc = "")
+     {
+         Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+         if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
+         string key = _sql.Key("EVM");
+
+         string abi = @"[{""inputs"":[],""name"":""deposit"",""outputs"":[],""stateMutability"":""payable"",""type"":""function""}]";
+
+         string txHash = null;
+
+         string[] types = { };
+         object[] values = { };
+
+         try
+         {
+             txHash = SendLegacy(
+                 rpc,
+                 contract,
+                 ZBSolutions.Encoder.EncodeTransactionData(abi, "deposit", types, values),
+                 value,
+                 key,
+                 3
+             );
+             try
+             {
+                 _project.Variables["blockchainHash"].Value = txHash;
+             }
+             catch (Exception ex)
+             {
+                 Log($"!W:{ex.Message}");
+             }
+         }
+         catch (Exception ex)
+         {
+             Log($"!W:{ex.Message}");
+             throw;
+         }
+
+         Log($"[WRAP] {value} native to {contract}...");
+         return txHash;
+     }
+     public string SendNative(string to, decimal amount, string rpc = "")
+     {
+         Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+         if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
+
+         string txHash = null;
+
+         try
+         {
+             txHash = SendLegacy(
+                 rpc,
+                 to,
+                 "",
+                 amount,
+                 _key,
+                 3
+             );
+             try
+             {
+                 _project.Variables["blockchainHash"].Value = txHash;
+             }
+             catch (Exception ex)
+             {
+                 Log($"!W:{ex.Message}");
+             }
+         }
+         catch (Exception ex)
+         {
+             Log($"!W:{ex.Message}");
+             throw;
+         }
+
+         Log($"[SEND_NATIVE] {amount} to {to}...");
+         return txHash;
+     }
 
 
 
-
-
-        bool set = false;
-        string timezoneOffset = "";
-        string timezoneName = "";
-
-        while (true)
-        {
-            _instance.ActiveTab.Navigate("https://www.browserscan.net/", "");
-            var toParse = "WebGL,WebGLReport, Audio, ClientRects, WebGPUReport,Fonts,TimeZoneBasedonIP,TimeFromIP";
-            Thread.Sleep(5000);
-            var hardware = _instance.ActiveTab.FindElementById("webGL_anchor").ParentElement.GetChildren(false);
-            foreach (HtmlElement child in hardware)
-            {
-                var text = child.GetAttribute("innertext");
-                var varName = Regex.Replace(text.Split('\n')[0], " ", ""); var varValue = "";
-                if (varName == "") continue;
-                if (toParse.Contains(varName))
-                {
-                    try { varValue = text.Split('\n')[2]; } catch { Thread.Sleep(2000); continue; }
-                    //_sql.Upd($"{varName} = '{varValue}'", tableName);
-                }
-            }
-
-            var software = _instance.ActiveTab.FindElementById("lang_anchor").ParentElement.GetChildren(false);
-            foreach (HtmlElement child in software)
-            {
-                var text = child.GetAttribute("innertext");
-                var varName = Regex.Replace(text.Split('\n')[0], " ", ""); var varValue = "";
-                if (varName == "") continue;
-                if (toParse.Contains(varName))
-                {
-                    if (varName == "TimeZone") continue;
-                    try { varValue = text.Split('\n')[1]; } catch { continue; }
-                    if (varName == "TimeFromIP") timezoneOffset = varValue;
-                    if (varName == "TimeZoneBasedonIP") timezoneName = varValue;
-                    _sql.Upd($"{varName} = '{varValue}'", tableName);
-                }
-            }
-
-
-            string heToWait = _instance.HeGet(("anchor_progress", "id"));
-
-            var score = heToWait.Split(' ')[3].Split('\n')[0]; var problems = "";
-
-            if (!score.Contains("100%"))
-            {
-                var problemsHe = _instance.ActiveTab.FindElementByAttribute("ul", "fulltagname", "ul", "regexp", 5).GetChildren(false);
-                foreach (HtmlElement child in problemsHe)
-                {
-                    var text = child.GetAttribute("innertext");
-                    var varValue = "";
-                    var varName = text.Split('\n')[0];
-                    try { varValue = text.Split('\n')[1]; } catch { continue; };
-                    problems += $"{varName}: {varValue}; ";
-                }
-                problems = problems.Trim();
-
-            }
-
-            score = $"[{score}] {problems}";
-            _sql.Upd($"score = '{score}'", tableName);
-
-
-            if (!score.Contains("100%") && !set)
-            {
-                var match = Regex.Match(timezoneOffset, @"GMT([+-]\d{2})");
-                if (match.Success)
-                {
-                    int Offset = int.Parse(match.Groups[1].Value);
-                    _project.L0g($"Setting timezone offset to: {Offset}");
-
-                    _instance.TimezoneWorkMode = ZennoLab.InterfacesLibrary.Enums.Browser.TimezoneMode.Emulate;
-                    _instance.SetTimezone(Offset, 0);
-                }
-                _instance.SetIanaTimezone(timezoneName);
-                set = true;
-                _instance.ActiveTab.MainDocument.EvaluateScript("location.reload(true)");
-                continue;
-            }
-            break;
-        }
-
-
-    }
-    public void InitVariables(string author = "")
-    {
-        DisableLogs();
-        _project.Variables["varSessionId"].Value = (DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString();
-
-        string projectName = _project.ExecuteMacro(_project.Name).Split('.')[0];
-        _project.Variables["projectName"].Value = projectName;
-
-        string[] vars = { "cfgPin", "DBsqltPath" };
-        CheckVars(vars);
-
-        //string tablename;
-        //string schema = "projects.";
-        //if (_project.Variables["DBmode"].Value == "PostgreSQL") tablename = schema + projectName.ToLower();
-        //else tablename = projectName.ToLower();
-        _project.Variables["projectTable"].Value = "projects_" + projectName;
-
-        _project.SetRange();
-        SAFU.Initialize(_project);
-        Logo(author);
-
-    }
-    private void DisableLogs()
-    {
-        try
-        {
-            StringBuilder logBuilder = new StringBuilder();
-            string basePath = @"C:\Program Files\ZennoLab";
-
-            foreach (string langDir in Directory.GetDirectories(basePath))
-            {
-                foreach (string programDir in Directory.GetDirectories(langDir))
-                {
-                    foreach (string versionDir in Directory.GetDirectories(programDir))
-                    {
-                        string logsPath = Path.Combine(versionDir, "Progs", "Logs");
-                        if (Directory.Exists(logsPath))
-                        {
-                            Directory.Delete(logsPath, true);
-                            Process process = new Process();
-                            process.StartInfo.FileName = "cmd.exe";
-                            process.StartInfo.Arguments = $"/c mklink /d \"{logsPath}\" \"NUL\"";
-                            process.StartInfo.UseShellExecute = false;
-                            process.StartInfo.CreateNoWindow = true;
-                            process.StartInfo.RedirectStandardOutput = true;
-                            process.StartInfo.RedirectStandardError = true;
-
-                            logBuilder.AppendLine($"Attempting to create symlink: {process.StartInfo.Arguments}");
-
-                            process.Start();
-                            string output = process.StandardOutput.ReadToEnd();
-                            string error = process.StandardError.ReadToEnd();
-                            process.WaitForExit();
-                        }
-                    }
-                }
-            }
-        }
-        catch (Exception ex) { }
-    }
-    private void Logo(string author)
-    {
-        string version = Assembly.GetExecutingAssembly()
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-            ?.InformationalVersion ?? "Unknown";
-
-        string name = _project.ExecuteMacro(_project.Name).Split('.')[0];
-        if (author != "") author = $" script author: @{author}";
-        string logo = $@"using ZennoposterBoosterSolutions v{version};
-        ┌by─┐					
-        │    w3bgrep			
-        └─→┘
-                    ► init {name} ░▒▓█  {author}";
-        _project.SendInfoToLog(logo, true);
-    }
-    private void CheckVars(string[] vars)
-    {
-        foreach (string var in vars)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(_project.Variables[var].Value))
-                {
-                    throw new Exception($"!E {var} is null or empty");
-                }
-            }
-            catch (Exception ex)
-            {
-                _project.L0g(ex.Message);
-                throw;
-            }
-        }
-    }
-    public void ConfigFromDb()
-    {
-        string settings = _sql.Settings();
-        foreach (string varData in settings.Split('\n'))
-        {
-            string varName = varData.Split('|')[0];
-            string varValue = varData.Split('|')[1].Trim();
-            try { _project.Variables[$"{varName}"].Value = varValue; }
-            catch (Exception e)  {Log(e.Message);}
-        }
-    }
-    public void FilterAccList(List<string> dbQueries, bool log = false)
-    {
-        if (!string.IsNullOrEmpty(_project.Variables["acc0Forced"].Value))
-        {
-            _project.Lists["accs"].Clear();
-            _project.Lists["accs"].Add(_project.Variables["acc0Forced"].Value);
-            Log($@"manual mode on with {_project.Variables["acc0Forced"].Value}");
-            return;
-        }
-
-        var allAccounts = new HashSet<string>();
-        foreach (var query in dbQueries)
-        {
-            try
-            {
-                var accsByQuery = _sql.DbQ(query).Trim();
-                if (!string.IsNullOrWhiteSpace(accsByQuery))
-                {
-                    var accounts = accsByQuery.Split('\n').Select(x => x.Trim().TrimStart(','));
-                    allAccounts.UnionWith(accounts);
-                }
-            }
-            catch
-            {
-
-                Log($"{query}");
-            }
-        }
-
-        if (allAccounts.Count == 0)
-        {
-            _project.Variables["noAccsToDo"].Value = "True";
-            Log($"♻ noAccountsAvailable by queries [{string.Join(" | ", dbQueries)}]");
-            return;
-        }
-        Log($"Initial availableAccounts: [{string.Join(", ", allAccounts)}]");
-
-        if (!string.IsNullOrEmpty(_project.Variables["requiredSocial"].Value))
-        {
-            string[] demanded = _project.Variables["requiredSocial"].Value.Split(',');
-            Log($"Filtering by socials: [{string.Join(", ", demanded)}]");
-
-            foreach (string social in demanded)
-            {
-                
-                string tableName = social.Trim().ToLower();
-                                 
-
-                if (_project.Variables["DBmode"].Value == "PostgreSQL") tableName = $"accounts.{tableName}";
-                var notOK = _sql.DbQ($"SELECT acc0 FROM {tableName} WHERE status NOT LIKE '%ok%'", log)
-                    .Split('\n')
-                    .Select(x => x.Trim())
-                    .Where(x => !string.IsNullOrEmpty(x));
-                allAccounts.ExceptWith(notOK);
-                Log($"After {social} filter: [{string.Join("|", allAccounts)}]");
-            }
-        }
-        _project.Lists["accs"].Clear();
-        _project.Lists["accs"].AddRange(allAccounts);
-            Log($"final list [{string.Join("|", _project.Lists["accs"])}]");
-    }
-    public List<string> MkToDoQueries(string toDo = null, string defaultRange = null, string defaultDoFail = null)
-    {
-        var nowIso = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
-
-        if (string.IsNullOrEmpty(toDo)) toDo = _project.Variables["cfgToDo"].Value;
-
-        string[] toDoItems = (toDo ?? "").Split(',');
-
-        var allQueries = new List<string>();
-
-        foreach (string taskId in toDoItems)
-        {
-            string trimmedTaskId = taskId.Trim();
-            if (!string.IsNullOrWhiteSpace(trimmedTaskId))
-            {
-                string tableName = _project.Variables["projectTable"].Value;
-                string range = defaultRange ?? _project.Variables["range"].Value;
-                string doFail = defaultDoFail ?? _project.Variables["doFail"].Value;
-                string failCondition = (doFail != "True" ? "AND status NOT LIKE '%fail%'" : "");
-                string query = $@"SELECT acc0 FROM {tableName} WHERE acc0 in ({range}) {failCondition} AND status NOT LIKE '%skip%' 
-            AND ({trimmedTaskId} < '{nowIso}' OR {trimmedTaskId} = '_')";
-                allQueries.Add(query);
-            }
-        }
-
-        return allQueries;
-    }
-   
-}
-
+ }
 
 }

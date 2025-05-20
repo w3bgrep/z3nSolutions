@@ -22,7 +22,7 @@ namespace ZBSolutions
         : base(project, log)
         {
               if (string.IsNullOrEmpty(adrEvm) && (!string.IsNullOrEmpty(_acc0))) 
-               _adrEvm = _sql.Address("evm");
+               _adrEvm = _sql.Address("evm_pk");
                _defRpc = project.Variables["blockchainRPC"].Value;
         }
 

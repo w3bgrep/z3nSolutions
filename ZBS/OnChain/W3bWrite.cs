@@ -393,7 +393,6 @@ namespace ZBSolutions
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
-            string key = _sql.Key("EVM" );
 
             string txHash = null;
 
@@ -404,7 +403,7 @@ namespace ZBSolutions
                     to,
                     "",
                     amount,
-                    key,
+                    _key,
                     3
                 );
                 try
