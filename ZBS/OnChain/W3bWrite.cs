@@ -36,7 +36,7 @@ namespace ZBSolutions
         : base(project, log)
         {
             _key = Key(key);
-            _adrEvm = _sql.Address("evm");
+            _adrEvm = _key.ToPubEvm();//_sql.Address("evm");
             _read = new W3bRead(project);
         }
 
@@ -44,8 +44,7 @@ namespace ZBSolutions
         {
             if (string.IsNullOrEmpty(key))
             {
-                string encryptedkey = _sql.Get("secp256k1", "accounts.blockchain_private");
-                key =  SAFU.Decode(_project, encryptedkey);
+                string encryptedkey = _sql.Key("evm");
             }
 
             if (string.IsNullOrEmpty(key)) 
