@@ -47,20 +47,22 @@ namespace ZBSolutions
             if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
             _project.L0g($"[ ▶  {callerName}] [{tolog}] ");
         }
-
-
         public void StartBrowser()
         {
             Log("initProfile");
             _project.Variables["instancePort"].Value = _instance.Port.ToString();
-            
+
             var webGlData = _sql.Get("webgl", "private_profile");
+
             _instance.SetDisplay(webGlData, _project);
 
-            var proxy = _sql.Proxy();
+            var proxy = _sql.Get("proxy", "private_profile");
+            _project.Variables["proxy"].Value = proxy;
+            try { _project.Variables["proxyLeaf"].Value = proxy.Replace("//", "").Replace("@", ":"); } catch { }
+            //return proxy;
             _instance.SetProxy(proxy, _project);
 
-            var cookiePath = $"{_project.Variables["settingsZenFolder"].Value}accounts\\cookies\\{_project.Variables["acc0"].Value}.json";
+            var cookiePath = $"{_project.Variables["profiles_folder"].Value}accounts\\cookies\\{_project.Variables["acc0"].Value}.json";
             _project.Variables["pathCookies"].Value = cookiePath;
 
             try
@@ -68,7 +70,7 @@ namespace ZBSolutions
                 var cookies = File.ReadAllText(cookiePath);
                 _instance.SetCookie(cookies);
             }
-            catch 
+            catch
             {
                 Log($"!W Fail to set cookies from file {cookiePath}");
                 try
@@ -77,7 +79,7 @@ namespace ZBSolutions
                     _instance.SetCookie(cookies);
                 }
                 catch (Exception Ex)
-                    {
+                {
                     Log($"!E Fail to set cookies from db Err. {Ex.Message}");
 
                 }
@@ -86,7 +88,7 @@ namespace ZBSolutions
             if (!_skipCheck)
             {
                 BrowserScanCheck();
-            } 
+            }
 
         }
         private void BrowserScanCheck()
@@ -305,7 +307,7 @@ namespace ZBSolutions
                 string varName = varData.Split('|')[0];
                 string varValue = varData.Split('|')[1].Trim();
                 try { _project.Variables[$"{varName}"].Value = varValue; }
-                catch  {}
+                catch (Exception e) { Log(e.Message); }
             }
         }
         public void FilterAccList(List<string> dbQueries, bool log = false)
@@ -353,10 +355,11 @@ namespace ZBSolutions
                 foreach (string social in demanded)
                 {
                     
-                    string tableName = social.Trim().ToLower();
-                                     
+                    //string tableName = social.Trim().ToLower();
 
-                    if (_project.Variables["DBmode"].Value == "PostgreSQL") tableName = $"accounts.{tableName}";
+
+                    //string tableName = $"private_{social.Trim().ToLower()}";
+                    string tableName = _sql.TblName($"private_{social.Trim().ToLower()}");
                     var notOK = _sql.DbQ($"SELECT acc0 FROM {tableName} WHERE status NOT LIKE '%ok%'", log)
                         .Split('\n')
                         .Select(x => x.Trim())
@@ -385,6 +388,7 @@ namespace ZBSolutions
                 if (!string.IsNullOrWhiteSpace(trimmedTaskId))
                 {
                     string tableName = _project.Variables["projectTable"].Value;
+                    tableName = _sql.TblName(tableName);
                     string range = defaultRange ?? _project.Variables["range"].Value;
                     string doFail = defaultDoFail ?? _project.Variables["doFail"].Value;
                     string failCondition = (doFail != "True" ? "AND status NOT LIKE '%fail%'" : "");
@@ -397,8 +401,5 @@ namespace ZBSolutions
             return allQueries;
         }
    
-    
-    
-    
     }
 }

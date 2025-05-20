@@ -1,4 +1,5 @@
 ﻿using Nethereum.Contracts.QueryHandlers.MultiCall;
+using Nethereum.Contracts.Standards.ENS.ENSRegistry.ContractDefinition;
 using Newtonsoft.Json.Linq;
 using System;
 using System.CodeDom;
@@ -576,33 +577,36 @@ namespace ZBSolutions
 
         public static void SetDisplay(this Instance instance, string webGl, IZennoPosterProjectModel project)
         {
-
-            var jsonObject = JObject.Parse(webGl);
-            var mapping = new Dictionary<string, string>
+            if (!string.IsNullOrEmpty(webGl))
             {
-                {"Renderer", "RENDERER"},
-                {"Vendor", "VENDOR"},
-                {"Version", "VERSION"},
-                {"ShadingLanguageVersion", "SHADING_LANGUAGE_VERSION"},
-                {"UnmaskedRenderer", "UNMASKED_RENDERER_WEBGL"},
-                {"UnmaskedVendor", "UNMASKED_VENDOR"},
-                {"MaxCombinedTextureImageUnits", "MAX_COMBINED_TEXTURE_IMAGE_UNITS"},
-                {"MaxCubeMapTextureSize", "MAX_CUBE_MAP_TEXTURE_SIZE"},
-                {"MaxFragmentUniformVectors", "MAX_FRAGMENT_UNIFORM_VECTORS"},
-                {"MaxTextureSize", "MAX_TEXTURE_SIZE"},
-                {"MaxVertexAttribs", "MAX_VERTEX_ATTRIBS"}
-            };
+                var jsonObject = JObject.Parse(webGl);
+                var mapping = new Dictionary<string, string>
+                {
+                    {"Renderer", "RENDERER"},
+                    {"Vendor", "VENDOR"},
+                    {"Version", "VERSION"},
+                    {"ShadingLanguageVersion", "SHADING_LANGUAGE_VERSION"},
+                    {"UnmaskedRenderer", "UNMASKED_RENDERER_WEBGL"},
+                    {"UnmaskedVendor", "UNMASKED_VENDOR"},
+                    {"MaxCombinedTextureImageUnits", "MAX_COMBINED_TEXTURE_IMAGE_UNITS"},
+                    {"MaxCubeMapTextureSize", "MAX_CUBE_MAP_TEXTURE_SIZE"},
+                    {"MaxFragmentUniformVectors", "MAX_FRAGMENT_UNIFORM_VECTORS"},
+                    {"MaxTextureSize", "MAX_TEXTURE_SIZE"},
+                    {"MaxVertexAttribs", "MAX_VERTEX_ATTRIBS"}
+                };
 
-            foreach (var pair in mapping)
-            {
-                string value = "";
-                if (jsonObject["parameters"]["default"][pair.Value] != null) value = jsonObject["parameters"]["default"][pair.Value].ToString();
-                else if (jsonObject["parameters"]["webgl"][pair.Value] != null) value = jsonObject["parameters"]["webgl"][pair.Value].ToString();
-                else if (jsonObject["parameters"]["webgl2"][pair.Value] != null) value = jsonObject["parameters"]["webgl2"][pair.Value].ToString();
-                if (!string.IsNullOrEmpty(value)) instance.WebGLPreferences.Set((WebGLPreference)Enum.Parse(typeof(WebGLPreference), pair.Key), value);
+                foreach (var pair in mapping)
+                {
+                    string value = "";
+                    if (jsonObject["parameters"]["default"][pair.Value] != null) value = jsonObject["parameters"]["default"][pair.Value].ToString();
+                    else if (jsonObject["parameters"]["webgl"][pair.Value] != null) value = jsonObject["parameters"]["webgl"][pair.Value].ToString();
+                    else if (jsonObject["parameters"]["webgl2"][pair.Value] != null) value = jsonObject["parameters"]["webgl2"][pair.Value].ToString();
+                    if (!string.IsNullOrEmpty(value)) instance.WebGLPreferences.Set((WebGLPreference)Enum.Parse(typeof(WebGLPreference), pair.Key), value);
 
+                }
             }
-            
+            else project.L0g("!W WebGL string is empty. Please parse WebGL data into the database. Otherwise, any antifraud system will fuck you up like it’s a piece of cake.");
+        
             try
             {
                 instance.SetWindowSize(1280, 720);
@@ -614,7 +618,7 @@ namespace ZBSolutions
             }
             catch (Exception ex)
             {
-                try { project.GlobalVariables[$"w3tools", $"Thread{project.Variables["acc0"].Value}"].Value = null; } catch { }
+                try { project.GlobalVariables[$"ZBS", $"Thread{project.Variables["acc0"].Value}"].Value = null; } catch { }
                 project.Variables["acc0"].Value = "";
                 project.L0g(ex.Message, thr0w: true);
             }
@@ -622,7 +626,13 @@ namespace ZBSolutions
         }
         public static void SetProxy(this Instance instance, string proxy, IZennoPosterProjectModel project)
 		{
-			long uTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds(); 
+            if (string.IsNullOrEmpty(proxy))
+            {
+                project.L0g("!W proxy string is EMPTY");
+                throw new Exception("!W EMPTY Proxy");
+            }
+
+                long uTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds(); 
 			string ipLocal = project.GET($"http://api.ipify.org/");
 
 			while (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - uTime < 60)

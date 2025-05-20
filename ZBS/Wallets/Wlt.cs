@@ -79,42 +79,34 @@ namespace ZBSolutions
 
         protected string Decrypt(KeyT KeyType)
         {
-            string encrypted;
             switch (KeyType)
             {
                 case KeyT.secp256k1: 
-                    encrypted = _sql.Get("secp256k1", "accounts.blockchain_private");
-                    break;
+                    return _sql.Key("evm");
                 case KeyT.base58:
-                    encrypted = _sql.Get("base58", "accounts.blockchain_private");
-                    break;
+                    return _sql.Key("sol");
                 case KeyT.bip39:
-                    encrypted = _sql.Get("bip39", "accounts.blockchain_private");
-                    break;
+                    return _sql.Key("seed");
                 default:
                     throw new Exception("unsupportedType");
             }
-            return SAFU.Decode(_project, encrypted);
 
         }
         protected string Decrypt(string KeyType)
         {
-            string encrypted;
+
             switch (KeyType)
             {
                 case "evm":
-                    encrypted = _sql.Get("secp256k1", "accounts.blockchain_private");
-                    break;
+                    return _sql.Key("evm");
                 case "sol":
-                    encrypted = _sql.Get("base58", "accounts.blockchain_private");
-                    break;
+                    return _sql.Key("sol");
                 case "seed":
-                    encrypted = _sql.Get("bip39", "accounts.blockchain_private");
-                    break;
+                    return _sql.Key("seed");
                 default:
                     throw new Exception("unsupportedType");
             }
-            return SAFU.Decode(_project, encrypted);
+     
 
         }
 
