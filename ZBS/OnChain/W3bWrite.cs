@@ -29,31 +29,14 @@ namespace ZBSolutions
 
     public class W3bWrite : W3b
     {
-        private readonly string _key;
-        private readonly string _adrEvm;
+
         private readonly W3bRead _read;
         public W3bWrite(IZennoPosterProjectModel project,string key = null, bool log = false)
         : base(project, log)
         {
-            _key = Key(key);
+            _key = ApplyKey(key);
             _adrEvm = _key.ToPubEvm();//_sql.Address("evm");
             _read = new W3bRead(project);
-        }
-
-        private string Key(string key = null) 
-        {
-            if (string.IsNullOrEmpty(key))
-            {
-                string encryptedkey = _sql.Key("evm");
-            }
-
-            if (string.IsNullOrEmpty(key)) 
-            {
-                Log("!W key is null or empty");
-                throw new Exception("emptykey");
-            };
-            return key;
-
         }
 
 

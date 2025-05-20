@@ -501,7 +501,105 @@ namespace ZBSolutions
             return addrss;
 
         }
+        public List<string> MkToDoQueries(string toDo = null, string defaultRange = null, string defaultDoFail = null)
+        {
+            string tableName = _project.Variables["projectTable"].Value;
+            TblName(tableName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
+
+            var nowIso = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+
+            if (string.IsNullOrEmpty(toDo)) toDo = _project.Variables["cfgToDo"].Value;
+
+            string[] toDoItems = (toDo ?? "").Split(',');
+
+            var allQueries = new List<string>();
+
+            foreach (string taskId in toDoItems)
+            {
+                string trimmedTaskId = taskId.Trim();
+                if (!string.IsNullOrWhiteSpace(trimmedTaskId))
+                {
+
+                    string range = defaultRange ?? _project.Variables["range"].Value;
+                    string doFail = defaultDoFail ?? _project.Variables["doFail"].Value;
+                    string failCondition = (doFail != "True" ? "AND status NOT LIKE '%fail%'" : "");
+                    string query = $@"SELECT acc0 FROM {_tableName} WHERE acc0 in ({range}) {failCondition} AND status NOT LIKE '%skip%' 
+                AND ({trimmedTaskId} < '{nowIso}' OR {trimmedTaskId} = '_')";
+                    allQueries.Add(query);
+                }
+            }
+
+            return allQueries;
+        }
+        public void FilterAccList(List<string> dbQueries, bool log = false)
+        {
+            if (!string.IsNullOrEmpty(_project.Variables["acc0Forced"].Value))
+            {
+                _project.Lists["accs"].Clear();
+                _project.Lists["accs"].Add(_project.Variables["acc0Forced"].Value);
+                Log($@"manual mode on with {_project.Variables["acc0Forced"].Value}");
+                return;
+            }
+
+            var allAccounts = new HashSet<string>();
+            foreach (var query in dbQueries)
+            {
+                try
+                {
+                    var accsByQuery = DbQ(query).Trim();
+                    if (!string.IsNullOrWhiteSpace(accsByQuery))
+                    {
+                        var accounts = accsByQuery.Split('\n').Select(x => x.Trim().TrimStart(','));
+                        allAccounts.UnionWith(accounts);
+                    }
+                }
+                catch
+                {
+
+                    Log($"{query}");
+                }
+            }
+
+            if (allAccounts.Count == 0)
+            {
+                _project.Variables["noAccsToDo"].Value = "True";
+                Log($"♻ noAccountsAvailable by queries [{string.Join(" | ", dbQueries)}]");
+                return;
+            }
+            Log($"Initial availableAccounts: [{string.Join(", ", allAccounts)}]");
+
+            if (!string.IsNullOrEmpty(_project.Variables["requiredSocial"].Value))
+            {
+                string[] demanded = _project.Variables["requiredSocial"].Value.Split(',');
+                Log($"Filtering by socials: [{string.Join(", ", demanded)}]");
+
+                foreach (string social in demanded)
+                {
+
+                    //string tableName = social.Trim().ToLower();
+
+
+                    //string tableName = $"private_{social.Trim().ToLower()}";
+                    string tableName = TblName($"private_{social.Trim().ToLower()}");
+
+                    TblName(tableName);
+                    if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+
+
+                    var notOK = DbQ($"SELECT acc0 FROM {_tableName} WHERE status NOT LIKE '%ok%'", log)
+                        .Split('\n')
+                        .Select(x => x.Trim())
+                        .Where(x => !string.IsNullOrEmpty(x));
+                    allAccounts.ExceptWith(notOK);
+                    Log($"After {social} filter: [{string.Join("|", allAccounts)}]");
+                }
+            }
+            _project.Lists["accs"].Clear();
+            _project.Lists["accs"].AddRange(allAccounts);
+            Log($"final list [{string.Join("|", _project.Lists["accs"])}]");
+        }
 
         public string Address(string chainType = "evm")
         {

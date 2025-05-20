@@ -14,16 +14,18 @@ namespace ZBSolutions
 {
     public class W3bRead : W3b
     {
-        public readonly string _adrEvm;
         public readonly string _defRpc;
 
 
-        public W3bRead(IZennoPosterProjectModel project, bool log = false, string adrEvm = null)
+        public W3bRead(IZennoPosterProjectModel project, bool log = false, string adrEvm = null, string key = null)
         : base(project, log)
         {
-              if (string.IsNullOrEmpty(adrEvm) && (!string.IsNullOrEmpty(_acc0))) 
-               _adrEvm = _sql.Address("evm_pk");
-               _defRpc = project.Variables["blockchainRPC"].Value;
+            if (string.IsNullOrEmpty(adrEvm) && (!string.IsNullOrEmpty(_acc0)))
+            {
+                //_key = ApplyKey(key);
+                _adrEvm = ApplyKey(key).ToPubEvm();
+            }
+             _defRpc = project.Variables["blockchainRPC"].Value;
         }
 
         private string ChekAdr(string address)

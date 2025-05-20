@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NBitcoin;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
@@ -16,8 +17,11 @@ namespace ZBSolutions
         protected readonly string _acc0;
         protected readonly Dictionary<string, string> _rpcs;
         protected readonly Dictionary<string, string> _adrs;
+        public string _adrEvm;
+        protected string _key;
 
-        public W3b(IZennoPosterProjectModel project, bool log = false)
+
+        public W3b(IZennoPosterProjectModel project, bool log = false, string key = null)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             _project = project;
@@ -25,6 +29,8 @@ namespace ZBSolutions
             _sql = new Sql(_project);
             _logShow = log;
             _rpcs = LoadRPCs();
+            _key = ApplyKey(key);
+            _adrEvm = _key.ToPubEvm();
             //_adrs = LoadAddresses();
         }
 
@@ -42,6 +48,26 @@ namespace ZBSolutions
                 return "";
             }
         }
+
+        protected string ApplyKey(string key = null)
+        {
+            if (string.IsNullOrEmpty(key))
+            {
+                key = _sql.Key("evm");
+            }
+
+            if (string.IsNullOrEmpty(key))
+            {
+                Log("!W key is null or empty");
+                throw new Exception("emptykey");
+            }
+            ;
+            return key;
+
+        }
+
+
+
         protected void Log(string tolog = "", [CallerMemberName] string callerName = "", bool log = false)
         {
             if (!_logShow && !log) return;
