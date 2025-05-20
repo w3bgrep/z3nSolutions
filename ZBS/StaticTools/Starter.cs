@@ -204,7 +204,6 @@ namespace ZBSolutions
 
 
         }
-
         public void InitVariables(string author = "")
         {
             DisableLogs();
@@ -227,8 +226,6 @@ namespace ZBSolutions
             Logo(author);
 
         }
-
-
         private void DisableLogs()
         {
             try
@@ -267,8 +264,6 @@ namespace ZBSolutions
             }
             catch (Exception ex) { }
         }
-
-
         private void Logo(string author)
         {
             string version = Assembly.GetExecutingAssembly()
@@ -284,8 +279,6 @@ namespace ZBSolutions
                         ► init {name} ░▒▓█  {author}";
             _project.SendInfoToLog(logo, true);
         }
-
-
         private void CheckVars(string[] vars)
         {
             foreach (string var in vars)
@@ -304,7 +297,6 @@ namespace ZBSolutions
                 }
             }
         }
-
         public void ConfigFromDb()
         {
             string settings = _sql.Settings();
@@ -316,7 +308,6 @@ namespace ZBSolutions
                 catch  {}
             }
         }
-
         public void FilterAccList(List<string> dbQueries, bool log = false)
         {
             if (!string.IsNullOrEmpty(_project.Variables["acc0Forced"].Value))
@@ -378,7 +369,6 @@ namespace ZBSolutions
             _project.Lists["accs"].AddRange(allAccounts);
                 Log($"final list [{string.Join("|", _project.Lists["accs"])}]");
         }
-
         public List<string> MkToDoQueries(string toDo = null, string defaultRange = null, string defaultDoFail = null)
         {
             var nowIso = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
@@ -406,5 +396,9 @@ namespace ZBSolutions
 
             return allQueries;
         }
+   
+    
+    
+    
     }
 }

@@ -821,6 +821,33 @@ namespace ZBSolutions
 
                     return;
 
+                case schema.public_blockchain:
+
+                    var acc0 = 1;
+                    _project.acc0w(acc0);
+                    while (true)
+                    {
+                        _project.acc0w(acc0);
+                        var pk = Key("evm");
+                        if (string.IsNullOrEmpty(pk)) break;
+                        var addrs = pk.ToPubEvm();
+                        Upd($"evm_pk = '{addrs}'", "public_blockchain");
+                        acc0++;
+                    }
+
+                    acc0 = 1;
+                    while (true)
+                    {
+                        _project.acc0w(acc0);
+                        var pk = Key("seed");
+                        if (string.IsNullOrEmpty(pk)) break;
+                        var addrs = pk.ToPubEvm();
+                        Upd($"evm_seed = '{addrs}'", "public_blockchain");
+                        acc0++;
+                    }
+
+                    return;
+
                 case schema.private_blockchain:
                     ImportKeys("seed");
                     ImportKeys("evm");
@@ -880,7 +907,6 @@ namespace ZBSolutions
                 case schema.public_google:
                 case schema.public_twitter:
                 case schema.public_discord:
-                case schema.public_blockchain:
                     Log($"{tableSchem.ToString()} is for manual fill or not compoulsary");
 
                     return;

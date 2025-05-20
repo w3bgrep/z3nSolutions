@@ -74,10 +74,6 @@ namespace ZBSolutions
             if (name) return tableName;
             else return schemaName;
         }
-
-
-
-
         public string DbQ(string query, bool log = false, bool throwOnEx = false)
         {
             string dbMode = _project.Variables["DBmode"].Value;
@@ -110,6 +106,7 @@ namespace ZBSolutions
             Log(query, result, log: log);
             return result;
         }
+        
         public void MkTable(Dictionary<string, string> tableStructure, string tableName = null, bool strictMode = false, bool insertData = false, string host = "localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "", string schemaName = "projects", bool log = false)
         {
             string dbMode = _project.Variables["DBmode"].Value;
@@ -129,7 +126,25 @@ namespace ZBSolutions
             }
             else throw new Exception($"unknown DBmode: {dbMode}");
             return;
-        }       
+        }
+ 
+        
+        public void Write(Dictionary<string, string> toWrite, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true)
+        {
+            if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
+
+            TblName(tableName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+            foreach (KeyValuePair<string, string> pair in toWrite)
+            {
+                string key = pair.Key.Replace("'", "''");
+                string value = pair.Value.Replace("'", "''");
+                string query = $@"INSERT INTO {_tableName} (key, value) VALUES ('{key}', '{value}')
+	                  ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;";
+                DbQ(query, log: log);
+            }
+
+        }
         public void UpdTxt(string toUpd, string tableName, string key, bool log = false, bool throwOnEx = false)
         {
             TblName(tableName);
@@ -158,7 +173,6 @@ namespace ZBSolutions
             DbQ($@"UPDATE {_tableName} SET {toUpd} WHERE acc0 = {_project.Variables["acc0"].Value};", log: log, throwOnEx: throwOnEx);
 
         }
-
         public void Upd(Dictionary<string, string> toWrite, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, bool byKey = false)
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
@@ -175,7 +189,6 @@ namespace ZBSolutions
                 Upd(value,_tableName,last:last, acc: key);
             }
         }
-
         public void Upd(List<string> toWrite, string columnName, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, bool byKey = false)
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
@@ -195,22 +208,6 @@ namespace ZBSolutions
         }
 
 
-        public void Write(Dictionary<string, string> toWrite, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true)
-        {
-            if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;        
-            
-            TblName(tableName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-            foreach (KeyValuePair<string, string> pair in toWrite)
-            {               
-                string key = pair.Key.Replace("'", "''");
-                string value = pair.Value.Replace("'", "''");
-                string query = $@"INSERT INTO {_tableName} (key, value) VALUES ('{key}', '{value}')
-	                  ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;";
-                DbQ(query,log:log);
-            }
-
-        }
 
 
         public string Get(string toGet, string tableName = null, bool log = false, bool throwOnEx = false)
@@ -241,6 +238,8 @@ namespace ZBSolutions
             if (!_pstgr) return;
             foreach (string name in schemas) DbQ($"CREATE SCHEMA IF NOT EXISTS {name};");
         }
+ 
+        
         public bool TblExist(string tblName)
         {
             TblName(tblName);
@@ -250,17 +249,12 @@ namespace ZBSolutions
             if (resp == "0" || resp == string.Empty) return false;
             else return true;
         }
-        public bool ClmnExist(string tblName, string clmnName)
+        public void TblAdd(string tblName, Dictionary<string, string> tableStructure)
         {
             TblName(tblName);
-            string resp = null;
-            if (_pstgr)
-                resp = DbQ($@"SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}' AND lower(column_name) = lower('{clmnName}');")?.Trim();
-            else
-                resp = DbQ($"SELECT COUNT(*) FROM pragma_table_info('{_tableName}') WHERE name='{clmnName}';");
-            if (resp == "0" || resp == string.Empty) return false;
-            else return true;
-
+            if (TblExist(tblName)) return;
+            if (_pstgr) DbQ($@" CREATE TABLE {_schemaName}.{_tableName} ( {string.Join(", ", tableStructure.Select(kvp => $"\"{kvp.Key}\" {kvp.Value.Replace("AUTOINCREMENT", "SERIAL")}"))} );");
+            else DbQ($"CREATE TABLE {_tableName} (" + string.Join(", ", tableStructure.Select(kvp => $"{kvp.Key} {kvp.Value}")) + ");");
         }
         public List<string> TblColumns(string tblName)
         {
@@ -280,6 +274,20 @@ namespace ZBSolutions
             return result;
         }
 
+
+
+        public bool ClmnExist(string tblName, string clmnName)
+        {
+            TblName(tblName);
+            string resp = null;
+            if (_pstgr)
+                resp = DbQ($@"SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}' AND lower(column_name) = lower('{clmnName}');")?.Trim();
+            else
+                resp = DbQ($"SELECT COUNT(*) FROM pragma_table_info('{_tableName}') WHERE name='{clmnName}';");
+            if (resp == "0" || resp == string.Empty) return false;
+            else return true;
+
+        }
         public void ClmnAdd(string tblName, string clmnName, string defaultValue = "TEXT DEFAULT \"\"")
         {
             TblName(tblName);
@@ -338,7 +346,6 @@ namespace ZBSolutions
                 }
             }
         }
-
         public void ClmnPrune(string tblName, Dictionary<string, string> tableStructure)
         {
 
@@ -359,13 +366,8 @@ namespace ZBSolutions
                 }
             }
         }
-        public void TblAdd(string tblName, Dictionary<string, string> tableStructure)
-        {
-            TblName(tblName);
-            if (TblExist(tblName)) return;
-            if (_pstgr) DbQ($@" CREATE TABLE {_schemaName}.{_tableName} ( {string.Join(", ", tableStructure.Select(kvp => $"\"{kvp.Key}\" {kvp.Value.Replace("AUTOINCREMENT", "SERIAL")}"))} );");
-            else DbQ($"CREATE TABLE {_tableName} (" + string.Join(", ", tableStructure.Select(kvp => $"{kvp.Key} {kvp.Value}")) + ");");
-        }
+ 
+            
         public void AddRange(string tblName, int range = 0)
         {
             if (range == 0)
@@ -390,6 +392,7 @@ namespace ZBSolutions
             }
 
         }
+
 
         public string Proxy()
         {
