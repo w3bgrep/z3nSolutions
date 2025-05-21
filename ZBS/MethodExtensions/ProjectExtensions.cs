@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Xml.Linq;
+using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using static Global.Env.EnvironmentVariables;
@@ -412,6 +413,50 @@ namespace ZBSolutions
             return tableStructure;
         }
 
+        public static string[] GetErr(this IZennoPosterProjectModel project, Instance instance)
+        {
+            var error = project.GetLastError();
+            var ActionId = error.ActionId.ToString();
+            var ActionComment = error.ActionComment;
+            var exception = error.Exception;
+
+            string path = $"{project.Path}.failed\\{project.Variables["projectName"].Value}\\{project.Name} • {project.Variables["acc0"].Value} • {project.LastExecutedActionId} • {ActionId}.jpg";
+            ZennoPoster.ImageProcessingResizeFromScreenshot(instance.Port, path, 50, 50, "percent", true, false);
+
+            if (exception != null)
+            {
+                var typeEx = exception.GetType();
+                string type = typeEx.Name;
+                string msg = exception.Message;
+                string StackTrace = exception.StackTrace;
+                StackTrace = StackTrace.Split('в')[1].Trim();
+                string innerMsg = string.Empty;
+
+                var innerException = exception.InnerException;
+                if (innerException != null) innerMsg = innerException.Message;
+
+
+                string toLog = $"{ActionId}\n{type}\n{msg}\n{StackTrace}\n{innerMsg}";
+
+                project.SendErrorToLog(toLog);
+
+                string failReport = $"⛔️\\#fail  \\#{project.Name.EscapeMarkdown()} \\#{project.Variables["acc0"].Value} \n" +
+                                    $"Error: `{ActionId.EscapeMarkdown()}` \n" +
+                                    $"Type: `{type.EscapeMarkdown()}` \n" +
+                                    $"Msg: `{msg.EscapeMarkdown()}` \n" +
+                                    $"Trace: `{StackTrace.EscapeMarkdown()}` \n";
+
+                if (!string.IsNullOrEmpty(innerMsg)) failReport += $"Inner: `{innerMsg.EscapeMarkdown()}` \n";
+                if (instance.BrowserType.ToString() == "Chromium") failReport += $"Page: `{instance.ActiveTab.URL.EscapeMarkdown()}`";
+                project.Variables["failReport"].Value = failReport;
+                return new string[] { ActionId, type, msg, StackTrace, innerMsg };
+
+            }
+
+            return null;
+
+
+        }
 
     }
 }
