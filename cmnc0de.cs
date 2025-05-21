@@ -83,408 +83,197 @@ namespace w3tools //by @w3bgrep
 
  }
 
-//  public class W3bWrite2 : W3b
-//  {
-//      private readonly string _key;
-//      private readonly string _adrEvm;
-//      private readonly W3bRead _read;
-//      public W3bWrite2(IZennoPosterProjectModel project,string key = "", bool log = false)
-//      : base(project, log)
-//      {
-//          _key = Key(key);
-//          _adrEvm = _key.ToPubEvm();//_sql.Address("evm");
-//          _read = new W3bRead(project);
-//      }
-
-//      private string Key(string key = null) 
-//      {
-//          Log(key);
-//          if (string.IsNullOrEmpty(key))
-//          {
-//              key = _sql.Key("evm");
-//          }
-//         Log(key);
-//          if (string.IsNullOrEmpty(key)) 
-//          {
-//              Log("!W key is null or empty");
-//              throw new Exception("emptykey");
-//          };
-//          Log(key);
-//          return key;
-
-//      }
+ public class BackpackWallet2 : Wlt
+ {
+     protected readonly string _extId;
+     protected readonly string _fileName;
+     protected readonly string _popout =  $"chrome-extension://aflkmfhebedbjioipglgcbcmnbpgliof/popout.html";
 
 
-//      public string SendLegacy(string chainRpc, string contractAddress, string encodedData, decimal value, string walletKey, int speedup = 1)
-//      {
-//          var web3 = new Nethereum.Web3.Web3(chainRpc);
+     public BackpackWallet2(IZennoPosterProjectModel project, Instance instance, bool log = false,string key = null)
+         : base(project, instance, log)
+     {
+         _extId = "aflkmfhebedbjioipglgcbcmnbpgliof";
+         _fileName = "Backpack0.10.94.crx";
+         _key = KeyCheck(key);
+     }
 
-//          var chainIdTask = web3.Eth.ChainId.SendRequestAsync();
-//          chainIdTask.Wait();
-//          int chainId = (int)chainIdTask.Result.Value;
+     string KeyCheck(string key)
+     {
+         if (string.IsNullOrEmpty(key)) 
+             key = Decrypt(KeyT.base58);
+         if (string.IsNullOrEmpty(key))
+             throw new Exception("emptykey");
+         return key;
+     }
 
-//          string fromAddress = new Nethereum.Signer.EthECKey(walletKey).GetPublicAddress();
+     public void Launch(string fileName = null, bool log = false)
+     {
+         if (string.IsNullOrEmpty(fileName)) fileName = _fileName;
 
-//          BigInteger _value = (BigInteger)(value * 1000000000000000000m);
+         var em = _instance.UseFullMouseEmulation;
+         _instance.UseFullMouseEmulation = false;
 
-//          BigInteger gasLimit = 0;
-//          BigInteger gasPrice = 0;
+         Log($"Launching Backpack wallet with file {fileName}", log: log);
+         if (Install(_extId, fileName, log))
+             Import(log: log);
+         else
+             Unlock(log: log);
+        Log($"checking", log: log);
+         Check(log: log);
+         _instance.CloseExtraTabs();
+         _instance.UseFullMouseEmulation = em;
+     }
 
-//          try
-//          {
-//              var gasPriceTask = web3.Eth.GasPrice.SendRequestAsync();
-//              gasPriceTask.Wait();
-//              BigInteger baseGasPrice = gasPriceTask.Result.Value / 100 + gasPriceTask.Result.Value;
-//              gasPrice = baseGasPrice / 100 * speedup + gasPriceTask.Result.Value;
-//          }
-//          catch (Exception ex)
-//          {
-//              throw new Exception($"Fail get gasPrice: {ex.Message}");
-//          }
+     public bool Import(bool log = false)
+     {
+         Log("Importing Backpack wallet with private key", log: log);
+         var key = _key;
+         var password = _pass;
 
-//          try
-//          {
-//              var transactionInput = new Nethereum.RPC.Eth.DTOs.TransactionInput
-//              {
-//                  To = contractAddress,
-//                  From = fromAddress,
-//                  Data = encodedData,
-//                  Value = new Nethereum.Hex.HexTypes.HexBigInteger(_value),
-//                  GasPrice = new Nethereum.Hex.HexTypes.HexBigInteger(gasPrice)
-//              };
+         _instance.CloseExtraTabs();
+         _instance.ActiveTab.Navigate($"chrome-extension://{_extId}/options.html?onboarding=true", "");
 
-//              var gasEstimateTask = web3.Eth.Transactions.EstimateGas.SendRequestAsync(transactionInput);
-//              gasEstimateTask.Wait();
-//              var gasEstimate = gasEstimateTask.Result;
-//              gasLimit = gasEstimate.Value + (gasEstimate.Value / 2);
-//          }
-//          catch (AggregateException ae)
-//          {
-//              if (ae.InnerException is Nethereum.JsonRpc.Client.RpcResponseException rpcEx)
-//              {
-//                  var error = $"Err: {rpcEx.RpcError.Code}, Msg: {rpcEx.RpcError.Message}, Errdata: {rpcEx.RpcError.Data}";
-//                  throw new Exception($"RpcErr : {error}");
-//              }
-//              throw;
-//          }
+         while (true)
+         {
+             if (!_instance.ActiveTab.FindElementByAttribute("p", "innertext", "Already\\ setup", "regexp", 0).IsVoid)
+             {
+                 Log("Wallet already set up, skipping import", log: log);
+                 return false;
+             }
+             else if (!_instance.ActiveTab.FindElementByAttribute("button", "innertext", "Import\\ Wallet", "regexp", 0).IsVoid)
+             {
+                 _instance.HeClick(("button", "innertext", "Import\\ Wallet", "regexp", 0));
+                 _instance.HeClick(("div", "class", "_dsp-flex\\ _ai-stretch\\ _fd-row\\ _fb-auto\\ _bxs-border-box\\ _pos-relative\\ _mih-0px\\ _miw-0px\\ _fs-0\\ _btc-889733467\\ _brc-889733467\\ _bbc-889733467\\ _blc-889733467\\ _w-10037\\ _pt-1316333121\\ _pr-1316333121\\ _pb-1316333121\\ _pl-1316333121\\ _gap-1316333121", "regexp", 0));
+                 _instance.HeClick(("button", "innertext", "Import\\ private\\ key", "regexp", 0));
+                 _instance.HeSet(("textarea", "fulltagname", "textarea", "regexp", 0), key);
+                 _instance.HeClick(("button", "innertext", "Import", "regexp", 0));
+                 _instance.HeSet(("input:password", "placeholder", "Password", "regexp", 0), password);
+                 _instance.HeSet(("input:password", "placeholder", "Confirm\\ Password", "regexp", 0), password);
+                 _instance.HeClick(("input:checkbox", "class", "PrivateSwitchBase-input\\ ", "regexp", 0));
+                 _instance.HeClick(("button", "innertext", "Next", "regexp", 0));
+                 _instance.HeClick(("button", "innertext", "Open\\ Backpack", "regexp", 0));
+                 Log("Successfully imported Backpack wallet", log: log);
+                 return true;
+             }
+         }
+     }
 
-//          try
-//          {
-//              var blockchain = new Blockchain(walletKey, chainId, chainRpc);
-//              string hash = blockchain.SendTransaction(contractAddress, value, encodedData, gasLimit, gasPrice).Result;
-//              return hash;
-//          }
-//          catch (Exception ex)
-//          {
-//              throw new Exception($"Send fail: {ex.Message}");
-//          }
-//      }
-//      public string Send1559(string chainRpc, string contractAddress, string encodedData, decimal value, string walletKey, int speedup = 1)
-//      {
-//          var web3 = new Nethereum.Web3.Web3(chainRpc);
-//          var chainIdTask = web3.Eth.ChainId.SendRequestAsync(); chainIdTask.Wait();
-//          int chainId = (int)chainIdTask.Result.Value;
-//          string fromAddress = new Nethereum.Signer.EthECKey(walletKey).GetPublicAddress();
-//          //
-//          BigInteger _value = (BigInteger)(value * 1000000000000000000m);
-//          //
-//          BigInteger gasLimit = 0; BigInteger priorityFee = 0; BigInteger maxFeePerGas = 0; BigInteger baseGasPrice = 0;
-//          try
-//          {
-//              var gasPriceTask = web3.Eth.GasPrice.SendRequestAsync(); gasPriceTask.Wait();
-//              baseGasPrice = gasPriceTask.Result.Value / 100 + gasPriceTask.Result.Value;
-//              priorityFee = baseGasPrice / 100 * speedup + gasPriceTask.Result.Value;
-//              maxFeePerGas = baseGasPrice / 100 * speedup + gasPriceTask.Result.Value;
-//          }
-//          catch (Exception ex) { throw new Exception($"failedEstimateGas: {ex.Message}"); }
-
-//          try
-//          {
-//              var transactionInput = new Nethereum.RPC.Eth.DTOs.TransactionInput
-//              {
-//                  To = contractAddress,
-//                  From = fromAddress,
-//                  Data = encodedData,
-//                  Value = new Nethereum.Hex.HexTypes.HexBigInteger((BigInteger)_value),
-//                  MaxPriorityFeePerGas = new Nethereum.Hex.HexTypes.HexBigInteger(priorityFee),
-//                  MaxFeePerGas = new Nethereum.Hex.HexTypes.HexBigInteger(maxFeePerGas),
-//                  Type = new Nethereum.Hex.HexTypes.HexBigInteger(2)
-//              };
-
-//              var gasEstimateTask = web3.Eth.Transactions.EstimateGas.SendRequestAsync(transactionInput);
-//              gasEstimateTask.Wait();
-//              var gasEstimate = gasEstimateTask.Result;
-//              gasLimit = gasEstimate.Value + (gasEstimate.Value / 2);
-//          }
-//          catch (AggregateException ae)
-//          {
-//              if (ae.InnerException is Nethereum.JsonRpc.Client.RpcResponseException rpcEx)
-//              {
-//                  var error = $"Code: {rpcEx.RpcError.Code}, Message: {rpcEx.RpcError.Message}, Data: {rpcEx.RpcError.Data}";
-//                  throw new Exception($"FailedSimulate RPC Error: {error}");
-//              }
-//              throw;
-//          }
-//          try
-//          {
-//              var blockchain = new Blockchain(_key, chainId, chainRpc);
-//              string hash = blockchain.SendTransactionEIP1559(contractAddress, value, encodedData, gasLimit, maxFeePerGas, priorityFee).Result;
-//              return hash;
-//          }
-//          catch (Exception ex)
-//          {
-//              throw new Exception($"FailedSend: {ex.Message}");
-//          }
-//      }
+     public void Unlock(bool log = false)
+     {
+         Log("Unlocking Backpack wallet", log: log);
+         var password = _pass;
+         _project.DeadLine();
 
 
-//      public string GzTarget(GZto destination, bool log = false)
-//      {
-//          // 0x010066 Sepolia | 0x01019e Soneum | 0x01000e BNB | 0x0100f0 Gravity | 0x010169 Zero
+     
+         if (_instance.ActiveTab.URL != _popout)
+             _instance.ActiveTab.Navigate(_popout, "");
 
-//          switch (destination)
-//          {
-//              case GZto.Sepolia:
-//                  return "0x010066";
-//              case GZto.Soneum:
-//                  return "0x01019e";
-//              case GZto.BNB:
-//                  return "0x01000e";
-//              case GZto.Gravity:
-//                  return "0x0100f0";
-//              case GZto.Zero:
-//                  return "0x010169";
-
-//              default:
-//                  return "null";
-//          }
-
-//      }
-
-//      public string GZ(string chainTo, decimal value, string rpc = null, bool log = false) 
-
-//      {
-
-//           // 0x010066 Sepolia | 0x01019e Soneum | 0x01000e BNB | 0x0100f0 Gravity | 0x010169 Zero
-//          string txHash = null;
-//          Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-//          Random rnd = new Random();
-//          var accountAddress = _adrEvm;
-//          string key = _key;
-
-//          if (string.IsNullOrEmpty(rpc))
-//          {
-//              string chainList = @"https://mainnet.era.zksync.io,
-// 	https://linea-rpc.publicnode.com,
-// 	https://arb1.arbitrum.io/rpc,
-// 	https://optimism-rpc.publicnode.com,
-// 	https://scroll.blockpi.network/v1/rpc/public,
-// 	https://rpc.taiko.xyz,
-// 	https://base.blockpi.network/v1/rpc/public,
-// 	https://rpc.zora.energy";
+        check:
+        string state = null;
+         _project.DeadLine(30);
+        if (!_instance.ActiveTab.FindElementByAttribute("path", "d", "M12 5v14", "text", 0).IsVoid) state = "unlocked";
+        else if (!_instance.ActiveTab.FindElementByAttribute("input:password", "fulltagname", "input:password", "regexp", 0).IsVoid) state = "unlock";
 
 
-//              bool found = false;
-//              foreach (string RPC in chainList.Split(','))
-//              {
-//                  rpc = RPC.Trim();
-//                  var native = _read.NativeEVM<decimal>(rpc);
-//                  var required = value + 0.00015m;
-//                  if (native > required)
-//                  {
-//                      _project.L0g($"CHOSEN: rpc:[{rpc}] native:[{native}]");
-//                      found = true; break;
-//                  }
-//                  if (log) Log($"rpc:[{rpc}] native:[{native}] lower than [{required}]");
-//                  Thread.Sleep(1000);
-//              }
+        switch (state)
+        {
+        case null:
+            Log("unknown state");
+            Thread.Sleep(1000);
+            goto check;
+        case "unlocked":
+            return;
+        case "unlock":
+            _instance.HeSet(("input:password", "fulltagname", "input:password", "regexp", 0), password);
+            _instance.HeClick(("button", "innertext", "Unlock", "regexp", 0));      
+            goto check;
+        }
+
+     }
+
+     public void Check(bool log = false)
+     {
+         Log("Checking Backpack wallet address", log: log);
+         if (_instance.ActiveTab.URL != _popout)
+             _instance.ActiveTab.Navigate(_popout, "");
+         _instance.CloseExtraTabs();
+
+         try
+         {
+             while (_instance.ActiveTab.FindElementByAttribute("button", "class", "is_Button\\ ", "regexp", 0).IsVoid)
+                 _instance.HeClick(("path", "d", "M12 5v14", "text", 0));
+
+             var publicSOL = _instance.HeGet(("p", "class", "MuiTypography-root\\ MuiTypography-body1", "regexp", 0), "last");
+             _instance.HeClick(("button", "aria-label", "TabsNavigator,\\ back", "regexp", 0));
+             _project.Variables["addressSol"].Value = publicSOL;
+             _sql.Upd($"sol = '{publicSOL}'", "public_blockchain");
+             Log($"SOL address: {publicSOL}", log: log);
+         }
+         catch (Exception ex)
+         {
+             Log($"Failed to check address: {ex.Message}", log: log);
+             throw;
+         }
+     }
+
+     public void Approve(bool log = false)
+     {
+         Log("Approving Backpack wallet action", log: log);
+
+         try
+         {
+             _instance.HeClick(("div", "innertext", "Approve", "regexp", 0), "last");
+             _instance.CloseExtraTabs();
+             Log("Action approved successfully", log: log);
+         }
+         catch
+         {
+             _instance.HeSet(("input:password", "fulltagname", "input:password", "regexp", 0), _pass);
+             _instance.HeClick(("button", "innertext", "Unlock", "regexp", 0));
+             _instance.HeClick(("div", "innertext", "Approve", "regexp", 0), "last");
+             _instance.CloseExtraTabs();
+             Log("Action approved after unlocking", log: log);
+         }
+     }
+
+    public void Connect(bool log = false)
+    {
+            string action = null;
+            getState:
+
+            try
+            {
+                action = _instance.HeGet(("div", "innertext", "Approve", "regexp", 0), "last");
+            }
+            catch (Exception ex)
+            {
+                if (!_instance.ActiveTab.FindElementByAttribute("input:password", "fulltagname", "input:password", "regexp", 0).IsVoid)
+                {
+                    Unlock();
+                    goto getState;
+                }
+                _project.L0g($"No Wallet tab found. 0");
+                return;
+            }
+
+            _project.L0g(action);
+
+            switch (action)
+            {
+                case "Approve":
+                    _instance.HeClick(("div", "innertext", "Approve", "regexp", 0), "last");
+                    goto getState;
+
+                default:
+                    goto getState;
+
+            }
+    
+
+ }
 
 
-//              if (!found)
-//              {
-//                  return $"fail: no balance over {value}ETH found by all Chains";
-//              }
-//          }
-
-//          else
-//          {
-//              var native = _read.NativeEVM<decimal>(rpc);
-//              if (log) Log($"rpc:[{rpc}] native:[{native}]");
-//              if (native < value + 0.0002m)
-//              {
-//                  return $"fail: no balance over {value}ETH found on {rpc}";
-//              }
-//          }
-//          string[] types = { };
-//          object[] values = { };
-
-
-//          try
-//          {
-//              string dataEncoded = chainTo;//0x010066 for Sepolia | 0x01019e Soneum | 0x01000e BNB
-//              txHash = Send1559(
-//                  rpc,
-//                  "0x391E7C679d29bD940d63be94AD22A25d25b5A604",//gazZipContract
-//                  dataEncoded,
-//                  value,  // value в ETH
-//                  key,
-//                  3   // speedup %
-//              );
-//              Thread.Sleep(1000);
-//              _project.Variables["blockchainHash"].Value = txHash;
-//          }
-//          catch (Exception ex) { _project.SendWarningToLog($"{ex.Message}", true); throw; }
-
-//          if (log) Log(txHash);
-//          _read.WaitTransaction(rpc, txHash);
-//          return txHash;
-//      }
-//      public string Approve(string contract, string spender, string amount, string rpc = "")
-//      {
-//          Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-//          if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
-//          string key = _sql.Key("EVM");
-
-//          string abi = @"[{""inputs"":[{""name"":""spender"",""type"":""address""},{""name"":""amount"",""type"":""uint256""}],""name"":""approve"",""outputs"":[{""name"":"""",""type"":""bool""}],""stateMutability"":""nonpayable"",""type"":""function""}]";
-
-//          string txHash = null;
-
-//          string[] types = { "address", "uint256" };
-//          BigInteger amountValue;
-
-
-//          if (amount.ToLower() == "max")
-//          {
-//              amountValue = BigInteger.Parse("115792089237316195423570985008687907853269984665640564039457584007913129639935"); // max uint256
-//          }
-//          else if (amount.ToLower() == "cancel")
-//          {
-//              amountValue = BigInteger.Zero;
-//          }
-//          else
-//          {
-//              try
-//              {
-//                  amountValue = BigInteger.Parse(amount);
-//                  if (amountValue < 0)
-//                      throw new ArgumentException("Amount cannot be negative");
-//              }
-//              catch (Exception ex)
-//              {
-//                  throw new Exception($"Failed to parse amount '{amount}': {ex.Message}");
-//              }
-//          }
-
-//          object[] values = { spender, amountValue };
-
-//          try
-//          {
-//              txHash = SendLegacy(
-//                  rpc,
-//                  contract,
-//                  ZBSolutions.Encoder.EncodeTransactionData(abi, "approve", types, values),
-//                  0,
-//                  key,
-//                  3
-//              );
-//              try
-//              {
-//                  _project.Variables["blockchainHash"].Value = txHash;
-//              }
-//              catch (Exception ex)
-//              {
-//                  Log($"!W:{ex.Message}");
-//              }
-
-//          }
-//          catch (Exception ex)
-//          {
-//              Log($"!W:{ex.Message}");
-//              throw;
-//          }
-
-//          Log($"[APPROVE] {contract} for spender {spender} with amount {amount}...");
-//          return txHash;
-//      }
-//      public string WrapNative(string contract, decimal value, string rpc = "")
-//      {
-//          Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-//          if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
-//          string key = _sql.Key("EVM");
-
-//          string abi = @"[{""inputs"":[],""name"":""deposit"",""outputs"":[],""stateMutability"":""payable"",""type"":""function""}]";
-
-//          string txHash = null;
-
-//          string[] types = { };
-//          object[] values = { };
-
-//          try
-//          {
-//              txHash = SendLegacy(
-//                  rpc,
-//                  contract,
-//                  ZBSolutions.Encoder.EncodeTransactionData(abi, "deposit", types, values),
-//                  value,
-//                  key,
-//                  3
-//              );
-//              try
-//              {
-//                  _project.Variables["blockchainHash"].Value = txHash;
-//              }
-//              catch (Exception ex)
-//              {
-//                  Log($"!W:{ex.Message}");
-//              }
-//          }
-//          catch (Exception ex)
-//          {
-//              Log($"!W:{ex.Message}");
-//              throw;
-//          }
-
-//          Log($"[WRAP] {value} native to {contract}...");
-//          return txHash;
-//      }
-//      public string SendNative(string to, decimal amount, string rpc = "")
-//      {
-//          Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-//          if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
-
-//          string txHash = null;
-
-//          try
-//          {
-//              txHash = SendLegacy(
-//                  rpc,
-//                  to,
-//                  "",
-//                  amount,
-//                  _key,
-//                  3
-//              );
-//              try
-//              {
-//                  _project.Variables["blockchainHash"].Value = txHash;
-//              }
-//              catch (Exception ex)
-//              {
-//                  Log($"!W:{ex.Message}");
-//              }
-//          }
-//          catch (Exception ex)
-//          {
-//              Log($"!W:{ex.Message}");
-//              throw;
-//          }
-
-//          Log($"[SEND_NATIVE] {amount} to {to}...");
-//          return txHash;
-//      }
-
-
-
-//  }
 
 }

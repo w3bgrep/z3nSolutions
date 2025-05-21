@@ -2,18 +2,21 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 
 namespace ZBSolutions
 {
-    public class BackpackWallet : Wlt
+    public class BackpackWallet2 : Wlt
     {
         protected readonly string _extId;
         protected readonly string _fileName;
+        protected readonly string _popout = $"chrome-extension://aflkmfhebedbjioipglgcbcmnbpgliof/popout.html";
 
-        public BackpackWallet(IZennoPosterProjectModel project, Instance instance, bool log = false,string key = null)
+
+        public BackpackWallet2(IZennoPosterProjectModel project, Instance instance, bool log = false, string key = null)
             : base(project, instance, log)
         {
             _extId = "aflkmfhebedbjioipglgcbcmnbpgliof";
@@ -23,14 +26,14 @@ namespace ZBSolutions
 
         string KeyCheck(string key)
         {
-            if (string.IsNullOrEmpty(key)) 
+            if (string.IsNullOrEmpty(key))
                 key = Decrypt(KeyT.base58);
             if (string.IsNullOrEmpty(key))
                 throw new Exception("emptykey");
             return key;
         }
 
-        public void BackpackLnch(string fileName = null, bool log = false)
+        public void Launch(string fileName = null, bool log = false)
         {
             if (string.IsNullOrEmpty(fileName)) fileName = _fileName;
 
@@ -39,16 +42,16 @@ namespace ZBSolutions
 
             Log($"Launching Backpack wallet with file {fileName}", log: log);
             if (Install(_extId, fileName, log))
-                BackpackImport(log: log);
+                Import(log: log);
             else
-                BackpackUnlock(log: log);
-
-            BackpackCheck(log: log);
+                Unlock(log: log);
+            Log($"checking", log: log);
+            Check(log: log);
             _instance.CloseExtraTabs();
             _instance.UseFullMouseEmulation = em;
         }
 
-        public bool BackpackImport(bool log = false)
+        public bool Import(bool log = false)
         {
             Log("Importing Backpack wallet with private key", log: log);
             var key = _key;
@@ -82,59 +85,45 @@ namespace ZBSolutions
             }
         }
 
-        public void BackpackUnlock(bool log = false)
+        public void Unlock(bool log = false)
         {
             Log("Unlocking Backpack wallet", log: log);
             var password = _pass;
+            _project.DeadLine();
 
 
-        unlock:
-            if (_instance.ActiveTab.URL != $"chrome-extension://{_extId}/popout.html")
-                _instance.ActiveTab.Navigate($"chrome-extension://{_extId}/popout.html", "");
 
-            //_instance.CloseExtraTabs();
+            if (_instance.ActiveTab.URL != _popout)
+                _instance.ActiveTab.Navigate(_popout, "");
+
+            check:
+            string state = null;
+            _project.DeadLine(30);
+            if (!_instance.ActiveTab.FindElementByAttribute("path", "d", "M12 5v14", "text", 0).IsVoid) state = "unlocked";
+            else if (!_instance.ActiveTab.FindElementByAttribute("input:password", "fulltagname", "input:password", "regexp", 0).IsVoid) state = "unlock";
 
 
-            if (!_instance.ActiveTab.FindElementByAttribute("path", "d", "M12 5v14", "text", 0).IsVoid)
+            switch (state)
             {
-                Log("Wallet already unlocked", log: log);
-                return;
-            }
-
-            try
-            {
-
-                try
-                {
-                    _instance.HeGet(("input:password", "fulltagname", "input:password", "regexp", 0));
-                }
-                catch
-                {
-                    _instance.CloseAllTabs();
-                    goto unlock;
-                }
-
-                _instance.HeSet(("input:password", "fulltagname", "input:password", "regexp", 0), password);
-                _instance.HeClick(("button", "innertext", "Unlock", "regexp", 0));
-
-
-                Log("Wallet unlocked successfully", log: log);
-            }
-            catch (Exception ex)
-            {
-                Log($"!E Failed to unlock Keplr wallet: {ex.Message}", log: log);
-                //throw;
-                _instance.CloseAllTabs();
-                goto unlock;
-
+                case null:
+                    Log("unknown state");
+                    Thread.Sleep(1000);
+                    goto check;
+                case "unlocked":
+                    return;
+                case "unlock":
+                    _instance.HeSet(("input:password", "fulltagname", "input:password", "regexp", 0), password);
+                    _instance.HeClick(("button", "innertext", "Unlock", "regexp", 0));
+                    goto check;
             }
 
         }
 
-        public void BackpackCheck(bool log = false)
+        public void Check(bool log = false)
         {
             Log("Checking Backpack wallet address", log: log);
-
+            if (_instance.ActiveTab.URL != _popout)
+                _instance.ActiveTab.Navigate(_popout, "");
             _instance.CloseExtraTabs();
 
             try
@@ -155,7 +144,7 @@ namespace ZBSolutions
             }
         }
 
-        public void BackpackApprove(bool log = false)
+        public void Approve(bool log = false)
         {
             Log("Approving Backpack wallet action", log: log);
 
@@ -173,6 +162,42 @@ namespace ZBSolutions
                 _instance.CloseExtraTabs();
                 Log("Action approved after unlocking", log: log);
             }
+        }
+
+        public void Connect(bool log = false)
+        {
+            string action = null;
+        getState:
+
+            try
+            {
+                action = _instance.HeGet(("div", "innertext", "Approve", "regexp", 0), "last");
+            }
+            catch (Exception ex)
+            {
+                if (!_instance.ActiveTab.FindElementByAttribute("input:password", "fulltagname", "input:password", "regexp", 0).IsVoid)
+                {
+                    Unlock();
+                    goto getState;
+                }
+                _project.L0g($"No Wallet tab found. 0");
+                return;
+            }
+
+            _project.L0g(action);
+
+            switch (action)
+            {
+                case "Approve":
+                    _instance.HeClick(("div", "innertext", "Approve", "regexp", 0), "last");
+                    goto getState;
+
+                default:
+                    goto getState;
+
+            }
+
+
         }
     }
 

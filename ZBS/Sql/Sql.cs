@@ -414,8 +414,8 @@ namespace ZBSolutions
         }
         public string Settings()
         {
-
-            TblName("private_settings");  if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+            TblName("private_settings");  
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
             var resp = DbQ($"SELECT key, value FROM {_tableName}");
             return resp;
