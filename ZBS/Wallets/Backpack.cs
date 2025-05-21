@@ -114,6 +114,7 @@ namespace ZBSolutions
                 case "unlock":
                     _instance.HeSet(("input:password", "fulltagname", "input:password", "regexp", 0), password);
                     _instance.HeClick(("button", "innertext", "Unlock", "regexp", 0));
+                    Thread.Sleep(2000);
                     goto check;
             }
 
