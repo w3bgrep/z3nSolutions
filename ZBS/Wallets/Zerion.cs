@@ -106,6 +106,7 @@ namespace ZBSolutions
         {
             if (addressToUse == "key") addressToUse = _publicFromKey;
             else if (addressToUse == "seed") addressToUse = _publicFromSeed;
+            else throw new Exception("supports \"key\" | \"seed\" only");
             go:
             Go("select");
             Thread.Sleep(1000);
@@ -203,10 +204,6 @@ namespace ZBSolutions
             }
         }
 
-        public void Refresh()
-        {
-
-        }
 
         public void ZerionLnch(string fileName = null, bool log = false)
         {

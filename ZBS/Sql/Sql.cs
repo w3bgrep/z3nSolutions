@@ -210,14 +210,14 @@ namespace ZBSolutions
 
 
 
-        public string Get(string toGet, string tableName = null, bool log = false, bool throwOnEx = false)
+        public string Get(string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "acc0")
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
             TblName(tableName);
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
-            var Q = $@"SELECT {toGet.Trim().TrimEnd(',')} from {_tableName} WHERE acc0 = {_project.Variables["acc0"].Value};";
-            return DbQ(Q, log: log, throwOnEx: throwOnEx);
+            if (key == "acc0") return DbQ($@"SELECT {toGet.Trim().TrimEnd(',')} from {_tableName} WHERE acc0 = {_project.Variables["acc0"].Value};", log: log, throwOnEx: throwOnEx);
+            else return DbQ($@"SELECT {toGet.Trim().TrimEnd(',')} from {_tableName} WHERE key = {key};", log: log, throwOnEx: throwOnEx);
         }
         public string GetColumns(string tableName, string schemaName = "accounts", bool log = false)
         {
@@ -434,7 +434,7 @@ namespace ZBSolutions
             if (emailMode == "Icloud") resp = emailData[1].Trim();
             return resp;
         }
-        public string Discord(string tableName = "discord", string schemaName = "accounts")
+        public string Discord()
         {
 
                 TblName("private_discord");
