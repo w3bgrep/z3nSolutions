@@ -9,14 +9,14 @@ using ZennoLab.InterfacesLibrary.ProjectModel;
 
 namespace ZBSolutions
 {
-    public class BackpackWallet2 : Wlt
+    public class BackpackWallet : Wlt
     {
         protected readonly string _extId;
         protected readonly string _fileName;
         protected readonly string _popout = $"chrome-extension://aflkmfhebedbjioipglgcbcmnbpgliof/popout.html";
 
 
-        public BackpackWallet2(IZennoPosterProjectModel project, Instance instance, bool log = false, string key = null)
+        public BackpackWallet(IZennoPosterProjectModel project, Instance instance, bool log = false, string key = null)
             : base(project, instance, log)
         {
             _extId = "aflkmfhebedbjioipglgcbcmnbpgliof";

@@ -36,7 +36,7 @@ namespace ZBSolutions
                         new RabbyWallet(_project, _instance, log).RabbyLnch(log: log);
                         break;
                     case W.Backpack:
-                        new BackpackWallet(_project, _instance, log).BackpackLnch(log: log);
+                        new BackpackWallet(_project, _instance, log).Launch(log: log);
                         break;
                     case W.Razor:
                         new RazorWallet(_project, _instance, log).RazorLnch(log: log);
@@ -164,7 +164,7 @@ namespace ZBSolutions
                     new MetaMaskWallet(_project, _instance, log).MetaMaskConfirm(log: log);
                     break;
                 case W.Backpack:
-                    new BackpackWallet(_project, _instance, log).BackpackApprove(log: log);
+                    new BackpackWallet(_project, _instance, log).Approve(log: log);
                     break;
                 case W.Keplr:
                     new KeplrWallet(_project, _instance, log).KeplrApprove(log: log);
