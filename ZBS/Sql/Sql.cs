@@ -473,8 +473,11 @@ namespace ZBSolutions
         public string Ref(string refCode = null, bool log = false)
         {
             if (string.IsNullOrEmpty(refCode)) refCode = _project.Variables["cfgRefCode"].Value;
+            
+            TblName(_project.Variables["projectTable"].Value);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
-            if (string.IsNullOrEmpty(refCode) || refCode == "_") refCode = DbQ($@"SELECT refcode FROM {_project.Variables["projectTable"].Value}
+            if (string.IsNullOrEmpty(refCode) || refCode == "_") refCode = DbQ($@"SELECT refcode FROM {_tableName}
 			WHERE refcode != '_' 
 			AND TRIM(refcode) != ''
 			ORDER BY RANDOM()
