@@ -37,15 +37,13 @@ namespace ZBSolutions
         {
             try
             {
-                // Заголовки для авторизации
                 var headers = new Dictionary<string, string>
-        {
-            { "Authorization", $"Bot {botToken}" },
-            { "User-Agent", "DiscordBot/1.0" } // Явно задаём User-Agent, чтобы Discord не блочил
-        };
+    {
+        { "Authorization", $"Bot {botToken}" },
+        { "User-Agent", "DiscordBot/1.0" }
+    };
                 Log($"Заголовки для запроса: {string.Join(", ", headers.Select(h => $"{h.Key}: {h.Value}"))}", callerName);
 
-                // 1. Получаем список ролей сервера, чтобы найти ID роли по имени
                 string rolesUrl = $"https://discord.com/api/v10/guilds/{guildId}/roles";
                 Log($"Отправляем GET: {rolesUrl}", callerName);
                 string rolesResponse = _http.GET(rolesUrl, headers: headers, callerName: callerName);
@@ -57,7 +55,6 @@ namespace ZBSolutions
                     return false;
                 }
 
-                // Парсим JSON для поиска роли
                 JArray roles = JArray.Parse(rolesResponse);
                 var role = roles.FirstOrDefault(r => r["name"].ToString().Equals(roleName, StringComparison.OrdinalIgnoreCase));
                 if (role == null)
@@ -68,10 +65,8 @@ namespace ZBSolutions
                 string roleId = role["id"].ToString();
                 Log($"Найдена роль: {roleName} (ID: {roleId})", callerName);
 
-                // 2. Формируем URL для выдачи или удаления роли
                 string url = $"https://discord.com/api/v10/guilds/{guildId}/members/{userId}/roles/{roleId}";
 
-                // 3. Выполняем запрос в зависимости от assignRole
                 string result;
                 if (assignRole)
                 {
@@ -121,13 +116,18 @@ namespace ZBSolutions
             _instance.HeSet(("input:password", "aria-label", "Password", "text", 0), _project.Variables["discordPASSWORD"].Value);
             _instance.HeClick(("button", "type", "submit", "regexp", 0));
 
+
+        capcha:
             while (_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Are\\ you\\ human\\?", "regexp", 0).IsVoid &&
                 _instance.ActiveTab.FindElementByAttribute("input:text", "autocomplete", "one-time-code", "regexp", 0).IsVoid) Thread.Sleep(1000);
 
             if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Are\\ you\\ human\\?", "regexp", 0).IsVoid)
             {
-                if ((_project.Variables["humanNear"].Value) != "True") return "capcha";
-                else _instance.WaitForUserAction(100, "dsCap");
+                _project.CapGuru();
+                Thread.Sleep(5000);
+                _project.TimeOut(5);
+
+                goto capcha;
             }
             _instance.HeSet(("input:text", "autocomplete", "one-time-code", "regexp", 0), OTP.Offline(_project.Variables["discord2FACODE"].Value));
             _instance.HeClick(("button", "type", "submit", "regexp", 0));
@@ -154,7 +154,7 @@ namespace ZBSolutions
                 if (!_instance.ActiveTab.FindElementByAttribute("section", "aria-label", "User\\ area", "regexp", 0).IsVoid) state = "logged";
             }
 
-            Log( state);
+            Log(state);
 
 
             if (state == "login" && !tokenUsed)
@@ -174,19 +174,20 @@ namespace ZBSolutions
                     goto start;
                 }
                 else if (login == "capcha")
-                    Log( "!W capcha");
+                    Log("!W capcha");
+                _project.CapGuru();
                 _instance.UseFullMouseEmulation = emu;
                 state = "capcha";
             }
 
             else if (state == "logged")
             {
+                _instance.HeClick(("button", "innertext", "Apply", "regexp", 0), thr0w: false);
                 state = _instance.ActiveTab.FindElementByAttribute("div", "class", "avatarWrapper__", "regexp", 0).FirstChild.GetAttribute("aria-label");
-                
-                Log( state);
+
+                Log(state);
                 var token = DSgetToken();
-                _sql.Upd($"token = '{token}', status = 'ok'", "discord");
-               // DSupdateDb($"token = '{token}', status = 'ok'");
+                _sql.Upd($"token = '{token}', status = 'ok'", "private_discord");
                 _instance.UseFullMouseEmulation = emu;
             }
             return state;
@@ -229,5 +230,6 @@ namespace ZBSolutions
             return result;
         }
     }
+
 
 }

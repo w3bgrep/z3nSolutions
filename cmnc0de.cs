@@ -284,8 +284,7 @@ public class Discord2
             
             Log( state);
             var token = DSgetToken();
-            _sql.Upd($"token = '{token}', status = 'ok'", "discord");
-           // DSupdateDb($"token = '{token}', status = 'ok'");
+            _sql.Upd($"token = '{token}', status = 'ok'", "private_discord");
             _instance.UseFullMouseEmulation = emu;
         }
         return state;
