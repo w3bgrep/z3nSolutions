@@ -89,7 +89,7 @@ namespace ZBSolutions
         {
             Log("Unlocking Backpack wallet", log: log);
             var password = _pass;
-            _project.DeadLine();
+            _project.Deadline();
 
 
 
@@ -98,7 +98,7 @@ namespace ZBSolutions
 
             check:
             string state = null;
-            _project.DeadLine(30);
+            _project.Deadline(30);
             if (!_instance.ActiveTab.FindElementByAttribute("path", "d", "M12 5v14", "text", 0).IsVoid) state = "unlocked";
             else if (!_instance.ActiveTab.FindElementByAttribute("input:password", "fulltagname", "input:password", "regexp", 0).IsVoid) state = "unlock";
 

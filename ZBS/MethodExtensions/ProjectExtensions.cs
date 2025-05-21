@@ -367,7 +367,7 @@ namespace ZBSolutions
         {
             if (project.TimeElapsed() > 60 * min) throw new Exception("GlobalTimeout");
         }
-        public static void DeadLine(this IZennoPosterProjectModel project, int sec = 0)
+        public static void Deadline(this IZennoPosterProjectModel project, int sec = 0)
         {
             if (sec != 0)
             {
