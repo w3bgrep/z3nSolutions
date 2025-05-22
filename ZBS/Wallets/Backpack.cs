@@ -190,7 +190,7 @@ namespace ZBSolutions
             switch (action)
             {
                 case "Approve":
-                    _instance.HeClick(("div", "innertext", "Approve", "regexp", 0), "last");
+                    _instance.HeClick(("div", "innertext", "Approve", "regexp", 0), "last", emu: 1);
                     goto getState;
 
                 default:
@@ -200,6 +200,96 @@ namespace ZBSolutions
 
 
         }
+
+        public void Add(string type = "Ethereum", string source = "key")//"Solana" | "Ethereum" //"key" | "phrase"
+        {
+            string _urlAdd = "chrome-extension://aflkmfhebedbjioipglgcbcmnbpgliof/options.html?add-user-account=true";
+            string key;
+            if (type == "Ethereum") key = new Sql(_project).Key("evm");
+            else key = new Sql(_project).Key("sol");
+            _instance.Go(_urlAdd, true);
+
+        check:
+
+            string state = null;
+
+            if (!_instance.ActiveTab.FindElementByAttribute("button", "innertext", "Import\\ Wallet", "regexp", 0).IsVoid) state = "importButton";
+            else if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Backpack\\ supports\\ multiple\\ blockchains.\\nWhich\\ do\\ you\\ want\\ to\\ use\\?\\ You\\ can\\ add\\ more\\ later.", "regexp", 0).IsVoid) state = "chooseChain";
+            else if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Choose\\ a\\ method\\ to\\ import\\ your\\ wallet.", "regexp", 0).IsVoid) state = "chooseSource";
+            else if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Enter private key", "text", 0).IsVoid) state = "enterKey";
+            else if (!_instance.ActiveTab.FindElementByAttribute("button", "innertext", "Open\\ Backpack", "regexp", 0).IsVoid) state = "open";
+
+            switch (state)
+            {
+                case "importButton":
+                    _instance.HeClick(("button", "innertext", "Import\\ Wallet", "regexp", 0));
+                    goto check;
+
+                case "chooseChain":
+                    _instance.HeClick(("button", "innertext", type, "regexp", 0));
+                    goto check;
+
+                case "chooseSource":
+                    _instance.HeClick(("button", "innertext", source, "text", 0));
+                    goto check;
+
+                case "enterKey":
+                    _instance.HeSet(("textarea", "fulltagname", "textarea", "regexp", 0), key);
+                    _instance.HeClick(("button", "innertext", "Import", "regexp", 0));
+                    goto check;
+                case "open":
+                    _instance.HeClick(("button", "innertext", "Open\\ Backpack", "regexp", 0));
+                    _instance.CloseExtraTabs();
+                    return;
+                default:
+                    goto check;
+
+            }
+
+
+
+
+
+        }
+
+
+
+        public void Switch(string type)//"Solana" | "Ethereum" //"key" | "phrase"
+
+        {
+        start:
+            if (_instance.ActiveTab.URL != _popout) _instance.ActiveTab.Navigate(_popout, "");
+            //_instance.CloseExtraTabs();
+
+            int toUse = 0;
+            if (type == "Ethereum")
+                toUse = 1;
+            _instance.HeClick(("button", "class", "MuiButtonBase-root\\ MuiIconButton-root\\ MuiIconButton-sizeMedium\\ css-xxmhpt\\ css-yt63r3", "regexp", 0));
+            int i = 0;
+            while (!_instance.ActiveTab.FindElementByAttribute("button", "class", "MuiButtonBase-root\\ MuiButton-root\\ MuiButton-text\\ MuiButton-textPrimary\\ MuiButton-sizeMedium\\ MuiButton-textSizeMedium\\ MuiButton-root\\ MuiButton-text\\ MuiButton-textPrimary\\ MuiButton-sizeMedium\\ MuiButton-textSizeMedium\\ css-1y4j1ko", "regexp", i).InnerText.Contains("Add")) i++;
+
+
+            if (i < 2)
+            {
+                Add();
+                goto start;
+            }
+            _instance.HeClick(("button", "class", "MuiButtonBase-root\\ MuiButton-root\\ MuiButton-text\\ MuiButton-textPrimary\\ MuiButton-sizeMedium\\ MuiButton-textSizeMedium\\ MuiButton-root\\ MuiButton-text\\ MuiButton-textPrimary\\ MuiButton-sizeMedium\\ MuiButton-textSizeMedium\\ css-1y4j1ko", "regexp", toUse));
+
+        }
+
+        public string Current()//"Solana" | "Ethereum" //"key" | "phrase"
+
+        {
+        start:
+            if (_instance.ActiveTab.URL != _popout) _instance.ActiveTab.Navigate(_popout, "");
+            var chan = _instance.HeGet(("div", "aria-haspopup", "dialog", "regexp", 0), atr: "innerhtml");
+            if (chan.Contains("solana")) return "Solana";
+            else if (chan.Contains("ethereum")) return "Ethereum";
+            else return "Undefined";
+        }
+
     }
+
 
 }

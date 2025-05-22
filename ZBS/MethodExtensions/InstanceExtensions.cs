@@ -686,12 +686,14 @@ namespace ZBSolutions
 
         }
 
-        public static string Traffic(this Instance instance, string url, string parametr = null, bool reload = false)
+        public static string Traffic(this Instance instance, string url,  string parametr , IZennoPosterProjectModel project, bool reload = false)
         {
+            project.Deadline();
             instance.UseTrafficMonitoring = true;
             if (reload) instance.ActiveTab.MainDocument.EvaluateScript("location.reload(true)");
 
             get:
+            project.Deadline(10);
             Thread.Sleep(1000);
             var traffic = instance.ActiveTab.GetTraffic();
             //project.SendInfoToLog(traffic.Count().ToString());

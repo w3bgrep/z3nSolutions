@@ -104,7 +104,7 @@ namespace ZBSolutions
         }
         private string DSgetToken()
         {
-            var stats = _instance.Traffic("https://discord.com/api/v9/science", "RequestHeaders",reload:true);
+            var stats = _instance.Traffic("https://discord.com/api/v9/science", "RequestHeaders",_project, reload:true);
             string patern = @"(?<=uthorization:\ ).*";
             string token = System.Text.RegularExpressions.Regex.Match(stats, patern).Value;
             return token;
