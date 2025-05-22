@@ -5,6 +5,7 @@ using System;
 using System.CodeDom;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using ZennoLab.CommandCenter;
@@ -685,7 +686,59 @@ namespace ZBSolutions
 
         }
 
+        public static string Traffic(this Instance instance, string url, string parametr = null)
+        {
+            instance.UseTrafficMonitoring = true;
+            instance.ActiveTab.MainDocument.EvaluateScript("location.reload(true)");
 
+        get:
+            Thread.Sleep(1000);
+            var traffic = instance.ActiveTab.GetTraffic();
+            //project.SendInfoToLog(traffic.Count().ToString());
+            var data = new Dictionary<string, string>();
+            string param;
+            foreach (var t in traffic)
+            {
+                if (t.Url.Contains(url))
+                {
+                    //project.SendInfoToLog("found url");
+                    
+                    
+                    var Method = t.Method;
+                    var ResultCode = t.ResultCode.ToString();
+                    var Url = t.Url;
+                    var ResponseContentType = t.ResponseContentType;
+                    var RequestHeaders = t.RequestHeaders;
+                    var RequestCookies = t.RequestCookies;
+                    var RequestBody = t.RequestBody;
+                    var ResponseHeaders = t.ResponseHeaders;
+                    var ResponseCookies = t.ResponseCookies;
+                    var ResponseBody = t.ResponseBody == null ? "" : Encoding.UTF8.GetString(t.ResponseBody, 0, t.ResponseBody.Length);
+
+                    data.Add("Method", Method);
+                    data.Add("ResultCode", ResultCode);
+                    data.Add("Url", Url);
+                    data.Add("ResponseContentType", ResponseContentType);
+                    data.Add("RequestHeaders", RequestHeaders);
+                    data.Add("RequestCookies", RequestCookies);
+                    data.Add("RequestBody", RequestBody);
+                    data.Add("ResponseHeaders", ResponseHeaders);
+                    data.Add("ResponseCookies", ResponseCookies);
+                    data.Add("ResponseBody", ResponseBody);
+                    break;
+                }
+
+            }
+            if (data.Count == 0) goto get;
+
+            if (string.IsNullOrEmpty(parametr)) 
+                return string.Join("\n", data.Select(kvp => $"{kvp.Key}-{kvp.Value}"));
+            else data.TryGetValue ( parametr, out param);
+                return param;
+            //return data.TryGetValue(parametr, out string param);
+
+
+        }
 
 
     }

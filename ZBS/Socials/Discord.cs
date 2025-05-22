@@ -104,7 +104,9 @@ namespace ZBSolutions
         }
         private string DSgetToken()
         {
-            var token = _instance.ActiveTab.MainDocument.EvaluateScript("return (webpackChunkdiscord_app.push([[\'\'],{},e=>{m=[];for(let c in e.c)m.push(e.c[c])}]),m).find(m=>m?.exports?.default?.getToken!== void 0).exports.default.getToken();\r\n");
+            var stats = _instance.Traffic("https://discord.com/api/v9/science", "RequestHeaders");
+            string patern = @"(?<=uthorization:\ ).*";
+            string token = System.Text.RegularExpressions.Regex.Match(stats, patern).Value;
             return token;
         }
         private string DSlogin()
@@ -213,7 +215,6 @@ namespace ZBSolutions
                 {
                     _instance.HeClick(item);
                     var FolderServer = item.FindChildByTag("ul", 0).GetChildren(false).ToList();
-                    //_project.SendInfoToLog(FolderServer.Count.ToString());
                     foreach (HtmlElement itemInFolder in FolderServer)
                     {
                         var server = itemInFolder.FindChildByTag("div", 1).FirstChild.GetAttribute("data-dnd-name");
@@ -225,9 +226,6 @@ namespace ZBSolutions
 
             string result = string.Join(" | ", servers);
             _sql.Upd($"servers = '{result}'", "discord");
-            //DSupdateDb($"servers = '{result}'");
-            //_project.SendInfoToLog(servers.Count.ToString());
-            //_project.SendInfoToLog(string.Join(" | ",servers));
             return result;
         }
     }
