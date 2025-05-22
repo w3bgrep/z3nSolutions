@@ -445,7 +445,7 @@ namespace ZBSolutions
             bool go = false;
             string current = instance.ActiveTab.URL;
             if (strict) if (current != url) go = true;
-            if (!strict) if (current.Contains(url)) go = true;
+            if (!strict) if (!current.Contains(url)) go = true;
             if (go) instance.ActiveTab.Navigate(url, "");
         }
 
