@@ -187,6 +187,7 @@ namespace ZBSolutions
 
                 Log(state);
                 var token = DSgetToken();
+                if (string.IsNullOrEmpty(token))
                 _sql.Upd($"token = '{token}', status = 'ok'", "private_discord");
                 _instance.UseFullMouseEmulation = emu;
             }
