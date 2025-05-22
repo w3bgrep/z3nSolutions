@@ -541,7 +541,7 @@ namespace ZBSolutions
         public static void CapGuru(this IZennoPosterProjectModel project)
         {
             var _sql = new Sql(project);
-            var key = _sql.Get("apikey", "pribate_api",key:"capguru");
+            var key = _sql.Get("apikey", "private_api",key:"capguru");
             project.Context["capguru_key"] = key; 
 
 

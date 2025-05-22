@@ -217,7 +217,7 @@ namespace ZBSolutions
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
             if (key == "acc0") return DbQ($@"SELECT {toGet.Trim().TrimEnd(',')} from {_tableName} WHERE acc0 = {_project.Variables["acc0"].Value};", log: log, throwOnEx: throwOnEx);
-            else return DbQ($@"SELECT {toGet.Trim().TrimEnd(',')} from {_tableName} WHERE key = {key};", log: log, throwOnEx: throwOnEx);
+            else return DbQ($@"SELECT {toGet.Trim().TrimEnd(',')} from {_tableName} WHERE key = '{key}';", log: log, throwOnEx: throwOnEx);
         }
         public string GetColumns(string tableName, string schemaName = "accounts", bool log = false)
         {
