@@ -101,10 +101,10 @@ namespace w3tools //by @w3bgrep
         }
 
 
-public static string Traffic(this Instance instance, string url, string parametr = null)
+public static string Traffic(this Instance instance, string url, string parametr = null, bool reload = true)
 {
     instance.UseTrafficMonitoring = true;
-    instance.ActiveTab.MainDocument.EvaluateScript("location.reload(true)");
+    if (reload)instance.ActiveTab.MainDocument.EvaluateScript("location.reload(true)");
 
 get:
     Thread.Sleep(1000);
