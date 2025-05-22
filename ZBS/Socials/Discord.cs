@@ -112,7 +112,8 @@ namespace ZBSolutions
         private string DSlogin()
         {
             _project.SendInfoToLog("DLogin");
-            DateTime deadline = DateTime.Now.AddSeconds(60);
+            _project.Deadline();
+
             _instance.CloseExtraTabs();
             _instance.HeSet(("input:text", "aria-label", "Email or Phone Number", "text", 0), _project.Variables["discordLOGIN"].Value);
             _instance.HeSet(("input:password", "aria-label", "Password", "text", 0), _project.Variables["discordPASSWORD"].Value);
@@ -127,7 +128,7 @@ namespace ZBSolutions
             {
                 _project.CapGuru();
                 Thread.Sleep(5000);
-                _project.TimeOut(5);
+                _project.Deadline(60);
 
                 goto capcha;
             }
