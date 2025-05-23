@@ -135,7 +135,7 @@ namespace ZBSolutions
                 var publicSOL = _instance.HeGet(("p", "class", "MuiTypography-root\\ MuiTypography-body1", "regexp", 0), "last");
                 _instance.HeClick(("button", "aria-label", "TabsNavigator,\\ back", "regexp", 0));
                 _project.Variables["addressSol"].Value = publicSOL;
-                _sql.Upd($"sol = '{publicSOL}'", "public_blockchain");
+                //_sql.Upd($"sol = '{publicSOL}'", "public_blockchain");
                 Log($"SOL address: {publicSOL}", log: log);
             }
             catch (Exception ex)
