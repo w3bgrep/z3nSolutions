@@ -274,9 +274,9 @@ namespace ZBSolutions
             return result;
         }
 
-        public  Dictionary<string, string> TblMapForProject( IZennoPosterProjectModel project, string[] staticColumns, string dynamicToDo = null, string defaultType = "TEXT DEFAULT ''")
+        public  Dictionary<string, string> TblMapForProject( string[] staticColumns, string dynamicToDo = null, string defaultType = "TEXT DEFAULT ''")
         {
-            if (string.IsNullOrEmpty(dynamicToDo)) dynamicToDo = project.Variables["cfgToDo"].Value;
+            if (string.IsNullOrEmpty(dynamicToDo)) dynamicToDo = _project.Variables["cfgToDo"].Value;
 
 
             var tableStructure = new Dictionary<string, string>
@@ -290,13 +290,17 @@ namespace ZBSolutions
                     tableStructure.Add(name, defaultType);
                 }
             }
-            string[] toDoItems = (dynamicToDo ?? "").Split(',');
-            foreach (string taskId in toDoItems)
+            if (string.IsNullOrEmpty(dynamicToDo)) 
             {
-                string trimmedTaskId = taskId.Trim();
-                if (!string.IsNullOrWhiteSpace(trimmedTaskId) && !tableStructure.ContainsKey(trimmedTaskId))
+                dynamicToDo = dynamicToDo.ToLower();
+                string[] toDoItems = (dynamicToDo ?? "").Split(',');
+                foreach (string taskId in toDoItems)
                 {
-                    tableStructure.Add(trimmedTaskId, defaultType);
+                    string trimmedTaskId = taskId.Trim();
+                    if (!string.IsNullOrWhiteSpace(trimmedTaskId) && !tableStructure.ContainsKey(trimmedTaskId))
+                    {
+                        tableStructure.Add(trimmedTaskId, defaultType);
+                    }
                 }
             }
             return tableStructure;

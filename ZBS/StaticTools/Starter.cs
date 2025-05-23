@@ -209,23 +209,28 @@ namespace ZBSolutions
         public void InitVariables(string author = "")
         {
             DisableLogs();
-            _project.Variables["varSessionId"].Value = (DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString();
-
+            string sessionId = (DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString();
             string projectName = _project.ExecuteMacro(_project.Name).Split('.')[0];
+            string version = Assembly.GetExecutingAssembly()
+               .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+               ?.InformationalVersion ?? "Unknown";
+            string dllTitle = Assembly.GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyTitleAttribute>()
+                ?.Title ?? "Unknown";
+
+
             _project.Variables["projectName"].Value = projectName;
+            _project.Variables["varSessionId"].Value = sessionId;
+            _project.Variables["nameSpase"].Value = dllTitle;
 
             string[] vars = { "cfgPin", "DBsqltPath" };
             CheckVars(vars);
 
-            //string tablename;
-            //string schema = "projects.";
-            //if (_project.Variables["DBmode"].Value == "PostgreSQL") tablename = schema + projectName.ToLower();
-            //else tablename = projectName.ToLower();
             _project.Variables["projectTable"].Value = "projects_" + projectName;
 
             _project.SetRange();
             SAFU.Initialize(_project);
-            Logo(author);
+            Logo(author, dllTitle);
 
         }
         private void DisableLogs()
@@ -266,7 +271,7 @@ namespace ZBSolutions
             }
             catch (Exception ex) { }
         }
-        private void Logo(string author)
+        private void Logo(string author, string dllTitle)
         {
             string version = Assembly.GetExecutingAssembly()
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
@@ -274,7 +279,7 @@ namespace ZBSolutions
 
             string name = _project.ExecuteMacro(_project.Name).Split('.')[0];
             if (author != "") author = $" script author: @{author}";
-            string logo = $@"using ZennoposterBoosterSolutions v{version};
+            string logo = $@"using {dllTitle} v{version};
             ┌by─┐					
             │    w3bgrep			
             └─→┘
