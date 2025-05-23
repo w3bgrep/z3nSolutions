@@ -652,7 +652,8 @@ namespace ZBSolutions
         public static List<string> ParseWebGl(this Instance instance, string vendor, int qnt, IZennoPosterProjectModel project)
         {
             var result = new List<string>();
-            instance.CanvasRenderMode = CanvasMode.Allow;
+
+            instance.CanvasRenderMode = CanvasMode.Emulate;
             while (result.Count < qnt)
             {
                 try { instance.Launch(BrowserType.Firefox45, false); } catch { }
@@ -661,8 +662,9 @@ namespace ZBSolutions
                 if (webglData.Contains(vendor))
                 {
                     result.Add(webglData);
-                    project.L0g($" {result.Count}/{qnt} strings added");
+                    project.L0g($"{result.Count}/{qnt} strings collected");
                 }
+                project.L0g($"vendorNotMatch regenerating...");
 
             }
             instance.CanvasRenderMode = CanvasMode.Block;
