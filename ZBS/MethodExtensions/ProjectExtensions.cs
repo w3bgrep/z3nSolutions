@@ -163,7 +163,7 @@ namespace ZBSolutions
 
             //project.L0g($"{rangeS}-{rangeE}\n{range}");
         }
-          public static string MathVar(this IZennoPosterProjectModel project, string varName, int input)
+        public static string MathVar(this IZennoPosterProjectModel project, string varName, int input)
         {
             project.Variables[$"{varName}"].Value = (int.Parse(project.Variables[$"{varName}"].Value) + input).ToString();
             return project.Variables[$"{varName}"].Value;

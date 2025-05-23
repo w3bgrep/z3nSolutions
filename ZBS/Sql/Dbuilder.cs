@@ -40,7 +40,7 @@ namespace ZBSolutions
         private readonly IZennoPosterProjectModel _project;
         protected readonly Instance _instance;
         private readonly F0rms _f0rm;
-        private int _range = 100;
+        private readonly int _range;
 
         public DBuilder(IZennoPosterProjectModel project, Instance instance, bool log = false)
             : base(project, log: log)
