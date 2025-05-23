@@ -221,7 +221,7 @@ namespace ZBSolutions
 
             _project.Variables["projectName"].Value = projectName;
             _project.Variables["varSessionId"].Value = sessionId;
-            _project.Variables["nameSpase"].Value = dllTitle;
+            try { _project.Variables["nameSpace"].Value = dllTitle; } catch { }
 
             string[] vars = { "cfgPin", "DBsqltPath" };
             CheckVars(vars);
