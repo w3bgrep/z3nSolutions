@@ -97,7 +97,39 @@ namespace ZBSolutions
         }
 
         //Variables
+        public static int Range(this IZennoPosterProjectModel project, string accRange = null, string output = null, bool log = false)
+        {
+            if (string.IsNullOrEmpty(accRange)) accRange = project.Variables["cfgAccRange"].Value;
+            if (string.IsNullOrEmpty(accRange)) throw new Exception("range is not provided by input or project setting [cfgAccRange]");
+            int rangeS, rangeE;
+            string range;
 
+            if (accRange.Contains(","))
+            {
+                range = accRange;
+                var rangeParts = accRange.Split(',').Select(int.Parse).ToArray();
+                rangeS = rangeParts.Min();
+                rangeE = rangeParts.Max();
+            }
+            else if (accRange.Contains("-"))
+            {
+                var rangeParts = accRange.Split('-').Select(int.Parse).ToArray();
+                rangeS = rangeParts[0];
+                rangeE = rangeParts[1];
+                range = string.Join(",", Enumerable.Range(rangeS, rangeE - rangeS + 1));
+            }
+            else
+            {
+                rangeE = int.Parse(accRange);
+                rangeS = int.Parse(accRange);
+                range = accRange;
+            }
+            project.Variables["rangeStart"].Value = $"{rangeS}";
+            project.Variables["rangeEnd"].Value = $"{rangeE}";
+            project.Variables["range"].Value = range;
+            return rangeE;
+            //project.L0g($"{rangeS}-{rangeE}\n{range}");
+        }
 
         public static void SetRange(this IZennoPosterProjectModel project, string accRange = null, bool log = false)
         {
@@ -207,11 +239,10 @@ namespace ZBSolutions
         }
         public static void GetGlobalVars(this IZennoPosterProjectModel project, string nameSpase = null)
         {
-            if (string.IsNullOrEmpty(nameSpase)) nameSpase = "ZenoBoosterSolutions";
+            if (string.IsNullOrEmpty(nameSpase)) nameSpase = "ZBS";
             var cleaned = new List<int>();
             var notDeclared = new List<int>();
             var busyAccounts = new List<string>();
-
 
             try
             {
@@ -430,8 +461,6 @@ namespace ZBSolutions
 
         }
 
-
-
         public static Dictionary<string, string> TblMap(this IZennoPosterProjectModel project, string[] staticColumns, string dynamicToDo = null, string defaultType = "TEXT DEFAULT ''")
         {
             if (string.IsNullOrEmpty(dynamicToDo)) dynamicToDo = project.Variables["cfgToDo"].Value;
@@ -461,9 +490,7 @@ namespace ZBSolutions
         }
 
 
-
-
-
+        //Cookies
         public static string CookiesGet(this IZennoPosterProjectModel project, Instance instance, string domainFilter = "")
         {
             if (domainFilter == ".") domainFilter = instance.ActiveTab.MainDomain;
@@ -542,7 +569,7 @@ namespace ZBSolutions
             File.WriteAllText(filePath, cookies);
         }
 
-
+        //Capcha
         public static void CapGuru(this IZennoPosterProjectModel project)
         {
             var _sql = new Sql(project);

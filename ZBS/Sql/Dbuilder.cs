@@ -40,8 +40,7 @@ namespace ZBSolutions
         private readonly IZennoPosterProjectModel _project;
         protected readonly Instance _instance;
         private readonly F0rms _f0rm;
-        private string _acc0;
-        private int _range = 108;
+        private int _range = 100;
 
         public DBuilder(IZennoPosterProjectModel project, Instance instance, bool log = false)
             : base(project, log: log)
@@ -49,7 +48,7 @@ namespace ZBSolutions
             _instance = instance;
             _project = project;         
             _f0rm = new F0rms(_project);
-            try { _range = int.Parse(_project.Variables["rangeEnd"].Value); } catch { }
+            _range = _project.Range();
         }
 
         public DBuilder(IZennoPosterProjectModel project, bool log = false)
@@ -57,10 +56,8 @@ namespace ZBSolutions
         {
             _project = project;
             _f0rm = new F0rms(_project);
-            try { _range = int.Parse(_project.Variables["rangeEnd"].Value); } catch { }
+            _range = _project.Range();
         }
-
-
 
 
         public string[] DefaultColumns(schema tableSchem)
