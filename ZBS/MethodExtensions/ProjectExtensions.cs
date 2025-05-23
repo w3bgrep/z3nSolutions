@@ -96,6 +96,8 @@ namespace ZBSolutions
 
         }
 
+        //Variables
+
 
         public static void SetRange(this IZennoPosterProjectModel project, string accRange = null, bool log = false)
         {
@@ -248,79 +250,6 @@ namespace ZBSolutions
         {
             project.Variables["acc0"].Value = acc0?.ToString() ?? string.Empty;
         }
-        public static void Sleep(this IZennoPosterProjectModel project, int min, int max)
-        {
-            Random rnd = new Random();
-            Thread.Sleep(rnd.Next(min, max) * 1000);
-        }
-        public static int TimeElapsed(this IZennoPosterProjectModel project, string varName = "varSessionId")
-        {
-            var start = project.Variables[$"{varName}"].Value;
-            long currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            long startTime = long.Parse(start);
-            int difference = (int)(currentTime - startTime);
-
-            return difference;
-        }
-        public static string InputBox(string message = "input data please", int width = 600, int height = 600)
-        {
-
-            System.Windows.Forms.Form form = new System.Windows.Forms.Form();
-            form.Text = message;
-            form.Width = width;
-            form.Height = height;
-            System.Windows.Forms.TextBox smsBox = new System.Windows.Forms.TextBox();
-            smsBox.Multiline = true;
-            smsBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            smsBox.Left = 5;
-            smsBox.Top = 5;
-            smsBox.Width = form.ClientSize.Width - 10;
-            System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
-            okButton.Text = "OK";
-            okButton.Width = form.ClientSize.Width - 10;
-            okButton.Height = 25;
-            okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
-            okButton.Top = form.ClientSize.Height - okButton.Height - 5;
-            okButton.Click += new System.EventHandler((sender, e) => { form.Close(); });
-            smsBox.Height = okButton.Top - smsBox.Top - 5;
-            form.Controls.Add(smsBox);
-            form.Controls.Add(okButton);
-            form.ShowDialog();
-            return smsBox.Text;
-        }
-        public static T Age<T>(this IZennoPosterProjectModel project)
-        {
-            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            long start;
-            try 
-            {
-                start = long.Parse(project.Variables["varSessionId"].Value);
-            }
-            catch 
-            {
-                project.Variables["varSessionId"].Value = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-                start = long.Parse(project.Variables["varSessionId"].Value);
-            }
-
-            long Age = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - start;
-
-
-            if (typeof(T) == typeof(string))
-            {
-                string result = TimeSpan.FromSeconds(Age).ToString();
-                return (T)(object)result;
-            }
-            else if (typeof(T) == typeof(TimeSpan))
-            {
-                TimeSpan result = TimeSpan.FromSeconds(Age);
-                return (T)(object)result;
-            }
-            else
-            {
-                return (T)Convert.ChangeType(Age, typeof(T));
-            }
-        
-        }
         public static T RndAmount<T>(this IZennoPosterProjectModel project, decimal min = 0, decimal max = 0)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -336,93 +265,18 @@ namespace ZBSolutions
             return (T)Convert.ChangeType(value, typeof(T));
 
         }
-        public static string GetExtVer(this IZennoPosterProjectModel project, string extId)
-        {
-            string securePrefsPath = project.Variables["pathProfileFolder"].Value + @"\Default\Secure Preferences";
-            string json = File.ReadAllText(securePrefsPath);
-            JObject jObj = JObject.Parse(json);
-            JObject settings = (JObject)jObj["extensions"]?["settings"];
-
-            if (settings == null)
-            {
-                throw new Exception("Секция extensions.settings не найдена");
-            }
-
-            JObject extData = (JObject)settings[extId];
-            if (extData == null)
-            {
-                throw new Exception($"Расширение с ID {extId} не найдено");
-            }
-
-            string version = (string)extData["manifest"]?["version"];
-            if (string.IsNullOrEmpty(version))
-            {
-                throw new Exception($"Версия для расширения {extId} не найдена");
-            }
-
-            return version;
-
-        }
-
-        public static void TimeOut(this IZennoPosterProjectModel project, int min = 30)
-        {
-            if (project.TimeElapsed() > 60 * min) throw new Exception("GlobalTimeout");
-        }
-        public static void Deadline(this IZennoPosterProjectModel project, int sec = 0)
-        {
-            if (sec != 0)
-            {
-                var start = project.Variables[$"t0"].Value;
-                long currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                long startTime = long.Parse(start);
-                int difference = (int)(currentTime - startTime);
-                if (difference > sec) throw new Exception("Timeout");
-
-            }
-            else 
-            {
-                project.Variables["t0"].Value = (DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString();
-            }
-        }
-
-        public static Dictionary<string, string> TblMap(this IZennoPosterProjectModel project, string[] staticColumns, string dynamicToDo = null, string defaultType = "TEXT DEFAULT ''")
-        {
-            if (string.IsNullOrEmpty(dynamicToDo)) dynamicToDo = project.Variables["cfgToDo"].Value;
-
-
-            var tableStructure = new Dictionary<string, string>
-        {
-            { "acc0", "INTEGER PRIMARY KEY" }
-        };
-            foreach (string name in staticColumns)
-            {
-                if (!tableStructure.ContainsKey(name))
-                {
-                    tableStructure.Add(name, defaultType);
-                }
-            }
-            string[] toDoItems = (dynamicToDo ?? "").Split(',');
-            foreach (string taskId in toDoItems)
-            {
-                string trimmedTaskId = taskId.Trim();
-                if (!string.IsNullOrWhiteSpace(trimmedTaskId) && !tableStructure.ContainsKey(trimmedTaskId))
-                {
-                    tableStructure.Add(trimmedTaskId, defaultType);
-                }
-            }
-            return tableStructure;
-        }
-
         public static string[] GetErr(this IZennoPosterProjectModel project, Instance instance)
         {
             var error = project.GetLastError();
             var ActionId = error.ActionId.ToString();
             var ActionComment = error.ActionComment;
             var exception = error.Exception;
-
-            string path = $"{project.Path}.failed\\{project.Variables["projectName"].Value}\\{project.Name} • {project.Variables["acc0"].Value} • {project.LastExecutedActionId} • {ActionId}.jpg";
-            ZennoPoster.ImageProcessingResizeFromScreenshot(instance.Port, path, 50, 50, "percent", true, false);
-
+            try
+            {
+                string path = $"{project.Path}.failed\\{project.Variables["projectName"].Value}\\{project.Name} • {project.Variables["acc0"].Value} • {project.LastExecutedActionId} • {ActionId}.jpg";
+                ZennoPoster.ImageProcessingResizeFromScreenshot(instance.Port, path, 50, 50, "percent", true, false);
+            }
+            catch (Exception e) { project.SendInfoToLog(e.Message); }
             if (exception != null)
             {
                 var typeEx = exception.GetType();
@@ -457,6 +311,158 @@ namespace ZBSolutions
 
 
         }
+
+        public static string Var(this IZennoPosterProjectModel project, string Var)
+        {
+            string value = string.Empty;
+            try
+            {
+                value = project.Variables[Var].Value;
+            }
+            catch (Exception e)
+            {
+                project.SendInfoToLog(e.Message);               
+            }
+            if (value == string.Empty) project.L0g($"no Value from [{Var}] `w");
+
+            return value;
+        }
+
+
+
+        //Time
+
+        public static void Sleep(this IZennoPosterProjectModel project, int min, int max)
+        {
+            Random rnd = new Random();
+            Thread.Sleep(rnd.Next(min, max) * 1000);
+        }
+        public static int TimeElapsed(this IZennoPosterProjectModel project, string varName = "varSessionId")
+        {
+            var start = project.Variables[$"{varName}"].Value;
+            long currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            long startTime = long.Parse(start);
+            int difference = (int)(currentTime - startTime);
+
+            return difference;
+        }
+        public static T Age<T>(this IZennoPosterProjectModel project)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            long start;
+            try 
+            {
+                start = long.Parse(project.Variables["varSessionId"].Value);
+            }
+            catch 
+            {
+                project.Variables["varSessionId"].Value = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+                start = long.Parse(project.Variables["varSessionId"].Value);
+            }
+
+            long Age = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - start;
+
+
+            if (typeof(T) == typeof(string))
+            {
+                string result = TimeSpan.FromSeconds(Age).ToString();
+                return (T)(object)result;
+            }
+            else if (typeof(T) == typeof(TimeSpan))
+            {
+                TimeSpan result = TimeSpan.FromSeconds(Age);
+                return (T)(object)result;
+            }
+            else
+            {
+                return (T)Convert.ChangeType(Age, typeof(T));
+            }
+        
+        }
+        public static void TimeOut(this IZennoPosterProjectModel project, int min = 30)
+        {
+            if (project.TimeElapsed() > 60 * min) throw new Exception("GlobalTimeout");
+        }
+        public static void Deadline(this IZennoPosterProjectModel project, int sec = 0)
+        {
+            if (sec != 0)
+            {
+                var start = project.Variables[$"t0"].Value;
+                long currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                long startTime = long.Parse(start);
+                int difference = (int)(currentTime - startTime);
+                if (difference > sec) throw new Exception("Timeout");
+
+            }
+            else
+            {
+                project.Variables["t0"].Value = (DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString();
+            }
+        }
+
+
+
+        public static string GetExtVer(this IZennoPosterProjectModel project, string extId)
+        {
+            string securePrefsPath = project.Variables["pathProfileFolder"].Value + @"\Default\Secure Preferences";
+            string json = File.ReadAllText(securePrefsPath);
+            JObject jObj = JObject.Parse(json);
+            JObject settings = (JObject)jObj["extensions"]?["settings"];
+
+            if (settings == null)
+            {
+                throw new Exception("Секция extensions.settings не найдена");
+            }
+
+            JObject extData = (JObject)settings[extId];
+            if (extData == null)
+            {
+                throw new Exception($"Расширение с ID {extId} не найдено");
+            }
+
+            string version = (string)extData["manifest"]?["version"];
+            if (string.IsNullOrEmpty(version))
+            {
+                throw new Exception($"Версия для расширения {extId} не найдена");
+            }
+
+            return version;
+
+        }
+
+
+
+        public static Dictionary<string, string> TblMap(this IZennoPosterProjectModel project, string[] staticColumns, string dynamicToDo = null, string defaultType = "TEXT DEFAULT ''")
+        {
+            if (string.IsNullOrEmpty(dynamicToDo)) dynamicToDo = project.Variables["cfgToDo"].Value;
+
+
+            var tableStructure = new Dictionary<string, string>
+        {
+            { "acc0", "INTEGER PRIMARY KEY" }
+        };
+            foreach (string name in staticColumns)
+            {
+                if (!tableStructure.ContainsKey(name))
+                {
+                    tableStructure.Add(name, defaultType);
+                }
+            }
+            string[] toDoItems = (dynamicToDo ?? "").Split(',');
+            foreach (string taskId in toDoItems)
+            {
+                string trimmedTaskId = taskId.Trim();
+                if (!string.IsNullOrWhiteSpace(trimmedTaskId) && !tableStructure.ContainsKey(trimmedTaskId))
+                {
+                    tableStructure.Add(trimmedTaskId, defaultType);
+                }
+            }
+            return tableStructure;
+        }
+
+
+
+
 
         public static string CookiesGet(this IZennoPosterProjectModel project, Instance instance, string domainFilter = "")
         {
@@ -525,7 +531,6 @@ namespace ZBSolutions
             project.Json.FromString(cookiesJson);
             return cookiesJson;
         }
-
         public static void CookiesExport(this IZennoPosterProjectModel project, string domainFilter = "")
         {
             var _sql = new Sql(project);

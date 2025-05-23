@@ -274,7 +274,33 @@ namespace ZBSolutions
             return result;
         }
 
+        public  Dictionary<string, string> TblMapForProject( IZennoPosterProjectModel project, string[] staticColumns, string dynamicToDo = null, string defaultType = "TEXT DEFAULT ''")
+        {
+            if (string.IsNullOrEmpty(dynamicToDo)) dynamicToDo = project.Variables["cfgToDo"].Value;
 
+
+            var tableStructure = new Dictionary<string, string>
+            {
+                { "acc0", "INTEGER PRIMARY KEY" }
+            };
+            foreach (string name in staticColumns)
+            {
+                if (!tableStructure.ContainsKey(name))
+                {
+                    tableStructure.Add(name, defaultType);
+                }
+            }
+            string[] toDoItems = (dynamicToDo ?? "").Split(',');
+            foreach (string taskId in toDoItems)
+            {
+                string trimmedTaskId = taskId.Trim();
+                if (!string.IsNullOrWhiteSpace(trimmedTaskId) && !tableStructure.ContainsKey(trimmedTaskId))
+                {
+                    tableStructure.Add(trimmedTaskId, defaultType);
+                }
+            }
+            return tableStructure;
+        }
 
         public bool ClmnExist(string tblName, string clmnName)
         {
@@ -377,7 +403,8 @@ namespace ZBSolutions
                 }
                 catch
                 {
-                    range = 108;
+                    Log("var  rangeEnd is empty or 0, fallback to 100");
+                    range = 100;
                 }
 
             TblName(tblName);
@@ -392,6 +419,10 @@ namespace ZBSolutions
             }
 
         }
+
+
+
+
 
 
         public string Proxy()
