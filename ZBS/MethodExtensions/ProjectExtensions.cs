@@ -302,7 +302,7 @@ namespace ZBSolutions
                         project.L0g($"buzy Threads: [{string.Join(" | ", busyAccounts)}]");
                     }
                     int currentThread = int.Parse(project.Variables["acc0"].Value);
-                    string currentThreadKey = $"Thread{currentThread}";
+                    string currentThreadKey = $"acc{currentThread}";
                     if (!busyAccounts.Any(x => x.StartsWith($"{currentThread}:"))) //
                     {
                         try
@@ -313,12 +313,12 @@ namespace ZBSolutions
                         {
                             project.GlobalVariables[nameSpase, currentThreadKey].Value = project.Variables["projectName"].Value;
                         }
-                        if (log) project.L0g($"Thread {currentThread} bound to {project.Variables["projectName"].Value}");
+                        if (log) project.L0g($"{currentThreadKey} bound to {project.Variables["projectName"].Value}");
                         return true;
                     }
                     else
                     {
-                        if (log) project.L0g($"Thread {currentThread} is already busy!");
+                        if (log) project.L0g($"{currentThreadKey} is already busy!");
                         return false;
                     }
                 }
@@ -343,7 +343,7 @@ namespace ZBSolutions
 
                 for (int i = int.Parse(project.Variables["rangeStart"].Value); i <= int.Parse(project.Variables["rangeEnd"].Value); i++)
                 {
-                    string threadKey = $"Thread{i}";
+                    string threadKey = $"acc{i}";
                     try
                     {
                         var globalVar = project.GlobalVariables[nameSpase, threadKey];
@@ -373,7 +373,7 @@ namespace ZBSolutions
             ?.Title ?? "Unknown";
             try
             {
-                project.GlobalVariables[nameSpase, $"Thread{project.Variables["acc0"].Value}"].Value = null;
+                project.GlobalVariables[nameSpase, $"acc{project.Variables["acc0"].Value}"].Value = null;
             }
             catch { }
 

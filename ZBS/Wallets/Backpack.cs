@@ -94,7 +94,7 @@ namespace ZBSolutions
 
 
 
-            if (_instance.ActiveTab.URL != _popout)
+            if (!_instance.ActiveTab.URL.Contains( _popout))
                 _instance.ActiveTab.Navigate(_popout, "");
 
             check:

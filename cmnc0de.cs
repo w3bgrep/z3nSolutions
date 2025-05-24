@@ -77,40 +77,31 @@ namespace w3tools //by @w3bgrep
 
     public static class TestStatic
 {
-public static int Range(this IZennoPosterProjectModel project, string accRange = null, string output = null, bool log = false)
-{
-    if (string.IsNullOrEmpty(accRange)) accRange = project.Variables["cfgAccRange"].Value;
-    if (string.IsNullOrEmpty(accRange)) throw new Exception("range is not provided by input or project setting [cfgAccRange]");
-    int rangeS, rangeE;
-    string range;
 
-    if (accRange.Contains(","))
-    {
-        range = accRange;
-        var rangeParts = accRange.Split(',').Select(int.Parse).ToArray();
-        rangeS = rangeParts.Min();
-        rangeE = rangeParts.Max();
-    }
-    else if (accRange.Contains("-"))
-    {
-        var rangeParts = accRange.Split('-').Select(int.Parse).ToArray();
-        rangeS = rangeParts[0];
-        rangeE = rangeParts[1];
-        range = string.Join(",", Enumerable.Range(rangeS, rangeE - rangeS + 1));
-    }
-    else
-    {
-        rangeE = int.Parse(accRange);
-        rangeS = int.Parse(accRange);
-        range = accRange;
-    }
-    project.Variables["rangeStart"].Value = $"{rangeS}";
-    project.Variables["rangeEnd"].Value = $"{rangeE}";
-    project.Variables["range"].Value = range;
-    return rangeE;
-    //project.L0g($"{rangeS}-{rangeE}\n{range}");
-}
-        
+        public static string HexToString( this string hexValue, string convert = "")
+        {
+            try
+            {
+                hexValue = hexValue?.Replace("0x", "").Trim();
+                if (string.IsNullOrEmpty(hexValue)) return "0";
+                BigInteger number = BigInteger.Parse("0" + hexValue, NumberStyles.AllowHexSpecifier);
+                switch (convert.ToLower())
+                {
+                    case "gwei":
+                        decimal gweiValue = (decimal)number / 1000000000m;
+                        return gweiValue.ToString("0.#########", CultureInfo.InvariantCulture);
+                    case "eth":
+                        decimal ethValue = (decimal)number / 1000000000000000000m;
+                        return ethValue.ToString("0.##################", CultureInfo.InvariantCulture);
+                    default:
+                        return number.ToString();
+                }
+            }
+            catch
+            {
+                return "0";
+            }
+        }
 
 
 }
