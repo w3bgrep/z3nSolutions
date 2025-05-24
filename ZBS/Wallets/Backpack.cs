@@ -179,7 +179,9 @@ namespace ZBSolutions
             {
                 if (!_instance.ActiveTab.FindElementByAttribute("input:password", "fulltagname", "input:password", "regexp", 0).IsVoid)
                 {
-                    Unlock();
+                    _instance.HeSet(("input:password", "fulltagname", "input:password", "regexp", 0), _pass);
+                    _instance.HeClick(("button", "innertext", "Unlock", "regexp", 0));
+                    Thread.Sleep(2000);
                     goto getState;
                 }
                 _project.L0g($"No Wallet tab found. 0");

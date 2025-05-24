@@ -290,7 +290,7 @@ namespace ZBSolutions
                     tableStructure.Add(name, defaultType);
                 }
             }
-            if (string.IsNullOrEmpty(dynamicToDo)) 
+            if (!string.IsNullOrEmpty(dynamicToDo)) 
             {
                 dynamicToDo = dynamicToDo.ToLower();
                 string[] toDoItems = (dynamicToDo ?? "").Split(',');
