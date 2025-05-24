@@ -250,6 +250,18 @@ namespace ZBSolutions
             return value;
         }
 
+        public static string Var(this IZennoPosterProjectModel project, string var, string value)
+        {
+            try
+            {
+               project.Variables[var].Value = value;
+            }
+            catch (Exception e)
+            {
+                project.SendInfoToLog(e.Message);
+            }
+            return string.Empty;
+        }
 
         //GlobalVars
 
