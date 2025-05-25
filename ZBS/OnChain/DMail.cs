@@ -15,7 +15,7 @@ namespace ZBSolutions
 {
     public class DMail : W3bWrite
     {
-        private readonly string _key;
+        //private readonly string _key;
         private string _encstring;
         private string _pid;
         private dynamic _allMail;

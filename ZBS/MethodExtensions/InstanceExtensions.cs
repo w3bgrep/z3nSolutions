@@ -688,7 +688,7 @@ namespace ZBSolutions
 
         }
 
-        public static string Traffic(this Instance instance, string url,  string parametr , IZennoPosterProjectModel project, bool reload = false)
+        public static string Traffic(this Instance instance, string url,  string parametr , IZennoPosterProjectModel project, bool reload = false, string method = null)
         {
             project.Deadline();
             instance.UseTrafficMonitoring = true;
@@ -706,8 +706,7 @@ namespace ZBSolutions
                 if (t.Url.Contains(url))
                 {
                     //project.SendInfoToLog("found url");
-                    
-                    
+                                    
                     var Method = t.Method;
                     var ResultCode = t.ResultCode.ToString();
                     var Url = t.Url;
@@ -719,6 +718,7 @@ namespace ZBSolutions
                     var ResponseCookies = t.ResponseCookies;
                     var ResponseBody = t.ResponseBody == null ? "" : Encoding.UTF8.GetString(t.ResponseBody, 0, t.ResponseBody.Length);
 
+                    if (Method == "OPTIONS") continue;
                     data.Add("Method", Method);
                     data.Add("ResultCode", ResultCode);
                     data.Add("Url", Url);

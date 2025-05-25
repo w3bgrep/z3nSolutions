@@ -210,13 +210,14 @@ namespace ZBSolutions
 
 
 
-        public string Get(string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "acc0")
+        public string Get(string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "acc0", string acc = null)
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
             TblName(tableName);
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
-            if (key == "acc0") return DbQ($@"SELECT {toGet.Trim().TrimEnd(',')} from {_tableName} WHERE acc0 = {_project.Variables["acc0"].Value};", log: log, throwOnEx: throwOnEx);
+            if (string.IsNullOrEmpty(acc)) acc = _project.Variables["acc0"].Value;
+            if (key == "acc0") return DbQ($@"SELECT {toGet.Trim().TrimEnd(',')} from {_tableName} WHERE acc0 = {acc};", log: log, throwOnEx: throwOnEx);
             else return DbQ($@"SELECT {toGet.Trim().TrimEnd(',')} from {_tableName} WHERE key = '{key}';", log: log, throwOnEx: throwOnEx);
         }
         public string GetColumns(string tableName, string schemaName = "accounts", bool log = false)

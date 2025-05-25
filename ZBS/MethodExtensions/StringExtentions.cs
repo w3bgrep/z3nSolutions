@@ -138,5 +138,66 @@ namespace ZBSolutions
             return parsedData;
         }
 
+        public static string StringToHex(this string value, string convert = "")
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(value)) return "0x0";
+
+                value = value?.Trim();
+                if (!decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal number))
+                    return "0x0";
+
+                BigInteger result;
+                switch (convert.ToLower())
+                {
+                    case "gwei":
+                        result = (BigInteger)(number * 1000000000m);
+                        break;
+                    case "eth":
+                        result = (BigInteger)(number * 1000000000000000000m);
+                        break;
+                    default:
+                        result = (BigInteger)number;
+                        break;
+                }
+
+                // Convert to hexadecimal and ensure it starts with 0x
+                string hex = result.ToString("X").TrimStart('0');
+                return string.IsNullOrEmpty(hex) ? "0x0" : "0x" + hex;
+            }
+            catch
+            {
+                return "0x0";
+            }
+        }
+
+        public static string HexToString(this string hexValue, string convert = "")
+        {
+            try
+            {
+                hexValue = hexValue?.Replace("0x", "").Trim();
+                if (string.IsNullOrEmpty(hexValue)) return "0";
+                BigInteger number = BigInteger.Parse("0" + hexValue, NumberStyles.AllowHexSpecifier);
+                switch (convert.ToLower())
+                {
+                    case "gwei":
+                        decimal gweiValue = (decimal)number / 1000000000m;
+                        return gweiValue.ToString("0.#########", CultureInfo.InvariantCulture);
+                    case "eth":
+                        decimal ethValue = (decimal)number / 1000000000000000000m;
+                        return ethValue.ToString("0.##################", CultureInfo.InvariantCulture);
+                    default:
+                        return number.ToString();
+                }
+            }
+            catch
+            {
+                return "0";
+            }
+        }
+
+
+
     }
 }
