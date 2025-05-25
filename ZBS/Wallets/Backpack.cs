@@ -121,7 +121,7 @@ namespace ZBSolutions
 
         }
 
-        public void Check(bool log = false)
+        public string Check(bool log = false)
         {
             Log("Checking Backpack wallet address", log: log);
             if (_instance.ActiveTab.URL != _popout)
@@ -133,11 +133,9 @@ namespace ZBSolutions
                 while (_instance.ActiveTab.FindElementByAttribute("button", "class", "is_Button\\ ", "regexp", 0).IsVoid)
                     _instance.HeClick(("path", "d", "M12 5v14", "text", 0));
 
-                var publicSOL = _instance.HeGet(("p", "class", "MuiTypography-root\\ MuiTypography-body1", "regexp", 0), "last");
+                var address = _instance.HeGet(("p", "class", "MuiTypography-root\\ MuiTypography-body1", "regexp", 0), "last");
                 _instance.HeClick(("button", "aria-label", "TabsNavigator,\\ back", "regexp", 0));
-                //_project.Variables["addressSol"].Value = publicSOL;
-                //_sql.Upd($"sol = '{publicSOL}'", "public_blockchain");
-                Log($"SOL address: {publicSOL}", log: log);
+                return address;
             }
             catch (Exception ex)
             {
