@@ -664,7 +664,7 @@ namespace ZBSolutions
                     result.Add(webglData);
                     project.L0g($"{result.Count}/{qnt} strings collected");
                 }
-                project.L0g($"vendorNotMatch regenerating...");
+                else project.L0g($"vendorNotMatch regenerating...");
 
             }
             instance.CanvasRenderMode = CanvasMode.Block;
