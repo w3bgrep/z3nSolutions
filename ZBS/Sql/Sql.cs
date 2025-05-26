@@ -158,19 +158,26 @@ namespace ZBSolutions
 
         public void Upd(string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, object acc = null)
         {
+            int acc0 = 0;
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
-            if (acc != null) _project.acc0w(acc);
+            if (acc != null)
+            {
+                if (acc is int i) acc0 = i;
+                else if (acc is string s) int.TryParse(s, out acc0);
+            }
+            else int.TryParse(_project.Var("acc0"), out acc0);
+
 
             TblName(tableName);
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
             string[] keywords = { "blockchain", "browser", "cex_deps", "native", "profile", "settings" };
             if (keywords.Any(keyword => tableName.Contains(keyword))) last = false;
+            
             toUpd = toUpd.Trim().TrimEnd(',');
-
             if (last) toUpd = toUpd + $", last = '{DateTime.UtcNow.ToString("MM-ddTHH:mm")}'";
 
-            DbQ($@"UPDATE {_tableName} SET {toUpd} WHERE acc0 = {_project.Variables["acc0"].Value};", log: log, throwOnEx: throwOnEx);
+            DbQ($@"UPDATE {_tableName} SET {toUpd} WHERE acc0 = {acc0};", log: log, throwOnEx: throwOnEx);
 
         }
         public void Upd(Dictionary<string, string> toWrite, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, bool byKey = false)
