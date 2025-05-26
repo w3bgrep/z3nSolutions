@@ -38,7 +38,6 @@ namespace ZBSolutions
 
             var signer = new EthereumMessageSigner();
             string key = _key;
-            Log(key);
             string wallet = _key.ToPubEvm();
             string time = string.Format("{0:yyyy-MM-dd HH:mm:ss}", DateTime.Now);
 

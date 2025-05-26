@@ -35,9 +35,18 @@ namespace ZBSolutions
         }
         public void open()
         {
-            if (_conn.State == System.Data.ConnectionState.Closed)
+            try
             {
-                _conn.Open();
+                if (_conn?.State == ConnectionState.Closed)
+                {
+                    _conn.Open();
+                }
+            }
+            catch (Exception ex)
+            {
+                _conn?.Dispose(); 
+                _conn = null;
+                throw new Exception($"DB connection failed: {ex.Message}");
             }
         }
         public void close()
