@@ -20,6 +20,8 @@ namespace ZBSolutions
 {
     public static class InstanceExtensions
     {
+        private static readonly object ClipboardLock = new object();
+        private static readonly SemaphoreSlim ClipboardSemaphore = new SemaphoreSlim(1, 1);
         private static readonly object LockObject = new object();
         public static HtmlElement GetHe(this Instance instance, object obj, string method = "")
         {
@@ -435,9 +437,21 @@ namespace ZBSolutions
 
         public static void CtrlV(this Instance instance, string ToPaste)
         {
-            lock (LockObject) { 
-                System.Windows.Forms.Clipboard.SetText(ToPaste);
-                instance.ActiveTab.KeyEvent("v", "press", "ctrl");
+            lock (new object()) 
+            {
+                string originalClipboard = null;
+                try
+                {
+                    if (System.Windows.Forms.Clipboard.ContainsText())
+                        originalClipboard = System.Windows.Forms.Clipboard.GetText();
+
+                    System.Windows.Forms.Clipboard.SetText(ToPaste);
+                    instance.ActiveTab.KeyEvent("v", "press", "ctrl");
+
+                    if (!string.IsNullOrEmpty(originalClipboard))
+                        System.Windows.Forms.Clipboard.SetText(originalClipboard);
+                }
+                catch { }
             }
         }
         public static void Go(this Instance instance, string url, bool strict = false)

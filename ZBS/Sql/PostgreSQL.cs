@@ -140,6 +140,7 @@ namespace ZBSolutions
             finally
             {
                 db.close();
+                db?.Dispose();
             }
         }
         public static void MkTablePostgre(IZennoPosterProjectModel project, Dictionary<string, string> tableStructure, string tableName = "", bool strictMode = false, bool insertData = true, string host = null, string dbName = "postgres", string dbUser = "postgres", string dbPswd = "", string schemaName = "projects", bool log = false)

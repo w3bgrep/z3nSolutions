@@ -177,9 +177,9 @@ namespace ZBSolutions
                 }
                 dynamic txData = JsonConvert.DeserializeObject<System.Dynamic.ExpandoObject>(data);
                 var gas = txData.gas.ToString();
-                var value = txData.gas.ToString();
-                var sender = txData.gas.ToString();
-                var recipient = txData.gas.ToString();
+                var value = txData.value.ToString();
+                var sender = txData.from.ToString();
+                var recipient = txData.to.ToString();
                 var datastring = $"{txData.data}";
 
 
