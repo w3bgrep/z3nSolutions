@@ -137,30 +137,30 @@ namespace ZBSolutions
 
         }
 
-        //protected string HexToString(string hexValue, string convert = "")
-        //{
-        //    try
-        //    {
-        //        hexValue = hexValue?.Replace("0x", "").Trim();
-        //        if (string.IsNullOrEmpty(hexValue)) return "0";
-        //        BigInteger number = BigInteger.Parse("0" + hexValue, NumberStyles.AllowHexSpecifier);
-        //        switch (convert.ToLower())
-        //        {
-        //            case "gwei":
-        //                decimal gweiValue = (decimal)number / 1000000000m;
-        //                return gweiValue.ToString("0.#########", CultureInfo.InvariantCulture);
-        //            case "eth":
-        //                decimal ethValue = (decimal)number / 1000000000000000000m;
-        //                return ethValue.ToString("0.##################", CultureInfo.InvariantCulture);
-        //            default:
-        //                return number.ToString();
-        //        }
-        //    }
-        //    catch
-        //    {
-        //        return "0";
-        //    }
-        //}
+        protected string HexToDecimalString(string hexValue, string convert = "")
+        {
+            try
+            {
+                hexValue = hexValue?.Replace("0x", "").Trim();
+                if (string.IsNullOrEmpty(hexValue)) return "0";
+                BigInteger number = BigInteger.Parse("0" + hexValue, NumberStyles.AllowHexSpecifier);
+                switch (convert.ToLower())
+                {
+                    case "gwei":
+                        decimal gweiValue = (decimal)number / 1000000000m;
+                        return gweiValue.ToString("0.#########", CultureInfo.InvariantCulture);
+                    case "eth":
+                        decimal ethValue = (decimal)number / 1000000000000000000m;
+                        return ethValue.ToString("0.##################", CultureInfo.InvariantCulture);
+                    default:
+                        return number.ToString();
+                }
+            }
+            catch
+            {
+                return "0";
+            }
+        }
         protected T FloorDecimal<T>(decimal value, int? decimalPlaces = null)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;

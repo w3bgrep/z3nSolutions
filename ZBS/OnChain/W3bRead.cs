@@ -825,9 +825,9 @@ namespace ZBSolutions
                             _project.Json.FromString(response);
                             try
                             {
-                                string gasUsed = HexToString(_project.Json.result.gasUsed, "gwei");
-                                string gasPrice = HexToString(_project.Json.result.effectiveGasPrice, "gwei");
-                                string status = HexToString(_project.Json.result.status);
+                                string gasUsed = HexToDecimalString(_project.Json.result.gasUsed, "gwei");
+                                string gasPrice = HexToDecimalString(_project.Json.result.effectiveGasPrice, "gwei");
+                                string status = HexToDecimalString(_project.Json.result.status);
 
                                 _project.Variables["txStatus"].Value = status == "1" ? "SUCCSESS" : "!W FAIL";
                                 bool res = status == "1" ? true : false;
@@ -870,10 +870,10 @@ namespace ZBSolutions
                             _project.Json.FromString(response);
                             try
                             {
-                                string gas = HexToString(_project.Json.result.maxFeePerGas, "gwei");
-                                string gasPrice = HexToString(_project.Json.result.gasPrice, "gwei");
-                                string nonce = HexToString(_project.Json.result.nonce);
-                                string value = HexToString(_project.Json.result.value, "eth");
+                                string gas = HexToDecimalString(_project.Json.result.maxFeePerGas, "gwei");
+                                string gasPrice = HexToDecimalString(_project.Json.result.gasPrice, "gwei");
+                                string nonce = HexToDecimalString(_project.Json.result.nonce);
+                                string value = HexToDecimalString(_project.Json.result.value, "eth");
                                 _project.Variables["txStatus"].Value = "PENDING";
 
                                 logString = $"[{rpc} {hash}] pending  gasLimit:[{gas}] gasNow:[{gasPrice}] nonce:[{nonce}] value:[{value}]";
