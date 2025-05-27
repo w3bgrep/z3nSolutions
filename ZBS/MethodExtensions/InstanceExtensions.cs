@@ -428,10 +428,10 @@ namespace ZBSolutions
             }
         }
 
-        public static void CloseExtraTabs(this Instance instance, bool blank = false)
+        public static void CloseExtraTabs(this Instance instance, bool blank = false, int tabToKeep = 1)
         {
-            for (; ; ) { try { instance.AllTabs[1].Close(); Thread.Sleep(1000); } catch { break; } }
-            Thread.Sleep(1000);
+            for (; ; ) { try { instance.AllTabs[tabToKeep].Close(); Thread.Sleep(1000); } catch { break; } }
+            Thread.Sleep(500);
             if (blank)instance.ActiveTab.Navigate("about:blank", "");
         }
 

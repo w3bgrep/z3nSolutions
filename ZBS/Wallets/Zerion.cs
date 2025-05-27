@@ -48,7 +48,9 @@ namespace ZBSolutions
             if (string.IsNullOrEmpty(seed))
                 seed = Decrypt(KeyT.bip39);
             if (string.IsNullOrEmpty(seed))
-                throw new Exception("emptykey");
+                seed =string.Empty;
+                Log("!seed is empty");
+                //throw new Exception("emptykey");
             return seed;
         }
 

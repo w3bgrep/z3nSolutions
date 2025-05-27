@@ -76,32 +76,141 @@ namespace w3tools //by @w3bgrep
 {
 
     public static class TestStatic
-{
+    {
 
-        public static string HexToString( this string hexValue, string convert = "")
+        private static readonly object FileLock = new object();
+
+        public static string GetNewCreds(this IZennoPosterProjectModel project, string dataType)
+        {
+            string pathFresh = $"{project.Path}.data\\fresh\\{dataType}.txt";
+            string pathUsed = $"{project.Path}.data\\used\\{dataType}.txt";
+
+            lock (FileLock)
+            {
+                try
+                {
+                    if (!File.Exists(pathFresh))
+                    {
+                        project.SendWarningToLog($"File not found: {pathFresh}");
+                        return null;
+                    }
+
+                    var freshAccs = File.ReadAllLines(pathFresh).ToList();
+                    project.SendInfoToLog($"Loaded {freshAccs.Count} accounts from {pathFresh}");
+
+                    if (freshAccs.Count == 0)
+                    {
+                        project.SendInfoToLog($"No accounts available in {pathFresh}");
+                        return string.Empty;
+                    }
+
+                    string creds = freshAccs[0];
+                    freshAccs.RemoveAt(0);
+
+                    File.WriteAllLines(pathFresh, freshAccs);
+                    File.AppendAllText(pathUsed, creds + Environment.NewLine);
+
+                    return creds;
+                }
+                catch (Exception ex)
+                {
+                    project.SendWarningToLog($"Error processing files for {dataType}: {ex.Message}");
+                    return null;
+                }
+            }
+
+        }
+        public static string CookiesToJson(string cookies)
         {
             try
             {
-                hexValue = hexValue?.Replace("0x", "").Trim();
-                if (string.IsNullOrEmpty(hexValue)) return "0";
-                BigInteger number = BigInteger.Parse("0" + hexValue, NumberStyles.AllowHexSpecifier);
-                switch (convert.ToLower())
+                if (string.IsNullOrEmpty(cookies))
                 {
-                    case "gwei":
-                        decimal gweiValue = (decimal)number / 1000000000m;
-                        return gweiValue.ToString("0.#########", CultureInfo.InvariantCulture);
-                    case "eth":
-                        decimal ethValue = (decimal)number / 1000000000000000000m;
-                        return ethValue.ToString("0.##################", CultureInfo.InvariantCulture);
-                    default:
-                        return number.ToString();
+                    //project.SendWarningToLog("Cookie string is empty or null");
+                    return "[]"; // Возвращаем пустой массив
                 }
+
+                var result = new List<Dictionary<string, string>>();
+                var cookiePairs = cookies.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+
+                foreach (var pair in cookiePairs)
+                {
+                    var trimmedPair = pair.Trim();
+                    if (string.IsNullOrEmpty(trimmedPair))
+                        continue;
+
+                    var keyValue = trimmedPair.Split(new[] { '=' }, 2);
+                    if (keyValue.Length != 2)
+                    {
+                        //project.SendWarningToLog($"Invalid cookie format: {trimmedPair}");
+                        continue;
+                    }
+
+                    var key = keyValue[0].Trim();
+                    var value = keyValue[1].Trim();
+                    if (!string.IsNullOrEmpty(key))
+                    {
+                        result.Add(new Dictionary<string, string>
+                    {
+                        { "name", key },
+                        { "value", value }
+                    });
+                    }
+                }
+
+                // Преобразуем список в JSON-массив
+                string json = JsonConvert.SerializeObject(result, Formatting.Indented);
+                return json;
             }
-            catch
+            catch (Exception ex)
             {
-                return "0";
+                //project.SendWarningToLog($"Error parsing cookies to JSON: {ex.Message}");
+                return "[]"; // Возвращаем пустой массив в случае ошибки
             }
         }
+    
+    public static string NewNickName()
+    {
+        // Списки слов для комбинации
+       string[] adjectives = {
+        "Sunny", "Mystic", "Wild", "Cosmic", "Shadow", "Lunar", "Blaze", "Dream", "Star", "Vivid",
+        "Frost", "Neon", "Gloomy", "Swift", "Silent", "Fierce", "Radiant", "Dusk", "Nova", "Spark",
+        "Crimson", "Azure", "Golden", "Midnight", "Velvet", "Stormy", "Echo", "Vortex", "Phantom", "Bright",
+        "Chill", "Rogue", "Daring", "Lush", "Savage", "Twilight", "Crystal", "Zesty", "Bold", "Hazy",
+        "Vibrant", "Gleam", "Frosty", "Wicked", "Serene", "Bliss", "Rusty", "Hollow", "Sleek", "Pale"
+        };
+
+        // Список существительных (50 элементов)
+        string[] nouns = {
+            "Wolf", "Viper", "Falcon", "Spark", "Catcher", "Rider", "Echo", "Flame", "Voyage", "Knight",
+            "Raven", "Hawk", "Storm", "Tide", "Drift", "Shade", "Quest", "Blaze", "Wraith", "Comet",
+            "Lion", "Phantom", "Star", "Cobra", "Dawn", "Arrow", "Ghost", "Sky", "Vortex", "Wave",
+            "Tiger", "Ninja", "Dreamer", "Seeker", "Glider", "Rebel", "Spirit", "Hunter", "Flash", "Beacon",
+            "Jaguar", "Drake", "Scout", "Path", "Glow", "Riser", "Shadow", "Bolt", "Zephyr", "Forge"
+        };
+
+        // Список суффиксов (10 элементов, как расширение)
+        string[] suffixes = { "", "", "", "", "", "X", "Z", "Vibe", "Glow", "Rush", "Peak", "Core", "Wave", "Zap" };
+
+        // Потокобезопасный генератор случайных чисел
+        Random random = new Random(Guid.NewGuid().GetHashCode());
+
+        // Выбираем случайные слова
+        string adjective = adjectives[random.Next(adjectives.Length)];
+        string noun = nouns[random.Next(nouns.Length)];
+        string suffix = suffixes[random.Next(suffixes.Length)];
+
+        // Комбинируем никнейм
+        string nickname = $"{adjective}{noun}{suffix}";
+
+        // Убедимся, что никнейм не слишком длинный (например, до 15 символов, как на TikTok)
+        if (nickname.Length > 15)
+        {
+            nickname = nickname.Substring(0, 15);
+        }
+
+        return nickname;
+    }
 
 
 }
