@@ -30,6 +30,7 @@ namespace ZBSolutions
             if (string.IsNullOrEmpty(key))
                 key = Decrypt(KeyT.base58);
             if (string.IsNullOrEmpty(key))
+                Log($"!W emptykey base58 acc:{_project.Var("acc0")}");
                 throw new Exception("emptykey");
             return key;
         }
