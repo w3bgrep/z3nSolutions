@@ -392,10 +392,8 @@ namespace ZBSolutions
 
             var current = TblColumns(tblName);
 
-            // Перебираем столбцы таблицы
             foreach (var column in current)
             {
-                // Если столбец отсутствует в ключах tableStructure
                 if (!tableStructure.ContainsKey(column))
                 {
                     Log($"[{column}] not in tableStructure keys, dropping");

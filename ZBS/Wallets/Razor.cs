@@ -14,6 +14,8 @@ namespace ZBSolutions
         protected readonly string _extId;
         protected readonly string _fileName;
         protected readonly string _urlImportKey = "chrome-extension://fdcnegogpncmfejlfnffnofpngdiejii/index.html#/account/initialize/import/private-key";
+        protected readonly string _urlMain = "chrome-extension://fdcnegogpncmfejlfnffnofpngdiejii/index.html";
+
 
         public RazorWallet(IZennoPosterProjectModel project, Instance instance, bool log = false, string key = null, string seed = null)
             : base(project, instance, log)
