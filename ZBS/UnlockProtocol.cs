@@ -60,7 +60,7 @@ namespace ZBSolutions
         {
             _project = project;
             _logShow = log;
-            _jsonRpc = new W3bRead(project).Rpc("optimism");
+            _jsonRpc = new W3b(project).Rpc("optimism");
             _blockchain = new Blockchain(_jsonRpc);
         }
 
@@ -130,7 +130,7 @@ namespace ZBSolutions
                 var owner = ownerOf(contract, i);
                 if (owner == "0x0000000000000000000000000000000000000000") break;
                 var exp = keyExpirationTimestampFor(contract, i);
-                result.Add(owner, exp);
+                result.Add(owner.ToLower(), exp.ToLower());
             }
             return result;
 

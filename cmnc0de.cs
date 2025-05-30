@@ -357,7 +357,7 @@ namespace w3tools //by @w3bgrep
             _project = project;
             _sql = new Sql(_project);
             _logShow = log;
-            _jsonRpc = new W3bRead(project).Rpc("optimism");
+            _jsonRpc = new W3b(project).Rpc("optimism");
             _blockchain = new Blockchain(_jsonRpc);
         }
 		
@@ -368,9 +368,10 @@ namespace w3tools //by @w3bgrep
 		        string[] types = { "uint256" };
 		        object[] values = { tokenId };
 
-		        string resultExpire = _blockchain.ReadContract(addressTo, "keyExpirationTimestampFor", _abi, values).Result;
-                if (decode) resultExpire = Decode(resultExpire,"keyExpirationTimestampFor");
-		        return resultExpire;
+		        string result = _blockchain.ReadContract(addressTo, "keyExpirationTimestampFor", _abi, values).Result;
+                if (decode) result = ProcessExpirationResult(result);
+                //if (decode) result = Decode(result, "keyExpirationTimestampFor");
+		        return result;
 		    }
 		    catch (Exception ex)
 		    {
@@ -379,20 +380,15 @@ namespace w3tools //by @w3bgrep
 		    }
 		}
 		
-
-		
-
-
-		
 		public string ownerOf( string addressTo, int tokenId, bool decode = true)
 		{
 		    try
 		    {
-		        string[] typesOwner = { "uint256" };
-		        object[] valuesOwner = { tokenId };
-		        string resultOwner = _blockchain.ReadContract(addressTo, "ownerOf", _abi, valuesOwner).Result;
-                if (decode) resultOwner = Decode(resultOwner,"ownerOf");
-		        return resultOwner;
+		        string[] types = { "uint256" };
+		        object[] values = { tokenId };
+		        string result = _blockchain.ReadContract(addressTo, "ownerOf", _abi, values).Result;
+                if (decode) result = Decode(result,"ownerOf");
+		        return result;
 		    }
 		    catch (Exception ex)
 		    {
@@ -421,6 +417,36 @@ namespace w3tools //by @w3bgrep
 		    return decodedResultExpire;
 		}
 
+        string ProcessExpirationResult(string resultExpire)
+        {
+            if (string.IsNullOrEmpty(resultExpire))
+            {
+                _project.SendToLog("Result is empty, nothing to decode", LogType.Warning, true, LogColor.Yellow);
+                return string.Empty;
+            }
+
+            if (resultExpire.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+            {
+                resultExpire = resultExpire.Substring(2);
+            }
+
+            if (resultExpire.Length < 64)
+            {
+                resultExpire = resultExpire.PadLeft(64, '0');
+            }
+
+            var decodedDataExpire = ZBSolutions.Decoder.AbiDataDecode(_abi, "keyExpirationTimestampFor", "0x" + resultExpire);
+            string decodedResultExpire = decodedDataExpire.Count == 1
+                ? decodedDataExpire.First().Value
+                : string.Join("\n", decodedDataExpire.Select(item => $"{item.Key};{item.Value}"));
+
+            // project.Variables["lastTimeStamp"].Value = decodedResultExpire;
+            // project.Variables["blockchainDecodedResult"].Value = decodedResultExpire;
+            // project.Variables["a0debug"].Value = decodedResultExpire;
+            // project.Variables["resultExpire"].Value = decodedResultExpire;
+
+            return decodedResultExpire;
+        }
 
         public Dictionary<string, string> Holders(string contract)
         {
@@ -432,7 +458,7 @@ namespace w3tools //by @w3bgrep
                 var owner = ownerOf(contract, i);
                 if (owner == "0x0000000000000000000000000000000000000000") break;
                 var exp = keyExpirationTimestampFor(contract, i);
-                result.Add(owner, exp);
+                result.Add(owner.ToLower(), exp.ToLower());
             }
             return result;
 

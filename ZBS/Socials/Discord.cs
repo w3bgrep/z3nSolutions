@@ -35,23 +35,21 @@ namespace ZBSolutions
 
         public bool ManageRole(string botToken, string guildId, string roleName, string userId, bool assignRole, [CallerMemberName] string callerName = "")
         {
+            Thread.Sleep(1000);
             try
             {
                 var headers = new Dictionary<string, string>
-    {
-        { "Authorization", $"Bot {botToken}" },
-        { "User-Agent", "DiscordBot/1.0" }
-    };
-                Log($"Заголовки для запроса: {string.Join(", ", headers.Select(h => $"{h.Key}: {h.Value}"))}", callerName);
+                {
+                    { "Authorization", $"Bot {botToken}" },
+                    { "User-Agent", "DiscordBot/1.0" }
+                };
 
                 string rolesUrl = $"https://discord.com/api/v10/guilds/{guildId}/roles";
-                Log($"Отправляем GET: {rolesUrl}", callerName);
                 string rolesResponse = _http.GET(rolesUrl, headers: headers, callerName: callerName);
-
-                Log($"Ответ от GET: {rolesResponse}", callerName);
+                Thread.Sleep(1000);
                 if (rolesResponse.StartsWith("Ошибка"))
                 {
-                    Log($"!W Не удалось получить роли сервера: {rolesResponse}", callerName, true);
+                    Log($"!W Не удалось получить роли сервера:{rolesUrl} {rolesResponse}", callerName, true);
                     return false;
                 }
 
@@ -63,26 +61,25 @@ namespace ZBSolutions
                     return false;
                 }
                 string roleId = role["id"].ToString();
-                Log($"Найдена роль: {roleName} (ID: {roleId})", callerName);
+                Log($"found : {roleName} (ID: {roleId})", callerName);
 
                 string url = $"https://discord.com/api/v10/guilds/{guildId}/members/{userId}/roles/{roleId}";
 
                 string result;
                 if (assignRole)
                 {
-                    Log($"Отправляем PUT: {url}", callerName);
                     result = _http.PUT(url, "", proxyString: null, headers: headers, callerName: callerName);
+                    Thread.Sleep(1000);
                 }
                 else
                 {
-                    Log($"Отправляем DELETE: {url}", callerName);
                     result = _http.DELETE(url, proxyString: null, headers: headers, callerName: callerName);
+                    Thread.Sleep(1000);
                 }
 
-                Log($"Ответ от {(assignRole ? "PUT" : "DELETE")}: {result}", callerName);
                 if (result.StartsWith("Ошибка"))
                 {
-                    Log($"!W Не удалось {(assignRole ? "выдать" : "удалить")} роль: {result}", callerName, true);
+                    Log($"!W Не удалось {(assignRole ? "выдать" : "удалить")} роль:{url} {result}", callerName, true);
                     return false;
                 }
 

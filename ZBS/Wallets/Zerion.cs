@@ -206,6 +206,24 @@ namespace ZBSolutions
             }
         }
 
+        public void Launch(string fileName = null, bool log = false)
+        {
+            if (string.IsNullOrEmpty(fileName)) fileName = _fileName;
+
+            var em = _instance.UseFullMouseEmulation;
+            _instance.UseFullMouseEmulation = false;
+
+            if (Install(_extId, fileName)) ZerionImport(log: log);
+            else
+            {
+                ZerionUnlock(log: false);
+                ZerionCheck(log: log);
+            }
+            _instance.CloseExtraTabs();
+            _instance.UseFullMouseEmulation = em;
+        }
+
+
 
         public void ZerionLnch(string fileName = null, bool log = false)
         {
