@@ -491,7 +491,47 @@ namespace ZBSolutions
             return version;
 
         }
+        private static readonly object FileLock = new object();
+        public static string GetNewCreds(this IZennoPosterProjectModel project, string dataType)
+        {
+            string pathFresh = $"{project.Path}.data\\fresh\\{dataType}.txt";
+            string pathUsed = $"{project.Path}.data\\used\\{dataType}.txt";
 
+            lock (FileLock)
+            {
+                try
+                {
+                    if (!File.Exists(pathFresh))
+                    {
+                        project.SendWarningToLog($"File not found: {pathFresh}");
+                        return null;
+                    }
+
+                    var freshAccs = File.ReadAllLines(pathFresh).ToList();
+                    project.SendInfoToLog($"Loaded {freshAccs.Count} accounts from {pathFresh}");
+
+                    if (freshAccs.Count == 0)
+                    {
+                        project.SendInfoToLog($"No accounts available in {pathFresh}");
+                        return string.Empty;
+                    }
+
+                    string creds = freshAccs[0];
+                    freshAccs.RemoveAt(0);
+
+                    File.WriteAllLines(pathFresh, freshAccs);
+                    File.AppendAllText(pathUsed, creds + Environment.NewLine);
+
+                    return creds;
+                }
+                catch (Exception ex)
+                {
+                    project.SendWarningToLog($"Error processing files for {dataType}: {ex.Message}");
+                    return null;
+                }
+            }
+
+        }
         public static Dictionary<string, string> TblMap(this IZennoPosterProjectModel project, string[] staticColumns, string dynamicToDo = null, string defaultType = "TEXT DEFAULT ''")
         {
             if (string.IsNullOrEmpty(dynamicToDo)) dynamicToDo = project.Variables["cfgToDo"].Value;

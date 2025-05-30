@@ -197,7 +197,41 @@ namespace ZBSolutions
             }
         }
 
+        public static string NewNickName()
+        {
+            string[] adjectives = {
+                "Sunny", "Mystic", "Wild", "Cosmic", "Shadow", "Lunar", "Blaze", "Dream", "Star", "Vivid",
+                "Frost", "Neon", "Gloomy", "Swift", "Silent", "Fierce", "Radiant", "Dusk", "Nova", "Spark",
+                "Crimson", "Azure", "Golden", "Midnight", "Velvet", "Stormy", "Echo", "Vortex", "Phantom", "Bright",
+                "Chill", "Rogue", "Daring", "Lush", "Savage", "Twilight", "Crystal", "Zesty", "Bold", "Hazy",
+                "Vibrant", "Gleam", "Frosty", "Wicked", "Serene", "Bliss", "Rusty", "Hollow", "Sleek", "Pale"
+            };
 
+                string[] nouns = {
+                "Wolf", "Viper", "Falcon", "Spark", "Catcher", "Rider", "Echo", "Flame", "Voyage", "Knight",
+                "Raven", "Hawk", "Storm", "Tide", "Drift", "Shade", "Quest", "Blaze", "Wraith", "Comet",
+                "Lion", "Phantom", "Star", "Cobra", "Dawn", "Arrow", "Ghost", "Sky", "Vortex", "Wave",
+                "Tiger", "Ninja", "Dreamer", "Seeker", "Glider", "Rebel", "Spirit", "Hunter", "Flash", "Beacon",
+                "Jaguar", "Drake", "Scout", "Path", "Glow", "Riser", "Shadow", "Bolt", "Zephyr", "Forge"
+            };
+
+            string[] suffixes = { "", "", "", "", "", "X", "Z", "Vibe", "Glow", "Rush", "Peak", "Core", "Wave", "Zap" };
+
+            Random random = new Random(Guid.NewGuid().GetHashCode());
+
+            string adjective = adjectives[random.Next(adjectives.Length)];
+            string noun = nouns[random.Next(nouns.Length)];
+            string suffix = suffixes[random.Next(suffixes.Length)];
+
+            string nickname = $"{adjective}{noun}{suffix}";
+
+            if (nickname.Length > 15)
+            {
+                nickname = nickname.Substring(0, 15);
+            }
+
+            return nickname;
+        }
 
     }
 }

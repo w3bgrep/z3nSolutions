@@ -78,6 +78,17 @@ namespace w3tools //by @w3bgrep
     public static class TestStatic
     {
 
+		public static string UnixToHuman(this string decodedResultExpire)
+		{
+		    if (!string.IsNullOrEmpty(decodedResultExpire))
+		    {
+		        int intEpoch = int.Parse(decodedResultExpire);
+		        return new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(intEpoch).ToShortDateString();
+		    }
+		    return string.Empty;
+		}
+
+
         private static readonly object FileLock = new object();
 
         public static string GetNewCreds(this IZennoPosterProjectModel project, string dataType)
@@ -126,8 +137,7 @@ namespace w3tools //by @w3bgrep
             {
                 if (string.IsNullOrEmpty(cookies))
                 {
-                    //project.SendWarningToLog("Cookie string is empty or null");
-                    return "[]"; // Возвращаем пустой массив
+                    return "[]"; 
                 }
 
                 var result = new List<Dictionary<string, string>>();
@@ -142,7 +152,6 @@ namespace w3tools //by @w3bgrep
                     var keyValue = trimmedPair.Split(new[] { '=' }, 2);
                     if (keyValue.Length != 2)
                     {
-                        //project.SendWarningToLog($"Invalid cookie format: {trimmedPair}");
                         continue;
                     }
 
@@ -158,21 +167,19 @@ namespace w3tools //by @w3bgrep
                     }
                 }
 
-                // Преобразуем список в JSON-массив
                 string json = JsonConvert.SerializeObject(result, Formatting.Indented);
                 return json;
             }
             catch (Exception ex)
             {
-                //project.SendWarningToLog($"Error parsing cookies to JSON: {ex.Message}");
-                return "[]"; // Возвращаем пустой массив в случае ошибки
+                return "[]"; 
             }
         }
-    
-    public static string NewNickName()
-    {
-        // Списки слов для комбинации
-       string[] adjectives = {
+
+        public static string NewNickName()
+        {
+            // Списки слов для комбинации
+            string[] adjectives = {
         "Sunny", "Mystic", "Wild", "Cosmic", "Shadow", "Lunar", "Blaze", "Dream", "Star", "Vivid",
         "Frost", "Neon", "Gloomy", "Swift", "Silent", "Fierce", "Radiant", "Dusk", "Nova", "Spark",
         "Crimson", "Azure", "Golden", "Midnight", "Velvet", "Stormy", "Echo", "Vortex", "Phantom", "Bright",
@@ -180,8 +187,8 @@ namespace w3tools //by @w3bgrep
         "Vibrant", "Gleam", "Frosty", "Wicked", "Serene", "Bliss", "Rusty", "Hollow", "Sleek", "Pale"
         };
 
-        // Список существительных (50 элементов)
-        string[] nouns = {
+            // Список существительных (50 элементов)
+            string[] nouns = {
             "Wolf", "Viper", "Falcon", "Spark", "Catcher", "Rider", "Echo", "Flame", "Voyage", "Knight",
             "Raven", "Hawk", "Storm", "Tide", "Drift", "Shade", "Quest", "Blaze", "Wraith", "Comet",
             "Lion", "Phantom", "Star", "Cobra", "Dawn", "Arrow", "Ghost", "Sky", "Vortex", "Wave",
@@ -189,31 +196,31 @@ namespace w3tools //by @w3bgrep
             "Jaguar", "Drake", "Scout", "Path", "Glow", "Riser", "Shadow", "Bolt", "Zephyr", "Forge"
         };
 
-        // Список суффиксов (10 элементов, как расширение)
-        string[] suffixes = { "", "", "", "", "", "X", "Z", "Vibe", "Glow", "Rush", "Peak", "Core", "Wave", "Zap" };
+            // Список суффиксов (10 элементов, как расширение)
+            string[] suffixes = { "", "", "", "", "", "X", "Z", "Vibe", "Glow", "Rush", "Peak", "Core", "Wave", "Zap" };
 
-        // Потокобезопасный генератор случайных чисел
-        Random random = new Random(Guid.NewGuid().GetHashCode());
+            // Потокобезопасный генератор случайных чисел
+            Random random = new Random(Guid.NewGuid().GetHashCode());
 
-        // Выбираем случайные слова
-        string adjective = adjectives[random.Next(adjectives.Length)];
-        string noun = nouns[random.Next(nouns.Length)];
-        string suffix = suffixes[random.Next(suffixes.Length)];
+            // Выбираем случайные слова
+            string adjective = adjectives[random.Next(adjectives.Length)];
+            string noun = nouns[random.Next(nouns.Length)];
+            string suffix = suffixes[random.Next(suffixes.Length)];
 
-        // Комбинируем никнейм
-        string nickname = $"{adjective}{noun}{suffix}";
+            // Комбинируем никнейм
+            string nickname = $"{adjective}{noun}{suffix}";
 
-        // Убедимся, что никнейм не слишком длинный (например, до 15 символов, как на TikTok)
-        if (nickname.Length > 15)
-        {
-            nickname = nickname.Substring(0, 15);
+            // Убедимся, что никнейм не слишком длинный (например, до 15 символов, как на TikTok)
+            if (nickname.Length > 15)
+            {
+                nickname = nickname.Substring(0, 15);
+            }
+
+            return nickname;
         }
 
-        return nickname;
+
     }
-
-
-}
 
 
     public class Tiktok
@@ -290,8 +297,149 @@ namespace w3tools //by @w3bgrep
 
         }
 
-    
-}
+
+    }
+
+
+
+    public class Unlock
+	{
+		
+		protected readonly IZennoPosterProjectModel _project;
+        protected readonly bool _logShow;
+        protected readonly Sql _sql;
+		protected readonly string _jsonRpc;
+		protected readonly Blockchain _blockchain;
+        protected readonly string _abi = @"[
+                        {
+                            ""inputs"": [
+                            {
+                                ""internalType"": ""uint256"",
+                                ""name"": ""_tokenId"",
+                                ""type"": ""uint256""
+                            }
+                            ],
+                            ""name"": ""keyExpirationTimestampFor"",
+                            ""outputs"": [
+                            {
+                                ""internalType"": ""uint256"",
+                                ""name"": """",
+                                ""type"": ""uint256""
+                            }
+                            ],
+                            ""stateMutability"": ""view"",
+                            ""type"": ""function""
+                        },
+                        {
+                            ""inputs"": [
+                            {
+                                ""internalType"": ""uint256"",
+                                ""name"": ""_tokenId"",
+                                ""type"": ""uint256""
+                            }
+                            ],
+                            ""name"": ""ownerOf"",
+                            ""outputs"": [
+                            {
+                                ""internalType"": ""address"",
+                                ""name"": """",
+                                ""type"": ""address""
+                            }
+                            ],
+                            ""stateMutability"": ""view"",
+                            ""type"": ""function""
+                        }
+                    ]";
+
+
+        public Unlock(IZennoPosterProjectModel project, bool log = false)
+        {
+            _project = project;
+            _sql = new Sql(_project);
+            _logShow = log;
+            _jsonRpc = new W3bRead(project).Rpc("optimism");
+            _blockchain = new Blockchain(_jsonRpc);
+        }
+		
+		public string keyExpirationTimestampFor(string addressTo, int tokenId, bool decode = true)
+		{
+		    try
+		    {
+		        string[] types = { "uint256" };
+		        object[] values = { tokenId };
+
+		        string resultExpire = _blockchain.ReadContract(addressTo, "keyExpirationTimestampFor", _abi, values).Result;
+                if (decode) resultExpire = Decode(resultExpire,"keyExpirationTimestampFor");
+		        return resultExpire;
+		    }
+		    catch (Exception ex)
+		    {
+                _project.L0g(ex.InnerException?.Message ?? ex.Message);
+		        throw;
+		    }
+		}
+		
+
+		
+
+
+		
+		public string ownerOf( string addressTo, int tokenId, bool decode = true)
+		{
+		    try
+		    {
+		        string[] typesOwner = { "uint256" };
+		        object[] valuesOwner = { tokenId };
+		        string resultOwner = _blockchain.ReadContract(addressTo, "ownerOf", _abi, valuesOwner).Result;
+                if (decode) resultOwner = Decode(resultOwner,"ownerOf");
+		        return resultOwner;
+		    }
+		    catch (Exception ex)
+		    {
+                _project.L0g(ex.InnerException?.Message ?? ex.Message);
+		        throw;
+		    }
+		}
+        
+        public string Decode(string toDecode, string function)
+		{
+		    if (string.IsNullOrEmpty(toDecode))
+		    {
+		         _project.L0g("Result is empty, nothing to decode");
+		        return string.Empty;
+		    }
+		
+		    if (toDecode.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) toDecode = toDecode.Substring(2);
+		    if (toDecode.Length < 64) toDecode = toDecode.PadLeft(64, '0');
+
+		
+		    var decodedDataExpire = ZBSolutions.Decoder.AbiDataDecode(_abi, function, "0x" + toDecode);
+		    string decodedResultExpire = decodedDataExpire.Count == 1
+		        ? decodedDataExpire.First().Value
+		        : string.Join("\n", decodedDataExpire.Select(item => $"{item.Key};{item.Value}"));
+		
+		    return decodedResultExpire;
+		}
+
+
+        public Dictionary<string, string> Holders(string contract)
+        {
+            var result = new Dictionary<string, string>();
+            int i = 0;
+            while (true)
+            {
+                i++;
+                var owner = ownerOf(contract, i);
+                if (owner == "0x0000000000000000000000000000000000000000") break;
+                var exp = keyExpirationTimestampFor(contract, i);
+                result.Add(owner, exp);
+            }
+            return result;
+
+
+		}
+		
+	}
 
 
 }

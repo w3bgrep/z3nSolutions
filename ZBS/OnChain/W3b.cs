@@ -29,8 +29,8 @@ namespace ZBSolutions
             _sql = new Sql(_project);
             _logShow = log;
             _rpcs = LoadRPCs();
-            _key = ApplyKey(key);
-            _adrEvm = _key.ToPubEvm();
+            //_key = ApplyKey(key);
+            //_adrEvm = _key.ToPubEvm();
             //_adrs = LoadAddresses();
         }
 

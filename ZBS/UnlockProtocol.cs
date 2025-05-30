@@ -1,0 +1,141 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using ZennoLab.InterfacesLibrary.ProjectModel;
+
+namespace ZBSolutions
+{
+    public class UnlockProtocol
+    {
+
+        protected readonly IZennoPosterProjectModel _project;
+        protected readonly bool _logShow;
+        protected readonly string _jsonRpc;
+        protected readonly Blockchain _blockchain;
+        protected readonly string _abi = @"[
+                        {
+                            ""inputs"": [
+                            {
+                                ""internalType"": ""uint256"",
+                                ""name"": ""_tokenId"",
+                                ""type"": ""uint256""
+                            }
+                            ],
+                            ""name"": ""keyExpirationTimestampFor"",
+                            ""outputs"": [
+                            {
+                                ""internalType"": ""uint256"",
+                                ""name"": """",
+                                ""type"": ""uint256""
+                            }
+                            ],
+                            ""stateMutability"": ""view"",
+                            ""type"": ""function""
+                        },
+                        {
+                            ""inputs"": [
+                            {
+                                ""internalType"": ""uint256"",
+                                ""name"": ""_tokenId"",
+                                ""type"": ""uint256""
+                            }
+                            ],
+                            ""name"": ""ownerOf"",
+                            ""outputs"": [
+                            {
+                                ""internalType"": ""address"",
+                                ""name"": """",
+                                ""type"": ""address""
+                            }
+                            ],
+                            ""stateMutability"": ""view"",
+                            ""type"": ""function""
+                        }
+                    ]";
+
+
+        public UnlockProtocol(IZennoPosterProjectModel project, bool log = false)
+        {
+            _project = project;
+            _logShow = log;
+            _jsonRpc = new W3bRead(project).Rpc("optimism");
+            _blockchain = new Blockchain(_jsonRpc);
+        }
+
+        public string keyExpirationTimestampFor(string addressTo, int tokenId, bool decode = true)
+        {
+            try
+            {
+                string[] types = { "uint256" };
+                object[] values = { tokenId };
+
+                string resultExpire = _blockchain.ReadContract(addressTo, "keyExpirationTimestampFor", _abi, values).Result;
+                if (decode) resultExpire = Decode(resultExpire, "keyExpirationTimestampFor");
+                return resultExpire;
+            }
+            catch (Exception ex)
+            {
+                _project.L0g(ex.InnerException?.Message ?? ex.Message);
+                throw;
+            }
+        }
+
+        public string ownerOf(string addressTo, int tokenId, bool decode = true)
+        {
+            try
+            {
+                string[] typesOwner = { "uint256" };
+                object[] valuesOwner = { tokenId };
+                string resultOwner = _blockchain.ReadContract(addressTo, "ownerOf", _abi, valuesOwner).Result;
+                if (decode) resultOwner = Decode(resultOwner, "ownerOf");
+                return resultOwner;
+            }
+            catch (Exception ex)
+            {
+                _project.L0g(ex.InnerException?.Message ?? ex.Message);
+                throw;
+            }
+        }
+
+        public string Decode(string toDecode, string function)
+        {
+            if (string.IsNullOrEmpty(toDecode))
+            {
+                _project.L0g("Result is empty, nothing to decode");
+                return string.Empty;
+            }
+
+            if (toDecode.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) toDecode = toDecode.Substring(2);
+            if (toDecode.Length < 64) toDecode = toDecode.PadLeft(64, '0');
+
+
+            var decodedDataExpire = ZBSolutions.Decoder.AbiDataDecode(_abi, function, "0x" + toDecode);
+            string decodedResultExpire = decodedDataExpire.Count == 1
+                ? decodedDataExpire.First().Value
+                : string.Join("\n", decodedDataExpire.Select(item => $"{item.Key};{item.Value}"));
+
+            return decodedResultExpire;
+        }
+
+
+        public Dictionary<string, string> Holders(string contract)
+        {
+            var result = new Dictionary<string, string>();
+            int i = 0;
+            while (true)
+            {
+                i++;
+                var owner = ownerOf(contract, i);
+                if (owner == "0x0000000000000000000000000000000000000000") break;
+                var exp = keyExpirationTimestampFor(contract, i);
+                result.Add(owner, exp);
+            }
+            return result;
+
+
+        }
+
+    }
+}
