@@ -217,16 +217,47 @@ namespace ZBSolutions
 
 
 
-        public string Get(string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "acc0", string acc = null)
+        //public string Get(string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "acc0", string acc = null)
+        //{
+        //    if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
+        //    TblName(tableName);
+        //    if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+
+        //    if (string.IsNullOrEmpty(acc)) acc = _project.Variables["acc0"].Value;
+        //    if (key == "acc0") return DbQ($@"SELECT {toGet.Trim().TrimEnd(',')} from {_tableName} WHERE acc0 = {acc};", log: log, throwOnEx: throwOnEx);
+        //    else return DbQ($@"SELECT {toGet.Trim().TrimEnd(',')} from {_tableName} WHERE key = '{key}';", log: log, throwOnEx: throwOnEx);
+        //}
+
+        //get
+        public string Get(string toGet, string tableName, string key, string acc, bool log, bool throwOnEx)
         {
-            if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
             TblName(tableName);
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
-            if (string.IsNullOrEmpty(acc)) acc = _project.Variables["acc0"].Value;
-            if (key == "acc0") return DbQ($@"SELECT {toGet.Trim().TrimEnd(',')} from {_tableName} WHERE acc0 = {acc};", log: log, throwOnEx: throwOnEx);
-            else return DbQ($@"SELECT {toGet.Trim().TrimEnd(',')} from {_tableName} WHERE key = '{key}';", log: log, throwOnEx: throwOnEx);
+            if (key == "acc0")
+                return DbQ($@"SELECT {toGet.Trim().TrimEnd(',')} from {_tableName} WHERE acc0 = {acc};", log, throwOnEx);
+            else
+                return DbQ($@"SELECT {toGet.Trim().TrimEnd(',')} from {_tableName} WHERE key = '{key}';", log, throwOnEx);
         }
+        public string Get(string toGet, string tableName, string key, bool log = false, bool throwOnEx = false)
+        {
+            string acc = _project.Variables["acc0"].Value;
+            return Get(toGet, tableName, key, acc, log, throwOnEx);
+        }
+        public string Get(string toGet, string key, bool log = false, bool throwOnEx = false)
+        {
+            string tableName = _project.Variables["projectTable"].Value;
+            return Get(toGet, tableName, key, log, throwOnEx);
+        }
+        public string Get(string toGet, bool log = false, bool throwOnEx = false)
+        {
+            string tableName = _project.Variables["projectTable"].Value;
+            string key = "acc0";
+            return Get(toGet, tableName, key, log, throwOnEx);
+        }
+
+
+
         public string GetColumns(string tableName, string schemaName = "accounts", bool log = false)
         {
             string Q; string name;

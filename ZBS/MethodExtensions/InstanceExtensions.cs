@@ -1,13 +1,16 @@
 ﻿using Nethereum.Contracts.QueryHandlers.MultiCall;
 using Nethereum.Contracts.Standards.ENS.ENSRegistry.ContractDefinition;
+using Nethereum.Model;
 using Newtonsoft.Json.Linq;
 using System;
 using System.CodeDom;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Web.Routing;
 using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.Enums.Browser;
 using ZennoLab.InterfacesLibrary.Enums.Log;
@@ -296,10 +299,6 @@ namespace ZBSolutions
             else
                 throw new Exception($"unsupported format [{format}]");
         }
-
-
-
-
 
         //js
         public static string JsClick(this Instance instance, string selector, int delay = 2)
@@ -759,10 +758,68 @@ namespace ZBSolutions
         }
 
 
+        public static void ExtSwitch(this Instance instance, IZennoPosterProjectModel project,string toUse = "", bool log = false)
+        {
+            project.L0g($"switching extentions  {toUse}");
+
+            if (instance.BrowserType.ToString() == "Chromium")
+            {
+                var wlt = new Wlt(project, instance, log);
+                string fileName = $"One-Click-Extensions-Manager.crx";
+                var managerId = "pbgjpgbpljobkekbhnnmlikbbfhbhmem";
+                instance.ExtAdd(project, managerId, fileName);
+                wlt.Install(managerId, fileName, log);
+
+                var em = instance.UseFullMouseEmulation;
+
+                int i = 0; string extStatus = "enabled";
+
+                while (instance.ActiveTab.URL != "chrome-extension://pbgjpgbpljobkekbhnnmlikbbfhbhmem/index.html")
+                {
+                    instance.ActiveTab.Navigate("chrome-extension://pbgjpgbpljobkekbhnnmlikbbfhbhmem/index.html", "");
+                    instance.CloseExtraTabs();
+                    project.L0g($"URL is correct {instance.ActiveTab.URL}");
+                }
+
+                while (!instance.ActiveTab.FindElementByAttribute("button", "class", "ext-name", "regexp", i).IsVoid)
+                {
+                    string extName = Regex.Replace(instance.ActiveTab.FindElementByAttribute("button", "class", "ext-name", "regexp", i).GetAttribute("innertext"), @" Wallet", "");
+                    string outerHtml = instance.ActiveTab.FindElementByAttribute("li", "class", "ext\\ type-normal", "regexp", i).GetAttribute("outerhtml");
+                    string extId = Regex.Match(outerHtml, @"extension-icon/([a-z0-9]+)").Groups[1].Value;
+                    if (outerHtml.Contains("disabled")) extStatus = "disabled";
+                    if (toUse.Contains(extName) && extStatus == "disabled" || toUse.Contains(extId) && extStatus == "disabled" || !toUse.Contains(extName) && !toUse.Contains(extId) && extStatus == "enabled")
+                        instance.HeClick(("button", "class", "ext-name", "regexp", i));
+                    i++;
+                }
+
+                instance.CloseExtraTabs();
+                instance.UseFullMouseEmulation = em;
+                project.L0g($"Enabled  {toUse}");
+            }
+
+        }
+        public static bool ExtAdd(this Instance instance, IZennoPosterProjectModel project, string extId, string fileName)
+        {
+            string path = $"{project.Path}.crx\\{fileName}";
+
+            if (!File.Exists(path))
+            {
+                project.L0g($"File not found: {path}");
+                throw new FileNotFoundException($"CRX file not found: {path}");
+            }
+
+            var extListString = string.Join("\n", instance.GetAllExtensions().Select(x => $"{x.Name}:{x.Id}"));
+            if (!extListString.Contains(extId))
+            {
+                project.L0g($"installing {path}");
+                instance.InstallCrxExtension(path);
+                return true;
+            }
+            return false;
+        }
+
+
     }
 
 
-
-
-    
 }

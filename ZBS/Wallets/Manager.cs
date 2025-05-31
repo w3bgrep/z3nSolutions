@@ -62,10 +62,7 @@ namespace ZBSolutions
 
         public void Switch(string toUse = "", bool log = false)
         {
-
-
             WalLog($"switching extentions  {toUse}", log: log);
-
             try
             {
                 if (_instance.BrowserType.ToString() == "Chromium" && _project.Variables["acc0"].Value != "")
