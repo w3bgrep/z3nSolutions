@@ -87,7 +87,7 @@
     <Compile Include="Sql\TableSvc.cs" />
     <Compile Include="OnChain\W3bRead.cs" />
     <Compile Include="Telegram.cs" />
-    <Compile Include="UnlockProtocol.cs" />
+    <Compile Include="OnChain\UnlockProtocol.cs" />
     <Compile Include="Wallets\Manager.cs" />
     <Compile Include="Wallets\Keplr.cs" />
     <Compile Include="Wallets\Rabby.cs" />
