@@ -281,9 +281,9 @@ namespace ZBSolutions
                 try
                 {
 
-                    for (int i = int.Parse(project.Variables["rangeStart"].Value); i <= int.Parse(project.Variables["rangeEnd"].Value); i++)
+                    for (int i = 1; i <= int.Parse(project.Variables["rangeEnd"].Value); i++)
                     {
-                        string threadKey = $"Thread{i}";
+                        string threadKey = $"acc{i}";
                         try
                         {
                             var globalVar = project.GlobalVariables[nameSpase, threadKey];
@@ -311,7 +311,7 @@ namespace ZBSolutions
                     }
                     else
                     {
-                        project.L0g($"buzy Threads: [{string.Join(" | ", busyAccounts)}]");
+                        project.L0g($"buzy Accounts: [{string.Join(" | ", busyAccounts)}]");
                     }
                     int currentThread = int.Parse(project.Variables["acc0"].Value);
                     string currentThreadKey = $"acc{currentThread}";

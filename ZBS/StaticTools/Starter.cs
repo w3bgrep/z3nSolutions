@@ -304,17 +304,17 @@ namespace ZBSolutions
                 }
             }
         }
-        public void ConfigFromDb()
-        {
-            string settings = _sql.Settings();
-            foreach (string varData in settings.Split('\n'))
-            {
-                string varName = varData.Split('|')[0];
-                string varValue = varData.Split('|')[1].Trim();
-                try { _project.Variables[$"{varName}"].Value = varValue; }
-                catch (Exception e) { Log(e.Message); }
-            }
-        }
+        //public void ConfigFromDb()
+        //{
+        //    string settings = _sql.Settings();
+        //    foreach (string varData in settings.Split('\n'))
+        //    {
+        //        string varName = varData.Split('|')[0];
+        //        string varValue = varData.Split('|')[1].Trim();
+        //        try { _project.Variables[$"{varName}"].Value = varValue; }
+        //        catch (Exception e) { Log(e.Message); }
+        //    }
+        //}
         
    
     }

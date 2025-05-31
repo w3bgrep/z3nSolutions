@@ -453,13 +453,27 @@ namespace ZBSolutions
             _project.Variables["accBIO"].Value = respData[1].Trim();
             return resp;
         }
-        public string Settings()
+        public Dictionary<string,string> Settings(bool set = true)
         {
+            var dbConfig = new Dictionary<string,string>();
+            
             TblName("private_settings");  
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-
             var resp = DbQ($"SELECT key, value FROM {_tableName}");
-            return resp;
+            foreach (string varData in resp.Split('\n'))
+            {
+                string varName = varData.Split('|')[0];
+                string varValue = varData.Split('|')[1].Trim();
+                dbConfig.Add(varName, varValue);
+
+                if (set) 
+                {
+                    try { _project.Var(varName, varValue); }
+                    catch (Exception e) { Log(e.Message); }
+                }
+            }
+            return dbConfig;
+
         }
         public string Email(string tableName = "google", string schemaName = "accounts")
         {
