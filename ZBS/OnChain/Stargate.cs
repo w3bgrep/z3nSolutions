@@ -52,30 +52,21 @@ namespace ZBSolutions
             if (!connectedButton.FindChildByAttribute("img", "alt", "Backpack", "regexp", 0).IsVoid) state = "Backpack";
             else if (unconnectedButton.InnerText == "Connect Wallet") state = "Connect";
 
-
             switch (state)
             {
                 case "Connect":
-
-                    _instance.HeClick(unconnectedButton);
-                    _instance.HeClick(("button", "innertext", "Backpac\\nConnect", "regexp", 0));
-                    new BackpackWallet(_project, _instance).Connect();
-
+                    _instance.HeClick(unconnectedButton, emu: 1);
+                    _instance.HeClick(("button", "innertext", "Zerion\\nConnect", "regexp", 0));
+                    new ZerionWallet(_project, _instance).ZerionConnect();
                     goto check;
 
                 case "Zerion":
                     _project.L0g($"{connectedButton.InnerText} connected with {state}");
-                    goto check;
-
-                case "Backpack":
-                    _project.L0g($"{connectedButton.InnerText} connected with {state}");
                     break;
-
 
                 default:
                     _project.L0g($"unknown state {connectedButton.InnerText}  {unconnectedButton.InnerText}");
                     goto check;
-
 
             }
         }

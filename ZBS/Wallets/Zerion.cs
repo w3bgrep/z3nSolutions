@@ -223,6 +223,130 @@ namespace ZBSolutions
             _instance.UseFullMouseEmulation = em;
         }
 
+        public void Connect(bool log = false)
+        {
+
+            string action = null;
+        getState:
+
+            try
+            {
+                action = _instance.HeGet(("button", "class", "_primary", "regexp", 0));
+            }
+            catch (Exception ex)
+            {
+                _project.L0g($"No Wallet tab found. 0");
+                return;
+            }
+
+            _project.L0g(action);
+
+            switch (action)
+            {
+                case "Add":
+                    _project.L0g($"adding {_instance.HeGet(("input:url", "fulltagname", "input:url", "text", 0), atr: "value")}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                    goto getState;
+                case "Close":
+                    _project.L0g($"added {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                    goto getState;
+                case "Connect":
+                    _project.L0g($"connecting {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                    goto getState;
+                case "Sign":
+                    _project.L0g($"sign {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                    goto getState;
+                case "Sign In":
+                    _project.L0g($"sign {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                    goto getState;
+
+                default:
+                    goto getState;
+
+            }
+
+
+        }
+
+        public void SwitchSource(string addressToUse = "key")
+        {
+
+            _project.Deadline();
+
+            if (addressToUse == "key") addressToUse = _publicFromKey;
+            else if (addressToUse == "seed") addressToUse = _publicFromSeed;
+            else throw new Exception("supports \"key\" | \"seed\" only");
+            go:
+            Go("select");
+            Thread.Sleep(1000);
+
+        waitWallets:
+            _project.Deadline(60);
+            if (_instance.ActiveTab.FindElementByAttribute("button", "class", "_wallet", "regexp", 0).IsVoid) goto waitWallets;
+
+            var wallets = _instance.ActiveTab.FindElementsByAttribute("button", "class", "_wallet", "regexp").ToList();
+
+            foreach (HtmlElement wallet in wallets)
+            {
+                string masked = "";
+                string balance = "";
+                string ens = "";
+
+                if (wallet.InnerHtml.Contains("M18 21a2.9 2.9 0 0 1-2.125-.875A2.9 2.9 0 0 1 15 18q0-1.25.875-2.125A2.9 2.9 0 0 1 18 15a3.1 3.1 0 0 1 .896.127 1.5 1.5 0 1 0 1.977 1.977Q21 17.525 21 18q0 1.25-.875 2.125A2.9 2.9 0 0 1 18 21")) continue;
+                if (wallet.InnerText.Contains("·"))
+                {
+                    ens = wallet.InnerText.Split('\n')[0].Split('·')[0];
+                    masked = wallet.InnerText.Split('\n')[0].Split('·')[1];
+                    balance = wallet.InnerText.Split('\n')[1].Trim();
+
+                }
+                else
+                {
+                    masked = wallet.InnerText.Split('\n')[0];
+                    balance = wallet.InnerText.Split('\n')[1];
+                }
+                masked = masked.Trim();
+
+                Log($"[{masked}]{masked.ChkAddress(addressToUse)}[{addressToUse}]");
+
+                if (masked.ChkAddress(addressToUse))
+                {
+                    _instance.HeClick(wallet);
+                    return;
+                }
+            }
+            Log("address not found");
+            Add("seed");
+
+            _instance.CloseExtraTabs(true);
+            goto go;
+
+
+        }
+
+        public void TestnetMode(bool testMode = false)
+        {
+            bool current;
+
+            string testmode = _instance.HeGet(("input:checkbox", "fulltagname", "input:checkbox", "text", 0), atr: "value");
+
+            if (testmode == "True")
+                current = true;
+            else
+                current = false;
+
+            if (testMode != current)
+                _instance.HeClick(("input:checkbox", "fulltagname", "input:checkbox", "text", 0));
+
+        }
+
+
+
+
 
 
         public void ZerionLnch(string fileName = null, bool log = false)
