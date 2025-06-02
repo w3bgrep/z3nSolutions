@@ -78,6 +78,7 @@
   <ItemGroup>
     <Compile Include="CexApi\Refuel.cs" />
     <Compile Include="MethodExtensions\ObjectExtentions.cs" />
+    <Compile Include="Relay.cs" />
     <Compile Include="Sql\Dbuilder.cs" />
     <Compile Include="F0rms.cs" />
     <Compile Include="OnChain\DMail.cs" />
@@ -86,8 +87,10 @@
     <Compile Include="Socials\Galxe.cs" />
     <Compile Include="Sql\TableSvc.cs" />
     <Compile Include="OnChain\W3bRead.cs" />
+    <Compile Include="OnChain\Stargate.cs" />
     <Compile Include="Telegram.cs" />
     <Compile Include="OnChain\UnlockProtocol.cs" />
+    <Compile Include="OnChain\Unlock.cs" />
     <Compile Include="Wallets\Manager.cs" />
     <Compile Include="Wallets\Keplr.cs" />
     <Compile Include="Wallets\Rabby.cs" />
