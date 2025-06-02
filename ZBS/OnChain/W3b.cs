@@ -100,6 +100,8 @@ namespace ZBSolutions
                 { "scroll", "https://rpc.scroll.io" },
                 { "soneium", "https://rpc.soneium.org" },
                 { "taiko", "https://rpc.mainnet.taiko.xyz" },
+                { "unichain", "https://unichain.drpc.org" },
+                { "zero", "https://zero.drpc.org" },            
                 { "zksync", "https://mainnet.era.zksync.io" },
                 { "zora", "https://rpc.zora.energy" },
                 // nonEthEvm
