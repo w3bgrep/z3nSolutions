@@ -682,8 +682,8 @@ namespace ZBSolutions
             string CEX = cexInput.Text.ToLower();
             string columnName = $"{CEX}_{CHAIN}";
 
-            _project.L0g($"{_pstgr} `p");
-            _project.L0g($"{_tableName} `lb");
+            //_project.L0g($"{_pstgr} `p");
+            //_project.L0g($"{_tableName} `lb");
 
 
             var tableStructure = new Dictionary<string, string>
@@ -693,16 +693,18 @@ namespace ZBSolutions
             };
             ClmnAdd(_tableName, tableStructure);
 
-            _project.L0g($"{_pstgr} `p");
+            //_project.L0g($"{_pstgr} `p");
 
-            _project.L0g($"{_tableName} `g");
+            //_project.L0g($"{_tableName} `g");
 
             string[] lines = addressInput.Text.Trim().Split('\n');
             int lineCount = 0;
 
+            AddRange(_tableName, lines.Length);
+
             for (int acc0index = startFrom; acc0index <= lines.Length; acc0index++)
             {
-                _project.L0g($"{_tableName} `y");
+                //_project.L0g($"{_tableName} `y");
                 string line = lines[acc0index - 1].Trim();
                 if (string.IsNullOrWhiteSpace(line))
                 {

@@ -430,11 +430,6 @@ namespace ZBSolutions
 
         }
 
-
-
-
-
-
         public string Proxy()
         {
             TblName("private_profile");
