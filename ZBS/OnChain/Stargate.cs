@@ -36,43 +36,11 @@ namespace ZBSolutions
         }
 
 
-        public void Connect()
-        {
-            _project.Deadline();
-        check:
-
-            _project.Deadline(60); Thread.Sleep(1000);
-
-            var connectedButton = _instance.ActiveTab.FindElementByAttribute("button", "class", "css-x1wnqh", "regexp", 0);
-            var unconnectedButton = _instance.ActiveTab.FindElementByAttribute("button", "sx", "\\[object\\ Object]", "regexp", 0).ParentElement;
-
-            string state = null;
-
-            if (!connectedButton.FindChildByAttribute("img", "alt", "Zerion", "regexp", 0).IsVoid) state = "Zerion";
-            if (!connectedButton.FindChildByAttribute("img", "alt", "Backpack", "regexp", 0).IsVoid) state = "Backpack";
-            else if (unconnectedButton.InnerText == "Connect Wallet") state = "Connect";
-
-            switch (state)
-            {
-                case "Connect":
-                    _instance.HeClick(unconnectedButton, emu: 1);
-                    _instance.HeClick(("button", "innertext", "Zerion\\nConnect", "regexp", 0));
-                    new ZerionWallet(_project, _instance).ZerionConnect();
-                    goto check;
-
-                case "Zerion":
-                    _project.L0g($"{connectedButton.InnerText} connected with {state}");
-                    break;
-
-                default:
-                    _project.L0g($"unknown state {connectedButton.InnerText}  {unconnectedButton.InnerText}");
-                    goto check;
-
-            }
-        }
-
+        
         public void Connect(string wallet)
         {
+
+            var connected = new List<string>();
             _project.Deadline();
         check:
 
@@ -81,43 +49,43 @@ namespace ZBSolutions
             var connectedButton = _instance.ActiveTab.FindElementByAttribute("button", "class", "css-x1wnqh", "regexp", 0);
             var unconnectedButton = _instance.ActiveTab.FindElementByAttribute("button", "sx", "\\[object\\ Object]", "regexp", 0).ParentElement;
 
-            string state = null;
 
-            if (!connectedButton.FindChildByAttribute("img", "alt", "Zerion", "regexp", 0).IsVoid) state += "Zerion";
-            if (!connectedButton.FindChildByAttribute("img", "alt", "Backpack", "regexp", 0).IsVoid) state += "Backpack";
-            else if (unconnectedButton.InnerText == "Connect Wallet") state = "Connect";
+            if (!connectedButton.FindChildByAttribute("img", "alt", "Zerion", "regexp", 0).IsVoid) connected.Add("Zerion");//state += "Zerion";
+            if (!connectedButton.FindChildByAttribute("img", "alt", "Backpack", "regexp", 0).IsVoid) connected.Add("Backpack");
 
 
-            switch (state)
+            if (connected.Contains(wallet))
             {
-                case "Connect":
+                _project.L0g($"{connectedButton.InnerText} connected with {wallet}");
+            }
 
-                    _instance.HeClick(unconnectedButton);
-                    _instance.HeClick(("button", "innertext", "Backpac\\nConnect", "regexp", 0));
-                    new BackpackWallet(_project, _instance).Connect();
-
-                    goto check;
-
-                case "Zerion":
-                    _project.L0g($"{connectedButton.InnerText} connected with {state}");
-                    _instance.HeClick(connectedButton);
-                    _instance.HeClick(("path", "d", "M14 8H2M8 2v12", "text", 0));
-                    _instance.HeClick(("div", "innertext", "Connect\\ Another\\ Wallet", "regexp", 0), "last");
-                    _instance.HeClick(("img", "alt", "Backpack", "regexp", 0));
-                    _instance.HeClick(("img", "alt", "Backpack", "regexp", 0));
-
-                    goto check;
-
-                case "ZerionBackpack":
-                    _project.L0g($"{connectedButton.InnerText} connected with {state}");
-                    break;
-
-
-                default:
-                    _project.L0g($"unknown state {connectedButton.InnerText}  {unconnectedButton.InnerText}");
-                    goto check;
+            else if (wallet == "Zerion")
+            {
+                _instance.HeClick(unconnectedButton, emu: 1);
+                _instance.HeClick(("button", "innertext", "Zerion\\nConnect", "regexp", 0));
+                new ZerionWallet(_project, _instance).ZerionConnect();
+                goto check;
 
             }
+
+            else if (wallet == "Backpack" && connected.Contains("Zerion"))
+            {
+                _instance.HeClick(connectedButton, emu: 1);
+                _instance.HeClick(("path", "d", "M14 8H2M8 2v12", "text", 0));
+                _instance.HeClick(("div", "innertext", "Connect\\ Another\\ Wallet", "regexp", 0), "last", thr0w: false);
+                _instance.HeClick(("img", "alt", "Backpack", "regexp", 0));
+                _instance.HeClick(("img", "alt", "Backpack", "regexp", 0));
+
+                goto check;
+
+            }
+
+            else
+            {
+                _project.L0g($"unknown state {connectedButton.InnerText}  {unconnectedButton.InnerText}");
+                goto check;
+            }
+
         }
 
 

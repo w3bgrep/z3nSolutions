@@ -29,9 +29,7 @@ namespace ZBSolutions
             _sql = new Sql(_project);
             _logShow = log;
             _rpcs = LoadRPCs();
-            //_key = ApplyKey(key);
-            //_adrEvm = _key.ToPubEvm();
-            //_adrs = LoadAddresses();
+
         }
 
         private string Acc0()
@@ -125,19 +123,7 @@ namespace ZBSolutions
             }          
             return rpcs;   
         }
-        private Dictionary<string, string> LoadAddresses(Dictionary<string, string> addresses = null)
-        {
-            if (string.IsNullOrEmpty(_acc0))
-            {
-                return new Dictionary<string, string>();
-            }
-            else if (addresses == null)
-            {
-                addresses = _sql.GetAddresses();
-            }
-            return addresses;
 
-        }
 
         protected string HexToDecimalString(string hexValue, string convert = "")
         {
