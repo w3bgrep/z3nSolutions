@@ -47,27 +47,34 @@ namespace ZBSolutions
             if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
             _project.L0g($"[ ▶  {callerName}] [{tolog}] ");
         }
-        public void StartBrowser()
+        public void StartBrowser(bool strictProxy = true)
         {
             Log("initProfile");
             _project.Variables["instancePort"].Value = _instance.Port.ToString();
 
-            var webGlData = _sql.Get("webgl", "private_profile");
-
+            string webGlData = _sql.Get("webgl", "private_profile");
             _instance.SetDisplay(webGlData, _project);
 
-            var proxy = _sql.Get("proxy", "private_profile");
-            _project.Variables["proxy"].Value = proxy;
-            try { _project.Variables["proxyLeaf"].Value = proxy.Replace("//", "").Replace("@", ":"); } catch { }
+            string proxy = _sql.Get("proxy", "private_profile");
+            bool goodProxy = new NetHttp(_project, true).CheckProxy(proxy);
+            if (goodProxy)
+                _instance.SetProxy(proxy, true, true, true, true);
+            else 
+            {
+                if (strictProxy) throw new Exception($"!E bad proxy {proxy}");
+            }
+            //var proxy = _sql.Get("proxy", "private_profile");
+            //_project.Variables["proxy"].Value = proxy;
+            //try { _project.Variables["proxyLeaf"].Value = proxy.Replace("//", "").Replace("@", ":"); } catch { }
             //return proxy;
-            _instance.SetProxy(proxy, _project);
+            //_instance.SetProxy(proxy, _project);
 
-            var cookiePath = $"{_project.Variables["profiles_folder"].Value}accounts\\cookies\\{_project.Variables["acc0"].Value}.json";
+            string cookiePath = $"{_project.Variables["profiles_folder"].Value}accounts\\cookies\\{_project.Variables["acc0"].Value}.json";
             _project.Variables["pathCookies"].Value = cookiePath;
 
             try
             {
-                var cookies = File.ReadAllText(cookiePath);
+                string cookies = File.ReadAllText(cookiePath);
                 _instance.SetCookie(cookies);
             }
             catch
@@ -75,13 +82,12 @@ namespace ZBSolutions
                 Log($"!W Fail to set cookies from file {cookiePath}");
                 try
                 {
-                    var cookies = _sql.Get("cookies", "private_profile");
+                    string cookies = _sql.Get("cookies", "private_profile");
                     _instance.SetCookie(cookies);
                 }
                 catch (Exception Ex)
                 {
                     Log($"!E Fail to set cookies from db Err. {Ex.Message}");
-
                 }
 
             }

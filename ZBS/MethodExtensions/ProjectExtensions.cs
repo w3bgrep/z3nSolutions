@@ -1,4 +1,5 @@
 ﻿using Leaf.xNet;
+using Nethereum.Contracts.QueryHandlers.MultiCall;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -249,7 +250,6 @@ namespace ZBSolutions
 
             return value;
         }
-
         public static string Var(this IZennoPosterProjectModel project, string var, string value)
         {
             try
@@ -263,6 +263,60 @@ namespace ZBSolutions
             return string.Empty;
         }
 
+        public static string VarRnd(this IZennoPosterProjectModel project, string Var)
+        {
+            string value = string.Empty;
+            try
+            {
+                value = project.Variables[Var].Value;
+            }
+            catch (Exception e)
+            {
+                project.SendInfoToLog(e.Message);
+            }
+            if (value == string.Empty) project.L0g($"no Value from [{Var}] `w");
+
+            if (value.Contains("-"))
+            {
+                var min = int.Parse(value.Split('-')[0].Trim());
+                var max = int.Parse(value.Split('-')[1].Trim());
+                return new Random().Next(min, max).ToString();
+            }
+            return value.Trim();
+        }
+
+        public static string VarMath(this IZennoPosterProjectModel project, string varName, int input)
+        {
+            project.Variables[$"{varName}"].Value = (int.Parse(project.Variables[$"{varName}"].Value) + input).ToString();
+            return project.Variables[$"{varName}"].Value;
+        }
+        public static decimal VarsMath(this IZennoPosterProjectModel project, string varA, char operation, string varB, string varRslt = "a_")
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            decimal a = decimal.Parse(project.Var(varA));
+            decimal b = decimal.Parse(project.Var(varB));
+            decimal result;
+            switch (operation) 
+            {
+                case '+':
+
+                    result = a + b;
+                    break;
+                case '-':
+                    result = a - b;
+                    break;
+                case '*':
+                    result = a * b;
+                    break;
+                case '/':
+                    result = a / b;
+                    break;
+                default:
+                    throw new Exception($"unsuppoted operation {operation}");
+            }
+            try { project.Var(varRslt, $"{result}"); } catch { }
+            return result;
+        }
         //GlobalVars
 
         public static bool GlobalSet(this IZennoPosterProjectModel project, bool log = false)

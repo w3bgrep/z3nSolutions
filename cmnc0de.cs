@@ -77,6 +77,30 @@ namespace w3tools //by @w3bgrep
 
     public static class TestStatic
     {
+        public static string VarRnd(this IZennoPosterProjectModel project, string Var)
+        {
+            string value = string.Empty;
+            try
+            {
+                value = project.Variables[Var].Value;
+            }
+            catch (Exception e)
+            {
+                project.SendInfoToLog(e.Message);
+            }
+            if (value == string.Empty) project.L0g($"no Value from [{Var}] `w");
+
+            if (value.Contains("-"))
+            {
+                var min = int.Parse(value.Split('-')[0].Trim());
+                var max = int.Parse(value.Split('-')[1].Trim());
+                return new Random().Next(min, max).ToString();
+            }
+            return value.Trim();
+        }
+
+
+
 
         public static string UnixToHuman(this string decodedResultExpire)
         {
@@ -87,6 +111,35 @@ namespace w3tools //by @w3bgrep
             }
             return string.Empty;
         }
+
+        public static decimal Math(this IZennoPosterProjectModel project, string varA, string operation, string varB, string varRslt = "a_")
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            decimal a = decimal.Parse(project.Var(varA));
+            decimal b = decimal.Parse(project.Var(varB));
+            decimal result;
+            switch (operation) 
+            {
+                case "+":
+
+                    result = a + b;
+                    break;
+                case "-":
+                    result = a - b;
+                    break;
+                case "*":
+                    result = a * b;
+                    break;
+                case "/":
+                    result = a / b;
+                    break;
+                default:
+                    throw new Exception($"unsuppoted operation {operation}");
+            }
+            try { project.Var(varRslt, $"{result}"); } catch { }
+            return result;
+        }
+
 
 
         private static readonly object FileLock = new object();
@@ -300,172 +353,6 @@ namespace w3tools //by @w3bgrep
 
     }
 
-
-
-    public class Unlock
-    {
-
-        protected readonly IZennoPosterProjectModel _project;
-        protected readonly bool _logShow;
-        protected readonly Sql _sql;
-        protected readonly string _jsonRpc;
-        protected readonly Blockchain _blockchain;
-        protected readonly string _abi = @"[
-                        {
-                            ""inputs"": [
-                            {
-                                ""internalType"": ""uint256"",
-                                ""name"": ""_tokenId"",
-                                ""type"": ""uint256""
-                            }
-                            ],
-                            ""name"": ""keyExpirationTimestampFor"",
-                            ""outputs"": [
-                            {
-                                ""internalType"": ""uint256"",
-                                ""name"": """",
-                                ""type"": ""uint256""
-                            }
-                            ],
-                            ""stateMutability"": ""view"",
-                            ""type"": ""function""
-                        },
-                        {
-                            ""inputs"": [
-                            {
-                                ""internalType"": ""uint256"",
-                                ""name"": ""_tokenId"",
-                                ""type"": ""uint256""
-                            }
-                            ],
-                            ""name"": ""ownerOf"",
-                            ""outputs"": [
-                            {
-                                ""internalType"": ""address"",
-                                ""name"": """",
-                                ""type"": ""address""
-                            }
-                            ],
-                            ""stateMutability"": ""view"",
-                            ""type"": ""function""
-                        }
-                    ]";
-
-
-        public Unlock(IZennoPosterProjectModel project, bool log = false)
-        {
-            _project = project;
-            _sql = new Sql(_project);
-            _logShow = log;
-            _jsonRpc = new W3b(project).Rpc("optimism");
-            _blockchain = new Blockchain(_jsonRpc);
-        }
-
-        public string keyExpirationTimestampFor(string addressTo, int tokenId, bool decode = true)
-        {
-            try
-            {
-                string[] types = { "uint256" };
-                object[] values = { tokenId };
-
-                string result = _blockchain.ReadContract(addressTo, "keyExpirationTimestampFor", _abi, values).Result;
-                if (decode) result = ProcessExpirationResult(result);
-                //if (decode) result = Decode(result, "keyExpirationTimestampFor");
-                return result;
-            }
-            catch (Exception ex)
-            {
-                _project.L0g(ex.InnerException?.Message ?? ex.Message);
-                throw;
-            }
-        }
-
-        public string ownerOf(string addressTo, int tokenId, bool decode = true)
-        {
-            try
-            {
-                string[] types = { "uint256" };
-                object[] values = { tokenId };
-                string result = _blockchain.ReadContract(addressTo, "ownerOf", _abi, values).Result;
-                if (decode) result = Decode(result, "ownerOf");
-                return result;
-            }
-            catch (Exception ex)
-            {
-                _project.L0g(ex.InnerException?.Message ?? ex.Message);
-                throw;
-            }
-        }
-
-        public string Decode(string toDecode, string function)
-        {
-            if (string.IsNullOrEmpty(toDecode))
-            {
-                _project.L0g("Result is empty, nothing to decode");
-                return string.Empty;
-            }
-
-            if (toDecode.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) toDecode = toDecode.Substring(2);
-            if (toDecode.Length < 64) toDecode = toDecode.PadLeft(64, '0');
-
-
-            var decodedDataExpire = ZBSolutions.Decoder.AbiDataDecode(_abi, function, "0x" + toDecode);
-            string decodedResultExpire = decodedDataExpire.Count == 1
-                ? decodedDataExpire.First().Value
-                : string.Join("\n", decodedDataExpire.Select(item => $"{item.Key};{item.Value}"));
-
-            return decodedResultExpire;
-        }
-
-        string ProcessExpirationResult(string resultExpire)
-        {
-            if (string.IsNullOrEmpty(resultExpire))
-            {
-                _project.SendToLog("Result is empty, nothing to decode", LogType.Warning, true, LogColor.Yellow);
-                return string.Empty;
-            }
-
-            if (resultExpire.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-            {
-                resultExpire = resultExpire.Substring(2);
-            }
-
-            if (resultExpire.Length < 64)
-            {
-                resultExpire = resultExpire.PadLeft(64, '0');
-            }
-
-            var decodedDataExpire = ZBSolutions.Decoder.AbiDataDecode(_abi, "keyExpirationTimestampFor", "0x" + resultExpire);
-            string decodedResultExpire = decodedDataExpire.Count == 1
-                ? decodedDataExpire.First().Value
-                : string.Join("\n", decodedDataExpire.Select(item => $"{item.Key};{item.Value}"));
-
-            // project.Variables["lastTimeStamp"].Value = decodedResultExpire;
-            // project.Variables["blockchainDecodedResult"].Value = decodedResultExpire;
-            // project.Variables["a0debug"].Value = decodedResultExpire;
-            // project.Variables["resultExpire"].Value = decodedResultExpire;
-
-            return decodedResultExpire;
-        }
-
-        public Dictionary<string, string> Holders(string contract)
-        {
-            var result = new Dictionary<string, string>();
-            int i = 0;
-            while (true)
-            {
-                i++;
-                var owner = ownerOf(contract, i);
-                if (owner == "0x0000000000000000000000000000000000000000") break;
-                var exp = keyExpirationTimestampFor(contract, i);
-                result.Add(owner.ToLower(), exp.ToLower());
-            }
-            return result;
-
-
-        }
-
-    }
 
 
 
@@ -925,6 +812,7 @@ namespace w3tools //by @w3bgrep
          if (string.IsNullOrEmpty(dstToken)) dstToken = srcDefault;
          string url = "https://stargate.finance/bridge?" + $"srcChain={srcChain}" + $"&srcToken={srcToken}" + $"&dstChain={dstChain}" + $"&dstToken={dstToken}";
          if (_instance.ActiveTab.URL != url) _instance.ActiveTab.Navigate(url, "");
+         _instance.HeClick(("path","d","M6 9.75h12l-3.5-3.5M18 14.25H6l3.5 3.5","regexp",0));
 
      }
 
@@ -976,6 +864,9 @@ namespace w3tools //by @w3bgrep
         var connectedButton = _instance.ActiveTab.FindElementByAttribute("button", "class", "css-x1wnqh", "regexp", 0);
         var unconnectedButton = _instance.ActiveTab.FindElementByAttribute("button", "sx", "\\[object\\ Object]", "regexp", 0).ParentElement;
 
+        _project.L0g($"checking... {connectedButton.InnerText}  {unconnectedButton.InnerText}");
+        if (unconnectedButton.IsVoid && connectedButton.IsVoid) goto check;
+
         string state = null;
 
         if (!connectedButton.FindChildByAttribute("img", "alt", "Zerion", "regexp", 0).IsVoid) connected.Add("Zerion");//state += "Zerion";
@@ -986,6 +877,7 @@ namespace w3tools //by @w3bgrep
             if (connected.Contains(wallet))
             {
                 _project.L0g($"{connectedButton.InnerText} connected with {wallet}");
+                _instance.HeClick(("button", "class", "css-1k2e1h7", "regexp", 0),deadline:1,thr0w:false);
             }
 
             else if (wallet == "Zerion")
@@ -996,6 +888,8 @@ namespace w3tools //by @w3bgrep
                 goto check;
 
             }
+            
+
 
             else if (wallet == "Backpack" && connected.Contains("Zerion"))
             {
@@ -1009,6 +903,7 @@ namespace w3tools //by @w3bgrep
 
             }
 
+
             else
             {
                 _project.L0g($"unknown state {connectedButton.InnerText}  {unconnectedButton.InnerText}");
@@ -1016,7 +911,7 @@ namespace w3tools //by @w3bgrep
             }
 
         }
-
+        
 
 
      public decimal LoadBalance()
@@ -1074,6 +969,48 @@ namespace w3tools //by @w3bgrep
          _instance.HeSet(("input:text", "class", "css-1qhcc16", "regexp", 0), qnt);
          _instance.HeSet(("input:text", "class", "css-1qhcc16", "regexp", 1), sliperage);
      }
+
+     public Dictionary<string,decimal> dicNative(bool log = false)
+     {
+        var chainsToUse = _project.Var("cfgChains").Split(',');
+        var bls = new Dictionary<string,decimal>();
+        var _w3b = new W3bRead(_project,log);
+        foreach (string chain in chainsToUse)
+        {
+            try{	
+                decimal native = _w3b.NativeEVM<decimal>(_w3b.Rpc(chain));
+                bls.Add(chain,native);
+            }
+            catch
+            {
+                decimal native = _w3b.NativeSOL<decimal>();
+                bls.Add(chain,native);            
+            }
+        }
+        return bls;
+     }
+
+     public Dictionary<string,decimal> dicToken(bool log = false)
+     {
+        var chainsToUse = _project.Var("cfgChains").Split(',');
+        var blsUsde = new Dictionary<string,decimal>();
+        var _w3b = new W3bRead(_project,log);
+        foreach (string chain in chainsToUse)
+        {
+            try{	
+                decimal usdeBal = _w3b.BalERC20<decimal>("0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34",_w3b.Rpc(chain));
+                blsUsde.Add(chain,usdeBal);
+            }
+            catch
+            {
+                decimal usdeBal = _w3b.TokenSPL<decimal>("DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT");
+                blsUsde.Add(chain,usdeBal);
+                
+            }
+        }
+        return blsUsde;
+     }
+
 
  }
 

@@ -32,11 +32,9 @@ namespace ZBSolutions
             if (string.IsNullOrEmpty(dstToken)) dstToken = srcDefault;
             string url = "https://stargate.finance/bridge?" + $"srcChain={srcChain}" + $"&srcToken={srcToken}" + $"&dstChain={dstChain}" + $"&dstToken={dstToken}";
             if (_instance.ActiveTab.URL != url) _instance.ActiveTab.Navigate(url, "");
+            _instance.HeClick(("path", "d", "M6 9.75h12l-3.5-3.5M18 14.25H6l3.5 3.5", "regexp", 0));
 
         }
-
-
-        
         public void Connect(string wallet)
         {
 
@@ -49,14 +47,20 @@ namespace ZBSolutions
             var connectedButton = _instance.ActiveTab.FindElementByAttribute("button", "class", "css-x1wnqh", "regexp", 0);
             var unconnectedButton = _instance.ActiveTab.FindElementByAttribute("button", "sx", "\\[object\\ Object]", "regexp", 0).ParentElement;
 
+            _project.L0g($"checking... {connectedButton.InnerText}  {unconnectedButton.InnerText}");
+            if (unconnectedButton.IsVoid && connectedButton.IsVoid) goto check;
+
+            string state = null;
 
             if (!connectedButton.FindChildByAttribute("img", "alt", "Zerion", "regexp", 0).IsVoid) connected.Add("Zerion");//state += "Zerion";
             if (!connectedButton.FindChildByAttribute("img", "alt", "Backpack", "regexp", 0).IsVoid) connected.Add("Backpack");
+            else if (unconnectedButton.InnerText == "Connect Wallet") state = "Connect";
 
 
             if (connected.Contains(wallet))
             {
                 _project.L0g($"{connectedButton.InnerText} connected with {wallet}");
+                _instance.HeClick(("button", "class", "css-1k2e1h7", "regexp", 0), deadline: 1, thr0w: false);
             }
 
             else if (wallet == "Zerion")
@@ -67,6 +71,8 @@ namespace ZBSolutions
                 goto check;
 
             }
+
+
 
             else if (wallet == "Backpack" && connected.Contains("Zerion"))
             {
@@ -80,6 +86,7 @@ namespace ZBSolutions
 
             }
 
+
             else
             {
                 _project.L0g($"unknown state {connectedButton.InnerText}  {unconnectedButton.InnerText}");
@@ -87,9 +94,7 @@ namespace ZBSolutions
             }
 
         }
-
-
-
+ 
         public decimal LoadBalance()
         {
             _project.Deadline();
@@ -110,8 +115,6 @@ namespace ZBSolutions
             }
 
         }
-
-
         public decimal WaitExpected()
         {
             _project.Deadline();
@@ -139,12 +142,13 @@ namespace ZBSolutions
             _instance.HeClick(("button", "role", "switch", "regexp", 1));
             _instance.HeSet(("input:text", "fulltagname", "input:text", "regexp", 1), address);
         }
-
         public void GasOnDestination(string qnt, string sliperage = "0.5")
         {
             _instance.HeSet(("input:text", "class", "css-1qhcc16", "regexp", 0), qnt);
             _instance.HeSet(("input:text", "class", "css-1qhcc16", "regexp", 1), sliperage);
         }
+
+
 
     }
 }

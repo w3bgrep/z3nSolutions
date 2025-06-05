@@ -896,5 +896,50 @@ namespace ZBSolutions
                 }
             }
         }
+
+        public Dictionary<string, decimal> DicNative(string[] chainsToUse = null, bool log = false)
+        {
+            if (chainsToUse == null) chainsToUse = _project.Var("cfgChains").Split(',');
+            
+            var bls = new Dictionary<string, decimal>();
+            var _w3b = new W3bRead(_project, log);
+            foreach (string chain in chainsToUse)
+            {
+                try
+                {
+                    decimal native = _w3b.NativeEVM<decimal>(_w3b.Rpc(chain));
+                    bls.Add(chain, native);
+                }
+                catch
+                {
+                    decimal native = _w3b.NativeSOL<decimal>();
+                    bls.Add(chain, native);
+                }
+            }
+            return bls;
+        }
+        public Dictionary<string, decimal> DicToken(bool log = false) //usde hardcoded
+        {
+            var chainsToUse = _project.Var("cfgChains").Split(',');
+            var blsUsde = new Dictionary<string, decimal>();
+            var _w3b = new W3bRead(_project, log);
+            foreach (string chain in chainsToUse)
+            {
+                try
+                {
+                    decimal usdeBal = _w3b.BalERC20<decimal>("0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34", _w3b.Rpc(chain));
+                    blsUsde.Add(chain, usdeBal);
+                }
+                catch
+                {
+                    decimal usdeBal = _w3b.TokenSPL<decimal>("DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT");
+                    blsUsde.Add(chain, usdeBal);
+
+                }
+            }
+            return blsUsde;
+        }
+
+
     }
 }

@@ -238,8 +238,7 @@ namespace ZBSolutions
         public string GET(
             string url,
             string proxyString = "",
-            Dictionary<string,
-                string> headers = null,
+            Dictionary<string, string> headers = null,
             bool parse = false,
             [CallerMemberName] string callerName = "",
             bool throwOnFail = false)
@@ -416,7 +415,13 @@ namespace ZBSolutions
 
 
         }
-        public string PUT(string url, string body = "", string proxyString = "", Dictionary<string, string> headers = null, bool parse = false, [CallerMemberName] string callerName = "")
+        public string PUT(
+            string url, 
+            string body = "",
+            string proxyString = "",
+            Dictionary<string, string> headers = null,
+            bool parse = false,
+            [CallerMemberName] string callerName = "")
         {
             try
             {
@@ -498,7 +503,11 @@ namespace ZBSolutions
                 return $"Ошибка: {e.Message}";
             }
         }
-        public string DELETE(string url, string proxyString = "", Dictionary<string, string> headers = null, [CallerMemberName] string callerName = "")
+        public string DELETE(
+            string url,
+            string proxyString = "",
+            Dictionary<string, string> headers = null,
+            [CallerMemberName] string callerName = "")
         {
 
             string debugHeaders = null;
@@ -577,37 +586,35 @@ namespace ZBSolutions
         }
 
 
-        public void CheckProxy(string url = "http://api.ipify.org/", string proxyString = null)
+        public bool CheckProxy( string proxyString = null)
         {
-            if (string.IsNullOrEmpty(proxyString)) proxyString = _project.Variables["proxy"].Value;
-            WebProxy proxy = ParseProxy(proxyString);
+            
+            if (string.IsNullOrEmpty(proxyString)) 
+                proxyString = new Sql(_project).Get("proxy","private_profile");
+            
+            //WebProxy proxy = ParseProxy(proxyString);
 
-            string ipWithoutProxy = GET(url, null);
+            string ipLocal = GET("http://api.ipify.org/", null);
+            string ipProxified = GET("http://api.ipify.org/", proxyString);
 
-            string ipWithProxy = "notSet";
-            if (proxy != null)
-            {
-                ipWithProxy = GET(url, proxyString);
-            }
-            else
-            {
-                ipWithProxy = "noProxy";
-            }
+            Log($"ipLocal: {ipLocal}, ipProxified: {ipProxified}");
 
-            Log($"local: {ipWithoutProxy}, proxified: {ipWithProxy}");
-
-            if (ipWithProxy != ipWithoutProxy && !ipWithProxy.StartsWith("Ошибка") && ipWithProxy != "Прокси не настроен")
+            if (ipProxified != ipLocal)
             {
-                Log($"Succsessfuly proxified: {ipWithProxy}");
+                Log($"proxy `validated: {ipProxified}");
+                _project.Var("proxy", proxyString);
+                return true;
             }
-            else if (ipWithProxy.StartsWith("Ошибка") || ipWithProxy == "Прокси не настроен")
+            else if (ipProxified.StartsWith("Ошибка") || ipProxified == "Прокси не настроен")
             {
-                Log($"!W proxy error: {ipWithProxy}");
+                Log($"!W proxy error: {ipProxified}");
+                
             }
-            else
+            else if (ipLocal == ipProxified)
             {
-                Log($"!W ip still same. Proxy was not applyed");
+                Log($"!W ip still same. ipLocal: [{ipLocal}], ipProxified: [{ipProxified}]. Proxy was not applyed");
             }
+            return false;
         }
 
 
