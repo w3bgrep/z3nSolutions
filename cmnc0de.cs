@@ -77,28 +77,7 @@ namespace w3tools //by @w3bgrep
 
     public static class TestStatic
     {
-        public static string VarRnd(this IZennoPosterProjectModel project, string Var)
-        {
-            string value = string.Empty;
-            try
-            {
-                value = project.Variables[Var].Value;
-            }
-            catch (Exception e)
-            {
-                project.SendInfoToLog(e.Message);
-            }
-            if (value == string.Empty) project.L0g($"no Value from [{Var}] `w");
-
-            if (value.Contains("-"))
-            {
-                var min = int.Parse(value.Split('-')[0].Trim());
-                var max = int.Parse(value.Split('-')[1].Trim());
-                return new Random().Next(min, max).ToString();
-            }
-            return value.Trim();
-        }
-
+   
 
 
 
@@ -356,437 +335,179 @@ namespace w3tools //by @w3bgrep
 
 
 
-    public class ZerionWallet2 : Wlt
+    public class Htt 
     {
-        protected readonly string _extId = "klghhnkeealcohjjanjjdaeeggmfmlpl";
-        protected readonly string _popupUrl = "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html#";
-        protected readonly string _sidepanelUrl = "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#";
-        protected readonly string _importPage = "/get-started/import";
-        protected readonly string _selectPage = "/wallet-select";
-        protected readonly string _historyPage = "/overview/history";
-        protected readonly string _fileName;
-        protected readonly string _publicFromKey;
-        protected readonly string _publicFromSeed;
+        private readonly IZennoPosterProjectModel _project;
+        private readonly bool _logShow;
 
-        public ZerionWallet2(IZennoPosterProjectModel project, Instance instance, bool log = false, string key = null, string seed = null)
-            : base(project, instance, log)
+
+        public Htt(IZennoPosterProjectModel project, bool log = false)
         {
-            _fileName = "Zerion1.21.3.crx";
-            _key = KeyCheck(key);
-            _seed = SeedCheck(seed);
-            _publicFromKey = _key.ToPubEvm();
-            _publicFromSeed = _seed.ToPubEvm();
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            _project = project ?? throw new ArgumentNullException(nameof(project));
+            _logShow = log;
         }
-
-        private string KeyCheck(string key)
+                protected void Log(string message, [CallerMemberName] string callerName = "", bool forceLog = false)
         {
-            if (string.IsNullOrEmpty(key))
-                key = Decrypt(KeyT.secp256k1);
-            if (string.IsNullOrEmpty(key))
-                key =string.Empty;
-                Log("!Key is empty");
-            return key;
+            if (!_logShow && !forceLog) return;
+            _project.L0g($"[ 🌍 {callerName}] [{message}]");
         }
-        private string SeedCheck(string seed)
+public string GET(
+            string url,
+            string proxyString = "",
+            Dictionary<string, string> headers = null,
+            bool parse = false,
+            [CallerMemberName] string callerName = "",
+            bool throwOnFail = false)
         {
-            if (string.IsNullOrEmpty(seed))
-                seed = Decrypt(KeyT.bip39);
-            if (string.IsNullOrEmpty(seed))
-                seed =string.Empty;
-                Log("!Seed is empty");
-                //throw new Exception("emptykey");
-            return seed;
-        }
-
-
-        public void Go(string page = null, string mode = "sidepanel", bool newtab = false)
-        {
-            if (newtab) { Tab tab2 = _instance.NewTab("zw"); }
-
-
-            string sourseLink;
-            string method;
-            if (mode == "sidepanel") sourseLink = _sidepanelUrl;
-            else sourseLink = _popupUrl;
-
-            switch (page)
-            {
-                case "import":
-                    method = _importPage;
-                    break;
-                case "select":
-                    method = _selectPage;
-                    break;
-                case "history":
-                    method = _historyPage;
-                    break;
-                default:
-                    method = null;
-                    break;
-            }
-
-            _instance.ActiveTab.Navigate(sourseLink + method, "");
-        }
-        public void Add(string source = "seed", bool log = false)
-        {
-
-            if (!_instance.ActiveTab.URL.Contains(_importPage)) Go("import");
-
-            if (source == "pkey") source = _key;
-            else if (source == "seed") source = _seed;
-
-            _instance.HeSet(("seedOrPrivateKey", "name"), source);
-            _instance.HeClick(("button", "innertext", "Import", "regexp", 0));
-            _instance.HeSet(("input:password", "fulltagname", "input:password", "text", 0), _pass);
-            _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+            string debugHeaders = string.Empty;
             try
             {
-                _instance.HeClick(("button", "class", "_option", "regexp", 0));
-                _instance.HeClick(("button", "class", "_primary", "regexp", 0));
-                _instance.HeClick(("button", "class", "_primary", "regexp", 0));
-            }
-            catch { }
-
-        }
-        public void SwitchSource(string addressToUse = "key")
-        {
-
-            _project.Deadline();
-
-            if (addressToUse == "key") addressToUse = _publicFromKey;
-            else if (addressToUse == "seed") addressToUse = _publicFromSeed;
-            else throw new Exception("supports \"key\" | \"seed\" only");
-            go:
-            Go("select");
-            Thread.Sleep(1000);
-
-        waitWallets:
-            _project.Deadline(60);
-            if (_instance.ActiveTab.FindElementByAttribute("button", "class", "_wallet", "regexp", 0).IsVoid) goto waitWallets;
-
-            var wallets = _instance.ActiveTab.FindElementsByAttribute("button", "class", "_wallet", "regexp").ToList();
-
-            foreach (HtmlElement wallet in wallets)
-            {
-                string masked = "";
-                string balance = "";
-                string ens = "";
-
-                if (wallet.InnerHtml.Contains("M18 21a2.9 2.9 0 0 1-2.125-.875A2.9 2.9 0 0 1 15 18q0-1.25.875-2.125A2.9 2.9 0 0 1 18 15a3.1 3.1 0 0 1 .896.127 1.5 1.5 0 1 0 1.977 1.977Q21 17.525 21 18q0 1.25-.875 2.125A2.9 2.9 0 0 1 18 21")) continue;
-                if (wallet.InnerText.Contains("·"))
+                WebProxy proxy = ParseProxy(proxyString);
+                var handler = new HttpClientHandler
                 {
-                    ens = wallet.InnerText.Split('\n')[0].Split('·')[0];
-                    masked = wallet.InnerText.Split('\n')[0].Split('·')[1];
-                    balance = wallet.InnerText.Split('\n')[1].Trim();
+                    Proxy = proxy,
+                    UseProxy = proxy != null
+                };
 
-                }
-                else
+                using (var client = new HttpClient(handler))
                 {
-                    masked = wallet.InnerText.Split('\n')[0];
-                    balance = wallet.InnerText.Split('\n')[1];
-                }
-                masked = masked.Trim();
+                    client.Timeout = TimeSpan.FromSeconds(15);
 
-                Log($"[{masked}]{masked.ChkAddress(addressToUse)}[{addressToUse}]");
+                    StringBuilder headersString = new StringBuilder();
+                    headersString.AppendLine("[debugRequestHeaders]:");
 
-                if (masked.ChkAddress(addressToUse))
-                {
-                    _instance.HeClick(wallet);
-                    return;
-                }
-            }
-            Log("address not found");
-            Add("seed");
-
-            _instance.CloseExtraTabs(true);
-            goto go;
-
-
-        }
-        public bool Sign(bool log = false)
-        {
-            var urlNow = _instance.ActiveTab.URL;
-            try {
-
-                var type = "null";
-                var data = "null";
-                var origin = "null";
-
-                var parts = urlNow.Split('?').ToList();
-
-                foreach (string part in parts)
-                {
-                    //project.SendInfoToLog(part);
-                    if (part.StartsWith("windowType"))
+                    string defaultUserAgent = _project.Profile.UserAgent; // Same as in POST
+                    if (headers == null || !headers.ContainsKey("User-Agent"))
                     {
-                        type = part.Split('=')[1];
-                    }
-                    if (part.StartsWith("origin"))
-                    {
-                        origin = part.Split('=')[1];
-                        data = part.Split('=')[2];
-                        data = data.Split('&')[0].Trim();
+                        client.DefaultRequestHeaders.Add("User-Agent", defaultUserAgent);
+                        headersString.AppendLine($"User-Agent: {defaultUserAgent} (default)");
                     }
 
+                    if (headers != null)
+                    {
+                        foreach (var header in headers)
+                        {
+                            client.DefaultRequestHeaders.Add(header.Key, header.Value);
+                            headersString.AppendLine($"{header.Key}: {header.Value}");
+                            debugHeaders += $"{header.Key}: {header.Value}";
+                        }
+                    }
+
+                    HttpResponseMessage response = client.GetAsync(url).GetAwaiter().GetResult();
+                    response.EnsureSuccessStatusCode();
+
+                    StringBuilder responseHeadersString = new StringBuilder();
+                    responseHeadersString.AppendLine("[debugResponseHeaders]:");
+                    foreach (var header in response.Headers)
+                    {
+                        var value = string.Join(", ", header.Value);
+                        responseHeadersString.AppendLine($"{header.Key}: {value}");
+                    }
+
+                    string cookies = "";
+                    if (response.Headers.TryGetValues("Set-Cookie", out var cookieValues))
+                    {
+                        cookies = cookieValues.Aggregate((a, b) => a + "; " + b);
+                        Log("Set-Cookie found: " + cookies, callerName);
+                    }
+
+                    try
+                    {
+                        _project.Variables["debugCookies"].Value = cookies;
+                    }
+                    catch { }
+
+                    string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    //if (parse) ParseJson(result);
+                    Log($"{result}", callerName);
+                    return result.Trim();
                 }
-                dynamic txData = JsonConvert.DeserializeObject<System.Dynamic.ExpandoObject>(data);
-                var gas = txData.gas.ToString();
-                var value = txData.value.ToString();
-                var sender = txData.from.ToString();
-                var recipient = txData.to.ToString();
-                var datastring = $"{txData.data}";
-
-
-                BigInteger gasWei = BigInteger.Parse("0" + gas.TrimStart('0', 'x'), NumberStyles.AllowHexSpecifier);
-                decimal gasGwei = (decimal)gasWei / 1000000000m;
-                Log($"Sending {datastring} to {recipient}, gas: {gasGwei}");
-
             }
-            catch { }
+            catch (HttpRequestException e)
+            {
+                Log($"[GET] SERVER Err: [{e.Message}] url:[{url}] (proxy: {(proxyString)}), Headers\n{debugHeaders.Trim()}", callerName);
+                if (throwOnFail) throw;
 
+                return string.Empty;
+            }
+            catch (Exception e)
+            {
+                Log($"!W [GET] RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString)}) Headers\n{debugHeaders.Trim()}", callerName);
+                if (throwOnFail) throw;
+
+                return string.Empty;
+            }
+        }
+        public WebProxy ParseProxy(string proxyString, [CallerMemberName] string callerName = "")
+        {
+            if (string.IsNullOrEmpty(proxyString))
+            {
+                return null;
+            }
+            if (proxyString == "+") proxyString = _project.Variables["proxy"].Value;
             try
             {
-                var button = _instance.HeGet(("button", "class", "_primary", "regexp", 0));
-                Log(button, log: log);
-                _instance.HeClick(("button", "class", "_primary", "regexp", 0));
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Log($"!W {ex.Message}", log: log);
-                throw;
-            }
-        }
-        public void Launch(string fileName = null, bool log = false)
-        {
-            if (string.IsNullOrEmpty(fileName)) fileName = _fileName;
+                WebProxy proxy = new WebProxy();
 
-            var em = _instance.UseFullMouseEmulation;
-            _instance.UseFullMouseEmulation = false;
+                if (proxyString.Contains("//")) proxyString = proxyString.Split('/')[2];
 
-            if (Install(_extId, fileName)) ZerionImport(log: log);
-            else
-            {
-                ZerionUnlock(log: false);
-                ZerionCheck(log: log);
-            }
-            _instance.CloseExtraTabs();
-            _instance.UseFullMouseEmulation = em;
-        }
-        public void TestnetMode(bool testMode = false)
-        {
-            bool current;
-
-            string testmode = _instance.HeGet(("input:checkbox", "fulltagname", "input:checkbox", "text", 0),atr:"value");
-
-            if (testmode == "True") 
-                current = true;
-            else 
-                current = false;
-                
-            if (testMode != current)
-                _instance.HeClick(("input:checkbox", "fulltagname", "input:checkbox", "text", 0));
-
-        }
-
-
-
-
-
-
-
-
-        public void ZerionLnch(string fileName = null, bool log = false)
-        {
-            if (string.IsNullOrEmpty(fileName)) fileName = _fileName;
-
-            var em = _instance.UseFullMouseEmulation;
-            _instance.UseFullMouseEmulation = false;
-
-            if (Install(_extId, fileName)) ZerionImport(log: log);
-            else
-            {
-                ZerionUnlock(log: false);
-                ZerionCheck(log: log);
-            }
-            _instance.CloseExtraTabs();
-            _instance.UseFullMouseEmulation = em;
-        }
-
-        public bool ZerionImport(string source = "pkey", string refCode = null, bool log = false)
-        {
-            if (string.IsNullOrWhiteSpace(refCode))
-            {
-
-                refCode = _sql.DbQ(@"SELECT referralCode
-                FROM projects.zerion
-                WHERE referralCode != '_' 
-                AND TRIM(referralCode) != ''
-                ORDER BY RANDOM()
-                LIMIT 1;");
-            }
-
-            var inputRef = true;
-            _instance.HeClick(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\?windowType=tab&appMode=onboarding#/onboarding/import", "regexp", 0));
-            if (source == "pkey")
-            {
-                _instance.HeClick(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\?windowType=tab&appMode=onboarding#/onboarding/import/private-key", "regexp", 0));
-                string key = _key;
-                _instance.ActiveTab.FindElementByName("key").SetValue(key, "Full", false);
-            }
-            else if (source == "seed")
-            {
-                _instance.HeClick(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\?windowType=tab&appMode=onboarding#/onboarding/import/mnemonic", "regexp", 0));
-                string seedPhrase = _seed;
-                int index = 0;
-                foreach (string word in seedPhrase.Split(' '))
+                if (proxyString.Contains("@")) // Прокси с авторизацией (login:pass@proxy:port)
                 {
-                    _instance.ActiveTab.FindElementById($"word-{index}").SetValue(word, "Full", false);
-                    index++;
+                    string[] parts = proxyString.Split('@');
+                    string credentials = parts[0];
+                    string proxyHost = parts[1];
+
+                    proxy.Address = new Uri("http://" + proxyHost);
+                    string[] creds = credentials.Split(':');
+                    proxy.Credentials = new NetworkCredential(creds[0], creds[1]);
+
+                    Log($"proxy set:{proxyHost}", callerName);
                 }
+                else // Прокси без авторизации (proxy:port)
+                {
+                    proxy.Address = new Uri("http://" + proxyString);
+                    Log($"proxy set: ip:{proxyString}", callerName);
+                }
+
+                return proxy;
             }
-            _instance.HeClick(("button", "innertext", "Import\\ wallet", "regexp", 0));
-            _instance.HeSet(("input:password", "fulltagname", "input:password", "text", 0), _pass);
-            _instance.HeClick(("button", "class", "_primary", "regexp", 0));
-            _instance.HeSet(("input:password", "fulltagname", "input:password", "text", 0), _pass);
-            _instance.HeClick(("button", "class", "_primary", "regexp", 0));
-            if (inputRef)
+            catch (Exception e)
             {
-                _instance.HeClick(("button", "innertext", "Enter\\ Referral\\ Code", "regexp", 0));
-                _instance.HeSet((("referralCode", "name")), refCode);
-                _instance.HeClick(("button", "class", "_regular", "regexp", 0));
+                Log($"Ошибка настройки прокси: {e.Message}", callerName, true);
+                return null;
             }
-            return true;
         }
 
-        public void ZerionUnlock(bool log = false)
+
+        public bool CheckProxy(string proxyString = null)
         {
-            Go();
-            //_instance.ActiveTab.Navigate("chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/overview", "");
+            if (string.IsNullOrEmpty(proxyString))
+                proxyString = new Sql(_project).Get("proxy", "private_profile");
 
-            string active = null;
-            try
+            //WebProxy proxy = ParseProxy(proxyString);
+
+            string ipLocal = GET("http://api.ipify.org/", null);
+            string ipProxified = GET("http://api.ipify.org/", proxyString);
+
+            Log($"ipLocal: {ipLocal}, ipProxified: {ipProxified}");
+
+            // Проверяем валидность IP один раз
+            bool isValidIp = System.Net.IPAddress.TryParse(ipProxified, out var ipAddress);
+
+            if (isValidIp && ipProxified != ipLocal)
             {
-                active = _instance.HeGet(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html\\#/wallet-select", "regexp", 0),deadline:2);
-            }
-            catch
-            {
-                _instance.HeSet(("input:password", "fulltagname", "input:password", "text", 0), _pass);
-                _instance.HeClick(("button", "class", "_primary", "regexp", 0));
-                active = _instance.HeGet(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html\\#/wallet-select", "regexp", 0));
-            }
-            Log(active, log: log);
-        }
-
-        public string ZerionCheck(bool log = false)
-        {
-            if (_instance.ActiveTab.URL != "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/overview")
-                _instance.ActiveTab.Navigate("chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/overview", "");
-
-            var active = _instance.HeGet(("div", "class", "_uitext_", "regexp", 0));
-            var balance = _instance.HeGet(("div", "class", "_uitext_", "regexp", 1));
-            var pnl = _instance.HeGet(("div", "class", "_uitext_", "regexp", 2));
-
-            Log($"{active} {balance} {pnl}", log: log);
-            return active;
-        }
-
-        public bool ZerionApprove(bool log = false)
-        {
-
-            try
-            {
-                var button = _instance.HeGet(("button", "class", "_primary", "regexp", 0));
-                Log(button, log: log);
-                _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                Log($"proxy validated: {ipProxified}");
+                _project.Var("proxy", proxyString);
                 return true;
             }
-            catch (Exception ex)
-            {
-                Log($"!W {ex.Message}", log: log);
-                throw;
-            }
-        }
-        public void ZerionConnect(bool log = false)
-        {
-
-            string action = null;
-            getState:
-
-            try
-            {
-                action = _instance.HeGet(("button", "class", "_primary", "regexp", 0));
-            }
-            catch (Exception ex)
-            {
-                _project.L0g($"No Wallet tab found. 0");
-                return;
-            }
-
-            _project.L0g(action);
-
-            switch (action)
-            {
-                case "Add":
-                    _project.L0g($"adding {_instance.HeGet(("input:url", "fulltagname", "input:url", "text", 0), atr: "value")}");
-                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
-                    goto getState;
-                case "Close":
-                    _project.L0g($"added {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
-                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
-                    goto getState;
-                case "Connect":
-                    _project.L0g($"connecting {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
-                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
-                    goto getState;
-                case "Sign":
-                    _project.L0g($"sign {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
-                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
-                    goto getState;
-                case "Sign In":
-                    _project.L0g($"sign {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
-                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
-                    goto getState;
-
-                default:
-                    goto getState;
-
-            }
-
-
-        }
-        public bool ZerionWaitTx(int deadline = 60, bool log = false)
-        {
-            DateTime functionStart = DateTime.Now;
-        check:
-            bool result;
-            if ((DateTime.Now - functionStart).TotalSeconds > deadline) throw new Exception($"!W Deadline [{deadline}]s exeeded");
-
-
-            if (!_instance.ActiveTab.URL.Contains("chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/overview/history"))
-            {
-                Tab tab = _instance.NewTab("zw");
-                if (tab.IsBusy) tab.WaitDownloading();
-                _instance.ActiveTab.Navigate("chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/overview/history", "");
-
-            }
-            Thread.Sleep(2000);
-
-            var status = _instance.HeGet(("div", "style", "padding: 0px 16px;", "regexp", 0));
-
-
-
-            if (status.Contains("Pending")) goto check;
-            else if (status.Contains("Failed")) result = false;
-            else if (status.Contains("Execute")) result = true;
             else
             {
-                Log($"unknown status {status}");
-                goto check;
+                throw new Exception($"!W proxy failed: ipLocal: [{ipLocal}], ipProxified: [{ipProxified}]. {(isValidIp ? "Proxy was not applied" : "Invalid IP format")}");
+                //_project.L0g($"!W proxy failed: ipLocal: [{ipLocal}], ipProxified: [{ipProxified}]. {(isValidIp ? "Proxy was not applied" : "Invalid IP format")}");
             }
-            _instance.CloseExtraTabs();
-            return result;
-
+            //throw new Exception("");
+            return false;
         }
     }
 
