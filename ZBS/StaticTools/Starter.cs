@@ -234,7 +234,7 @@ namespace ZBSolutions
 
             _project.Variables["projectTable"].Value = "projects_" + projectName;
 
-            _project.SetRange();
+            _project.Range();
             SAFU.Initialize(_project);
             Logo(author, dllTitle);
 

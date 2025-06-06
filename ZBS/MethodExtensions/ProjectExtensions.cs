@@ -23,7 +23,8 @@ namespace ZBSolutions
     public static class ProjectExtensions
     {
         private static readonly object LockObject = new object();
-        
+        private static readonly object FileLock = new object();
+
 
         public static void L0g(this IZennoPosterProjectModel project, string toLog, [CallerMemberName] string callerName = "", bool show = true, bool thr0w = false ,bool toZp = true)
         {
@@ -97,97 +98,6 @@ namespace ZBSolutions
             if (thr0w) throw new Exception($"{formated}");
 
         }
-
-        //Variables
-        public static int Range(this IZennoPosterProjectModel project, string accRange = null, string output = null, bool log = false)
-        {
-            if (string.IsNullOrEmpty(accRange)) accRange = project.Variables["cfgAccRange"].Value;
-            if (string.IsNullOrEmpty(accRange)) throw new Exception("range is not provided by input or project setting [cfgAccRange]");
-            int rangeS, rangeE;
-            string range;
-
-            if (accRange.Contains(","))
-            {
-                range = accRange;
-                var rangeParts = accRange.Split(',').Select(int.Parse).ToArray();
-                rangeS = rangeParts.Min();
-                rangeE = rangeParts.Max();
-            }
-            else if (accRange.Contains("-"))
-            {
-                var rangeParts = accRange.Split('-').Select(int.Parse).ToArray();
-                rangeS = rangeParts[0];
-                rangeE = rangeParts[1];
-                range = string.Join(",", Enumerable.Range(rangeS, rangeE - rangeS + 1));
-            }
-            else
-            {
-                rangeE = int.Parse(accRange);
-                rangeS = int.Parse(accRange);
-                range = accRange;
-            }
-            project.Variables["rangeStart"].Value = $"{rangeS}";
-            project.Variables["rangeEnd"].Value = $"{rangeE}";
-            project.Variables["range"].Value = range;
-            return rangeE;
-            //project.L0g($"{rangeS}-{rangeE}\n{range}");
-        }
-        public static void SetRange(this IZennoPosterProjectModel project, string accRange = null, bool log = false)
-        {
-            if (string.IsNullOrEmpty(accRange)) accRange = project.Variables["cfgAccRange"].Value;
-            int rangeS, rangeE;
-            string range;
-
-            if (accRange.Contains(","))
-            {
-                range = accRange;
-                var rangeParts = accRange.Split(',').Select(int.Parse).ToArray();
-                rangeS = rangeParts.Min();
-                rangeE = rangeParts.Max();
-            }
-            else if (accRange.Contains("-"))
-            {
-                var rangeParts = accRange.Split('-').Select(int.Parse).ToArray();
-                rangeS = rangeParts[0];
-                rangeE = rangeParts[1];
-                range = string.Join(",", Enumerable.Range(rangeS, rangeE - rangeS + 1));
-            }
-            else
-            {
-                rangeE = int.Parse(accRange);
-                rangeS = int.Parse(accRange);
-                range = accRange;
-            }
-            project.Variables["rangeStart"].Value = $"{rangeS}";
-            project.Variables["rangeEnd"].Value = $"{rangeE}";
-            project.Variables["range"].Value = range;
-
-            //project.L0g($"{rangeS}-{rangeE}\n{range}");
-        }
-        public static string MathVar(this IZennoPosterProjectModel project, string varName, int input)
-        {
-            project.Variables[$"{varName}"].Value = (int.Parse(project.Variables[$"{varName}"].Value) + input).ToString();
-            return project.Variables[$"{varName}"].Value;
-        }
-        public static void acc0w(this IZennoPosterProjectModel project, object acc0)
-        {
-            project.Variables["acc0"].Value = acc0?.ToString() ?? string.Empty;
-        }
-        public static T RndAmount<T>(this IZennoPosterProjectModel project, decimal min = 0, decimal max = 0)
-        {
-            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            Random rnd = new Random();
-            if (min == 0) min = decimal.Parse(project.Variables["defaultAmountMin"].Value);
-            if (max == 0) max = decimal.Parse(project.Variables["defaultAmountMax"].Value);
-
-            decimal value = min + (max - min) * (decimal)rnd.Next(0, 1000000000) / 1000000000;
-
-            if (typeof(T) == typeof(string))
-                return (T)Convert.ChangeType(value.ToString(), typeof(T));
-
-            return (T)Convert.ChangeType(value, typeof(T));
-
-        }
         public static string[] GetErr(this IZennoPosterProjectModel project, Instance instance)
         {
             var error = project.GetLastError();
@@ -235,6 +145,49 @@ namespace ZBSolutions
 
         }
 
+        #region Vars
+        public static void acc0w(this IZennoPosterProjectModel project, object acc0)
+        {
+            project.Variables["acc0"].Value = acc0?.ToString() ?? string.Empty;
+        }
+        public static int Range(this IZennoPosterProjectModel project, string accRange = null, string output = null, bool log = false)
+        {
+            if (string.IsNullOrEmpty(accRange)) accRange = project.Variables["cfgAccRange"].Value;
+            if (string.IsNullOrEmpty(accRange)) throw new Exception("range is not provided by input or project setting [cfgAccRange]");
+            int rangeS, rangeE;
+            string range;
+
+            if (accRange.Contains(","))
+            {
+                range = accRange;
+                var rangeParts = accRange.Split(',').Select(int.Parse).ToArray();
+                rangeS = rangeParts.Min();
+                rangeE = rangeParts.Max();
+            }
+            else if (accRange.Contains("-"))
+            {
+                var rangeParts = accRange.Split('-').Select(int.Parse).ToArray();
+                rangeS = rangeParts[0];
+                rangeE = rangeParts[1];
+                range = string.Join(",", Enumerable.Range(rangeS, rangeE - rangeS + 1));
+            }
+            else
+            {
+                rangeE = int.Parse(accRange);
+                rangeS = int.Parse(accRange);
+                range = accRange;
+            }
+            project.Variables["rangeStart"].Value = $"{rangeS}";
+            project.Variables["rangeEnd"].Value = $"{rangeE}";
+            project.Variables["range"].Value = range;
+            return rangeE;
+            //project.L0g($"{rangeS}-{rangeE}\n{range}");
+        }
+        public static int VarCounter(this IZennoPosterProjectModel project, string varName, int input)
+        {
+            project.Variables[$"{varName}"].Value = (int.Parse(project.Variables[$"{varName}"].Value) + input).ToString();
+            return int.Parse(project.Variables[varName].Value);
+        }
         public static string Var(this IZennoPosterProjectModel project, string Var)
         {
             string value = string.Empty;
@@ -262,7 +215,6 @@ namespace ZBSolutions
             }
             return string.Empty;
         }
-
         public static string VarRnd(this IZennoPosterProjectModel project, string Var)
         {
             string value = string.Empty;
@@ -283,12 +235,6 @@ namespace ZBSolutions
                 return new Random().Next(min, max).ToString();
             }
             return value.Trim();
-        }
-
-        public static string VarMath(this IZennoPosterProjectModel project, string varName, int input)
-        {
-            project.Variables[$"{varName}"].Value = (int.Parse(project.Variables[$"{varName}"].Value) + input).ToString();
-            return project.Variables[$"{varName}"].Value;
         }
         public static decimal VarsMath(this IZennoPosterProjectModel project, string varA, char operation, string varB, string varRslt = "a_")
         {
@@ -317,7 +263,10 @@ namespace ZBSolutions
             try { project.Var(varRslt, $"{result}"); } catch { }
             return result;
         }
-        //GlobalVars
+
+        #endregion
+
+        #region GlobalVars
 
         public static bool GlobalSet(this IZennoPosterProjectModel project, bool log = false)
         {
@@ -445,8 +394,9 @@ namespace ZBSolutions
 
         }
 
+        #endregion
 
-        //Time
+        #region Time
 
         public static void Sleep(this IZennoPosterProjectModel project, int min, int max)
         {
@@ -516,106 +466,9 @@ namespace ZBSolutions
             }
         }
 
+        #endregion
 
-
-        public static string GetExtVer(this IZennoPosterProjectModel project, string extId)
-        {
-            string securePrefsPath = project.Variables["pathProfileFolder"].Value + @"\Default\Secure Preferences";
-            string json = File.ReadAllText(securePrefsPath);
-            JObject jObj = JObject.Parse(json);
-            JObject settings = (JObject)jObj["extensions"]?["settings"];
-
-            if (settings == null)
-            {
-                throw new Exception("Секция extensions.settings не найдена");
-            }
-
-            JObject extData = (JObject)settings[extId];
-            if (extData == null)
-            {
-                throw new Exception($"Расширение с ID {extId} не найдено");
-            }
-
-            string version = (string)extData["manifest"]?["version"];
-            if (string.IsNullOrEmpty(version))
-            {
-                throw new Exception($"Версия для расширения {extId} не найдена");
-            }
-
-            return version;
-
-        }
-        private static readonly object FileLock = new object();
-        public static string GetNewCreds(this IZennoPosterProjectModel project, string dataType)
-        {
-            string pathFresh = $"{project.Path}.data\\fresh\\{dataType}.txt";
-            string pathUsed = $"{project.Path}.data\\used\\{dataType}.txt";
-
-            lock (FileLock)
-            {
-                try
-                {
-                    if (!File.Exists(pathFresh))
-                    {
-                        project.SendWarningToLog($"File not found: {pathFresh}");
-                        return null;
-                    }
-
-                    var freshAccs = File.ReadAllLines(pathFresh).ToList();
-                    project.SendInfoToLog($"Loaded {freshAccs.Count} accounts from {pathFresh}");
-
-                    if (freshAccs.Count == 0)
-                    {
-                        project.SendInfoToLog($"No accounts available in {pathFresh}");
-                        return string.Empty;
-                    }
-
-                    string creds = freshAccs[0];
-                    freshAccs.RemoveAt(0);
-
-                    File.WriteAllLines(pathFresh, freshAccs);
-                    File.AppendAllText(pathUsed, creds + Environment.NewLine);
-
-                    return creds;
-                }
-                catch (Exception ex)
-                {
-                    project.SendWarningToLog($"Error processing files for {dataType}: {ex.Message}");
-                    return null;
-                }
-            }
-
-        }
-        public static Dictionary<string, string> TblMap(this IZennoPosterProjectModel project, string[] staticColumns, string dynamicToDo = null, string defaultType = "TEXT DEFAULT ''")
-        {
-            if (string.IsNullOrEmpty(dynamicToDo)) dynamicToDo = project.Variables["cfgToDo"].Value;
-
-
-            var tableStructure = new Dictionary<string, string>
-        {
-            { "acc0", "INTEGER PRIMARY KEY" }
-        };
-            foreach (string name in staticColumns)
-            {
-                if (!tableStructure.ContainsKey(name))
-                {
-                    tableStructure.Add(name, defaultType);
-                }
-            }
-            string[] toDoItems = (dynamicToDo ?? "").Split(',');
-            foreach (string taskId in toDoItems)
-            {
-                string trimmedTaskId = taskId.Trim();
-                if (!string.IsNullOrWhiteSpace(trimmedTaskId) && !tableStructure.ContainsKey(trimmedTaskId))
-                {
-                    tableStructure.Add(trimmedTaskId, defaultType);
-                }
-            }
-            return tableStructure;
-        }
-
-
-        //Cookies
+        #region Cookies
         public static string CookiesGet(this IZennoPosterProjectModel project, Instance instance, string domainFilter = "")
         {
             if (domainFilter == ".") domainFilter = instance.ActiveTab.MainDomain;
@@ -696,8 +549,106 @@ namespace ZBSolutions
             if (!Directory.Exists(directoryPath)) Directory.CreateDirectory(directoryPath);
             File.WriteAllText(filePath, cookies);
         }
+        #endregion
 
-        //Capcha
+        #region FileRW
+        public static string GetExtVer(this IZennoPosterProjectModel project, string extId)
+        {
+            string securePrefsPath = project.Variables["pathProfileFolder"].Value + @"\Default\Secure Preferences";
+            string json = File.ReadAllText(securePrefsPath);
+            JObject jObj = JObject.Parse(json);
+            JObject settings = (JObject)jObj["extensions"]?["settings"];
+
+            if (settings == null)
+            {
+                throw new Exception("Секция extensions.settings не найдена");
+            }
+
+            JObject extData = (JObject)settings[extId];
+            if (extData == null)
+            {
+                throw new Exception($"Расширение с ID {extId} не найдено");
+            }
+
+            string version = (string)extData["manifest"]?["version"];
+            if (string.IsNullOrEmpty(version))
+            {
+                throw new Exception($"Версия для расширения {extId} не найдена");
+            }
+
+            return version;
+
+        }     
+        public static string GetNewCreds(this IZennoPosterProjectModel project, string dataType)
+        {
+            string pathFresh = $"{project.Path}.data\\fresh\\{dataType}.txt";
+            string pathUsed = $"{project.Path}.data\\used\\{dataType}.txt";
+
+            lock (FileLock)
+            {
+                try
+                {
+                    if (!File.Exists(pathFresh))
+                    {
+                        project.SendWarningToLog($"File not found: {pathFresh}");
+                        return null;
+                    }
+
+                    var freshAccs = File.ReadAllLines(pathFresh).ToList();
+                    project.SendInfoToLog($"Loaded {freshAccs.Count} accounts from {pathFresh}");
+
+                    if (freshAccs.Count == 0)
+                    {
+                        project.SendInfoToLog($"No accounts available in {pathFresh}");
+                        return string.Empty;
+                    }
+
+                    string creds = freshAccs[0];
+                    freshAccs.RemoveAt(0);
+
+                    File.WriteAllLines(pathFresh, freshAccs);
+                    File.AppendAllText(pathUsed, creds + Environment.NewLine);
+
+                    return creds;
+                }
+                catch (Exception ex)
+                {
+                    project.SendWarningToLog($"Error processing files for {dataType}: {ex.Message}");
+                    return null;
+                }
+            }
+
+        }
+        #endregion
+ 
+        
+        public static Dictionary<string, string> TblMap(this IZennoPosterProjectModel project, string[] staticColumns, string dynamicToDo = null, string defaultType = "TEXT DEFAULT ''")
+        {
+            if (string.IsNullOrEmpty(dynamicToDo)) dynamicToDo = project.Variables["cfgToDo"].Value;
+
+
+            var tableStructure = new Dictionary<string, string>
+        {
+            { "acc0", "INTEGER PRIMARY KEY" }
+        };
+            foreach (string name in staticColumns)
+            {
+                if (!tableStructure.ContainsKey(name))
+                {
+                    tableStructure.Add(name, defaultType);
+                }
+            }
+            string[] toDoItems = (dynamicToDo ?? "").Split(',');
+            foreach (string taskId in toDoItems)
+            {
+                string trimmedTaskId = taskId.Trim();
+                if (!string.IsNullOrWhiteSpace(trimmedTaskId) && !tableStructure.ContainsKey(trimmedTaskId))
+                {
+                    tableStructure.Add(trimmedTaskId, defaultType);
+                }
+            }
+            return tableStructure;
+        }
         public static void CapGuru(this IZennoPosterProjectModel project)
         {
             var _sql = new Sql(project);

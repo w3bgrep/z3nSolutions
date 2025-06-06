@@ -148,7 +148,105 @@ namespace ZBSolutions
             _instance.HeSet(("input:text", "class", "css-1qhcc16", "regexp", 1), sliperage);
         }
 
+        public void ParseStats()
+        {
+            _instance.Go("https://stargate.finance/");
 
+
+            _instance.HeClick(("button", "class", "css-x1wnqh", "regexp", 0), deadline: 1, thr0w: false);//open
+            _instance.HeClick(("button", "innertext", "Transactions", "regexp", 0), deadline: 1, thr0w: false);//open
+
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+
+            var txs = _instance.ActiveTab.FindElementByAttribute("a", "href", "https://layerzeroscan.com/tx/0x", "regexp", 1).ParentElement.GetChildren(false).ToList();
+            int totalCnt = txs.Count;
+            decimal totalVlmEth = 0;
+            decimal totalVlmUSDe = 0;
+
+            int totalArbitrum = 0;
+            int totalOptimism = 0;
+            int totalBase = 0;
+            int totalSoneium = 0;
+            int totalUnichain = 0;
+            int totalSolana = 0;
+
+            string strike = null;
+            //string route = null;
+
+            int multiplyer = 1;
+
+            var route = new List<string>();
+
+            string TmpD = null;
+
+            foreach (HtmlElement tx in txs)
+            {
+                var src = tx.InnerText.Split('\n')[1].Trim();
+                var dst = tx.InnerText.Split('\n')[2].Trim();
+                if (src == "Arbitrum" || dst == "Arbitrum") totalArbitrum++;
+                if (src == "Base" || dst == "Base") totalBase++;
+                if (src == "OP Mainnet" || dst == "OP Mainnet") totalOptimism++;
+                if (src == "Soneium" || dst == "Soneium") totalSoneium++;
+                if (src == "Solana" || dst == "Solana") totalSolana++;
+                if (src == "Unichain" || dst == "Unichain") totalUnichain++;
+
+
+                route.Add($"[{src} > {dst}]");
+
+                var val = tx.InnerText.Split('\n')[3].Trim();
+                decimal valDec = decimal.Parse(val.Split(' ')[0].Trim());
+                if (val.Contains("ETH"))
+                {
+                    totalVlmEth += valDec;
+                }
+                else if (val.Contains("USDe"))
+                {
+                    totalVlmUSDe += valDec;
+                }
+
+                string dat = tx.InnerText.Split('\n')[4].Split('·')[1].Replace("ago", "").Trim();
+
+                if (dat != TmpD && TmpD != null)
+                {
+                    strike += $"[{TmpD} x {multiplyer}].";
+                    multiplyer = 1;
+                }
+                else if (dat == TmpD)
+                {
+                    multiplyer++;
+                }
+                else
+                {
+                    multiplyer = 1;
+                }
+
+                TmpD = dat;
+
+                if (tx == txs.Last())
+                {
+                    strike += $"[{dat} x {multiplyer}].";
+                }
+            }
+
+            string routestring = string.Join(".", route.AsEnumerable().Reverse());
+            strike = strike.Trim('.');
+
+            new Sql(_project).Upd($@"
+	            stats_volume = 'Total:[{totalCnt}] BridgedEth:[{totalVlmEth}] BridgedUSDe [{totalVlmUSDe}]',
+	            stats_chains = 'Arbitrum: [{totalArbitrum}] Base:[{totalBase}] OP: [{totalOptimism}] Soneium:[{totalSoneium}] Solana:[{totalSolana}] Unichain:[{totalUnichain}]',
+	            route = '{routestring}',
+	            strike = '{strike}',
+	            ");
+
+
+            _project.SendInfoToLog($@"--------------------------
+                Total:[{totalCnt}] BridgedEth:[{totalVlmEth}] BridgedUSDe [{totalVlmUSDe}]
+                Arbitrum: [{totalArbitrum}] Base:[{totalBase}] OP: [{totalOptimism}] Soneium:[{totalSoneium}] Solana:[{totalSolana}] Unichain:[{totalUnichain}]
+                {strike}
+                {routestring}");
+
+            _instance.HeClick(("button", "class", "css-1k2e1h7", "regexp", 0), deadline: 1, thr0w: false);//close
+        }
 
     }
 }

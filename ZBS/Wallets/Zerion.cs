@@ -170,9 +170,9 @@ namespace ZBSolutions
             else
             {
                 Unlock(log: false);
-                Check(log: log);
+                Check(log: true);
             }
-            TestnetMode(false);
+            try { TestnetMode(false); } catch { }
             _instance.CloseExtraTabs();
             _instance.UseFullMouseEmulation = em;
         }

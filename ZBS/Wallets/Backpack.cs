@@ -49,7 +49,8 @@ namespace ZBSolutions
             else
                 Unlock(log: log);
             Log($"checking", log: log);
-            Check(log: log);
+            var adr = Check(log: log);
+            Log($"using [{adr}]", log: true);
             _instance.CloseExtraTabs();
             _instance.UseFullMouseEmulation = em;
         }
