@@ -1,15 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading;
-using ZennoLab.CommandCenter;
-using ZennoLab.InterfacesLibrary.ProjectModel;
-using System.IO;
 using System.Text.RegularExpressions;
-using System.Diagnostics;
-using System.Reflection;
+using System.Threading;
+using System.Windows.Forms;
+using ZennoLab.CommandCenter;
+using ZennoLab.InterfacesLibrary.Enums.Log;
+using ZennoLab.InterfacesLibrary.ProjectModel;
 
 
 namespace ZBSolutions
@@ -310,18 +312,35 @@ namespace ZBSolutions
                 }
             }
         }
-        //public void ConfigFromDb()
-        //{
-        //    string settings = _sql.Settings();
-        //    foreach (string varData in settings.Split('\n'))
-        //    {
-        //        string varName = varData.Split('|')[0];
-        //        string varValue = varData.Split('|')[1].Trim();
-        //        try { _project.Variables[$"{varName}"].Value = varValue; }
-        //        catch (Exception e) { Log(e.Message); }
-        //    }
-        //}
-        
-   
+
+        private bool ChooseSingleAcc()
+        {
+            var listAccounts = _project.Lists["accs"];
+
+        check:
+            if (listAccounts.Count == 0)
+            {
+                _project.Variables["noAccsToDo"].Value = "True";
+                _project.SendToLog($"♻ noAccoutsAvaliable", LogType.Info, true, LogColor.Turquoise);
+                _project.Variables["acc0"].Value = "";
+                return false;
+                throw new Exception($"TimeToChill");
+            }
+ 
+            int randomAccount = new Random().Next(0, listAccounts.Count);
+            _project.Variables["acc0"].Value = listAccounts[randomAccount];
+            listAccounts.RemoveAt(randomAccount);
+            if (!_project.GlobalSet()) 
+                goto check;
+            _project.Var("pathProfileFolder", $"{_project.Var("pathProfileFolder")}accounts\\profilesFolder\\{_project.Var("acc0")}");
+
+
+            //_project.Variables["pathProfileFolder"].Value = $"{_project.Variables["profiles_folder"].Value}accounts\\profilesFolder\\{_project.Variables["acc0"].Value}";
+            _project.L0g($"`working with: [acc{_project.Var("acc0")}] accs left: [{listAccounts.Count}]");
+            return true;
+
+
+        }
+
     }
 }

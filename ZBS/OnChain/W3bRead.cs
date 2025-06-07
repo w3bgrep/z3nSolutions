@@ -918,9 +918,9 @@ namespace ZBSolutions
             }
             return bls;
         }
-        public Dictionary<string, decimal> DicToken(bool log = false) //usde hardcoded
+        public Dictionary<string, decimal> DicToken(string[] chainsToUse = null, bool log = false) //usde hardcoded
         {
-            var chainsToUse = _project.Var("cfgChains").Split(',');
+            if (chainsToUse == null) chainsToUse = _project.Var("cfgChains").Split(',');
             var blsUsde = new Dictionary<string, decimal>();
             var _w3b = new W3bRead(_project, log);
             foreach (string chain in chainsToUse)

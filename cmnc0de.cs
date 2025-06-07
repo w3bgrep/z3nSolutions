@@ -77,7 +77,7 @@ namespace w3tools //by @w3bgrep
 
     public static class TestStatic
     {
-   
+
 
 
 
@@ -97,7 +97,7 @@ namespace w3tools //by @w3bgrep
             decimal a = decimal.Parse(project.Var(varA));
             decimal b = decimal.Parse(project.Var(varB));
             decimal result;
-            switch (operation) 
+            switch (operation)
             {
                 case "+":
 
@@ -332,10 +332,7 @@ namespace w3tools //by @w3bgrep
 
     }
 
-
-
-
-    public class Htt 
+    public class Htt
     {
         private readonly IZennoPosterProjectModel _project;
         private readonly bool _logShow;
@@ -347,18 +344,18 @@ namespace w3tools //by @w3bgrep
             _project = project ?? throw new ArgumentNullException(nameof(project));
             _logShow = log;
         }
-                protected void Log(string message, [CallerMemberName] string callerName = "", bool forceLog = false)
+        protected void Log(string message, [CallerMemberName] string callerName = "", bool forceLog = false)
         {
             if (!_logShow && !forceLog) return;
             _project.L0g($"[ 🌍 {callerName}] [{message}]");
         }
-public string GET(
-            string url,
-            string proxyString = "",
-            Dictionary<string, string> headers = null,
-            bool parse = false,
-            [CallerMemberName] string callerName = "",
-            bool throwOnFail = false)
+        public string GET(
+                    string url,
+                    string proxyString = "",
+                    Dictionary<string, string> headers = null,
+                    bool parse = false,
+                    [CallerMemberName] string callerName = "",
+                    bool throwOnFail = false)
         {
             string debugHeaders = string.Empty;
             try
@@ -510,95 +507,94 @@ public string GET(
             return false;
         }
     }
+    public class Stargate2
+    {
 
- public class Stargate2
- {
-
-     protected readonly IZennoPosterProjectModel _project;
-     protected readonly Instance _instance;
-     protected readonly bool _logShow;
-
-
-     public Stargate2(IZennoPosterProjectModel project, Instance instance, bool log = false)
-     {
-         _project = project;
-         _instance = instance;
-         _logShow = log;
-     }
-
-     public void Go(string srcChain, string dstChain, string srcToken = null, string dstToken = null)
-     {
-         var srcDefault = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
-         if (string.IsNullOrEmpty(srcToken)) srcToken = srcDefault;
-         if (string.IsNullOrEmpty(dstToken)) dstToken = srcDefault;
-         string url = "https://stargate.finance/bridge?" + $"srcChain={srcChain}" + $"&srcToken={srcToken}" + $"&dstChain={dstChain}" + $"&dstToken={dstToken}";
-         if (_instance.ActiveTab.URL != url) _instance.ActiveTab.Navigate(url, "");
-         _instance.HeClick(("path","d","M6 9.75h12l-3.5-3.5M18 14.25H6l3.5 3.5","regexp",0));
-
-     }
+        protected readonly IZennoPosterProjectModel _project;
+        protected readonly Instance _instance;
+        protected readonly bool _logShow;
 
 
-     public void Connect()
-     {
-         _project.Deadline();
-     check:
+        public Stargate2(IZennoPosterProjectModel project, Instance instance, bool log = false)
+        {
+            _project = project;
+            _instance = instance;
+            _logShow = log;
+        }
 
-         _project.Deadline(60); Thread.Sleep(1000);
+        public void Go(string srcChain, string dstChain, string srcToken = null, string dstToken = null)
+        {
+            var srcDefault = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+            if (string.IsNullOrEmpty(srcToken)) srcToken = srcDefault;
+            if (string.IsNullOrEmpty(dstToken)) dstToken = srcDefault;
+            string url = "https://stargate.finance/bridge?" + $"srcChain={srcChain}" + $"&srcToken={srcToken}" + $"&dstChain={dstChain}" + $"&dstToken={dstToken}";
+            if (_instance.ActiveTab.URL != url) _instance.ActiveTab.Navigate(url, "");
+            _instance.HeClick(("path", "d", "M6 9.75h12l-3.5-3.5M18 14.25H6l3.5 3.5", "regexp", 0));
 
-         var connectedButton = _instance.ActiveTab.FindElementByAttribute("button", "class", "css-x1wnqh", "regexp", 0);
-         var unconnectedButton = _instance.ActiveTab.FindElementByAttribute("button", "sx", "\\[object\\ Object]", "regexp", 0).ParentElement;
+        }
 
-         string state = null;
 
-         if (!connectedButton.FindChildByAttribute("img", "alt", "Zerion", "regexp", 0).IsVoid) state = "Zerion";
-         if (!connectedButton.FindChildByAttribute("img", "alt", "Backpack", "regexp", 0).IsVoid) state = "Backpack";
-         else if (unconnectedButton.InnerText == "Connect Wallet") state = "Connect";
-
-         switch (state)
-         {
-             case "Connect":
-                 _instance.HeClick(unconnectedButton, emu: 1);
-                 _instance.HeClick(("button", "innertext", "Zerion\\nConnect", "regexp", 0));
-                 new ZerionWallet(_project, _instance).ZerionConnect();
-                 goto check;
-
-             case "Zerion":
-                 _project.L0g($"{connectedButton.InnerText} connected with {state}");
-                 break;
-
-             default:
-                 _project.L0g($"unknown state {connectedButton.InnerText}  {unconnectedButton.InnerText}");
-                 goto check;
-
-         }
-     }
-
-     public void Connect(string wallet)
-     {
-
-        var connected = new List<string>();
-        _project.Deadline();
+        public void Connect()
+        {
+            _project.Deadline();
         check:
 
-        _project.Deadline(60); Thread.Sleep(1000);
+            _project.Deadline(60); Thread.Sleep(1000);
 
-        var connectedButton = _instance.ActiveTab.FindElementByAttribute("button", "class", "css-x1wnqh", "regexp", 0);
-        var unconnectedButton = _instance.ActiveTab.FindElementByAttribute("button", "sx", "\\[object\\ Object]", "regexp", 0).ParentElement;
+            var connectedButton = _instance.ActiveTab.FindElementByAttribute("button", "class", "css-x1wnqh", "regexp", 0);
+            var unconnectedButton = _instance.ActiveTab.FindElementByAttribute("button", "sx", "\\[object\\ Object]", "regexp", 0).ParentElement;
 
-        _project.L0g($"checking... {connectedButton.InnerText}  {unconnectedButton.InnerText}");
-        if (unconnectedButton.IsVoid && connectedButton.IsVoid) goto check;
+            string state = null;
 
-        string state = null;
+            if (!connectedButton.FindChildByAttribute("img", "alt", "Zerion", "regexp", 0).IsVoid) state = "Zerion";
+            if (!connectedButton.FindChildByAttribute("img", "alt", "Backpack", "regexp", 0).IsVoid) state = "Backpack";
+            else if (unconnectedButton.InnerText == "Connect Wallet") state = "Connect";
 
-        if (!connectedButton.FindChildByAttribute("img", "alt", "Zerion", "regexp", 0).IsVoid) connected.Add("Zerion");//state += "Zerion";
-        if (!connectedButton.FindChildByAttribute("img", "alt", "Backpack", "regexp", 0).IsVoid) connected.Add("Backpack");
-        else if (unconnectedButton.InnerText == "Connect Wallet") state = "Connect";
+            switch (state)
+            {
+                case "Connect":
+                    _instance.HeClick(unconnectedButton, emu: 1);
+                    _instance.HeClick(("button", "innertext", "Zerion\\nConnect", "regexp", 0));
+                    new ZerionWallet(_project, _instance).ZerionConnect();
+                    goto check;
+
+                case "Zerion":
+                    _project.L0g($"{connectedButton.InnerText} connected with {state}");
+                    break;
+
+                default:
+                    _project.L0g($"unknown state {connectedButton.InnerText}  {unconnectedButton.InnerText}");
+                    goto check;
+
+            }
+        }
+
+        public void Connect(string wallet)
+        {
+
+            var connected = new List<string>();
+            _project.Deadline();
+        check:
+
+            _project.Deadline(60); Thread.Sleep(1000);
+
+            var connectedButton = _instance.ActiveTab.FindElementByAttribute("button", "class", "css-x1wnqh", "regexp", 0);
+            var unconnectedButton = _instance.ActiveTab.FindElementByAttribute("button", "sx", "\\[object\\ Object]", "regexp", 0).ParentElement;
+
+            _project.L0g($"checking... {connectedButton.InnerText}  {unconnectedButton.InnerText}");
+            if (unconnectedButton.IsVoid && connectedButton.IsVoid) goto check;
+
+            string state = null;
+
+            if (!connectedButton.FindChildByAttribute("img", "alt", "Zerion", "regexp", 0).IsVoid) connected.Add("Zerion");//state += "Zerion";
+            if (!connectedButton.FindChildByAttribute("img", "alt", "Backpack", "regexp", 0).IsVoid) connected.Add("Backpack");
+            else if (unconnectedButton.InnerText == "Connect Wallet") state = "Connect";
 
 
             if (connected.Contains(wallet))
             {
                 _project.L0g($"{connectedButton.InnerText} connected with {wallet}");
-                _instance.HeClick(("button", "class", "css-1k2e1h7", "regexp", 0),deadline:1,thr0w:false);
+                _instance.HeClick(("button", "class", "css-1k2e1h7", "regexp", 0), deadline: 1, thr0w: false);
             }
 
             else if (wallet == "Zerion")
@@ -609,7 +605,7 @@ public string GET(
                 goto check;
 
             }
-            
+
 
 
             else if (wallet == "Backpack" && connected.Contains("Zerion"))
@@ -632,108 +628,163 @@ public string GET(
             }
 
         }
-        
 
 
-     public decimal LoadBalance()
-     {
-         _project.Deadline();
-         Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 
-     waitForBal:
-         _project.Deadline(60);
-         string est = _instance.HeGet(("div", "class", "css-n2rwim", "regexp", 0));
-
-         try
-         {
-             decimal bal = decimal.Parse(est.Split('\n')[1].Replace("Balance: ", ""));
-             return bal;
-         }
-         catch
-         {
-             goto waitForBal;
-         }
-
-     }
-
-
-     public decimal WaitExpected()
-     {
-         _project.Deadline();
-         Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-
-     waitForBal:
-         _project.Deadline(60);
-         string est = _instance.HeGet(("input:text", "class", "css-109vo2x", "regexp", 1), atr: "value");
-
-         try
-         {
-             decimal expected = decimal.Parse(est);
-             return expected;
-         }
-         catch
-         {
-             goto waitForBal;
-         }
-
-     }
-
-     public void SetManualAddress(string address)
-     {
-         _instance.HeClick(("button", "innertext", "Advanced\\ Transfer", "regexp", 0));
-         _instance.HeClick(("button", "role", "switch", "regexp", 1));
-         _instance.HeSet(("input:text", "fulltagname", "input:text", "regexp", 1), address);
-     }
-
-     public void GasOnDestination(string qnt, string sliperage = "0.5")
-     {
-         _instance.HeSet(("input:text", "class", "css-1qhcc16", "regexp", 0), qnt);
-         _instance.HeSet(("input:text", "class", "css-1qhcc16", "regexp", 1), sliperage);
-     }
-
-     public Dictionary<string,decimal> dicNative(bool log = false)
-     {
-        var chainsToUse = _project.Var("cfgChains").Split(',');
-        var bls = new Dictionary<string,decimal>();
-        var _w3b = new W3bRead(_project,log);
-        foreach (string chain in chainsToUse)
+        public decimal LoadBalance()
         {
-            try{	
-                decimal native = _w3b.NativeEVM<decimal>(_w3b.Rpc(chain));
-                bls.Add(chain,native);
+            _project.Deadline();
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+
+        waitForBal:
+            _project.Deadline(60);
+            string est = _instance.HeGet(("div", "class", "css-n2rwim", "regexp", 0));
+
+            try
+            {
+                decimal bal = decimal.Parse(est.Split('\n')[1].Replace("Balance: ", ""));
+                return bal;
             }
             catch
             {
-                decimal native = _w3b.NativeSOL<decimal>();
-                bls.Add(chain,native);            
+                goto waitForBal;
             }
-        }
-        return bls;
-     }
 
-     public Dictionary<string,decimal> dicToken(bool log = false)
-     {
-        var chainsToUse = _project.Var("cfgChains").Split(',');
-        var blsUsde = new Dictionary<string,decimal>();
-        var _w3b = new W3bRead(_project,log);
-        foreach (string chain in chainsToUse)
+        }
+
+
+        public decimal WaitExpected()
         {
-            try{	
-                decimal usdeBal = _w3b.BalERC20<decimal>("0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34",_w3b.Rpc(chain));
-                blsUsde.Add(chain,usdeBal);
+            _project.Deadline();
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+
+        waitForBal:
+            _project.Deadline(60);
+            string est = _instance.HeGet(("input:text", "class", "css-109vo2x", "regexp", 1), atr: "value");
+
+            try
+            {
+                decimal expected = decimal.Parse(est);
+                return expected;
             }
             catch
             {
-                decimal usdeBal = _w3b.TokenSPL<decimal>("DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT");
-                blsUsde.Add(chain,usdeBal);
-                
+                goto waitForBal;
             }
+
         }
-        return blsUsde;
-     }
+
+        public void SetManualAddress(string address)
+        {
+            _instance.HeClick(("button", "innertext", "Advanced\\ Transfer", "regexp", 0));
+            _instance.HeClick(("button", "role", "switch", "regexp", 1));
+            _instance.HeSet(("input:text", "fulltagname", "input:text", "regexp", 1), address);
+        }
+
+        public void GasOnDestination(string qnt, string sliperage = "0.5")
+        {
+            _instance.HeSet(("input:text", "class", "css-1qhcc16", "regexp", 0), qnt);
+            _instance.HeSet(("input:text", "class", "css-1qhcc16", "regexp", 1), sliperage);
+        }
+
+        public Dictionary<string, decimal> dicNative(bool log = false)
+        {
+            var chainsToUse = _project.Var("cfgChains").Split(',');
+            var bls = new Dictionary<string, decimal>();
+            var _w3b = new W3bRead(_project, log);
+            foreach (string chain in chainsToUse)
+            {
+                try
+                {
+                    decimal native = _w3b.NativeEVM<decimal>(_w3b.Rpc(chain));
+                    bls.Add(chain, native);
+                }
+                catch
+                {
+                    decimal native = _w3b.NativeSOL<decimal>();
+                    bls.Add(chain, native);
+                }
+            }
+            return bls;
+        }
+
+        public Dictionary<string, decimal> dicToken(bool log = false)
+        {
+            var chainsToUse = _project.Var("cfgChains").Split(',');
+            var blsUsde = new Dictionary<string, decimal>();
+            var _w3b = new W3bRead(_project, log);
+            foreach (string chain in chainsToUse)
+            {
+                try
+                {
+                    decimal usdeBal = _w3b.BalERC20<decimal>("0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34", _w3b.Rpc(chain));
+                    blsUsde.Add(chain, usdeBal);
+                }
+                catch
+                {
+                    decimal usdeBal = _w3b.TokenSPL<decimal>("DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT");
+                    blsUsde.Add(chain, usdeBal);
+
+                }
+            }
+            return blsUsde;
+        }
 
 
- }
+    }
+    public class Starter2
+    {
+        protected readonly IZennoPosterProjectModel _project;
+        protected readonly Instance _instance;
+        protected readonly bool _logShow;
+        protected readonly string _pass;
+        protected readonly Sql _sql;
+        protected readonly bool _skipCheck;
+        public Starter2(IZennoPosterProjectModel project, Instance instance, bool log = false)
+        {
+            _project = project;
+            _sql = new Sql(_project);
+            _logShow = log;
+            _instance = instance;
+            _skipCheck = project.Variables["skipBrowserScan"].Value == "True";
+        }
+        public Starter2(IZennoPosterProjectModel project, bool log = false)
+        {
+            _project = project;
+            _logShow = log;
+            _sql = new Sql(_project);
+            _skipCheck = project.Variables["skipBrowserScan"].Value == "True";
+        }
+            
+        public bool ChooseSingleAcc()
+        {
+            var listAccounts = _project.Lists["accs"];
+
+        check:
+            if (listAccounts.Count == 0)
+            {
+                _project.Variables["noAccsToDo"].Value = "True";
+                _project.SendToLog($"♻ noAccoutsAvaliable", LogType.Info, true, LogColor.Turquoise);
+                _project.Variables["acc0"].Value = "";
+                return false;
+                throw new Exception($"TimeToChill");
+            }
+ 
+            int randomAccount = new Random().Next(0, listAccounts.Count);
+            _project.Variables["acc0"].Value = listAccounts[randomAccount];
+            listAccounts.RemoveAt(randomAccount);
+            if (!_project.GlobalSet()) 
+                goto check;
+            _project.Var("pathProfileFolder", $"{_project.Var("profiles_folder")}accounts\\profilesFolder\\{_project.Var("acc0")}");
 
 
+            //_project.Variables["pathProfileFolder"].Value = $"{_project.Variables["profiles_folder"].Value}accounts\\profilesFolder\\{_project.Variables["acc0"].Value}";
+            _project.L0g($"`working with: [acc{_project.Var("acc0")}] accs left: [{listAccounts.Count}]");
+            return true;
+
+
+        }
+
+    }
+    
 }

@@ -281,7 +281,6 @@ namespace ZBSolutions
             if (_dbMode == "PostgreSQL") _tableName = $"{_schemaName}.{_tableName}";
             return result;
         }
-
         public  Dictionary<string, string> TblMapForProject( string[] staticColumns, string dynamicToDo = null, string defaultType = "TEXT DEFAULT ''")
         {
             if (string.IsNullOrEmpty(dynamicToDo)) dynamicToDo = _project.Variables["cfgToDo"].Value;
@@ -313,6 +312,7 @@ namespace ZBSolutions
             }
             return tableStructure;
         }
+
 
         public bool ClmnExist(string tblName, string clmnName)
         {
@@ -401,9 +401,7 @@ namespace ZBSolutions
                     DbQ($@"ALTER TABLE {_tableName} DROP COLUMN {column}{cascade};", true);
                 }
             }
-        }
- 
-            
+        }           
         public void AddRange(string tblName, int range = 0)
         {
             if (range == 0)
@@ -429,6 +427,9 @@ namespace ZBSolutions
             }
 
         }
+
+
+
 
         public string Proxy()
         {
@@ -630,11 +631,6 @@ namespace ZBSolutions
 
                 foreach (string social in demanded)
                 {
-
-                    //string tableName = social.Trim().ToLower();
-
-
-                    //string tableName = $"private_{social.Trim().ToLower()}";
                     string tableName = TblName($"private_{social.Trim().ToLower()}");
 
                     TblName(tableName);
@@ -700,9 +696,6 @@ namespace ZBSolutions
             return decoded;
 
         }
-
-        
-
 
     }
 
