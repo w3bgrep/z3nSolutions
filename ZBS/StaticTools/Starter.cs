@@ -141,7 +141,7 @@ namespace ZBSolutions
                 var toParse = "WebGL,WebGLReport, Audio, ClientRects, WebGPUReport,Fonts,TimeZoneBasedonIP,TimeFromIP";
                 Thread.Sleep(5000);
                 var hardware = _instance.ActiveTab.FindElementById("webGL_anchor").ParentElement.GetChildren(false);
-                foreach (HtmlElement child in hardware)
+                foreach (ZennoLab.CommandCenter.HtmlElement child in hardware)
                 {
                     var text = child.GetAttribute("innertext");
                     var varName = Regex.Replace(text.Split('\n')[0], " ", ""); var varValue = "";
@@ -154,7 +154,7 @@ namespace ZBSolutions
                 }
 
                 var software = _instance.ActiveTab.FindElementById("lang_anchor").ParentElement.GetChildren(false);
-                foreach (HtmlElement child in software)
+                foreach (ZennoLab.CommandCenter.HtmlElement child in software)
                 {
                     var text = child.GetAttribute("innertext");
                     var varName = Regex.Replace(text.Split('\n')[0], " ", ""); var varValue = "";
@@ -177,7 +177,7 @@ namespace ZBSolutions
                 if (!score.Contains("100%"))
                 {
                     var problemsHe = _instance.ActiveTab.FindElementByAttribute("ul", "fulltagname", "ul", "regexp", 5).GetChildren(false);
-                    foreach (HtmlElement child in problemsHe)
+                    foreach (ZennoLab.CommandCenter.HtmlElement child in problemsHe)
                     {
                         var text = child.GetAttribute("innertext");
                         var varValue = "";
