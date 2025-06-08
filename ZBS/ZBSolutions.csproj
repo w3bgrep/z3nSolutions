@@ -91,6 +91,7 @@
     <Compile Include="Telegram.cs" />
     <Compile Include="OnChain\UnlockProtocol.cs" />
     <Compile Include="OnChain\Unlock.cs" />
+    <Compile Include="TikTok.cs" />
     <Compile Include="Wallets\Manager.cs" />
     <Compile Include="Wallets\Keplr.cs" />
     <Compile Include="Wallets\Rabby.cs" />

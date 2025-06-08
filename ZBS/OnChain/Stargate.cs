@@ -91,6 +91,7 @@ namespace ZBSolutions
                 _instance.HeClick(unconnectedButton, emu: 1);
                 _instance.HeClick(("button", "innertext", "Zerion\\nConnect", "regexp", 0));
                 new ZerionWallet(_project, _instance).ZerionConnect();
+
                 goto check;
             }
 
