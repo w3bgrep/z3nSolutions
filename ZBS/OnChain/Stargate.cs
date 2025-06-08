@@ -72,8 +72,6 @@ namespace ZBSolutions
 
             }
 
-
-
             else if (wallet == "Backpack" && connected.Contains("Zerion"))
             {
                 _instance.HeClick(connectedButton, emu: 1);
@@ -90,6 +88,9 @@ namespace ZBSolutions
             else
             {
                 _project.L0g($"unknown state {connectedButton.InnerText}  {unconnectedButton.InnerText}");
+                _instance.HeClick(unconnectedButton, emu: 1);
+                _instance.HeClick(("button", "innertext", "Zerion\\nConnect", "regexp", 0));
+                new ZerionWallet(_project, _instance).ZerionConnect();
                 goto check;
             }
 

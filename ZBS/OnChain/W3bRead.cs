@@ -905,37 +905,31 @@ namespace ZBSolutions
             var _w3b = new W3bRead(_project, log);
             foreach (string chain in chainsToUse)
             {
-                try
-                {
-                    decimal native = _w3b.NativeEVM<decimal>(_w3b.Rpc(chain));
-                    bls.Add(chain, native);
-                }
-                catch
-                {
-                    decimal native = _w3b.NativeSOL<decimal>();
-                    bls.Add(chain, native);
-                }
+                decimal native;
+                if (!chain.Contains("solana"))
+                    native = _w3b.NativeSOL<decimal>();
+                else
+                    native = _w3b.NativeEVM<decimal>(_w3b.Rpc(chain));
+                bls.Add(chain, native);
             }
             return bls;
         }
-        public Dictionary<string, decimal> DicToken(string[] chainsToUse = null, bool log = false) //usde hardcoded
+        public Dictionary<string, decimal> DicToken(string[] chainsToUse = null, bool log = false, string tokenEVM = null , string tokenSPL = null) //usde fallback
         {
             if (chainsToUse == null) chainsToUse = _project.Var("cfgChains").Split(',');
+            if (tokenEVM == null) tokenEVM = "0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34";//usde fallback
+            if (tokenSPL == null) tokenSPL = "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT";//usde fallback
+
             var blsUsde = new Dictionary<string, decimal>();
             var _w3b = new W3bRead(_project, log);
             foreach (string chain in chainsToUse)
             {
-                try
-                {
-                    decimal usdeBal = _w3b.BalERC20<decimal>("0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34", _w3b.Rpc(chain));
-                    blsUsde.Add(chain, usdeBal);
-                }
-                catch
-                {
-                    decimal usdeBal = _w3b.TokenSPL<decimal>("DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT");
-                    blsUsde.Add(chain, usdeBal);
-
-                }
+                decimal bal;
+                if (!chain.Contains("solana"))
+                    bal = _w3b.BalERC20<decimal>(tokenEVM, _w3b.Rpc(chain));
+                else
+                    bal = _w3b.TokenSPL<decimal>(tokenSPL);
+                blsUsde.Add(chain, bal);
             }
             return blsUsde;
         }

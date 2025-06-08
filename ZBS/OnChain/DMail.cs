@@ -1,38 +1,60 @@
 ﻿using Nethereum.Signer;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 using ZennoLab.InterfacesLibrary.ProjectModel;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System.Dynamic;
-using System.Reflection;
-using System.Security.Policy;
 
 namespace ZBSolutions
 {
-    public class DMail : W3bWrite
+    public class DMail
     {
         //private readonly string _key;
         private string _encstring;
         private string _pid;
+        private string _key;
+
         private dynamic _allMail;
         private Dictionary<string, string> _headers;
         private readonly NetHttp _h;
+        private readonly W3bWrite _W3b;
+        private readonly Sql _sql;
+        private readonly IZennoPosterProjectModel _project;
+        private readonly bool _logShow;
+
 
         private readonly string _postRead = "https://icp.dmail.ai/api/node/v6/dmail/inbox_all/read_by_page_with_content";
         private readonly string _postWrite = "https://icp.dmail.ai/api/node/v6/dmail/inbox_all/update_by_bulk";
 
 
+
         public DMail(IZennoPosterProjectModel project, string key = null, bool log = false)
-            : base(project, key: key, log: log)
         {
-            _key = Key(key);
-            _h = new NetHttp(project, true);
+            _project = project;
+            _h = new NetHttp(project, log: log);
+            _sql = new Sql(project, log: log);
+            _logShow = log;
+            _key = KeyCheck(key);
             CheckAuth();
+
         }
+
+        protected void Log(string tolog = "", [CallerMemberName] string callerName = "", bool log = false)
+        {
+            if (!_logShow && !log) return;
+            var stackFrame = new System.Diagnostics.StackFrame(1);
+            var callingMethod = stackFrame.GetMethod();
+            if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
+            _project.L0g($"[ 💠  {callerName}] [{tolog}] ");
+        }
+
         public void Auth()
         {
 
@@ -138,18 +160,16 @@ namespace ZBSolutions
             };
 
         }
-        private string Key(string key = null)
+        private string KeyCheck(string key = null)
         {
             if (string.IsNullOrEmpty(key))
-            {
-                string encryptedkey = _sql.Get("secp256k1", "accounts.blockchain_private");
-                key = SAFU.Decode(_project, encryptedkey);
-            }
-            if (string.IsNullOrEmpty(key)) throw new Exception("emptykey");
+                key = _sql.Key("evm");
+            if (string.IsNullOrEmpty(key))
+                throw new Exception("emptykey");
             return key;
         }
-        
-        
+
+
         public dynamic GetAll()
         {
 

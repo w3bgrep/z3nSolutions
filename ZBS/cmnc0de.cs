@@ -35,6 +35,7 @@ using ZennoLab.InterfacesLibrary.ProjectModel;
 using ZennoLab.InterfacesLibrary;
 using ZBSolutions;
 using NBitcoin;
+using Nethereum.Model;
 
 
 using System;
@@ -66,10 +67,20 @@ using ZennoLab.InterfacesLibrary.ProjectModel;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using Nethereum.Model;
+
 using static Leaf.xNet.Services.Cloudflare.CloudflareBypass;
-
+using Nethereum.Signer;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using ZennoLab.InterfacesLibrary.ProjectModel;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-
+using System.Dynamic;
+using System.Reflection;
+using System.Security.Policy;
 #endregion
 
 namespace w3tools //by @w3bgrep
@@ -698,16 +709,12 @@ namespace w3tools //by @w3bgrep
             var _w3b = new W3bRead(_project, log);
             foreach (string chain in chainsToUse)
             {
-                try
-                {
-                    decimal native = _w3b.NativeEVM<decimal>(_w3b.Rpc(chain));
-                    bls.Add(chain, native);
-                }
-                catch
-                {
-                    decimal native = _w3b.NativeSOL<decimal>();
-                    bls.Add(chain, native);
-                }
+                decimal native;
+                if (!chain.Contains("solana"))
+                    native = _w3b.NativeSOL<decimal>();
+                else
+                    native = _w3b.NativeEVM<decimal>(_w3b.Rpc(chain));
+                bls.Add(chain, native);
             }
             return bls;
         }
@@ -733,61 +740,12 @@ namespace w3tools //by @w3bgrep
 
 
     }
-    public class Starter2
-    {
-        protected readonly IZennoPosterProjectModel _project;
-        protected readonly Instance _instance;
-        protected readonly bool _logShow;
-        protected readonly string _pass;
-        protected readonly Sql _sql;
-        protected readonly bool _skipCheck;
-        public Starter2(IZennoPosterProjectModel project, Instance instance, bool log = false)
-        {
-            _project = project;
-            _sql = new Sql(_project);
-            _logShow = log;
-            _instance = instance;
-            _skipCheck = project.Variables["skipBrowserScan"].Value == "True";
-        }
-        public Starter2(IZennoPosterProjectModel project, bool log = false)
-        {
-            _project = project;
-            _logShow = log;
-            _sql = new Sql(_project);
-            _skipCheck = project.Variables["skipBrowserScan"].Value == "True";
-        }
-
-        public bool ChooseSingleAcc()
-        {
-            var listAccounts = _project.Lists["accs"];
-
-        check:
-            if (listAccounts.Count == 0)
-            {
-                _project.Variables["noAccsToDo"].Value = "True";
-                _project.SendToLog($"♻ noAccoutsAvaliable", LogType.Info, true, LogColor.Turquoise);
-                _project.Variables["acc0"].Value = "";
-                return false;
-                throw new Exception($"TimeToChill");
-            }
-
-            int randomAccount = new Random().Next(0, listAccounts.Count);
-            _project.Variables["acc0"].Value = listAccounts[randomAccount];
-            listAccounts.RemoveAt(randomAccount);
-            if (!_project.GlobalSet())
-                goto check;
-            _project.Var("pathProfileFolder", $"{_project.Var("profiles_folder")}accounts\\profilesFolder\\{_project.Var("acc0")}");
-
-
-            //_project.Variables["pathProfileFolder"].Value = $"{_project.Variables["profiles_folder"].Value}accounts\\profilesFolder\\{_project.Variables["acc0"].Value}";
-            _project.L0g($"`working with: [acc{_project.Var("acc0")}] accs left: [{listAccounts.Count}]");
-            return true;
-
-
-        }
-        
+    
 
 
     }
+
+
     
+
 }

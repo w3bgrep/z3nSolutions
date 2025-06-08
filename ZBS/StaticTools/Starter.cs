@@ -312,8 +312,7 @@ namespace ZBSolutions
                 }
             }
         }
-
-        private bool ChooseSingleAcc()
+        public bool ChooseSingleAcc()
         {
             var listAccounts = _project.Lists["accs"];
 
@@ -326,19 +325,15 @@ namespace ZBSolutions
                 return false;
                 throw new Exception($"TimeToChill");
             }
- 
+
             int randomAccount = new Random().Next(0, listAccounts.Count);
             _project.Variables["acc0"].Value = listAccounts[randomAccount];
             listAccounts.RemoveAt(randomAccount);
-            if (!_project.GlobalSet()) 
+            if (!_project.GlobalSet())
                 goto check;
-            _project.Var("pathProfileFolder", $"{_project.Var("pathProfileFolder")}accounts\\profilesFolder\\{_project.Var("acc0")}");
-
-
-            //_project.Variables["pathProfileFolder"].Value = $"{_project.Variables["profiles_folder"].Value}accounts\\profilesFolder\\{_project.Variables["acc0"].Value}";
+            _project.Var("pathProfileFolder", $"{_project.Var("profiles_folder")}accounts\\profilesFolder\\{_project.Var("acc0")}");
             _project.L0g($"`working with: [acc{_project.Var("acc0")}] accs left: [{listAccounts.Count}]");
             return true;
-
 
         }
 
