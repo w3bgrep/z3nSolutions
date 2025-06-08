@@ -89,9 +89,6 @@ namespace w3tools //by @w3bgrep
     public static class TestStatic
     {
 
-
-
-
         public static string UnixToHuman(this string decodedResultExpire)
         {
             if (!string.IsNullOrEmpty(decodedResultExpire))
@@ -178,13 +175,5 @@ namespace w3tools //by @w3bgrep
 
 
     }
-
-
-
-
-    }
-
-
-    
 
 }
