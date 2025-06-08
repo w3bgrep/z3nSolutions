@@ -114,7 +114,11 @@ namespace ZBSolutions
                 { "xrp", "https://rpc.testnet.xrplevm.org/" },
                 // nonEvm
                 { "aptos", "https://fullnode.mainnet.aptoslabs.com/v1" },
-                { "movement", "https://mainnet.movementnetwork.xyz/v1" }
+                { "movement", "https://mainnet.movementnetwork.xyz/v1" },
+                //sol
+                { "solana", "https://api.mainnet-beta.solana.com" },
+                { "solana_devnet", "https://api.devnet.solana.com" },
+                { "solana_testnet", "https://api.testnet.solana.com" },
             };
 
             if (rpcs == null)
