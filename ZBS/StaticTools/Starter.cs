@@ -61,7 +61,7 @@ namespace ZBSolutions
             bool goodProxy = new NetHttp(_project, true).CheckProxy(proxy);
             if (goodProxy)
                 _instance.SetProxy(proxy, true, true, true, true);
-            else 
+            else
             {
                 if (strictProxy) throw new Exception($"!E bad proxy {proxy}");
             }
@@ -211,7 +211,8 @@ namespace ZBSolutions
         }
         public void InitVariables(string author = "")
         {
-            DisableLogs();
+            new Sys(_project).DisableLogs();
+
             string sessionId = (DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString();
             string projectName = _project.ExecuteMacro(_project.Name).Split('.')[0];
             string version = Assembly.GetExecutingAssembly()
@@ -235,44 +236,6 @@ namespace ZBSolutions
             SAFU.Initialize(_project);
             Logo(author, dllTitle);
 
-        }
-        private void DisableLogs()
-        {
-            try
-            {
-                StringBuilder logBuilder = new StringBuilder();
-                string basePath = @"C:\Program Files\ZennoLab";
-
-                foreach (string langDir in Directory.GetDirectories(basePath))
-                {
-                    foreach (string programDir in Directory.GetDirectories(langDir))
-                    {
-                        foreach (string versionDir in Directory.GetDirectories(programDir))
-                        {
-                            string logsPath = Path.Combine(versionDir, "Progs", "Logs");
-                            if (Directory.Exists(logsPath))
-                            {
-                                Directory.Delete(logsPath, true);
-                                Process process = new Process();
-                                process.StartInfo.FileName = "cmd.exe";
-                                process.StartInfo.Arguments = $"/c mklink /d \"{logsPath}\" \"NUL\"";
-                                process.StartInfo.UseShellExecute = false;
-                                process.StartInfo.CreateNoWindow = true;
-                                process.StartInfo.RedirectStandardOutput = true;
-                                process.StartInfo.RedirectStandardError = true;
-
-                                logBuilder.AppendLine($"Attempting to create symlink: {process.StartInfo.Arguments}");
-
-                                process.Start();
-                                string output = process.StandardOutput.ReadToEnd();
-                                string error = process.StandardError.ReadToEnd();
-                                process.WaitForExit();
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex) { }
         }
         private void Logo(string author, string dllTitle)
         {
@@ -331,55 +294,93 @@ namespace ZBSolutions
             return true;
 
         }
+ 
+        
+        
+        //public void StartRandomBrowser(bool strictProxy = true)
+        //{
+        //    Log("initProfile");
+        //    _project.Variables["instancePort"].Value = _instance.Port.ToString();
 
-        public void StartRandomBrowser(bool strictProxy = true)
-        {
-            Log("initProfile");
-            _project.Variables["instancePort"].Value = _instance.Port.ToString();
+        //    string webGlData = _sql.Get("webgl", "private_profile");
+        //    _instance.SetDisplay(webGlData, _project);
 
-            string webGlData = _sql.Get("webgl", "private_profile");
-            _instance.SetDisplay(webGlData, _project);
+        //    string proxy = _sql.Get("proxy", "private_profile");
+        //    bool goodProxy = new NetHttp(_project, true).CheckProxy(proxy);
+        //    if (goodProxy)
+        //        _instance.SetProxy(proxy, true, true, true, true);
+        //    else
+        //    {
+        //        if (strictProxy) throw new Exception($"!E bad proxy {proxy}");
+        //    }
 
-            string proxy = _sql.Get("proxy", "private_profile");
-            bool goodProxy = new NetHttp(_project, true).CheckProxy(proxy);
-            if (goodProxy)
-                _instance.SetProxy(proxy, true, true, true, true);
-            else
-            {
-                if (strictProxy) throw new Exception($"!E bad proxy {proxy}");
-            }
+        //    string cookiePath = $"{_project.Variables["profiles_folder"].Value}accounts\\cookies\\{_project.Variables["acc0"].Value}.json";
+        //    _project.Variables["pathCookies"].Value = cookiePath;
 
-            string cookiePath = $"{_project.Variables["profiles_folder"].Value}accounts\\cookies\\{_project.Variables["acc0"].Value}.json";
-            _project.Variables["pathCookies"].Value = cookiePath;
+        //    try
+        //    {
+        //        string cookies = File.ReadAllText(cookiePath);
+        //        _instance.SetCookie(cookies);
+        //    }
+        //    catch
+        //    {
+        //        Log($"!W Fail to set cookies from file {cookiePath}");
+        //        try
+        //        {
+        //            string cookies = _sql.Get("cookies", "private_profile");
+        //            _instance.SetCookie(cookies);
+        //        }
+        //        catch (Exception Ex)
+        //        {
+        //            Log($"!E Fail to set cookies from db Err. {Ex.Message}");
+        //        }
 
-            try
-            {
-                string cookies = File.ReadAllText(cookiePath);
-                _instance.SetCookie(cookies);
-            }
-            catch
-            {
-                Log($"!W Fail to set cookies from file {cookiePath}");
-                try
-                {
-                    string cookies = _sql.Get("cookies", "private_profile");
-                    _instance.SetCookie(cookies);
-                }
-                catch (Exception Ex)
-                {
-                    Log($"!E Fail to set cookies from db Err. {Ex.Message}");
-                }
+        //    }
+        //    if (!_skipCheck)
+        //    {
+        //        BrowserScanCheck();
+        //    }
 
-            }
-            if (!_skipCheck)
-            {
-                BrowserScanCheck();
-            }
+        //}
+        
+        //private void DisableLogs()
+        //{
+        //    try
+        //    {
+        //        StringBuilder logBuilder = new StringBuilder();
+        //        string basePath = @"C:\Program Files\ZennoLab";
 
-        }
+        //        foreach (string langDir in Directory.GetDirectories(basePath))
+        //        {
+        //            foreach (string programDir in Directory.GetDirectories(langDir))
+        //            {
+        //                foreach (string versionDir in Directory.GetDirectories(programDir))
+        //                {
+        //                    string logsPath = Path.Combine(versionDir, "Progs", "Logs");
+        //                    if (Directory.Exists(logsPath))
+        //                    {
+        //                        Directory.Delete(logsPath, true);
+        //                        Process process = new Process();
+        //                        process.StartInfo.FileName = "cmd.exe";
+        //                        process.StartInfo.Arguments = $"/c mklink /d \"{logsPath}\" \"NUL\"";
+        //                        process.StartInfo.UseShellExecute = false;
+        //                        process.StartInfo.CreateNoWindow = true;
+        //                        process.StartInfo.RedirectStandardOutput = true;
+        //                        process.StartInfo.RedirectStandardError = true;
 
+        //                        logBuilder.AppendLine($"Attempting to create symlink: {process.StartInfo.Arguments}");
 
-
+        //                        process.Start();
+        //                        string output = process.StandardOutput.ReadToEnd();
+        //                        string error = process.StandardError.ReadToEnd();
+        //                        process.WaitForExit();
+        //                    }
+        //                }
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex) { }
+        //}
 
     }
 }

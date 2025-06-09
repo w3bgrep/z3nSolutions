@@ -104,12 +104,7 @@ namespace ZBSolutions
             var ActionId = error.ActionId.ToString();
             var ActionComment = error.ActionComment;
             var exception = error.Exception;
-            try
-            {
-                string path = $"{project.Path}.failed\\{project.Variables["projectName"].Value}\\{project.Name} • {project.Variables["acc0"].Value} • {project.LastExecutedActionId} • {ActionId}.jpg";
-                ZennoPoster.ImageProcessingResizeFromScreenshot(instance.Port, path, 50, 50, "percent", true, false);
-            }
-            catch (Exception e) { project.SendInfoToLog(e.Message); }
+
             if (exception != null)
             {
                 var typeEx = exception.GetType();
@@ -136,6 +131,12 @@ namespace ZBSolutions
                 if (!string.IsNullOrEmpty(innerMsg)) failReport += $"Inner: `{innerMsg.EscapeMarkdown()}` \n";
                 if (instance.BrowserType.ToString() == "Chromium") failReport += $"Page: `{instance.ActiveTab.URL.EscapeMarkdown()}`";
                 project.Variables["failReport"].Value = failReport;
+                try
+                {
+                    string path = $"{project.Path}.failed\\{project.Variables["projectName"].Value}\\{project.Name} • {project.Variables["acc0"].Value} • {project.LastExecutedActionId} • {ActionId}.jpg";
+                    ZennoPoster.ImageProcessingResizeFromScreenshot(instance.Port, path, 50, 50, "percent", true, false);
+                }
+                catch (Exception e) { project.SendInfoToLog(e.Message); }
                 return new string[] { ActionId, type, msg, StackTrace, innerMsg };
 
             }
@@ -263,6 +264,31 @@ namespace ZBSolutions
             try { project.Var(varRslt, $"{result}"); } catch { }
             return result;
         }
+
+        public static bool ChooseSingleAcc(this IZennoPosterProjectModel project)
+        {
+            var listAccounts = project.Lists["accs"];
+
+        check:
+            if (listAccounts.Count == 0)
+            {
+                project.Variables["noAccsToDo"].Value = "True";
+                project.SendToLog($"♻ noAccoutsAvaliable", LogType.Info, true, LogColor.Turquoise);
+                project.Variables["acc0"].Value = "";
+                return false;
+                throw new Exception($"TimeToChill");
+            }
+
+            int randomAccount = new Random().Next(0, listAccounts.Count);
+            project.Variables["acc0"].Value = listAccounts[randomAccount];
+            listAccounts.RemoveAt(randomAccount);
+            if (!project.GlobalSet())
+                goto check;
+            project.Var("pathProfileFolder", $"{project.Var("profiles_folder")}accounts\\profilesFolder\\{project.Var("acc0")}");
+            project.L0g($"`working with: [acc{project.Var("acc0")}] accs left: [{listAccounts.Count}]");
+            return true;
+        }
+
 
         #endregion
 
@@ -552,6 +578,8 @@ namespace ZBSolutions
         #endregion
 
         #region FileRW
+
+
         public static string GetNewCreds(this IZennoPosterProjectModel project, string dataType)
         {
             string pathFresh = $"{project.Path}.data\\fresh\\{dataType}.txt";

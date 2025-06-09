@@ -79,6 +79,7 @@
     <Compile Include="CexApi\Refuel.cs" />
     <Compile Include="ChromeExtentions.cs" />
     <Compile Include="Loggers.cs" />
+    <Compile Include="MethodExtensions\File.cs" />
     <Compile Include="MethodExtensions\ObjectExtentions.cs" />
     <Compile Include="OnChain\Relay.cs" />
     <Compile Include="Rnd.cs" />

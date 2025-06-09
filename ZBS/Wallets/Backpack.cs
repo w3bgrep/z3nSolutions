@@ -205,7 +205,7 @@ namespace ZBSolutions
             switch (state)
             {
                 case null:
-                    _logger.Send("loading...");
+                    _logger.Send("...");
                     Thread.Sleep(1000);
                     goto check;
                 case "unlocked":

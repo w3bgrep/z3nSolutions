@@ -1,4 +1,5 @@
 ﻿using NBitcoin;
+using Nethereum.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -682,10 +683,6 @@ namespace ZBSolutions
             string CEX = cexInput.Text.ToLower();
             string columnName = $"{CEX}_{CHAIN}";
 
-            //_project.L0g($"{_pstgr} `p");
-            //_project.L0g($"{_tableName} `lb");
-
-
             var tableStructure = new Dictionary<string, string>
             {
                 {"acc0", "INTEGER PRIMARY KEY"},
@@ -693,9 +690,6 @@ namespace ZBSolutions
             };
             ClmnAdd(_tableName, tableStructure);
 
-            //_project.L0g($"{_pstgr} `p");
-
-            //_project.L0g($"{_tableName} `g");
 
             string[] lines = addressInput.Text.Trim().Split('\n');
             int lineCount = 0;
@@ -704,7 +698,6 @@ namespace ZBSolutions
 
             for (int acc0index = startFrom; acc0index <= lines.Length; acc0index++)
             {
-                //_project.L0g($"{_tableName} `y");
                 string line = lines[acc0index - 1].Trim();
                 if (string.IsNullOrWhiteSpace(line))
                 {
@@ -716,9 +709,7 @@ namespace ZBSolutions
                 {
                     acc0.Value = acc0index.ToString();
                     Upd($"{columnName} = '{line}'", _tableName, last: false);
-                    // _sql.DbQ($@"UPDATE {table} SET
-                    //         {columnName} = '{line}'
-                    //         WHERE acc0 = {acc0};");
+
                     lineCount++;
                 }
                 catch (Exception ex)
@@ -954,7 +945,6 @@ namespace ZBSolutions
             }
             else
             {
-                // SQLite: Проверяем существование исходной таблицы
                 string existQuery = $"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='{sourceTableName}';";
                 string existResult = DbQ(existQuery);
                 if (existResult == "0" || string.IsNullOrEmpty(existResult))
@@ -963,7 +953,6 @@ namespace ZBSolutions
                     return;
                 }
 
-                // Получаем SQL для создания исходной таблицы
                 string createTableSQL = DbQ($"SELECT sql FROM sqlite_master WHERE type='table' AND name='{sourceTableName}';");
                 if (string.IsNullOrEmpty(createTableSQL))
                 {
@@ -971,16 +960,12 @@ namespace ZBSolutions
                     return;
                 }
 
-                // Заменяем имя таблицы в SQL
                 string newTableSQL = createTableSQL.Replace(sourceTableName, targetTableName);
 
-                // Удаляем целевую таблицу, если существует
                 DbQ($"DROP TABLE IF EXISTS {targetTableName};");
 
-                // Создаём новую таблицу
                 DbQ(newTableSQL);
 
-                // Копируем данные
                 DbQ($"INSERT INTO {targetTableName} SELECT * FROM {sourceTableName};");
 
                 _project.SendInfoToLog($"Table {sourceTableName} successfully copied to {targetTableName}");
@@ -1027,6 +1012,16 @@ namespace ZBSolutions
 
         public void Execute()
         {
+
+            try
+            {
+                new Sql(_project).DbQ("CREATE SCHEMA IF NOT EXISTS private;");
+                new Sql(_project).DbQ("CREATE SCHEMA IF NOT EXISTS public;");
+                new Sql(_project).DbQ("CREATE SCHEMA IF NOT EXISTS projects;");
+
+            }
+            catch (Exception ex) { }
+
 
             var phK = new List<string> {
                 "private_settings",
