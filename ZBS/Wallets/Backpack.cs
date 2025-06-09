@@ -26,10 +26,12 @@ namespace ZBSolutions
         protected readonly string _urlImport = $"chrome-extension://aflkmfhebedbjioipglgcbcmnbpgliof/options.html?onboarding=true";
 
 
-        public BackpackWallet(IZennoPosterProjectModel project, Instance instance,string fileName = "Backpack0.10.94.crx", bool log = false, string key = null)
+        public BackpackWallet(IZennoPosterProjectModel project, Instance instance, bool log = false, string key = null, string fileName = "Backpack0.10.94.crx")
             
         {
-            _fileName = "Backpack0.10.94.crx";
+            _project = project;
+            _instance = instance;
+            _fileName = fileName;
             _key = KeyLoad(key);
             _pass = SAFU.HWPass(_project);
             _logger = new Logger(project,log:log, classEmoji: "🎒");
