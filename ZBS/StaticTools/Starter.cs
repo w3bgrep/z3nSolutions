@@ -65,11 +65,6 @@ namespace ZBSolutions
             {
                 if (strictProxy) throw new Exception($"!E bad proxy {proxy}");
             }
-            //var proxy = _sql.Get("proxy", "private_profile");
-            //_project.Variables["proxy"].Value = proxy;
-            //try { _project.Variables["proxyLeaf"].Value = proxy.Replace("//", "").Replace("@", ":"); } catch { }
-            //return proxy;
-            //_instance.SetProxy(proxy, _project);
 
             string cookiePath = $"{_project.Variables["profiles_folder"].Value}accounts\\cookies\\{_project.Variables["acc0"].Value}.json";
             _project.Variables["pathCookies"].Value = cookiePath;
@@ -336,6 +331,55 @@ namespace ZBSolutions
             return true;
 
         }
+
+        public void StartRandomBrowser(bool strictProxy = true)
+        {
+            Log("initProfile");
+            _project.Variables["instancePort"].Value = _instance.Port.ToString();
+
+            string webGlData = _sql.Get("webgl", "private_profile");
+            _instance.SetDisplay(webGlData, _project);
+
+            string proxy = _sql.Get("proxy", "private_profile");
+            bool goodProxy = new NetHttp(_project, true).CheckProxy(proxy);
+            if (goodProxy)
+                _instance.SetProxy(proxy, true, true, true, true);
+            else
+            {
+                if (strictProxy) throw new Exception($"!E bad proxy {proxy}");
+            }
+
+            string cookiePath = $"{_project.Variables["profiles_folder"].Value}accounts\\cookies\\{_project.Variables["acc0"].Value}.json";
+            _project.Variables["pathCookies"].Value = cookiePath;
+
+            try
+            {
+                string cookies = File.ReadAllText(cookiePath);
+                _instance.SetCookie(cookies);
+            }
+            catch
+            {
+                Log($"!W Fail to set cookies from file {cookiePath}");
+                try
+                {
+                    string cookies = _sql.Get("cookies", "private_profile");
+                    _instance.SetCookie(cookies);
+                }
+                catch (Exception Ex)
+                {
+                    Log($"!E Fail to set cookies from db Err. {Ex.Message}");
+                }
+
+            }
+            if (!_skipCheck)
+            {
+                BrowserScanCheck();
+            }
+
+        }
+
+
+
 
     }
 }

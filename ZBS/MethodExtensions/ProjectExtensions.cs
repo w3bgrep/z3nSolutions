@@ -552,33 +552,6 @@ namespace ZBSolutions
         #endregion
 
         #region FileRW
-        public static string GetExtVer(this IZennoPosterProjectModel project, string extId)
-        {
-            string securePrefsPath = project.Variables["pathProfileFolder"].Value + @"\Default\Secure Preferences";
-            string json = File.ReadAllText(securePrefsPath);
-            JObject jObj = JObject.Parse(json);
-            JObject settings = (JObject)jObj["extensions"]?["settings"];
-
-            if (settings == null)
-            {
-                throw new Exception("Секция extensions.settings не найдена");
-            }
-
-            JObject extData = (JObject)settings[extId];
-            if (extData == null)
-            {
-                throw new Exception($"Расширение с ID {extId} не найдено");
-            }
-
-            string version = (string)extData["manifest"]?["version"];
-            if (string.IsNullOrEmpty(version))
-            {
-                throw new Exception($"Версия для расширения {extId} не найдена");
-            }
-
-            return version;
-
-        }     
         public static string GetNewCreds(this IZennoPosterProjectModel project, string dataType)
         {
             string pathFresh = $"{project.Path}.data\\fresh\\{dataType}.txt";

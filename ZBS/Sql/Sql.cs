@@ -227,6 +227,31 @@ namespace ZBSolutions
             if (key == "acc0") return DbQ($@"SELECT {toGet.Trim().TrimEnd(',')} from {_tableName} WHERE acc0 = {acc};", log: log, throwOnEx: throwOnEx);
             else return DbQ($@"SELECT {toGet.Trim().TrimEnd(',')} from {_tableName} WHERE key = '{key}';", log: log, throwOnEx: throwOnEx);
         }
+
+
+        public string GetRandom(string toGet, string tableName = null, bool log = false, bool acc = false, bool throwOnEx = false, int range = 0)
+        {
+            if (range == 0) range = _project.Range();
+            if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
+            TblName(tableName);
+            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+            string acc0 = string.Empty;
+            if (acc) acc0 = "acc0, ";
+
+            return DbQ($@"
+                SELECT {acc0}{toGet.Trim().TrimEnd(',')} 
+                from {_tableName} 
+                WHERE TRIM({toGet}) != ''
+	            AND acc0 < {range}
+                ORDER BY RANDOM()
+                LIMIT 1;",
+            log: log, throwOnEx: throwOnEx);
+
+        }
+
+
+
+
         public string GetColumns(string tableName, string schemaName = "accounts", bool log = false)
         {
             string Q; string name;

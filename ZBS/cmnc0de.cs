@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 using System.Linq;
@@ -89,16 +89,22 @@ namespace w3tools //by @w3bgrep
     public static class TestStatic
     {
 
-        public static string UnixToHuman(this string decodedResultExpire)
+
+        public static string UnixToHuman(this IZennoPosterProjectModel project, string decodedResultExpire = null)
         {
+            var _log = new Logger(project, classEmoji: "☻");
+            if (string.IsNullOrEmpty(decodedResultExpire)) decodedResultExpire = project.Var("varSessionId");
             if (!string.IsNullOrEmpty(decodedResultExpire))
             {
                 int intEpoch = int.Parse(decodedResultExpire);
-                return new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(intEpoch).ToShortDateString();
+                string converted = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(intEpoch).ToShortDateString();
+                _log.Send(converted);
+                return converted;
+
+                
             }
             return string.Empty;
         }
-
         public static decimal Math(this IZennoPosterProjectModel project, string varA, string operation, string varB, string varRslt = "a_")
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -126,8 +132,6 @@ namespace w3tools //by @w3bgrep
             try { project.Var(varRslt, $"{result}"); } catch { }
             return result;
         }
-
-
         public static string CookiesToJson(string cookies)
         {
             try
@@ -173,7 +177,8 @@ namespace w3tools //by @w3bgrep
             }
         }
 
-
     }
+
+    
 
 }

@@ -77,8 +77,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CexApi\Refuel.cs" />
+    <Compile Include="ChromeExtentions.cs" />
+    <Compile Include="Loggers.cs" />
     <Compile Include="MethodExtensions\ObjectExtentions.cs" />
-    <Compile Include="Relay.cs" />
+    <Compile Include="OnChain\Relay.cs" />
+    <Compile Include="Rnd.cs" />
     <Compile Include="Sql\Dbuilder.cs" />
     <Compile Include="F0rms.cs" />
     <Compile Include="OnChain\DMail.cs" />
@@ -88,10 +91,10 @@
     <Compile Include="Sql\TableSvc.cs" />
     <Compile Include="OnChain\W3bRead.cs" />
     <Compile Include="OnChain\Stargate.cs" />
-    <Compile Include="Telegram.cs" />
+    <Compile Include="Socials\Telegram.cs" />
     <Compile Include="OnChain\UnlockProtocol.cs" />
     <Compile Include="OnChain\Unlock.cs" />
-    <Compile Include="TikTok.cs" />
+    <Compile Include="Socials\TikTok.cs" />
     <Compile Include="Wallets\Manager.cs" />
     <Compile Include="Wallets\Keplr.cs" />
     <Compile Include="Wallets\Rabby.cs" />
