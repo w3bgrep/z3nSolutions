@@ -229,7 +229,7 @@ namespace ZBSolutions
         }
 
 
-        public string GetRandom(string toGet, string tableName = null, bool log = false, bool acc = false, bool throwOnEx = false, int range = 0)
+        public string GetRandom(string toGet, string tableName = null, bool log = false, bool acc = false, bool throwOnEx = false, int range = 0, bool single = true, bool invert = false)
         {
             if (range == 0) range = _project.Range();
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
@@ -238,18 +238,18 @@ namespace ZBSolutions
             string acc0 = string.Empty;
             if (acc) acc0 = "acc0, ";
 
-            return DbQ($@"
+            string query = $@"
                 SELECT {acc0}{toGet.Trim().TrimEnd(',')} 
                 from {_tableName} 
                 WHERE TRIM({toGet}) != ''
 	            AND acc0 < {range}
-                ORDER BY RANDOM()
-                LIMIT 1;",
-            log: log, throwOnEx: throwOnEx);
+                ORDER BY RANDOM()";
 
+            if (single) query += " LIMIT 1;";
+            if (invert) query = query.Replace("!=", "=");
+
+            return DbQ(query, log:log, throwOnEx: throwOnEx);
         }
-
-
 
 
         public string GetColumns(string tableName, string schemaName = "accounts", bool log = false)

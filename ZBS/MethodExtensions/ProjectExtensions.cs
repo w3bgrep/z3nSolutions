@@ -129,7 +129,10 @@ namespace ZBSolutions
                                     $"Trace: `{StackTrace.EscapeMarkdown()}` \n";
 
                 if (!string.IsNullOrEmpty(innerMsg)) failReport += $"Inner: `{innerMsg.EscapeMarkdown()}` \n";
-                if (instance.BrowserType.ToString() == "Chromium") failReport += $"Page: `{instance.ActiveTab.URL.EscapeMarkdown()}`";
+                if (instance.GetType().ToString() != "ZennoLab.CommandCenter.EmptyInstance")
+                {
+                    if (instance.BrowserType.ToString() == "Chromium") failReport += $"Page: `{instance.ActiveTab.URL.EscapeMarkdown()}`";
+                }
                 project.Variables["failReport"].Value = failReport;
                 try
                 {
@@ -200,7 +203,8 @@ namespace ZBSolutions
             {
                 project.SendInfoToLog(e.Message);               
             }
-            if (value == string.Empty) project.L0g($"no Value from [{Var}] `w");
+            if (value == string.Empty)
+            { }// project.L0g($"no Value from [{Var}] `w");
 
             return value;
         }
