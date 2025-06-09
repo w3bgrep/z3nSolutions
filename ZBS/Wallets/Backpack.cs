@@ -110,7 +110,7 @@ namespace ZBSolutions
             _instance.Go(_urlImport);
             _logger.Send($"keytype is {keyType}");
         check:
-
+            Thread.Sleep(1000);
             string state = string.Empty;
             if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Select\\ one\\ or\\ more \\wallets", "regexp", 0).IsVoid) state = "NoFundedWallets";
 
@@ -195,6 +195,7 @@ namespace ZBSolutions
                 _instance.ActiveTab.Navigate(_popout, "");
 
             check:
+            Thread.Sleep(1000);
             string state = null;
             _project.Deadline(30);
             if (!_instance.ActiveTab.FindElementByAttribute("path", "d", "M12 5v14", "text", 0).IsVoid) state = "unlocked";
@@ -204,7 +205,7 @@ namespace ZBSolutions
             switch (state)
             {
                 case null:
-                    _logger.Send("unknown state");
+                    _logger.Send("loading...");
                     Thread.Sleep(1000);
                     goto check;
                 case "unlocked":
