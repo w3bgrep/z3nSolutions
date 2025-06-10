@@ -16,6 +16,8 @@ namespace ZBSolutions
         protected readonly string _dbMode;
         private readonly bool _logShow;
 
+        private readonly Logger _logger;
+
         protected bool _pstgr = false;
         protected string _tableName = string.Empty;
         protected string _schemaName = string.Empty;
@@ -25,6 +27,9 @@ namespace ZBSolutions
             _project = project;
             _pstgr = _project.Variables["DBmode"].Value == "PostgreSQL" ? true : false;
             _dbMode = _project.Variables["DBmode"].Value;
+
+            if (_pstgr) _logger = new Logger(project, log: log, classEmoji: "🐘");
+            else _logger = new Logger(project, log: log, classEmoji: "✒");
             _logShow = log;
         }
         public void Log(string query, string response = null, bool log = false)
@@ -36,14 +41,15 @@ namespace ZBSolutions
 
             if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
             {
-                toLog += $"[ ▼ {dbMode}]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]";
+                toLog += $"( ▼ ): [{Regex.Replace(query.Trim(), @"\s+", " ")}]";
                 if (!string.IsNullOrEmpty(response)) toLog += $"\n          [{response.Replace("\n", "|").Replace("\r", "")}]";
             }
             else
             {
-                toLog += $"[ ▲ {dbMode}]: [{Regex.Replace(query.Trim(), @"\s+", " ")}]";
+                toLog += $"( ▲ ): [{Regex.Replace(query.Trim(), @"\s+", " ")}]";
             }
-            _project.L0g(toLog);
+            _logger.Send(toLog);
+            //_project.L0g(toLog);
         }
 
         public string TblName(string tableName, bool name = true)
@@ -294,12 +300,12 @@ namespace ZBSolutions
             var result = new List<string>();
             TblName(tblName);
             if (_dbMode == "PostgreSQL")
-                result = DbQ($@"SELECT column_name FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}';", true)
+                result = DbQ($@"SELECT column_name FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}';", log: _logShow)
                     .Split('\n')
                     .Select(s => s.Trim())
                     .ToList();
             else
-                result = DbQ($"SELECT name FROM pragma_table_info('{_tableName}');")
+                result = DbQ($"SELECT name FROM pragma_table_info('{_tableName}');", log: _logShow)
                     .Split('\n')
                     .Select(s => s.Trim())
                     .ToList();
@@ -344,9 +350,9 @@ namespace ZBSolutions
             TblName(tblName);
             string resp = null;
             if (_pstgr)
-                resp = DbQ($@"SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}' AND lower(column_name) = lower('{clmnName}');")?.Trim();
+                resp = DbQ($@"SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}' AND lower(column_name) = lower('{clmnName}');", log: _logShow)?.Trim();
             else
-                resp = DbQ($"SELECT COUNT(*) FROM pragma_table_info('{_tableName}') WHERE name='{clmnName}';");
+                resp = DbQ($"SELECT COUNT(*) FROM pragma_table_info('{_tableName}') WHERE name='{clmnName}';", log: _logShow);
             if (resp == "0" || resp == string.Empty) return false;
             else return true;
 
@@ -359,7 +365,7 @@ namespace ZBSolutions
 
             if (!current.Contains(clmnName))
             {
-                DbQ($@"ALTER TABLE {_tableName} ADD COLUMN {clmnName} {defaultValue};", true);
+                DbQ($@"ALTER TABLE {_tableName} ADD COLUMN {clmnName} {defaultValue};", log: _logShow);
             }
 
         }
@@ -378,7 +384,7 @@ namespace ZBSolutions
                 if (!current.Contains(keyWd))
                 {
                     Log($"CLMNADD [{keyWd}] not in  [{string.Join(",", current)}] ");
-                    DbQ($@"ALTER TABLE {_tableName} ADD COLUMN {keyWd} {column.Value};", true);
+                    DbQ($@"ALTER TABLE {_tableName} ADD COLUMN {keyWd} {column.Value};", log: _logShow);
                 }
             }
         }
@@ -391,7 +397,7 @@ namespace ZBSolutions
             if (current.Contains(clmnName))
             {
                 string cascade = (_pstgr) ? " CASCADE" : null;
-                DbQ($@"ALTER TABLE {_tableName} DROP COLUMN {clmnName}{cascade};", true);
+                DbQ($@"ALTER TABLE {_tableName} DROP COLUMN {clmnName}{cascade};", log: _logShow);
             }
         }
         public void ClmnDrop(string tblName, Dictionary<string, string> tableStructure)
@@ -405,7 +411,7 @@ namespace ZBSolutions
                 if (!current.Contains(column.Key))
                 {
                     string cascade = _dbMode == "PostgreSQL" ? " CASCADE" : null;
-                    DbQ($@"ALTER TABLE {_tableName} DROP COLUMN {column.Key}{cascade};", true);
+                    DbQ($@"ALTER TABLE {_tableName} DROP COLUMN {column.Key}{cascade};", log: _logShow);
                 }
             }
         }
@@ -423,7 +429,7 @@ namespace ZBSolutions
                 {
                     Log($"[{column}] not in tableStructure keys, dropping");
                     string cascade = _pstgr ? " CASCADE" : "";
-                    DbQ($@"ALTER TABLE {_tableName} DROP COLUMN {column}{cascade};", true);
+                    DbQ($@"ALTER TABLE {_tableName} DROP COLUMN {column}{cascade};", log:_logShow);
                 }
             }
         }           

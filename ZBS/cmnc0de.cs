@@ -564,50 +564,7 @@ namespace w3tools //by @w3bgrep
 
     }
 
-    public class Sys
-    {
-        protected readonly IZennoPosterProjectModel _project;
-        protected bool _logShow = false;
-        private readonly Logger _logger;
-
-        public Sys(IZennoPosterProjectModel project, bool log = false, string classEmoji = null)
-        {
-            _project = project;
-            if (!log) _logShow = _project.Var("debug") == "True";
-            _logger = new Logger(project, log: log, classEmoji: "🎒");
-
-        }
-
-        public void RmRf(string path)
-        {
-            try
-            {
-                if (Directory.Exists(path))
-                {
-                    DirectoryInfo dir = new DirectoryInfo(path);
-                    dir.Attributes = FileAttributes.Normal;
-
-                    foreach (FileInfo file in dir.GetFiles())
-                    {
-                        file.IsReadOnly = false;
-                        file.Delete();
-                    }
-
-                    foreach (DirectoryInfo subDir in dir.GetDirectories())
-                    {
-                        RmRf(subDir.FullName);
-                    }
-                    Directory.Delete(path, true);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.Send(ex.Message);
-            }
-        }
-
-
-    }
+   
 
 
 
