@@ -61,14 +61,8 @@ namespace ZBSolutions
             string webGlData = _sql.Get("webgl", "private_profile");
             _instance.SetDisplay(webGlData, _project);
 
-            string proxy = _sql.Get("proxy", "private_profile");
-            bool goodProxy = new NetHttp(_project, true).CheckProxy(proxy);
-            if (goodProxy)
-                _instance.SetProxy(proxy, true, true, true, true);
-            else
-            {
-                if (strictProxy) throw new Exception($"!E bad proxy {proxy}");
-            }
+            bool goodProxy = new NetHttp(_project, true).ProxySet(_instance);
+            if (strictProxy && !goodProxy) throw new Exception($"!E bad proxy");
 
             string cookiePath = $"{_project.Variables["profiles_folder"].Value}accounts\\cookies\\{_project.Variables["acc0"].Value}.json";
             _project.Variables["pathCookies"].Value = cookiePath;

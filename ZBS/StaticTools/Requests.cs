@@ -171,19 +171,23 @@ namespace ZBSolutions
     public class NetHttp
     {
         private readonly IZennoPosterProjectModel _project;
+        private readonly Logger _logger;
         private readonly bool _logShow;
+        private readonly string _proxy;
 
         public NetHttp(IZennoPosterProjectModel project, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             _project = project ?? throw new ArgumentNullException(nameof(project));
+            _proxy = new Sql(_project).Get("proxy", "private_profile");
             _logShow = log;
+            _logger = new Logger(project, log: log, classEmoji: "♻");
         }
 
         protected void Log(string message, [CallerMemberName] string callerName = "", bool forceLog = false)
         {
             if (!_logShow && !forceLog) return;
-            _project.L0g($"[ 🌍 {callerName}] [{message}]");
+            _logger.Send($"({callerName}) [{message}]");
         }
         protected void ParseJson(string json)
         {
@@ -200,7 +204,8 @@ namespace ZBSolutions
             {
                 return null;
             }
-            if (proxyString == "+") proxyString = _project.Variables["proxy"].Value;
+            if (proxyString == "+") 
+                proxyString = _proxy;
             try
             {
                 WebProxy proxy = new WebProxy();
@@ -292,7 +297,7 @@ namespace ZBSolutions
                     if (response.Headers.TryGetValues("Set-Cookie", out var cookieValues))
                     {
                         cookies = cookieValues.Aggregate((a, b) => a + "; " + b);
-                        Log("Set-Cookie found: " + cookies, callerName);
+                        _logger.Send($"Set-Cookie found: {cookies}");
                     }
 
                     try
@@ -303,20 +308,20 @@ namespace ZBSolutions
 
                     string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                     if (parse) ParseJson(result);
-                    Log($"{result}", callerName);
+                    _logger.Send(result);
                     return result.Trim();
                 }
             }
             catch (HttpRequestException e)
             {
-                Log($"[GET] SERVER Err: [{e.Message}] url:[{url}] (proxy: {(proxyString)}), Headers\n{debugHeaders.Trim()}", callerName);
+                _logger.Send($"[GET] SERVER Err: [{e.Message}] url:[{url}] (proxy: {(proxyString)}), Headers\n{debugHeaders.Trim()}");
                 if (throwOnFail) throw;
 
                 return string.Empty;
             }
             catch (Exception e)
             {
-                Log($"!W [GET] RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString)}) Headers\n{debugHeaders.Trim()}", callerName);
+                _logger.Send($"!W [GET] RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString)}) Headers\n{debugHeaders.Trim()}");
                 if (throwOnFail) throw;
 
                 return string.Empty;
@@ -367,7 +372,7 @@ namespace ZBSolutions
 
                     headersString.AppendLine($"Content-Type: application/json; charset=UTF-8");
 
-                    Log(body);
+                    _logger.Send(body);
 
                     HttpResponseMessage response = client.PostAsync(url, content).GetAwaiter().GetResult();
                     response.EnsureSuccessStatusCode();
@@ -384,7 +389,7 @@ namespace ZBSolutions
                     if (response.Headers.TryGetValues("Set-Cookie", out var cookieValues))
                     {
                         cookies = cookieValues.Aggregate((a, b) => a + "; " + b);
-                        Log("Set-Cookie found: " + cookies, callerName);
+                        _logger.Send("Set-Cookie found: " + cookies);
                     }
 
                     try
@@ -395,20 +400,20 @@ namespace ZBSolutions
 
                     string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
 
-                    Log(result);
+                    _logger.Send(result);
                     if (parse) ParseJson(result);
                     return result.Trim();
                 }
             }
             catch (HttpRequestException e)
             {
-                Log($"[POST] SERVER Err: [{e.Message}] url:[{url}] (proxy: {(proxyString)}), Headers\n{debugHeaders.Trim()}", callerName);
+                _logger.Send($"[POST] SERVER Err: [{e.Message}] url:[{url}] (proxy: {(proxyString)}), Headers\n{debugHeaders.Trim()}");
                 if (throwOnFail) throw;
                 return string.Empty;
             }
             catch (Exception e)
             {
-                Log($"!W [POST] RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString)}) Headers\n{debugHeaders.Trim()}", callerName);
+                _logger.Send($"!W [POST] RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString)}) Headers\n{debugHeaders.Trim()}");
                 if (throwOnFail) throw;
                 return string.Empty;
             }
@@ -459,7 +464,7 @@ namespace ZBSolutions
                     if (content != null)
                     {
                         headersString.AppendLine($"Content-Type: application/json; charset=UTF-8");
-                        Log(body, callerName);
+                        _logger.Send(body);
                     }
 
                     HttpResponseMessage response = client.PutAsync(url, content).GetAwaiter().GetResult();
@@ -477,7 +482,7 @@ namespace ZBSolutions
                     if (response.Headers.TryGetValues("Set-Cookie", out var cookieValues))
                     {
                         cookies = cookieValues.Aggregate((a, b) => a + "; " + b);
-                        Log("Set-Cookie found: " + cookies, callerName);
+                        _logger.Send("Set-Cookie found: {cookies}");
                     }
 
                     try
@@ -487,19 +492,19 @@ namespace ZBSolutions
                     catch { }
 
                     string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                    Log(result, callerName);
+                    _logger.Send(result);
                     if (parse) ParseJson(result);
                     return result.Trim();
                 }
             }
             catch (HttpRequestException e)
             {
-                Log($"!W RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")})", callerName);
+                _logger.Send($"!W RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")})");
                 return $"Ошибка: {e.Message}";
             }
             catch (Exception e)
             {
-                Log($"!W UnknownErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")})", callerName);
+                _logger.Send($"!W UnknownErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")})");
                 return $"Ошибка: {e.Message}";
             }
         }
@@ -559,7 +564,7 @@ namespace ZBSolutions
                     if (response.Headers.TryGetValues("Set-Cookie", out var cookieValues))
                     {
                         cookies = cookieValues.Aggregate((a, b) => a + "; " + b);
-                        Log("Set-Cookie found: " + cookies, callerName);
+                        _logger.Send($"Set-Cookie found: {cookies}");
                     }
 
                     try
@@ -569,18 +574,18 @@ namespace ZBSolutions
                     catch { }
 
                     string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                    Log(result, callerName);
+                    _logger.Send(result);
                     return result.Trim();
                 }
             }
             catch (HttpRequestException e)
             {
-                Log($"!W [DELETE] RequestErr: [{e.Message}] url:[{url}] (proxy: {proxyString}), Headers\n{debugHeaders.Trim()}", callerName);
+                _logger.Send($"!W [DELETE] RequestErr: [{e.Message}] url:[{url}] (proxy: {proxyString}), Headers\n{debugHeaders.Trim()}");
                 return $"Ошибка: {e.Message}";
             }
             catch (Exception e)
             {
-                Log($"!W [DELETE] UnknownErr: [{e.Message}] url:[{url}] (proxy: {proxyString}) Headers\n{debugHeaders.Trim()}", callerName);
+                _logger.Send($"!W [DELETE] UnknownErr: [{e.Message}] url:[{url}] (proxy: {proxyString})");
                 return $"Ошибка: {e.Message}";
             }
         }
@@ -597,26 +602,55 @@ namespace ZBSolutions
             string ipLocal = GET("http://api.ipify.org/", null);
             string ipProxified = GET("http://api.ipify.org/", proxyString);
 
-            Log($"ipLocal: {ipLocal}, ipProxified: {ipProxified}");
+            _logger.Send($"ipLocal: {ipLocal}, ipProxified: {ipProxified}");
 
             if (ipProxified != ipLocal)
             {
-                Log($"proxy `validated: {ipProxified}");
+                _logger.Send($"proxy `validated: {ipProxified}");
                 _project.Var("proxy", proxyString);
                 return true;
             }
             else if (ipProxified.StartsWith("Ошибка") || ipProxified == "Прокси не настроен")
             {
-                Log($"!W proxy error: {ipProxified}");
+                _logger.Send($"!W proxy error: {ipProxified}");
                 
             }
             else if (ipLocal == ipProxified)
             {
-                Log($"!W ip still same. ipLocal: [{ipLocal}], ipProxified: [{ipProxified}]. Proxy was not applyed");
+                _logger.Send($"!W ip still same. ipLocal: [{ipLocal}], ipProxified: [{ipProxified}]. Proxy was not applyed");
             }
             return false;
         }
 
+        public bool ProxySet(Instance instance, string proxyString = null)
+        {
+
+            if (string.IsNullOrEmpty(proxyString))
+                proxyString = _proxy;
+
+
+            string ipLocal = GET("http://api.ipify.org/", null);
+            string ipProxified = GET("http://api.ipify.org/", proxyString);
+
+            //_logger.Send($"ipLocal: {ipLocal}, ipProxified: {ipProxified}");
+
+            if (ipProxified != ipLocal)
+            {
+                _logger.Send($"proxy `validated: {ipProxified}");
+                _project.Var("proxy", proxyString);
+                instance.SetProxy(proxyString, true, true, true, true);
+                return true;
+            }
+            else if (ipProxified.StartsWith("Ошибка") || ipProxified == "Proxy not Set")
+            {
+                _logger.Send($"!W proxy error: {ipProxified}");
+            }
+            else if (ipLocal == ipProxified)
+            {
+                _logger.Send($"!W ip still same. ipLocal: [{ipLocal}], ipProxified: [{ipProxified}]. Proxy was not applyed");
+            }
+            return false;
+        }
 
     }
 

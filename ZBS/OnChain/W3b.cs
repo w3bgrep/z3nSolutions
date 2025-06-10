@@ -19,6 +19,8 @@ namespace ZBSolutions
         protected readonly Dictionary<string, string> _adrs;
         public string _adrEvm;
         protected string _key;
+        private readonly Logger _logger;
+
 
 
         public W3b(IZennoPosterProjectModel project, bool log = false, string key = null)
@@ -29,6 +31,7 @@ namespace ZBSolutions
             _sql = new Sql(_project);
             _logShow = log;
             _rpcs = LoadRPCs();
+            _logger = new Logger(project, log: log, classEmoji: "💠");
 
         }
 
@@ -72,7 +75,7 @@ namespace ZBSolutions
             var stackFrame = new System.Diagnostics.StackFrame(1);
             var callingMethod = stackFrame.GetMethod();
             if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
-            _project.L0g($"[ 💠  {callerName}] [{tolog}] ");
+            _logger.Send($"({callerName}) [{tolog}] ");
         }
         protected void Log(string address, string balance, string rpc, string contract = null, [CallerMemberName] string callerName = "", bool log = false)
         {
