@@ -20,15 +20,18 @@ namespace ZBSolutions
     {
         protected readonly IZennoPosterProjectModel _project;
         protected readonly Instance _instance;
+        private readonly Logger _logger;
         protected readonly bool _logShow;
         protected readonly string _pass;
         protected readonly Sql _sql;
         protected readonly bool _skipCheck;
+
         public Starter(IZennoPosterProjectModel project, Instance instance, bool log = false)
         {
             _project = project;
             _sql = new Sql(_project);
             _logShow = log;
+            _logger = new Logger(project, log: log, classEmoji: "🚀");
             _instance = instance;
             _skipCheck = project.Variables["skipBrowserScan"].Value == "True";
         }
@@ -36,6 +39,7 @@ namespace ZBSolutions
         {
             _project = project;
             _logShow = log;
+            _logger = new Logger(project, log: log, classEmoji: "🚀");
             _sql = new Sql(_project);
             _skipCheck = project.Variables["skipBrowserScan"].Value == "True";
         }
@@ -51,9 +55,9 @@ namespace ZBSolutions
         }
         public void StartBrowser(bool strictProxy = true)
         {
-            Log("initProfile");
-            _project.Variables["instancePort"].Value = _instance.Port.ToString();
 
+            _project.Variables["instancePort"].Value = _instance.Port.ToString();
+            _logger.Send($"init browser in port: {_instance.Port}");
             string webGlData = _sql.Get("webgl", "private_profile");
             _instance.SetDisplay(webGlData, _project);
 
@@ -76,7 +80,7 @@ namespace ZBSolutions
             }
             catch
             {
-                Log($"!W Fail to set cookies from file {cookiePath}");
+                _logger.Send($"!W Fail to set cookies from file {cookiePath}");
                 try
                 {
                     string cookies = _sql.Get("cookies", "private_profile");
@@ -84,7 +88,7 @@ namespace ZBSolutions
                 }
                 catch (Exception Ex)
                 {
-                    Log($"!E Fail to set cookies from db Err. {Ex.Message}");
+                    _logger.Send($"!E Fail to set cookies from db Err. {Ex.Message}");
                 }
 
             }

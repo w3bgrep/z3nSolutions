@@ -74,14 +74,14 @@ namespace ZBSolutions
         }
 
 
-        public void Launch(string fileName = null, bool log = false)
+        public string Launch(string fileName = null, bool log = false)
         {
             if (string.IsNullOrEmpty(fileName)) fileName = _fileName;
 
             var em = _instance.UseFullMouseEmulation;
             _instance.UseFullMouseEmulation = false;
 
-            _logger.Send($"Launching Backpack wallet with file {fileName}");
+            _logger.Send($"Launching Backpack ({fileName})");
             if (new ChromeExt(_project,_instance).Install(_extId, fileName, log))
                 Import(log: log);
             else
@@ -91,6 +91,7 @@ namespace ZBSolutions
             _logger.Send($"using [{adr}]");
             _instance.CloseExtraTabs();
             _instance.UseFullMouseEmulation = em;
+            return adr;
         }
 
         public bool Import(bool log = false)
