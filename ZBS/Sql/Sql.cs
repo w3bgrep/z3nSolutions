@@ -80,6 +80,29 @@ namespace ZBSolutions
             if (name) return tableName;
             else return schemaName;
         }
+        private string QuoteColumnNames(string updateString)
+        {
+            var parts = updateString.Split(',').Select(p => p.Trim()).ToList();
+            var result = new List<string>();
+
+            foreach (var part in parts)
+            {
+                int equalsIndex = part.IndexOf('=');
+                if (equalsIndex > 0)
+                {
+                    string columnName = part.Substring(0, equalsIndex).Trim();
+                    string valuePart = part.Substring(equalsIndex).Trim();
+                    result.Add($"\"{columnName}\" {valuePart}");
+                }
+                else
+                {
+                    result.Add(part);
+                }
+            }
+            return string.Join(", ", result);
+        }
+
+
         public string DbQ(string query, bool log = false, bool throwOnEx = false)
         {
             string dbMode = _project.Variables["DBmode"].Value;
@@ -223,27 +246,6 @@ namespace ZBSolutions
             }
         }
 
-        private string QuoteColumnNames(string updateString)
-        {
-            var parts = updateString.Split(',').Select(p => p.Trim()).ToList();
-            var result = new List<string>();
-
-            foreach (var part in parts)
-            {
-                int equalsIndex = part.IndexOf('=');
-                if (equalsIndex > 0) 
-                {
-                    string columnName = part.Substring(0, equalsIndex).Trim();
-                    string valuePart = part.Substring(equalsIndex).Trim();
-                    result.Add($"\"{columnName}\" {valuePart}");
-                }
-                else
-                {
-                    result.Add(part);
-                }
-            }
-            return string.Join(", ", result);
-        }
 
 
         public string Get(string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "acc0", string acc = null)

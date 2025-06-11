@@ -94,28 +94,25 @@ namespace ZBSolutions
             }
         }
 
-        public static class DirectoryCopy
+        public void CopyDir(string sourceDir, string destDir)
         {
-            public static void Copy(string sourceDir, string destDir)
+            if (!Directory.Exists(sourceDir)) throw new DirectoryNotFoundException("Source directory does not exist: " + sourceDir);
+            if (!Directory.Exists(destDir)) Directory.CreateDirectory(destDir);
+
+            DirectoryInfo source = new DirectoryInfo(sourceDir);
+            DirectoryInfo target = new DirectoryInfo(destDir);
+
+
+            foreach (FileInfo file in source.GetFiles())
             {
-                if (!Directory.Exists(sourceDir)) throw new DirectoryNotFoundException("Source directory does not exist: " + sourceDir);
-                if (!Directory.Exists(destDir)) Directory.CreateDirectory(destDir);
+                string targetFilePath = Path.Combine(target.FullName, file.Name);
+                file.CopyTo(targetFilePath, true);
+            }
 
-                DirectoryInfo source = new DirectoryInfo(sourceDir);
-                DirectoryInfo target = new DirectoryInfo(destDir);
-
-
-                foreach (FileInfo file in source.GetFiles())
-                {
-                    string targetFilePath = Path.Combine(target.FullName, file.Name);
-                    file.CopyTo(targetFilePath, true);
-                }
-
-                foreach (DirectoryInfo subDir in source.GetDirectories())
-                {
-                    string targetSubDirPath = Path.Combine(target.FullName, subDir.Name);
-                    Copy(subDir.FullName, targetSubDirPath);
-                }
+            foreach (DirectoryInfo subDir in source.GetDirectories())
+            {
+                string targetSubDirPath = Path.Combine(target.FullName, subDir.Name);
+                CopyDir(subDir.FullName, targetSubDirPath);
             }
         }
 

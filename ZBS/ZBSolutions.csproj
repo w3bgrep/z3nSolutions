@@ -76,6 +76,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Browser\BrowserScan.cs" />
     <Compile Include="CexApi\Refuel.cs" />
     <Compile Include="ChromeExtentions.cs" />
     <Compile Include="Loggers.cs" />
@@ -105,7 +106,7 @@
     <Compile Include="Wallets\MetaMask.cs" />
     <Compile Include="Wallets\Razor.cs" />
     <Compile Include="Socials\Google.cs" />
-    <Compile Include="StaticTools\Starter.cs" />
+    <Compile Include="Browser\Starter.cs" />
     <Compile Include="StaticTools\Converter.cs" />
     <Compile Include="StaticTools\Cryptography.cs" />
     <Compile Include="Sql\DataImporter.cs" />
@@ -179,4 +180,5 @@
   <ItemGroup>
     <WCFMetadata Include="Connected Services\" />
   </ItemGroup>
+  <ItemGroup />
 </Project>
