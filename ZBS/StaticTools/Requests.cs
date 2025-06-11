@@ -173,13 +173,11 @@ namespace ZBSolutions
         private readonly IZennoPosterProjectModel _project;
         private readonly Logger _logger;
         private readonly bool _logShow;
-        private readonly string _proxy;
 
         public NetHttp(IZennoPosterProjectModel project, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             _project = project ?? throw new ArgumentNullException(nameof(project));
-            _proxy = new Sql(_project).Get("proxy", "private_profile");
             _logShow = log;
             _logger = new Logger(project, log: log, classEmoji: "↑↓");
         }
@@ -205,7 +203,7 @@ namespace ZBSolutions
                 return null;
             }
             if (proxyString == "+") 
-                proxyString = _proxy;
+                proxyString = new Sql(_project).Get("proxy", "private_profile");
             try
             {
                 WebProxy proxy = new WebProxy();
@@ -238,8 +236,6 @@ namespace ZBSolutions
                 return null;
             }
         }
-
-
         public string GET(
             string url,
             string proxyString = "",
@@ -625,7 +621,7 @@ namespace ZBSolutions
         {
 
             if (string.IsNullOrEmpty(proxyString))
-                proxyString = _proxy;
+                proxyString = new Sql(_project).Get("proxy", "private_profile");
 
 
             string ipLocal = GET("http://api.ipify.org/", null);
