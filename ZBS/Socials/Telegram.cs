@@ -77,9 +77,10 @@ namespace ZBSolutions
             string toLog = $"✔️ All jobs done. Elapsed: {_project.TimeElapsed()}s \n███ ██ ██  ██ █  █  █  ▓▓▓ ▓▓ ▓▓  ▓  ▓  ▓  ▒▒▒ ▒▒ ▒▒ ▒  ▒  ░░░ ░░  ░░ ░ ░ ░ ░ ░ ░  ░  ░  ░   ░   ░   ░    ░    ░    ░     ░        ░          ░";
             if (toLog.Contains("fail")) _project.SendToLog(toLog.Trim(), LogType.Info, true, LogColor.Orange);
             else _project.SendToLog(toLog.Trim(), LogType.Info, true, LogColor.Green);
-
-
         }
+
+
+
 
     }
 

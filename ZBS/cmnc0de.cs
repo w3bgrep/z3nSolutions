@@ -88,9 +88,29 @@ using ZBSolutions;
 namespace w3tools //by @w3bgrep
 {
 
-    public static class TestStatic
+    public  static class TestStatic
     {
+        public static string QuoteColumnNames(string updateString)
+        {
+            var parts = updateString.Split(',').Select(p => p.Trim()).ToList();
+            var result = new List<string>();
 
+            foreach (var part in parts)
+            {
+                int equalsIndex = part.IndexOf('=');
+                if (equalsIndex > 0)
+                {
+                    string columnName = part.Substring(0, equalsIndex).Trim();
+                    string valuePart = part.Substring(equalsIndex).Trim();
+                    result.Add($"\"{columnName}\" {valuePart}");
+                }
+                else
+                {
+                    result.Add(part);
+                }
+            }
+            return string.Join(", ", result);
+        }
 
         public static string UnixToHuman(this IZennoPosterProjectModel project, string decodedResultExpire = null)
         {
@@ -181,390 +201,236 @@ namespace w3tools //by @w3bgrep
 
     }
 
-    public class BackpackWallet2
+    public class Sys2
+    {
+        protected readonly IZennoPosterProjectModel _project;
+        protected bool _logShow = false;
+        private readonly Logger _logger;
+
+        public Sys2(IZennoPosterProjectModel project, bool log = false, string classEmoji = null)
+        {
+            _project = project;
+            if (!log) _logShow = _project.Var("debug") == "True";
+            _logger = new Logger(project, log: log, classEmoji: "⚙️");
+        }
+
+        public void RmRf(string path)
+        {
+            try
+            {
+                if (Directory.Exists(path))
+                {
+                    DirectoryInfo dir = new DirectoryInfo(path);
+                    dir.Attributes = FileAttributes.Normal;
+
+                    foreach (FileInfo file in dir.GetFiles())
+                    {
+                        file.IsReadOnly = false;
+                        file.Delete();
+                    }
+
+                    foreach (DirectoryInfo subDir in dir.GetDirectories())
+                    {
+                        RmRf(subDir.FullName);
+                    }
+                    Directory.Delete(path, true);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Send(ex.Message);
+            }
+        }
+        public void DisableLogs()
+        {
+            try
+            {
+                StringBuilder logBuilder = new StringBuilder();
+                string basePath = @"C:\Program Files\ZennoLab";
+
+                foreach (string langDir in Directory.GetDirectories(basePath))
+                {
+                    foreach (string programDir in Directory.GetDirectories(langDir))
+                    {
+                        foreach (string versionDir in Directory.GetDirectories(programDir))
+                        {
+                            string logsPath = Path.Combine(versionDir, "Progs", "Logs");
+                            if (Directory.Exists(logsPath))
+                            {
+                                Directory.Delete(logsPath, true);
+                                Process process = new Process();
+                                process.StartInfo.FileName = "cmd.exe";
+                                process.StartInfo.Arguments = $"/c mklink /d \"{logsPath}\" \"NUL\"";
+                                process.StartInfo.UseShellExecute = false;
+                                process.StartInfo.CreateNoWindow = true;
+                                process.StartInfo.RedirectStandardOutput = true;
+                                process.StartInfo.RedirectStandardError = true;
+
+                                logBuilder.AppendLine($"Attempting to create symlink: {process.StartInfo.Arguments}");
+
+                                process.Start();
+                                string output = process.StandardOutput.ReadToEnd();
+                                string error = process.StandardError.ReadToEnd();
+                                process.WaitForExit();
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Send(ex.Message);
+            }
+        }
+
+        public void CopyDir(string sourceDir, string destDir)
+        {
+            if (!Directory.Exists(sourceDir)) throw new DirectoryNotFoundException("Source directory does not exist: " + sourceDir);
+            if (!Directory.Exists(destDir)) Directory.CreateDirectory(destDir);
+
+            DirectoryInfo source = new DirectoryInfo(sourceDir);
+            DirectoryInfo target = new DirectoryInfo(destDir);
+
+
+            foreach (FileInfo file in source.GetFiles())
+            {
+                string targetFilePath = Path.Combine(target.FullName, file.Name);
+                file.CopyTo(targetFilePath, true);
+            }
+
+            foreach (DirectoryInfo subDir in source.GetDirectories())
+            {
+                string targetSubDirPath = Path.Combine(target.FullName, subDir.Name);
+                CopyDir(subDir.FullName, targetSubDirPath);
+            }
+        }
+
+
+
+
+    }
+
+
+
+    public class BrowserScan
     {
         private readonly IZennoPosterProjectModel _project;
         private readonly Instance _instance;
         private readonly Logger _logger;
 
-
-        protected readonly string _pass;
-        protected readonly string _fileName;
-        private string _key;
-
-        protected readonly string _extId = "aflkmfhebedbjioipglgcbcmnbpgliof";
-        protected readonly string _popout = $"chrome-extension://aflkmfhebedbjioipglgcbcmnbpgliof/popout.html";
-        protected readonly string _urlImport = $"chrome-extension://aflkmfhebedbjioipglgcbcmnbpgliof/options.html?onboarding=true";
-
-
-        public BackpackWallet2(IZennoPosterProjectModel project, Instance instance, bool log = false, string key = null, string fileName = "Backpack0.10.94.crx")
+        public BrowserScan(IZennoPosterProjectModel project, Instance instance, bool log = false)
 
         {
             _project = project;
             _instance = instance;
-            _fileName = fileName;
-            _key = KeyLoad(key);
-            _pass = SAFU.HWPass(_project);
-            _logger = new Logger(project, log: log, classEmoji: "🎒");
+            _logger = new Logger(project, log: log, classEmoji: "🌎");
         }
 
-        private string KeyLoad(string key)
+        private void BrowserScanCheck()
         {
+            var _sql = new Sql(_project);
+            string[] columns = { "score", "WebGL", "WebGLReport", "UnmaskedRenderer", "Audio", "ClientRects", "WebGPUReport", "Fonts", "TimeZoneBasedonIP", "TimeFromIP"};
 
-            if (string.IsNullOrEmpty(key))
+            var tableStructure = _sql.TblMapForProject(columns);
+            var tblName = "public_browser";
+            var tableName = tblName;
+            _sql.TblAdd(tblName, tableStructure);
+            _sql.ClmnAdd(tblName, tableStructure);
+            _sql.ClmnPrune(tblName, tableStructure);
+            _sql.AddRange(tblName);
+
+
+            bool set = false;
+            string timezoneOffset = "";
+            string timezoneName = "";
+
+            while (true)
             {
-                _project.SendInfoToLog($"key is null");
-                key = "key";
-            }
-
-            _project.SendInfoToLog($"{key}");
-            switch (key)
-            {
-                case "key":
-                    key = new Sql(_project).Key("sol");
-                    break;
-                case "seed":
-                    key = new Sql(_project).Key("seed");
-                    break;
-                default:
-                    return key;
-            }
-            return key;
-        }
-
-        private string KeyType(string input)
-        {
-            if (string.IsNullOrWhiteSpace(input))
-                return null;
-
-            if (Regex.IsMatch(input, @"^[0-9a-fA-F]{64}$"))
-                return "keyEvm";
-
-            if (Regex.IsMatch(input, @"^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{87,88}$"))
-                return "keySol";
-
-            var words = input.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            if (words.Length == 12 || words.Length == 24)
-                return "seed";
-
-            return null;
-        }
-
-
-        public void Launch(string fileName = null, bool log = false)
-        {
-            if (string.IsNullOrEmpty(fileName)) fileName = _fileName;
-
-            var em = _instance.UseFullMouseEmulation;
-            _instance.UseFullMouseEmulation = false;
-
-            _logger.Send($"Launching Backpack wallet with file {fileName}");
-            if (new ChromeExt(_project, _instance).Install(_extId, fileName, log))
-                Import(log: log);
-            else
-                Unlock(log: log);
-            _logger.Send($"checking");
-            var adr = Check(log: log);
-            _logger.Send($"using [{adr}]");
-            _instance.CloseExtraTabs();
-            _instance.UseFullMouseEmulation = em;
-        }
-
-        public bool Import(bool log = false)
-        {
-            _logger.Send("Importing Backpack wallet with private key");
-            var key = _key;
-            var password = _pass;
-            var keyType = KeyType(_key);
-
-            var type = "Solana";
-            var source = "key";
-
-            if (keyType == "keyEvm") type = "Ethereum";
-            if (!keyType.Contains("key")) source = "phrase";
-
-            _instance.CloseExtraTabs();
-            _instance.Go(_urlImport);
-            _logger.Send($"keytype is {keyType}");
-        check:
-
-            string state = string.Empty;
-            if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Select\\ one\\ or\\ more \\wallets", "regexp", 0).IsVoid) state = "NoFundedWallets";
-
-            else if (!_instance.ActiveTab.FindElementByAttribute("button", "innertext", "Import\\ Wallet", "regexp", 0).IsVoid) state = "importButton";
-            else if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Backpack\\ supports\\ multiple\\ blockchains.\\nWhich\\ do\\ you\\ want\\ to\\ use\\?\\ You\\ can\\ add\\ more\\ later.", "regexp", 0).IsVoid) state = "chooseChain";
-            else if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Choose\\ a\\ method\\ to\\ import\\ your\\ wallet.", "regexp", 0).IsVoid) state = "chooseSource";
-            else if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Enter private key", "text", 0).IsVoid) state = "enterKey";
-            else if (!_instance.ActiveTab.FindElementByAttribute("button", "innertext", "Open\\ Backpack", "regexp", 0).IsVoid) state = "open";
-            else if (!_instance.ActiveTab.FindElementByAttribute("p", "innertext", "Already\\ setup", "regexp", 0).IsVoid) state = "alreadySetup";
-            else if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Enter\\ or\\ paste\\ your\\ 12\\ or\\ 24-word\\ phrase.", "regexp", 0).IsVoid) state = "enterSeed";
-            else if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Create\\ a\\ Password", "regexp", 0).IsVoid) state = "inputPass";
-
-
-            _logger.Send(state);
-            switch (state)
-            {
-                case "importButton":
-                    _instance.HeClick(("button", "innertext", "Import\\ Wallet", "regexp", 0));
-                    goto check;
-
-                case "chooseChain":
-                    _instance.HeClick(("button", "innertext", type, "regexp", 0));
-                    goto check;
-
-                case "chooseSource":
-                    _instance.HeClick(("button", "innertext", source, "text", 0));
-                    goto check;
-
-                case "enterKey":
-                    _instance.HeSet(("textarea", "fulltagname", "textarea", "regexp", 0), key);
-                    _instance.HeClick(("button", "innertext", "Import", "regexp", 0));
-                    goto check;
-
-                case "open":
-                    _instance.HeClick(("button", "innertext", "Open\\ Backpack", "regexp", 0));
-                    _instance.CloseExtraTabs();
-                    return true;
-
-                case "alreadySetup":
-                    _instance.CloseExtraTabs();
-                    return false;
-
-                case "enterSeed":
-                    string[] seed = key.Split(' ');
-                    int i = 0;
-                    foreach (string word in seed)
-                    {
-                        _instance.HeSet(("input:text", "fulltagname", "input:text", "regexp", i), word, delay: 0);
-                        i++;
-                    }
-                    _instance.HeClick(("button", "innertext", "Import", "regexp", 0));
-                    goto check;
-
-                case "inputPass":
-                    _instance.HeSet(("input:password", "placeholder", "Password", "regexp", 0), password);
-                    _instance.HeSet(("input:password", "placeholder", "Confirm\\ Password", "regexp", 0), password);
-                    _instance.HeClick(("input:checkbox", "class", "PrivateSwitchBase-input\\ ", "regexp", 0));
-                    _instance.HeClick(("button", "innertext", "Next", "regexp", 0));
-                    goto check;
-
-                case "NoFundedWallets":
-                    _instance.HeClick(("button", "class", "is_Button\\ ", "regexp", 0));
-                    _instance.HeClick(("div", "class", "is_SelectItem\\ _bg-0active-744986709\\ _btc-0active-1163467620\\ _brc-0active-1163467620\\ _bbc-0active-1163467620\\ _blc-0active-1163467620\\ _bg-0hover-1067792163\\ _btc-0hover-1394778429\\ _brc-0hover-1394778429\\ _bbc-0hover-1394778429\\ _blc-0hover-1394778429\\ _bg-0focus-455866976\\ _btc-0focus-1452587353\\ _brc-0focus-1452587353\\ _bbc-0focus-1452587353\\ _blc-0focus-1452587353\\ _outlineWidth-0focus-visible-1px\\ _outlineStyle-0focus-visible-solid\\ _dsp-flex\\ _ai-center\\ _fd-row\\ _fb-auto\\ _bxs-border-box\\ _pos-relative\\ _mih-1611762906\\ _miw-0px\\ _fs-0\\ _pr-1316332129\\ _pl-1316332129\\ _pt-1316333028\\ _pb-1316333028\\ _jc-441309761\\ _fw-nowrap\\ _w-10037\\ _btc-2122800589\\ _brc-2122800589\\ _bbc-2122800589\\ _blc-2122800589\\ _maw-10037\\ _ox-hidden\\ _oy-hidden\\ _bg-1067792132\\ _cur-default\\ _outlineOffset--0d0t5px46", "regexp", 3));
-                    _instance.HeClick(("div", "class", "is_Circle\\ ", "regexp", 0));
-                    _instance.HeClick(("button", "innertext", "Import\\ Wallet", "regexp", 0));
-
-                    goto check;
-
-                default:
-                    goto check;
-
-            }
-        }
-
-        public void Unlock(bool log = false)
-        {
-            _logger.Send("Unlocking Backpack wallet");
-            var password = _pass;
-            _project.Deadline();
-
-            if (!_instance.ActiveTab.URL.Contains(_popout))
-                _instance.ActiveTab.Navigate(_popout, "");
-
-            check:
-            string state = null;
-            _project.Deadline(30);
-            if (!_instance.ActiveTab.FindElementByAttribute("path", "d", "M12 5v14", "text", 0).IsVoid) state = "unlocked";
-            else if (!_instance.ActiveTab.FindElementByAttribute("input:password", "fulltagname", "input:password", "regexp", 0).IsVoid) state = "unlock";
-
-
-            switch (state)
-            {
-                case null:
-                    _logger.Send("unknown state");
-                    Thread.Sleep(1000);
-                    goto check;
-                case "unlocked":
-                    return;
-                case "unlock":
-                    _instance.HeSet(("input:password", "fulltagname", "input:password", "regexp", 0), password);
-                    _instance.HeClick(("button", "innertext", "Unlock", "regexp", 0));
-                    Thread.Sleep(2000);
-                    goto check;
-            }
-
-        }
-
-        public string Check(bool log = false)
-        {
-            _logger.Send("Checking Backpack wallet address");
-            if (_instance.ActiveTab.URL != _popout)
-                _instance.ActiveTab.Navigate(_popout, "");
-            _instance.CloseExtraTabs();
-
-            try
-            {
-                while (_instance.ActiveTab.FindElementByAttribute("button", "class", "is_Button\\ ", "regexp", 0).IsVoid)
-                    _instance.HeClick(("path", "d", "M12 5v14", "text", 0));
-
-                var address = _instance.HeGet(("p", "class", "MuiTypography-root\\ MuiTypography-body1", "regexp", 0), "last");
-                _instance.HeClick(("button", "aria-label", "TabsNavigator,\\ back", "regexp", 0));
-                return address;
-            }
-            catch (Exception ex)
-            {
-                _logger.Send($"Failed to check address: {ex.Message}");
-                throw;
-            }
-        }
-
-        public void Approve(bool log = false)
-        {
-            _logger.Send("Approving Backpack wallet action");
-
-            try
-            {
-                _instance.HeClick(("div", "innertext", "Approve", "regexp", 0), "last");
-                _instance.CloseExtraTabs();
-                _logger.Send("Action approved successfully");
-            }
-            catch
-            {
-                _instance.HeSet(("input:password", "fulltagname", "input:password", "regexp", 0), _pass);
-                _instance.HeClick(("button", "innertext", "Unlock", "regexp", 0));
-                _instance.HeClick(("div", "innertext", "Approve", "regexp", 0), "last");
-                _instance.CloseExtraTabs();
-                _logger.Send("Action approved after unlocking");
-            }
-        }
-
-        public void Connect(bool log = false)
-        {
-            string action = null;
-        getState:
-
-            try
-            {
-                action = _instance.HeGet(("div", "innertext", "Approve", "regexp", 0), "last");
-            }
-            catch (Exception ex)
-            {
-                if (!_instance.ActiveTab.FindElementByAttribute("input:password", "fulltagname", "input:password", "regexp", 0).IsVoid)
+                _instance.ActiveTab.Navigate("https://www.browserscan.net/", "");
+                var toParse = "WebGL,WebGLReport, Audio, ClientRects, WebGPUReport,Fonts,TimeZoneBasedonIP,TimeFromIP";
+                Thread.Sleep(5000);
+                var hardware = _instance.ActiveTab.FindElementById("webGL_anchor").ParentElement.GetChildren(false);
+                foreach (ZennoLab.CommandCenter.HtmlElement child in hardware)
                 {
-                    _instance.HeSet(("input:password", "fulltagname", "input:password", "regexp", 0), _pass);
-                    _instance.HeClick(("button", "innertext", "Unlock", "regexp", 0));
-                    Thread.Sleep(2000);
-                    goto getState;
+                    var text = child.GetAttribute("innertext");
+                    var varName = Regex.Replace(text.Split('\n')[0], " ", ""); var varValue = "";
+                    if (varName == "") continue;
+                    if (toParse.Contains(varName))
+                    {
+                        try { varValue = text.Split('\n')[2]; } catch { Thread.Sleep(2000); continue; }
+                        //_sql.Upd($"{varName} = '{varValue}'", tableName);
+                    }
                 }
-                _project.L0g($"No Wallet tab found. 0");
-                return;
-            }
 
-            _project.L0g(action);
+                var software = _instance.ActiveTab.FindElementById("lang_anchor").ParentElement.GetChildren(false);
+                foreach (ZennoLab.CommandCenter.HtmlElement child in software)
+                {
+                    var text = child.GetAttribute("innertext");
+                    var varName = Regex.Replace(text.Split('\n')[0], " ", ""); var varValue = "";
+                    if (varName == "") continue;
+                    if (toParse.Contains(varName))
+                    {
+                        if (varName == "TimeZone") continue;
+                        try { varValue = text.Split('\n')[1]; } catch { continue; }
+                        if (varName == "TimeFromIP") timezoneOffset = varValue;
+                        if (varName == "TimeZoneBasedonIP") timezoneName = varValue;
+                        _sql.Upd($"{varName} = '{varValue}'", tableName);
+                    }
+                }
 
-            switch (action)
-            {
-                case "Approve":
-                    _instance.HeClick(("div", "innertext", "Approve", "regexp", 0), "last", emu: 1);
-                    goto getState;
 
-                default:
-                    goto getState;
+                string heToWait = _instance.HeGet(("anchor_progress", "id"));
 
+                var score = heToWait.Split(' ')[3].Split('\n')[0]; var problems = "";
+
+                if (!score.Contains("100%"))
+                {
+                    var problemsHe = _instance.ActiveTab.FindElementByAttribute("ul", "fulltagname", "ul", "regexp", 5).GetChildren(false);
+                    foreach (ZennoLab.CommandCenter.HtmlElement child in problemsHe)
+                    {
+                        var text = child.GetAttribute("innertext");
+                        var varValue = "";
+                        var varName = text.Split('\n')[0];
+                        try { varValue = text.Split('\n')[1]; } catch { continue; }
+                        ;
+                        problems += $"{varName}: {varValue}; ";
+                    }
+                    problems = problems.Trim();
+
+                }
+
+                score = $"[{score}] {problems}";
+                _sql.Upd($"score = '{score}'", tableName);
+
+
+                if (!score.Contains("100%") && !set)
+                {
+                    var match = Regex.Match(timezoneOffset, @"GMT([+-]\d{2})");
+                    if (match.Success)
+                    {
+                        int Offset = int.Parse(match.Groups[1].Value);
+                        _project.L0g($"Setting timezone offset to: {Offset}");
+
+                        _instance.TimezoneWorkMode = ZennoLab.InterfacesLibrary.Enums.Browser.TimezoneMode.Emulate;
+                        _instance.SetTimezone(Offset, 0);
+                    }
+                    _instance.SetIanaTimezone(timezoneName);
+                    set = true;
+                    _instance.ActiveTab.MainDocument.EvaluateScript("location.reload(true)");
+                    continue;
+                }
+                break;
             }
 
 
         }
 
-        public void Add(string type = "Ethereum", string source = "key")//"Solana" | "Ethereum" //"key" | "phrase"
-        {
-            string _urlAdd = "chrome-extension://aflkmfhebedbjioipglgcbcmnbpgliof/options.html?add-user-account=true";
-            string key;
-            if (type == "Ethereum") key = new Sql(_project).Key("evm");
-            else key = new Sql(_project).Key("sol");
-            _instance.Go(_urlAdd, true);
-
-        check:
-
-            string state = null;
-
-            if (!_instance.ActiveTab.FindElementByAttribute("button", "innertext", "Import\\ Wallet", "regexp", 0).IsVoid) state = "importButton";
-            else if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Backpack\\ supports\\ multiple\\ blockchains.\\nWhich\\ do\\ you\\ want\\ to\\ use\\?\\ You\\ can\\ add\\ more\\ later.", "regexp", 0).IsVoid) state = "chooseChain";
-            else if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Choose\\ a\\ method\\ to\\ import\\ your\\ wallet.", "regexp", 0).IsVoid) state = "chooseSource";
-            else if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Enter private key", "text", 0).IsVoid) state = "enterKey";
-            else if (!_instance.ActiveTab.FindElementByAttribute("button", "innertext", "Open\\ Backpack", "regexp", 0).IsVoid) state = "open";
-
-            switch (state)
-            {
-                case "importButton":
-                    _instance.HeClick(("button", "innertext", "Import\\ Wallet", "regexp", 0));
-                    goto check;
-
-                case "chooseChain":
-                    _instance.HeClick(("button", "innertext", type, "regexp", 0));
-                    goto check;
-
-                case "chooseSource":
-                    _instance.HeClick(("button", "innertext", source, "text", 0));
-                    goto check;
-
-                case "enterKey":
-                    _instance.HeSet(("textarea", "fulltagname", "textarea", "regexp", 0), key);
-                    _instance.HeClick(("button", "innertext", "Import", "regexp", 0));
-                    goto check;
-                case "open":
-                    _instance.HeClick(("button", "innertext", "Open\\ Backpack", "regexp", 0));
-                    _instance.CloseExtraTabs();
-                    return;
-                default:
-                    goto check;
-
-            }
 
 
 
 
-
-        }
-
-        public void Switch(string type)//"Solana" | "Ethereum" //"key" | "phrase"
-
-        {
-        start:
-            if (_instance.ActiveTab.URL != _popout) _instance.ActiveTab.Navigate(_popout, "");
-            //_instance.CloseExtraTabs();
-
-            int toUse = 0;
-            if (type == "Ethereum")
-                toUse = 1;
-            _instance.HeClick(("button", "class", "MuiButtonBase-root\\ MuiIconButton-root\\ MuiIconButton-sizeMedium\\ css-xxmhpt\\ css-yt63r3", "regexp", 0));
-            int i = 0;
-            while (!_instance.ActiveTab.FindElementByAttribute("button", "class", "MuiButtonBase-root\\ MuiButton-root\\ MuiButton-text\\ MuiButton-textPrimary\\ MuiButton-sizeMedium\\ MuiButton-textSizeMedium\\ MuiButton-root\\ MuiButton-text\\ MuiButton-textPrimary\\ MuiButton-sizeMedium\\ MuiButton-textSizeMedium\\ css-1y4j1ko", "regexp", i).InnerText.Contains("Add")) i++;
-
-
-            if (i < 2)
-            {
-                Add();
-                goto start;
-            }
-            _instance.HeClick(("button", "class", "MuiButtonBase-root\\ MuiButton-root\\ MuiButton-text\\ MuiButton-textPrimary\\ MuiButton-sizeMedium\\ MuiButton-textSizeMedium\\ MuiButton-root\\ MuiButton-text\\ MuiButton-textPrimary\\ MuiButton-sizeMedium\\ MuiButton-textSizeMedium\\ css-1y4j1ko", "regexp", toUse));
-
-        }
-
-        public string Current()//"Solana" | "Ethereum" //"key" | "phrase"
-
-        {
-        start:
-            if (_instance.ActiveTab.URL != _popout) _instance.ActiveTab.Navigate(_popout, "");
-            var chan = _instance.HeGet(("div", "aria-haspopup", "dialog", "regexp", 0), atr: "innerhtml");
-            if (chan.Contains("solana")) return "Solana";
-            else if (chan.Contains("ethereum")) return "Ethereum";
-            else return "Undefined";
-        }
 
     }
-
-   
 
 
 

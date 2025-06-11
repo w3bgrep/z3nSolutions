@@ -260,7 +260,7 @@ namespace ZBSolutions
 
                 using (var client = new HttpClient(handler))
                 {
-                    client.Timeout = TimeSpan.FromSeconds(15);
+                    client.Timeout = TimeSpan.FromSeconds(30);
 
                     StringBuilder headersString = new StringBuilder();
                     headersString.AppendLine("[debugRequestHeaders]:");
@@ -314,16 +314,15 @@ namespace ZBSolutions
             }
             catch (HttpRequestException e)
             {
-                _logger.Send($"[GET] SERVER Err: [{e.Message}] url:[{url}] (proxy: {(proxyString)}), Headers\n{debugHeaders.Trim()}");
+                _logger.Send($"[GET] SERVER Err: [{e.Message}] url:[{url}] (proxy: {(proxyString)}), headers: [{debugHeaders.Trim()}]");
                 if (throwOnFail) throw;
 
                 return string.Empty;
             }
             catch (Exception e)
             {
-                _logger.Send($"!W [GET] RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString)}) Headers\n{debugHeaders.Trim()}");
+                _logger.Send($"!W [GET] RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString)}) headers: [{debugHeaders.Trim()}]");
                 if (throwOnFail) throw;
-
                 return string.Empty;
             }
         }

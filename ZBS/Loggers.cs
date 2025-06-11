@@ -1,6 +1,9 @@
-﻿using System;
+﻿using OtpNet;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -138,6 +141,38 @@ namespace ZBSolutions
             _project.SendToLog(toSend, type, toZp, color);
             if (thr0w) throw new Exception($"{toSend}");
         }
+        public void SendToTelegram()
+        {
+            var _http = new NetHttp(_project);
+            string _token = _project.Variables["tg_logger_token"].Value;
+            string _group = _project.Variables["tg_logger_group"].Value;
+            string _topic = _project.Variables["tg_logger_topic"].Value;
 
+            //string time = _project.ExecuteMacro(DateTime.Now.ToString("MM-dd HH:mm"));
+            
+
+            if (!string.IsNullOrEmpty(_project.Variables["failReport"].Value))
+            {
+                string encodedFailReport = Uri.EscapeDataString(_project.Variables["failReport"].Value);
+                string failUrl = $"https://api.telegram.org/bot{_token}/sendMessage?chat_id={_group}&text={encodedFailReport}&reply_to_message_id={_topic}&parse_mode=MarkdownV2";
+                _http.GET(failUrl);
+            }
+            else
+            {
+                string lastQuery = string.Empty;
+                try { lastQuery= _project.Var("lastQuery"); } catch { }
+                string successReport = $"✅️\\#succsess  \\#{_project.Name.EscapeMarkdown()} `\\#{_project.Var("acc0")}` \n" +
+                    $"LastUpd: `{lastQuery}` \n" +
+                    $"TookTime: {_project.TimeElapsed()}s \n";
+               
+                string encodedReport = Uri.EscapeDataString(successReport);
+                string url = $"https://api.telegram.org/bot{_token}/sendMessage?chat_id={_group}&text={encodedReport}&reply_to_message_id={_topic}&parse_mode=MarkdownV2";
+                _http.GET(url);
+            }
+
+            string toLog = $"✔️ All jobs done. Elapsed: {_project.TimeElapsed()}s \n███ ██ ██  ██ █  █  █  ▓▓▓ ▓▓ ▓▓  ▓  ▓  ▓  ▒▒▒ ▒▒ ▒▒ ▒  ▒  ░░░ ░░  ░░ ░ ░ ░ ░ ░ ░  ░  ░  ░   ░   ░   ░    ░    ░    ░     ░        ░          ░";
+            if (toLog.Contains("fail")) _project.SendToLog(toLog.Trim(), LogType.Info, true, LogColor.Orange);
+            else _project.SendToLog(toLog.Trim(), LogType.Info, true, LogColor.Green);
+        }
     }
 }

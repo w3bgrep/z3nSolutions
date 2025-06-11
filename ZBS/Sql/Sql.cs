@@ -164,6 +164,7 @@ namespace ZBSolutions
 
         public void Upd(string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, object acc = null)
         {
+            
             int acc0 = 0;
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
             if (acc != null)
@@ -183,8 +184,10 @@ namespace ZBSolutions
             toUpd = toUpd.Trim().TrimEnd(',');
             if (last) toUpd = toUpd + $", last = '{DateTime.UtcNow.ToString("MM-ddTHH:mm")}'";
 
-            DbQ($@"UPDATE {_tableName} SET {toUpd} WHERE acc0 = {acc0};", log: log, throwOnEx: throwOnEx);
-
+            toUpd = QuoteColumnNames(toUpd);
+            string query = $@"UPDATE {_tableName} SET {toUpd} WHERE acc0 = {acc0};";
+            try { _project.Var("lastQuery", query); } catch { }
+            DbQ(query, log: log, throwOnEx: throwOnEx);
         }
         public void Upd(Dictionary<string, string> toWrite, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, bool byKey = false)
         {
@@ -220,7 +223,27 @@ namespace ZBSolutions
             }
         }
 
+        private string QuoteColumnNames(string updateString)
+        {
+            var parts = updateString.Split(',').Select(p => p.Trim()).ToList();
+            var result = new List<string>();
 
+            foreach (var part in parts)
+            {
+                int equalsIndex = part.IndexOf('=');
+                if (equalsIndex > 0) 
+                {
+                    string columnName = part.Substring(0, equalsIndex).Trim();
+                    string valuePart = part.Substring(equalsIndex).Trim();
+                    result.Add($"\"{columnName}\" {valuePart}");
+                }
+                else
+                {
+                    result.Add(part);
+                }
+            }
+            return string.Join(", ", result);
+        }
 
 
         public string Get(string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "acc0", string acc = null)
@@ -330,7 +353,7 @@ namespace ZBSolutions
             }
             if (!string.IsNullOrEmpty(dynamicToDo)) 
             {
-                dynamicToDo = dynamicToDo.ToLower();
+                //dynamicToDo = dynamicToDo.ToLower();
                 string[] toDoItems = (dynamicToDo ?? "").Split(',');
                 foreach (string taskId in toDoItems)
                 {
@@ -458,8 +481,6 @@ namespace ZBSolutions
             }
 
         }
-
-
 
 
         public string Proxy()
