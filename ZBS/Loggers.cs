@@ -22,13 +22,14 @@ namespace ZBSolutions
         public Logger(IZennoPosterProjectModel project, bool log = false, string classEmoji = null)
         {
             _project = project;
-            if (!log) _logShow = _project.Var("debug") == "True";
+            _logShow = log || _project.Var("debug") == "True";
+            //if (!log) _logShow = _project.Var("debug") == "True";
             _emoji = classEmoji;
         }
 
-        public void Send(string toLog, [CallerMemberName] string callerName = "", bool show = true, bool thr0w = false, bool toZp = true, int cut = 0, bool wrap = true)
+        public void Send(string toLog, [CallerMemberName] string callerName = "", bool show = false, bool thr0w = false, bool toZp = true, int cut = 0, bool wrap = true)
         {
-            if (!show) return;
+            if (!show && !_logShow) return;
             string header = string.Empty;
             string body = toLog;
 
@@ -161,7 +162,7 @@ namespace ZBSolutions
             {
                 string lastQuery = string.Empty; try { lastQuery = _project.Var("lastQuery"); } catch { }
 
-                string successReport = $"✅️\\#succsess  \\#{_project.Name.EscapeMarkdown()} `\\#{_project.Var("acc0")}` \n";
+                string successReport = $"✅️\\#succsess  \\#{_project.Name.EscapeMarkdown()} \\#{_project.Var("acc0")} \n";
                 if (lastQuery != string.Empty) successReport += $"LastUpd: `{lastQuery}` \n";               
                 if (!string.IsNullOrEmpty(message)) successReport += $"Message:`{message}` \n";               
                 successReport += $"TookTime: {_project.TimeElapsed()}s \n";

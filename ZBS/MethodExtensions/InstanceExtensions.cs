@@ -818,6 +818,12 @@ namespace ZBSolutions
             return false;
         }
 
+        public static void ExtRm(this Instance instance, string[] ExtToRemove)
+        {
+            if (ExtToRemove != null && ExtToRemove.Length > 0)
+            foreach (string ext in ExtToRemove)
+                try { instance.UninstallExtension(ext); } catch { }
+        }
 
     }
 

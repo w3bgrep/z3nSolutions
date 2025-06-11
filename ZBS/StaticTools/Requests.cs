@@ -181,7 +181,7 @@ namespace ZBSolutions
             _project = project ?? throw new ArgumentNullException(nameof(project));
             _proxy = new Sql(_project).Get("proxy", "private_profile");
             _logShow = log;
-            _logger = new Logger(project, log: log, classEmoji: "♻");
+            _logger = new Logger(project, log: log, classEmoji: "↑↓");
         }
 
         protected void Log(string message, [CallerMemberName] string callerName = "", bool forceLog = false)
@@ -222,12 +222,12 @@ namespace ZBSolutions
                     string[] creds = credentials.Split(':');
                     proxy.Credentials = new NetworkCredential(creds[0], creds[1]);
 
-                    Log($"proxy set:{proxyHost}", callerName);
+                    _logger.Send($"proxy set:{proxyHost}", callerName);
                 }
                 else // Прокси без авторизации (proxy:port)
                 {
                     proxy.Address = new Uri("http://" + proxyString);
-                    Log($"proxy set: ip:{proxyString}", callerName);
+                    _logger.Send($"proxy set: ip:{proxyString}", callerName);
                 }
 
                 return proxy;

@@ -112,7 +112,7 @@ namespace ZBSolutions
             _logger.Send($"keytype is {keyType}");
         check:
             Thread.Sleep(1000);
-            string state = string.Empty;
+            string state = null;
             if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Select\\ one\\ or\\ more \\wallets", "regexp", 0).IsVoid) state = "NoFundedWallets";
 
             else if (!_instance.ActiveTab.FindElementByAttribute("button", "innertext", "Import\\ Wallet", "regexp", 0).IsVoid) state = "importButton";
@@ -128,6 +128,10 @@ namespace ZBSolutions
             _logger.Send(state);
             switch (state)
             {
+                case null:
+                    _logger.Send("...");
+                    Thread.Sleep(2000);
+                    goto check;
                 case "importButton":
                     _instance.HeClick(("button", "innertext", "Import\\ Wallet", "regexp", 0));
                     goto check;
