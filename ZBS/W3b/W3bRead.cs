@@ -26,6 +26,7 @@ namespace ZBSolutions
                 _adrEvm = ApplyKey(key).ToPubEvm();
             }
              _defRpc = project.Variables["blockchainRPC"].Value;
+            
         }
 
         private string ChekAdr(string address)
@@ -137,8 +138,9 @@ namespace ZBSolutions
                 return (T)Convert.ChangeType(gasGwei.ToString("0.######", CultureInfo.InvariantCulture), typeof(T));
             return (T)Convert.ChangeType(gasGwei, typeof(T));
         }
- 
-        public T NativeEVM<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
+
+        #region native
+        public string NativeEVM(string rpc = null, string address = null, string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             address = ChekAdr(address);
@@ -180,9 +182,290 @@ namespace ZBSolutions
 
             string balanceString = FloorDecimal<string>(balance, int.Parse("18"));
             Log(address, balanceString, rpc, log: log);
+            return balanceString;
+
+            //if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(balanceString, typeof(T));
+            //return (T)Convert.ChangeType(balance, typeof(T));
+        }
+        public T NativeEVM<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            //address = ChekAdr(address);
+            //if (string.IsNullOrEmpty(rpc)) rpc = _defRpc;
+
+            //string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_getBalance"", ""params"": [""{address}"", ""latest""], ""id"": 1 }}";
+            //string response;
+
+            //using (var request = new HttpRequest())
+            //{
+            //    request.UserAgent = "Mozilla/5.0";
+            //    request.IgnoreProtocolErrors = true;
+            //    request.ConnectTimeout = 5000;
+
+            //    if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
+            //    if (!string.IsNullOrEmpty(proxy))
+            //    {
+            //        string[] proxyArray = proxy.Split(':');
+            //        string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);
+            //        request.Proxy = new HttpProxyClient(host, port, username, password);
+            //    }
+
+            //    try
+            //    {
+            //        HttpResponse httpResponse = request.Post(rpc, jsonBody, "application/json");
+            //        response = httpResponse.ToString();
+            //    }
+            //    catch (HttpException ex)
+            //    {
+            //        _project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
+            //        throw;
+            //    }
+            //}
+
+            //var json = JObject.Parse(response);
+            //string hexBalance = json["result"]?.ToString()?.TrimStart('0', 'x') ?? "0";
+            //BigInteger balanceWei = BigInteger.Parse("0" + hexBalance, NumberStyles.AllowHexSpecifier);
+            //decimal balance = (decimal)balanceWei / 1000000000000000000m;
+
+            string balanceString = NativeEVM(rpc, address, proxy, log);//FloorDecimal<string>(balance, int.Parse("18"));
+            decimal balance = decimal.Parse(balanceString);
+            Log(address, balanceString, rpc, log: log);
             if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(balanceString, typeof(T));
             return (T)Convert.ChangeType(balance, typeof(T));
         }
+
+        public string NativeSOL(string rpc = null, string address = null, string proxy = null, bool log = false)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            if (string.IsNullOrEmpty(address)) address = _sql.Address("sol");
+            if (string.IsNullOrEmpty(rpc)) rpc = "https://api.mainnet-beta.solana.com";
+
+            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""getBalance"", ""params"": [""{address}""], ""id"": 1 }}";
+            string response;
+
+            using (var request = new HttpRequest())
+            {
+                request.UserAgent = "Mozilla/5.0";
+                request.IgnoreProtocolErrors = true;
+                request.ConnectTimeout = 5000;
+
+                if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
+                if (!string.IsNullOrEmpty(proxy))
+                {
+                    string[] proxyArray = proxy.Split(':');
+                    string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);
+                    request.Proxy = new HttpProxyClient(host, port, username, password);
+                }
+
+                try
+                {
+                    HttpResponse httpResponse = request.Post(rpc, jsonBody, "application/json");
+                    response = httpResponse.ToString();
+                }
+                catch (HttpException ex)
+                {
+                    _project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
+                    throw;
+                }
+            }
+
+            var json = JObject.Parse(response);
+            string tokenDecimal = json["result"]?["value"]?.ToString() ?? "0";
+            decimal balance = decimal.Parse(tokenDecimal) / 1000000000m; // Solana uses 9 decimal places (lamports)
+
+            string balanceString = FloorDecimal<string>(balance, 9); // Fixed precision to 9 for Solana
+            Log(address, balanceString, rpc, log: log);
+            return balanceString;
+        }
+        public T NativeSOL<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            string balanceString = NativeSOL(rpc, address, proxy, log);
+            decimal balance = decimal.Parse(balanceString);
+            Log(address, balanceString, rpc, log: log);
+            if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(balanceString, typeof(T));
+            return (T)Convert.ChangeType(balance, typeof(T));
+        }
+
+        public string NativeAPT(string rpc = null, string address = null, string proxy = null, bool log = false)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+
+            if (string.IsNullOrEmpty(address)) address = _sql.Address("apt");
+            if (string.IsNullOrEmpty(rpc))
+                rpc = "https://fullnode.mainnet.aptoslabs.com/v1";
+
+            string url = $"{rpc}/view";
+            string coinType = "0x1::aptos_coin::AptosCoin";
+            string requestBody = $@"{{
+                                    ""function"": ""0x1::coin::balance"",
+                                    ""type_arguments"": [""{coinType}""],
+                                    ""arguments"": [""{address}""]
+                                    }}";
+
+            string response;
+
+            using (var request = new HttpRequest())
+            {
+                request.UserAgent = "Mozilla/5.0";
+                request.IgnoreProtocolErrors = true;
+                request.ConnectTimeout = 5000;
+                request.AddHeader("Content-Type", "application/json");
+
+                if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
+                if (!string.IsNullOrEmpty(proxy))
+                {
+                    string[] proxyArray = proxy.Split(':');
+                    string username = proxyArray[1];
+                    string password = proxyArray[2];
+                    string host = proxyArray[3];
+                    int port = int.Parse(proxyArray[4]);
+                    request.Proxy = new HttpProxyClient(host, port, username, password);
+                }
+
+                try
+                {
+                    HttpResponse httpResponse = request.Post(url, requestBody, "application/json");
+                    response = httpResponse.ToString();
+                }
+                catch (HttpException ex)
+                {
+                    _project.SendErrorToLog($"Err HTTpreq: {ex.Message}, Status: {ex.Status}");
+                    throw;
+                }
+            }
+
+            JArray json;
+            try
+            {
+                json = JArray.Parse(response);
+            }
+            catch (Exception ex)
+            {
+                _project.SendErrorToLog($"Failed to parse JSON response: {ex.Message}");
+                return "0";
+            }
+
+            string octas = json[0]?.ToString() ?? "0";
+            decimal balance;
+            try
+            {
+                balance = decimal.Parse(octas) / 100000000m; // 8 decimals for Aptos (octas)
+            }
+            catch (Exception ex)
+            {
+                _project.SendErrorToLog($"Failed to parse balance: {ex.Message}");
+                return "0";
+            }
+
+            string balanceString = FloorDecimal<string>(balance, 8);
+            Log(address, balanceString, rpc, log: log);
+            return balanceString;
+        }
+        public T NativeAPT<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            string balanceString = NativeAPT(rpc, address, proxy, log);
+            decimal balance;
+            try
+            {
+                balance = decimal.Parse(balanceString);
+            }
+            catch (Exception ex)
+            {
+                _project.SendErrorToLog($"Failed to parse balance string in generic method: {ex.Message}");
+                if (typeof(T) == typeof(string)) return (T)(object)"0";
+                return (T)(object)0m;
+            }
+            Log(address, balanceString, rpc, log: log);
+            if (typeof(T) == typeof(string)) return (T)(object)balanceString;
+            return (T)Convert.ChangeType(balance, typeof(T));
+        }
+
+        public string NativeSUI(string rpc = null, string address = null, string proxy = null, bool log = false)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            if (string.IsNullOrEmpty(address)) address = _sql.Address("sui");
+            if (string.IsNullOrEmpty(rpc)) rpc = "https://fullnode.mainnet.sui.io";
+
+            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""suix_getBalance"", ""params"": [""{address}"", ""0x2::sui::SUI""], ""id"": 1 }}";
+            string response;
+
+            using (var request = new HttpRequest())
+            {
+                request.UserAgent = "Mozilla/5.0";
+                request.IgnoreProtocolErrors = true;
+                request.ConnectTimeout = 5000;
+
+                if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
+                if (!string.IsNullOrEmpty(proxy))
+                {
+                    string[] proxyArray = proxy.Split(':');
+                    string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);
+                    request.Proxy = new HttpProxyClient(host, port, username, password);
+                }
+
+                try
+                {
+                    HttpResponse httpResponse = request.Post(rpc, jsonBody, "application/json");
+                    response = httpResponse.ToString();
+                }
+                catch (HttpException ex)
+                {
+                    _project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
+                    throw;
+                }
+            }
+
+            JObject json;
+            try
+            {
+                json = JObject.Parse(response);
+            }
+            catch (Exception ex)
+            {
+                _project.SendErrorToLog($"Failed to parse JSON response: {ex.Message}");
+                return "0";
+            }
+
+            string mist = json["result"]?["totalBalance"]?.ToString() ?? "0";
+            decimal balance;
+            try
+            {
+                balance = decimal.Parse(mist) / 1000000000m; // 9 decimals for SUI (MIST)
+            }
+            catch (Exception ex)
+            {
+                _project.SendErrorToLog($"Failed to parse balance: {ex.Message}");
+                return "0";
+            }
+
+            string balanceString = FloorDecimal<string>(balance, 9); // 9 decimals for consistency
+            Log(address, balanceString, rpc, log: log);
+            return balanceString;
+        }
+        public T NativeSUI<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            string balanceString = NativeSUI(rpc, address, proxy, log);
+            decimal balance;
+            try
+            {
+                balance = decimal.Parse(balanceString);
+            }
+            catch (Exception ex)
+            {
+                _project.SendErrorToLog($"Failed to parse balance string in generic method: {ex.Message}");
+                if (typeof(T) == typeof(string)) return (T)(object)"0";
+                return (T)(object)0m;
+            }
+            Log(address, balanceString, rpc, log: log);
+            if (typeof(T) == typeof(string)) return (T)(object)balanceString;
+            return (T)Convert.ChangeType(balance, typeof(T));
+        }
+
+        #endregion
+
         public T BalERC20<T>(string tokenContract, string rpc = null, string address = null, string tokenDecimal = "18", string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -380,54 +663,57 @@ namespace ZBSolutions
         }
        
         //spl
-        public T NativeSOL<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
-        {
-            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            if (string.IsNullOrEmpty(address)) address = _sql.Address("sol");
-            if (string.IsNullOrEmpty(rpc)) rpc = "https://api.mainnet-beta.solana.com";
+        //public T NativeSOL<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
+        //{
+        //    Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+        //    if (string.IsNullOrEmpty(address)) address = _sql.Address("sol");
+        //    if (string.IsNullOrEmpty(rpc)) rpc = "https://api.mainnet-beta.solana.com";
 
-            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""getBalance"", ""params"": [""{address}""], ""id"": 1 }}";
-            string response;
+        //    string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""getBalance"", ""params"": [""{address}""], ""id"": 1 }}";
+        //    string response;
 
-            using (var request = new HttpRequest())
-            {
-                request.UserAgent = "Mozilla/5.0";
-                request.IgnoreProtocolErrors = true;
-                request.ConnectTimeout = 5000;
+        //    using (var request = new HttpRequest())
+        //    {
+        //        request.UserAgent = "Mozilla/5.0";
+        //        request.IgnoreProtocolErrors = true;
+        //        request.ConnectTimeout = 5000;
 
-                if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
-                if (!string.IsNullOrEmpty(proxy))
-                {
-                    string[] proxyArray = proxy.Split(':');
-                    string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);
-                    request.Proxy = new HttpProxyClient(host, port, username, password);
-                }
+        //        if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
+        //        if (!string.IsNullOrEmpty(proxy))
+        //        {
+        //            string[] proxyArray = proxy.Split(':');
+        //            string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);
+        //            request.Proxy = new HttpProxyClient(host, port, username, password);
+        //        }
 
-                try
-                {
-                    HttpResponse httpResponse = request.Post(rpc, jsonBody, "application/json");
-                    response = httpResponse.ToString();
-                }
-                catch (HttpException ex)
-                {
-                    _project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
-                    throw;
-                }
-            }
+        //        try
+        //        {
+        //            HttpResponse httpResponse = request.Post(rpc, jsonBody, "application/json");
+        //            response = httpResponse.ToString();
+        //        }
+        //        catch (HttpException ex)
+        //        {
+        //            _project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
+        //            throw;
+        //        }
+        //    }
 
-            var json = JObject.Parse(response);
-            string tokenDecimal = json["result"]?["value"]?.ToString() ?? "0";
+        //    var json = JObject.Parse(response);
+        //    string tokenDecimal = json["result"]?["value"]?.ToString() ?? "0";
 
 
-            decimal balance = decimal.Parse(tokenDecimal) / 1000000000m;
+        //    decimal balance = decimal.Parse(tokenDecimal) / 1000000000m;
 
-            string balanceString = FloorDecimal<string>(balance, int.Parse(tokenDecimal));
-            Log(address, balanceString, rpc, log: log);
+        //    string balanceString = FloorDecimal<string>(balance, int.Parse(tokenDecimal));
+        //    Log(address, balanceString, rpc, log: log);
 
-            if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(balanceString, typeof(T));
-            return (T)Convert.ChangeType(balance, typeof(T));
+        //    if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(balanceString, typeof(T));
+        //    return (T)Convert.ChangeType(balance, typeof(T));
 
-        }
+        //}
+ 
+        
+        
         public T TokenSPL<T>(string tokenMint, string address = null, int floor = 0, string rpc = null, string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -482,50 +768,50 @@ namespace ZBSolutions
         }
         
         //move
-        public T NativeSUI<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
-        {
-            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            if (string.IsNullOrEmpty(address)) address = _sql.Address("sui");
-            if (string.IsNullOrEmpty(rpc)) rpc = "https://fullnode.mainnet.sui.io";
+        //public T NativeSUI<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
+        //{
+        //    Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+        //    if (string.IsNullOrEmpty(address)) address = _sql.Address("sui");
+        //    if (string.IsNullOrEmpty(rpc)) rpc = "https://fullnode.mainnet.sui.io";
 
-            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""suix_getBalance"", ""params"": [""{address}"", ""0x2::sui::SUI""], ""id"": 1 }}";
-            string response;
+        //    string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""suix_getBalance"", ""params"": [""{address}"", ""0x2::sui::SUI""], ""id"": 1 }}";
+        //    string response;
 
-            using (var request = new HttpRequest())
-            {
-                request.UserAgent = "Mozilla/5.0";
-                request.IgnoreProtocolErrors = true;
-                request.ConnectTimeout = 5000;
+        //    using (var request = new HttpRequest())
+        //    {
+        //        request.UserAgent = "Mozilla/5.0";
+        //        request.IgnoreProtocolErrors = true;
+        //        request.ConnectTimeout = 5000;
 
-                if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
-                if (!string.IsNullOrEmpty(proxy))
-                {
-                    string[] proxyArray = proxy.Split(':');
-                    string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);
-                    request.Proxy = new HttpProxyClient(host, port, username, password);
-                }
+        //        if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
+        //        if (!string.IsNullOrEmpty(proxy))
+        //        {
+        //            string[] proxyArray = proxy.Split(':');
+        //            string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);
+        //            request.Proxy = new HttpProxyClient(host, port, username, password);
+        //        }
 
-                try
-                {
-                    HttpResponse httpResponse = request.Post(rpc, jsonBody, "application/json");
-                    response = httpResponse.ToString();
-                }
-                catch (HttpException ex)
-                {
-                    _project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
-                    throw;
-                }
-            }
+        //        try
+        //        {
+        //            HttpResponse httpResponse = request.Post(rpc, jsonBody, "application/json");
+        //            response = httpResponse.ToString();
+        //        }
+        //        catch (HttpException ex)
+        //        {
+        //            _project.SendErrorToLog($"Err HTTPreq: {ex.Message}, Status: {ex.Status}");
+        //            throw;
+        //        }
+        //    }
 
-            var json = JObject.Parse(response);
-            string mist = json["result"]?["totalBalance"]?.ToString() ?? "0";
-            decimal balanceSui = decimal.Parse(mist) / 1000000000m;
-            if (log) Log($"{address}: {balanceSui} SUI");
+        //    var json = JObject.Parse(response);
+        //    string mist = json["result"]?["totalBalance"]?.ToString() ?? "0";
+        //    decimal balanceSui = decimal.Parse(mist) / 1000000000m;
+        //    if (log) Log($"{address}: {balanceSui} SUI");
 
-            if (typeof(T) == typeof(string))
-                return (T)Convert.ChangeType(balanceSui.ToString("0.##################"), typeof(T));
-            return (T)Convert.ChangeType(balanceSui, typeof(T));
-        }
+        //    if (typeof(T) == typeof(string))
+        //        return (T)Convert.ChangeType(balanceSui.ToString("0.##################"), typeof(T));
+        //    return (T)Convert.ChangeType(balanceSui, typeof(T));
+        //}
         public T TokenSUI<T>(string coinType, string address = null, string rpc = null, string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -576,86 +862,86 @@ namespace ZBSolutions
 
         }
  
-        public T NativeAPT<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
-        {
-            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+   //     public T NativeAPT<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
+   //     {
+   //         Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 
-            if (string.IsNullOrEmpty(address)) address = _sql.Address("apt");
-            if (string.IsNullOrEmpty(rpc))
-                rpc = "https://fullnode.mainnet.aptoslabs.com/v1";
+   //         if (string.IsNullOrEmpty(address)) address = _sql.Address("apt");
+   //         if (string.IsNullOrEmpty(rpc))
+   //             rpc = "https://fullnode.mainnet.aptoslabs.com/v1";
 
-            string url = $"{rpc}/view";
-            string coinType = "0x1::aptos_coin::AptosCoin";
-            string requestBody = $@"{{
-				""function"": ""0x1::coin::balance"",
-				""type_arguments"": [""{coinType}""],
-				""arguments"": [""{address}""]
-			}}";
+   //         string url = $"{rpc}/view";
+   //         string coinType = "0x1::aptos_coin::AptosCoin";
+   //         string requestBody = $@"{{
+			//	""function"": ""0x1::coin::balance"",
+			//	""type_arguments"": [""{coinType}""],
+			//	""arguments"": [""{address}""]
+			//}}";
 
-            string response;
+   //         string response;
 
-            using (var request = new HttpRequest())
-            {
-                request.UserAgent = "Mozilla/5.0";
-                request.IgnoreProtocolErrors = true;
-                request.ConnectTimeout = 5000;
-                request.AddHeader("Content-Type", "application/json");
+   //         using (var request = new HttpRequest())
+   //         {
+   //             request.UserAgent = "Mozilla/5.0";
+   //             request.IgnoreProtocolErrors = true;
+   //             request.ConnectTimeout = 5000;
+   //             request.AddHeader("Content-Type", "application/json");
 
-                // Настройка прокси, если указан
-                if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
-                if (!string.IsNullOrEmpty(proxy))
-                {
-                    string[] proxyArray = proxy.Split(':');
-                    string username = proxyArray[1];
-                    string password = proxyArray[2];
-                    string host = proxyArray[3];
-                    int port = int.Parse(proxyArray[4]);
-                    request.Proxy = new HttpProxyClient(host, port, username, password);
-                }
+   //             // Настройка прокси, если указан
+   //             if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
+   //             if (!string.IsNullOrEmpty(proxy))
+   //             {
+   //                 string[] proxyArray = proxy.Split(':');
+   //                 string username = proxyArray[1];
+   //                 string password = proxyArray[2];
+   //                 string host = proxyArray[3];
+   //                 int port = int.Parse(proxyArray[4]);
+   //                 request.Proxy = new HttpProxyClient(host, port, username, password);
+   //             }
 
-                try
-                {
-                    HttpResponse httpResponse = request.Post(url, requestBody, "application/json");
-                    response = httpResponse.ToString();
-                }
-                catch (HttpException ex)
-                {
-                    _project.SendErrorToLog($"Err HTTpreq: {ex.Message}, Status: {ex.Status}");
-                    throw;
-                }
-            }
+   //             try
+   //             {
+   //                 HttpResponse httpResponse = request.Post(url, requestBody, "application/json");
+   //                 response = httpResponse.ToString();
+   //             }
+   //             catch (HttpException ex)
+   //             {
+   //                 _project.SendErrorToLog($"Err HTTpreq: {ex.Message}, Status: {ex.Status}");
+   //                 throw;
+   //             }
+   //         }
 
-            JArray json;
-            try
-            {
-                json = JArray.Parse(response);
-            }
-            catch (Exception ex)
-            {
-                _project.SendErrorToLog($"Failed to parse JSON response: {ex.Message}");
-                if (typeof(T) == typeof(string)) return (T)(object)"0";
-                return (T)(object)0m;
-            }
+   //         JArray json;
+   //         try
+   //         {
+   //             json = JArray.Parse(response);
+   //         }
+   //         catch (Exception ex)
+   //         {
+   //             _project.SendErrorToLog($"Failed to parse JSON response: {ex.Message}");
+   //             if (typeof(T) == typeof(string)) return (T)(object)"0";
+   //             return (T)(object)0m;
+   //         }
 
-            string octas = json[0]?.ToString() ?? "0";
-            decimal balance;
-            try
-            {
-                balance = decimal.Parse(octas) / 100000000m; // 8 decimals
-            }
-            catch (Exception ex)
-            {
-                _project.SendErrorToLog($"Failed to parse balance: {ex.Message}");
-                if (typeof(T) == typeof(string)) return (T)(object)"0";
-                return (T)(object)0m;
-            }
+   //         string octas = json[0]?.ToString() ?? "0";
+   //         decimal balance;
+   //         try
+   //         {
+   //             balance = decimal.Parse(octas) / 100000000m; // 8 decimals
+   //         }
+   //         catch (Exception ex)
+   //         {
+   //             _project.SendErrorToLog($"Failed to parse balance: {ex.Message}");
+   //             if (typeof(T) == typeof(string)) return (T)(object)"0";
+   //             return (T)(object)0m;
+   //         }
 
-            string balanceString = FloorDecimal<string>(balance, 8);
-            Log(address, balanceString, rpc, log: log);
+   //         string balanceString = FloorDecimal<string>(balance, 8);
+   //         Log(address, balanceString, rpc, log: log);
 
-            if (typeof(T) == typeof(string)) return (T)(object)balanceString;
-            return (T)Convert.ChangeType(balance, typeof(T));
-        }
+   //         if (typeof(T) == typeof(string)) return (T)(object)balanceString;
+   //         return (T)Convert.ChangeType(balance, typeof(T));
+   //     }
         public T TokenAPT<T>(string coinType, string address = null, string rpc = null, string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;

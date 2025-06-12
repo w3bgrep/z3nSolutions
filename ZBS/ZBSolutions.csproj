@@ -82,16 +82,18 @@
     <Compile Include="Loggers.cs" />
     <Compile Include="MethodExtensions\SystemExtentions.cs" />
     <Compile Include="MethodExtensions\ObjectExtentions.cs" />
+    <Compile Include="W3b\Native.cs" />
+    <Compile Include="W3b\GazZip.cs" />
     <Compile Include="W3bProtocols\Relay.cs" />
     <Compile Include="Rnd.cs" />
     <Compile Include="Sql\Dbuilder.cs" />
     <Compile Include="F0rms.cs" />
     <Compile Include="W3bProtocols\DMail.cs" />
     <Compile Include="MethodExtensions\DictionaryExtentions.cs" />
-    <Compile Include="OnChain\W3bWrite.cs" />
+    <Compile Include="W3b\W3bWrite.cs" />
     <Compile Include="Socials\Galxe.cs" />
     <Compile Include="Sql\TableSvc.cs" />
-    <Compile Include="OnChain\W3bRead.cs" />
+    <Compile Include="W3b\W3bRead.cs" />
     <Compile Include="W3bProtocols\Stargate.cs" />
     <Compile Include="Socials\Telegram.cs" />
     <Compile Include="W3bProtocols\UnlockProtocol.cs" />
@@ -102,7 +104,7 @@
     <Compile Include="Wallets\Rabby.cs" />
     <Compile Include="Wallets\Backpack.cs" />
     <Compile Include="CexApi\BinanceApi.cs" />
-    <Compile Include="OnChain\Blockchain.cs" />
+    <Compile Include="W3b\Blockchain.cs" />
     <Compile Include="Wallets\MetaMask.cs" />
     <Compile Include="Wallets\Razor.cs" />
     <Compile Include="Socials\Google.cs" />
@@ -128,7 +130,7 @@
     <Compile Include="Wallets\Wlt.cs" />
     <Compile Include="Socials\X.cs" />
     <Compile Include="Wallets\Zerion.cs" />
-    <Compile Include="OnChain\W3b.cs" />
+    <Compile Include="W3b\W3b.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="ValidateZennoPosterDllPath" BeforeTargets="BeforeBuild">

@@ -220,12 +220,12 @@ namespace ZBSolutions
                     string[] creds = credentials.Split(':');
                     proxy.Credentials = new NetworkCredential(creds[0], creds[1]);
 
-                    _logger.Send($"proxy set:{proxyHost}", callerName);
+                    //_logger.Send($"proxy set:{proxyHost}", callerName);
                 }
                 else // Прокси без авторизации (proxy:port)
                 {
                     proxy.Address = new Uri("http://" + proxyString);
-                    _logger.Send($"proxy set: ip:{proxyString}", callerName);
+                    //_logger.Send($"proxy set: ip:{proxyString}", callerName);
                 }
 
                 return proxy;
