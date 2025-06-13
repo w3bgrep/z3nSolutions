@@ -597,7 +597,7 @@ namespace ZBSolutions
             string ipLocal = GET("http://api.ipify.org/", null);
             string ipProxified = GET("http://api.ipify.org/", proxyString);
 
-            _logger.Send($"ipLocal: {ipLocal}, ipProxified: {ipProxified}");
+            //_logger.Send($"ipLocal: {ipLocal}, ipProxified: {ipProxified}");
 
             if (ipProxified != ipLocal)
             {

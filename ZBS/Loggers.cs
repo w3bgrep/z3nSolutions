@@ -119,9 +119,9 @@ namespace ZBSolutions
                 { "`g", LogColor.Green },
                 { "!W", LogColor.Orange },
                 { "!E", LogColor.Orange },
-                { "relax", LogColor.LightBlue },
+                { "relax", LogColor.LightBlue },              
+                { "Error", LogColor.Orange },
                 { "success", LogColor.Blue },
-                { "error", LogColor.Orange },
             };
 
             string combined = (header ?? "") + (toLog ?? "");
