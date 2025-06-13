@@ -79,8 +79,8 @@
     <Compile Include="W3b\Balance.cs" />
     <Compile Include="Browser\BrowserScan.cs" />
     <Compile Include="CexApi\Refuel.cs" />
-    <Compile Include="ChromeExtentions.cs" />
-    <Compile Include="Traffic.cs" />
+    <Compile Include="Extensions\ChromeExtentions.cs" />
+    <Compile Include="Browser\Traffic.cs" />
     <Compile Include="W3b\CommonTx.cs" />
     <Compile Include="Loggers.cs" />
     <Compile Include="Extensions\SystemExtentions.cs" />
@@ -88,7 +88,7 @@
     <Compile Include="W3b\Native.cs" />
     <Compile Include="W3bProtocols\GazZip.cs" />
     <Compile Include="W3bProtocols\Relay.cs" />
-    <Compile Include="Rnd.cs" />
+    <Compile Include="Extensions\Rnd.cs" />
     <Compile Include="Sql\Dbuilder.cs" />
     <Compile Include="F0rms.cs" />
     <Compile Include="W3bProtocols\DMail.cs" />

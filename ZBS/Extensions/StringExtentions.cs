@@ -99,7 +99,6 @@ namespace ZBSolutions
 
         }
 
-
         public static bool ChkAddress(this string shortAddress, string fullAddress)
         {
             if (string.IsNullOrEmpty(shortAddress) || string.IsNullOrEmpty(fullAddress))

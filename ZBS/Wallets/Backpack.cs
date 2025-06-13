@@ -246,6 +246,32 @@ namespace ZBSolutions
                 throw;
             }
         }
+        public string CurrentChain(bool log = true)
+        {
+            string modeNow = null;
+        ifNow:
+            var mode = _instance.HeGet(("div", "aria-haspopup", "dialog", "regexp", 0), atr: "innerhtml");
+
+            if (mode.Contains("solana.png")) modeNow = "mainnet";
+            if (mode.Contains("devnet.png")) modeNow = "devnet";
+            if (mode.Contains("testnet.png")) modeNow = "testnet";
+            if (mode.Contains("ethereum.png")) modeNow = "ethereum";
+            switch (modeNow)
+            {
+                case "devnet":
+                case "mainnet":
+                case "testnet":
+                case "ethereum":
+                    _project.L0g(modeNow);
+                    break;
+
+                default:
+                    Thread.Sleep(1000);
+                    _project.L0g("unknown");
+                    goto ifNow;
+            }
+            return modeNow;
+        }
 
         public void Approve(bool log = false)
         {
@@ -285,8 +311,17 @@ namespace ZBSolutions
                     Thread.Sleep(2000);
                     goto getState;
                 }
-                _project.L0g($"No Wallet tab found. 0");
-                return;
+
+                if (!_instance.ActiveTab.URL.Contains(_extId))
+                {
+                    _logger.Send($"No Wallet tab found. 0");
+                    return;
+                }
+                else
+                {
+                    _logger.Send($"wallet tab detected. {action}");
+                }
+               
             }
 
             _project.L0g(action);
@@ -334,34 +369,6 @@ namespace ZBSolutions
 
         }
 
-        public string CurrentChain(bool enable = true)
-        {
-            string modeNow = null;
-        ifNow:
-            var mode = _instance.HeGet(("div", "aria-haspopup", "dialog", "regexp", 0), atr: "innerhtml");
-
-            if (mode.Contains("solana.png")) modeNow = "mainnet";
-            if (mode.Contains("devnet.png")) modeNow = "devnet";
-            if (mode.Contains("testnet.png")) modeNow = "testnet";
-            if (mode.Contains("ethereum.png")) modeNow = "ethereum";
-            switch (modeNow)
-            {
-                case "devnet":
-                case "mainnet":
-                case "testnet":
-                case "ethereum":
-                    _project.L0g(modeNow);
-                    break;
-
-                default:
-                    Thread.Sleep(1000);
-                    _project.L0g("unknown");
-                    goto ifNow;
-
-            }
-            return modeNow;
-
-        }
 
         public void DevChain(string reqmode = "devnet")
         {
