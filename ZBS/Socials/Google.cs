@@ -50,7 +50,7 @@ namespace ZBSolutions
         private string LoadCreds()
         {
 
-            string[] Creds = _sql.Get("status,  login, password, otpsecret, recoveryemail, otpbackup, cookies", "google").Split('|');
+            string[] Creds = _sql.Get("status,  login, password, otpsecret, recoveryemail, otpbackup, cookies", "private_google").Split('|');
             _status = Creds[0];
             _login = Creds[1];
             _pass = Creds[2];

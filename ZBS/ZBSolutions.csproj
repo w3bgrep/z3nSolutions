@@ -76,6 +76,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="HanaGarden.cs" />
     <Compile Include="W3b\Balance.cs" />
     <Compile Include="Browser\BrowserScan.cs" />
     <Compile Include="CexApi\Refuel.cs" />

@@ -313,7 +313,7 @@ namespace ZBSolutions
                 _logger.Send($"[GET] SERVER Err: [{e.Message}] url:[{url}] (proxy: {(proxyString)}), headers: [{debugHeaders.Trim()}]");
                 if (throwOnFail) throw;
 
-                return string.Empty;
+                return e.Message;
             }
             catch (Exception e)
             {
@@ -404,7 +404,7 @@ namespace ZBSolutions
             {
                 _logger.Send($"[POST] SERVER Err: [{e.Message}] url:[{url}] (proxy: {(proxyString)}), Headers\n{debugHeaders.Trim()}");
                 if (throwOnFail) throw;
-                return string.Empty;
+                return e.Message;
             }
             catch (Exception e)
             {
@@ -495,7 +495,7 @@ namespace ZBSolutions
             catch (HttpRequestException e)
             {
                 _logger.Send($"!W RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")})");
-                return $"Ошибка: {e.Message}";
+                return e.Message;
             }
             catch (Exception e)
             {
@@ -576,7 +576,7 @@ namespace ZBSolutions
             catch (HttpRequestException e)
             {
                 _logger.Send($"!W [DELETE] RequestErr: [{e.Message}] url:[{url}] (proxy: {proxyString}), Headers\n{debugHeaders.Trim()}");
-                return $"Ошибка: {e.Message}";
+                return e.Message;
             }
             catch (Exception e)
             {
