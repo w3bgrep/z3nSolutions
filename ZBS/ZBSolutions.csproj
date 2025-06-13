@@ -76,20 +76,23 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="W3b\Balance.cs" />
     <Compile Include="Browser\BrowserScan.cs" />
     <Compile Include="CexApi\Refuel.cs" />
     <Compile Include="ChromeExtentions.cs" />
+    <Compile Include="Traffic.cs" />
+    <Compile Include="W3b\CommonTx.cs" />
     <Compile Include="Loggers.cs" />
-    <Compile Include="MethodExtensions\SystemExtentions.cs" />
-    <Compile Include="MethodExtensions\ObjectExtentions.cs" />
+    <Compile Include="Extensions\SystemExtentions.cs" />
+    <Compile Include="Extensions\ObjectExtentions.cs" />
     <Compile Include="W3b\Native.cs" />
-    <Compile Include="W3b\GazZip.cs" />
+    <Compile Include="W3bProtocols\GazZip.cs" />
     <Compile Include="W3bProtocols\Relay.cs" />
     <Compile Include="Rnd.cs" />
     <Compile Include="Sql\Dbuilder.cs" />
     <Compile Include="F0rms.cs" />
     <Compile Include="W3bProtocols\DMail.cs" />
-    <Compile Include="MethodExtensions\DictionaryExtentions.cs" />
+    <Compile Include="Extensions\DictionaryExtentions.cs" />
     <Compile Include="W3b\W3bWrite.cs" />
     <Compile Include="Socials\Galxe.cs" />
     <Compile Include="Sql\TableSvc.cs" />
@@ -113,7 +116,7 @@
     <Compile Include="StaticTools\Cryptography.cs" />
     <Compile Include="Sql\DataImporter.cs" />
     <Compile Include="Socials\Discord.cs" />
-    <Compile Include="MethodExtensions\InstanceExtensions.cs" />
+    <Compile Include="Extensions\InstanceExtensions.cs" />
     <Compile Include="StaticTools\ISAFU.cs" />
     <Compile Include="CexApi\OKXApi.cs" />
     <Compile Include="StaticTools\OTP.cs" />
@@ -122,11 +125,11 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Sql\Sql.cs" />
     <Compile Include="Sql\SQLite.cs" />
-    <Compile Include="MethodExtensions\HtmlExtensions.cs" />
-    <Compile Include="MethodExtensions\StringExtentions.cs" />
-    <Compile Include="StaticTools\Requests.cs" />
-    <Compile Include="StaticTools\Time.cs" />
-    <Compile Include="MethodExtensions\ProjectExtensions.cs" />
+    <Compile Include="Extensions\HtmlExtensions.cs" />
+    <Compile Include="Extensions\StringExtentions.cs" />
+    <Compile Include="Requests.cs" />
+    <Compile Include="Extensions\Time.cs" />
+    <Compile Include="Extensions\ProjectExtensions.cs" />
     <Compile Include="Wallets\Wlt.cs" />
     <Compile Include="Socials\X.cs" />
     <Compile Include="Wallets\Zerion.cs" />

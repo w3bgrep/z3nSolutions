@@ -27,14 +27,14 @@ namespace ZBSolutions
 
 
         public BackpackWallet(IZennoPosterProjectModel project, Instance instance, bool log = false, string key = null, string fileName = "Backpack0.10.94.crx")
-            
+
         {
             _project = project;
             _instance = instance;
             _fileName = fileName;
             _key = KeyLoad(key);
             _pass = SAFU.HWPass(_project);
-            _logger = new Logger(project,log:log, classEmoji: "🎒");
+            _logger = new Logger(project, log: log, classEmoji: "🎒");
         }
 
         private string KeyLoad(string key)
@@ -82,12 +82,12 @@ namespace ZBSolutions
             _instance.UseFullMouseEmulation = false;
 
             _logger.Send($"Launching Backpack ({fileName})");
-            if (new ChromeExt(_project,_instance).Install(_extId, fileName, log))
+            if (new ChromeExt(_project, _instance).Install(_extId, fileName, log))
                 Import(log: log);
             else
                 Unlock(log: log);
             _logger.Send($"checking");
-            var adr = Check(log: log);
+            var adr = CurrentAddress(log: log);
             _logger.Send($"using [{adr}]");
             _instance.CloseExtraTabs();
             _instance.UseFullMouseEmulation = em;
@@ -224,7 +224,7 @@ namespace ZBSolutions
 
         }
 
-        public string Check(bool log = false)
+        public string CurrentAddress(bool log = false)
         {
             _logger.Send("Checking Backpack wallet address");
             if (_instance.ActiveTab.URL != _popout)
@@ -304,6 +304,94 @@ namespace ZBSolutions
 
 
         }
+
+        public void Devmode(bool enable = true)
+        {
+            _instance.Go(_popout);
+
+        ifswitch:
+            try
+            {
+            switchBox:
+                bool DevModeNow = false;
+                if (_instance.HeGet(("input:checkbox", "class", "css-1m9pwf3", "regexp", 0), deadline: 1, atr: "value") == "True") DevModeNow = true;
+
+                if (enable != DevModeNow)
+                {
+                    _instance.HeClick(("input:checkbox", "class", "css-1m9pwf3", "regexp", 0));
+                    goto switchBox;
+                }
+
+            }
+            catch
+            {
+                _instance.HeClick(("button", "class", "css-xxmhpt\\ css-yt63r3", "regexp", 0));
+                _instance.HeClick(("button", "innertext", "Settings", "regexp", 0));
+                _instance.HeClick(("div", "innertext", "Preferences", "regexp", 0), "last");
+                goto ifswitch;
+            }
+
+
+        }
+
+        public string CurrentChain(bool enable = true)
+        {
+            string modeNow = null;
+        ifNow:
+            var mode = _instance.HeGet(("div", "aria-haspopup", "dialog", "regexp", 0), atr: "innerhtml");
+
+            if (mode.Contains("solana.png")) modeNow = "mainnet";
+            if (mode.Contains("devnet.png")) modeNow = "devnet";
+            if (mode.Contains("testnet.png")) modeNow = "testnet";
+            if (mode.Contains("ethereum.png")) modeNow = "ethereum";
+            switch (modeNow)
+            {
+                case "devnet":
+                case "mainnet":
+                case "testnet":
+                case "ethereum":
+                    _project.L0g(modeNow);
+                    break;
+
+                default:
+                    Thread.Sleep(1000);
+                    _project.L0g("unknown");
+                    goto ifNow;
+
+            }
+            return modeNow;
+
+        }
+
+        public void DevChain(string reqmode = "devnet")
+        {
+            Switch("Solana");
+            var chain = CurrentChain();
+        check:
+            if (chain != reqmode)
+            {
+                 _instance.HeClick(("div", "aria-haspopup", "dialog", "regexp", 0));
+                _instance.HeClick(("span", "innertext", "Add\\ Network", "regexp", 0), "last");
+
+                try
+                {
+                    _instance.HeGet(("span", "innertext", "Test\\ Networks", "regexp", 0));
+                }
+                catch
+                {
+                    _instance.HeClick(("button", "aria-label", "TabsNavigator,\\ back", "regexp", 0));
+                    Devmode();
+                    goto check;
+                }
+
+                _instance.HeClick(("img", "src", $"{reqmode}.png", "regexp", 0));
+                _instance.HeClick(("span", "innertext", "From\\ Solana", "regexp", 0), "last", deadline: 3, thr0w: false);
+                _instance.HeClick(("button", "class", "is_Button\\ ", "regexp", 0), deadline: 3, thr0w: false);
+
+            }
+
+        }
+
 
         public void Add(string type = "Ethereum", string source = "key")//"Solana" | "Ethereum" //"key" | "phrase"
         {

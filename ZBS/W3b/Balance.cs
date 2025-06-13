@@ -1,185 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-
-using System.Linq;
-
-using System.Net.Http;
-using System.Net;
-
-using System.Text;
-using System.Text.RegularExpressions;
-
-using System.Threading;
-using Newtonsoft.Json;
-using ZennoLab.InterfacesLibrary.Enums.Browser;
-
-using System.Globalization;
-using System.Runtime.CompilerServices;
-
-using Leaf.xNet;
-
-using ZennoLab.CommandCenter;
-using ZennoLab.InterfacesLibrary.Enums.Http;
-using ZennoLab.InterfacesLibrary.Enums.Log;
-using ZennoLab.InterfacesLibrary.ProjectModel;
-using System.Security.Policy;
-
-#region using
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-
-using System.Linq;
-using ZennoLab.CommandCenter;
-using ZennoLab.InterfacesLibrary.ProjectModel;
-using ZennoLab.InterfacesLibrary;
-using ZBSolutions;
+﻿using Leaf.xNet;
 using NBitcoin;
-using Nethereum.Model;
-
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading;
-using ZennoLab.CommandCenter;
-using ZennoLab.InterfacesLibrary.ProjectModel;
-using System.IO;
-using System.Text.RegularExpressions;
-using System.Diagnostics;
-using System.Reflection;
-
-
-using Leaf.xNet;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text;
 using System.Numerics;
-
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
-using System.Runtime.InteropServices;
-using System.Runtime.CompilerServices;
-using Nethereum.Model;
 
-using static Leaf.xNet.Services.Cloudflare.CloudflareBypass;
-using Nethereum.Signer;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using ZennoLab.InterfacesLibrary.ProjectModel;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System.Dynamic;
-using System.Reflection;
-using System.Security.Policy;
-using ZBSolutions;
 
-#endregion
-
-namespace w3tools //by @w3bgrep
+namespace ZBSolutions
 {
-
-    public  static class TestStatic
-    {
-
-        public static string UnixToHuman(this IZennoPosterProjectModel project, string decodedResultExpire = null)
-        {
-            var _log = new Logger(project, classEmoji: "☻");
-            if (string.IsNullOrEmpty(decodedResultExpire)) decodedResultExpire = project.Var("varSessionId");
-            if (!string.IsNullOrEmpty(decodedResultExpire))
-            {
-                int intEpoch = int.Parse(decodedResultExpire);
-                string converted = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(intEpoch).ToShortDateString();
-                _log.Send(converted);
-                return converted;
-
-                
-            }
-            return string.Empty;
-        }
-        public static decimal Math(this IZennoPosterProjectModel project, string varA, string operation, string varB, string varRslt = "a_")
-        {
-            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            decimal a = decimal.Parse(project.Var(varA));
-            decimal b = decimal.Parse(project.Var(varB));
-            decimal result;
-            switch (operation)
-            {
-                case "+":
-
-                    result = a + b;
-                    break;
-                case "-":
-                    result = a - b;
-                    break;
-                case "*":
-                    result = a * b;
-                    break;
-                case "/":
-                    result = a / b;
-                    break;
-                default:
-                    throw new Exception($"unsuppoted operation {operation}");
-            }
-            try { project.Var(varRslt, $"{result}"); } catch { }
-            return result;
-        }
-        public static string CookiesToJson(string cookies)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(cookies))
-                {
-                    return "[]";
-                }
-
-                var result = new List<Dictionary<string, string>>();
-                var cookiePairs = cookies.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-
-                foreach (var pair in cookiePairs)
-                {
-                    var trimmedPair = pair.Trim();
-                    if (string.IsNullOrEmpty(trimmedPair))
-                        continue;
-
-                    var keyValue = trimmedPair.Split(new[] { '=' }, 2);
-                    if (keyValue.Length != 2)
-                    {
-                        continue;
-                    }
-
-                    var key = keyValue[0].Trim();
-                    var value = keyValue[1].Trim();
-                    if (!string.IsNullOrEmpty(key))
-                    {
-                        result.Add(new Dictionary<string, string>
-                    {
-                        { "name", key },
-                        { "value", value }
-                    });
-                    }
-                }
-
-                string json = JsonConvert.SerializeObject(result, Formatting.Indented);
-                return json;
-            }
-            catch (Exception ex)
-            {
-                return "[]";
-            }
-        }
-
-    }
-
     public class Balance : W3b
     {
         public readonly string _defRpc;
@@ -448,10 +283,10 @@ namespace w3tools //by @w3bgrep
 
             return (T)Convert.ChangeType(balance, typeof(T));
         }
-
-
-
-
+        
+        
+        
+        
         public T ERC1155<T>(string tokenContract, string tokenId, string rpc = null, string address = null, string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -729,57 +564,11 @@ namespace w3tools //by @w3bgrep
             return blsUsde;
         }
 
-        public List<BigInteger> ERC721TokenIds(string tokenContract, string rpc, string address, string proxy =null, bool log= false)
+        public List<BigInteger> ERC721TokenIds(string tokenContract, string rpc, string address, string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             address = ChekAdr(address);
             if (string.IsNullOrEmpty(rpc)) rpc = _defRpc;
-
-            // Проверка поддержки интерфейса ERC721Enumerable (0x780e9d63)
-            string supportsInterfaceSelector = "0x01ffc9a7";
-            string interfaceId = "780e9d63"; // ERC721Enumerable interface ID
-            string supportsInterfaceData = supportsInterfaceSelector + interfaceId.PadLeft(64, '0');
-            string supportsInterfaceJsonBody = "{\"jsonrpc\":\"2.0\",\"method\":\"eth_call\",\"params\":[{\"to\":\"" + tokenContract + "\",\"data\":\"" + supportsInterfaceData + "\"},\"latest\"],\"id\":1}";
-
-            string supportsInterfaceResponse;
-            using (HttpRequest request = new HttpRequest())
-            {
-                request.UserAgent = "Mozilla/5.0";
-                request.IgnoreProtocolErrors = true;
-                request.ConnectTimeout = 5000;
-
-                if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
-                if (!string.IsNullOrEmpty(proxy))
-                {
-                    string[] proxyArray = proxy.Split(':');
-                    string username = proxyArray[1];
-                    string password = proxyArray[2];
-                    string host = proxyArray[3];
-                    int port = int.Parse(proxyArray[4]);
-                    request.Proxy = new HttpProxyClient(host, port, username, password);
-                }
-
-                try
-                {
-                    HttpResponse httpResponse = request.Post(rpc, supportsInterfaceJsonBody, "application/json");
-                    supportsInterfaceResponse = httpResponse.ToString();
-                }
-                catch (HttpException ex)
-                {
-                    _project.SendErrorToLog("Err HTTPreq: " + ex.Message + ", Status: " + ex.Status);
-                    throw;
-                }
-            }
-
-            JObject supportsInterfaceJson = JObject.Parse(supportsInterfaceResponse);
-            string hexSupportsInterface = supportsInterfaceJson["result"] != null ? supportsInterfaceJson["result"].ToString().TrimStart('0', 'x') : "0";
-            bool supportsEnumerable = hexSupportsInterface != "0" && BigInteger.Parse("0" + hexSupportsInterface, NumberStyles.AllowHexSpecifier) != BigInteger.Zero;
-
-            if (!supportsEnumerable)
-            {
-                _project.SendErrorToLog("Контракт не поддерживает ERC721Enumerable");
-                return new List<BigInteger>(); // Возвращаем пустой список, если интерфейс не поддерживается
-            }
 
             // Шаг 1: Получаем баланс токенов для адреса
             string balanceFunctionSelector = "0x70a08231";
@@ -823,11 +612,11 @@ namespace w3tools //by @w3bgrep
 
             // Шаг 2: Получаем ID токенов через tokenOfOwnerByIndex
             List<BigInteger> tokenIds = new List<BigInteger>();
-            string tokenIdFunctionSelector = "0x4f6ccce7"; // Правильный селектор для tokenOfOwnerByIndex(address, uint256)
+            string tokenIdFunctionSelector = "0x2f745c59"; // Селектор для tokenOfOwnerByIndex(address, index)
 
             for (BigInteger i = BigInteger.Zero; i < balance; i = i + BigInteger.One)
             {
-                string paddedIndex = i.ToString("x").PadLeft(64, '0');
+                string paddedIndex = i.ToString("x").PadLeft(64, '0'); // Индекс в hex
                 string tokenIdData = tokenIdFunctionSelector + paddedAddress + paddedIndex;
                 string tokenIdJsonBody = "{\"jsonrpc\":\"2.0\",\"method\":\"eth_call\",\"params\":[{\"to\":\"" + tokenContract + "\",\"data\":\"" + tokenIdData + "\"},\"latest\"],\"id\":1}";
 
@@ -868,165 +657,9 @@ namespace w3tools //by @w3bgrep
             }
 
             // Шаг 3: Логируем и возвращаем список ID токенов
-            //Log(address, string.Join(", ", tokenIds), rpc, tokenContract, log);
+           // Log(address, string.Join(", ", tokenIds), rpc, tokenContract, log);
             return tokenIds;
         }
-
-        public List<BigInteger> ERC721TokenIds2(string tokenContract, string rpc, string address, string proxy = null, bool log = false, long startBlock = 21219959)
-        {
-            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            address = ChekAdr(address);
-            if (string.IsNullOrEmpty(rpc)) rpc = _defRpc;
-
-            // Событие Transfer(address,address,uint256)
-            string transferTopic = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
-            string paddedAddress = address.Replace("0x", "").ToLower().PadLeft(64, '0');
-
-            // Храним токены, полученные и отправленные
-            Dictionary<BigInteger, bool> tokenOwnership = new Dictionary<BigInteger, bool>(); // true = владеет, false = не владеет
-
-            // Получаем текущий блок, чтобы ограничить диапазон
-            string getBlockNumberJsonBody = "{\"jsonrpc\":\"2.0\",\"method\":\"eth_blockNumber\",\"params\":[],\"id\":1}";
-            string blockNumberResponse;
-            using (HttpRequest request = new HttpRequest())
-            {
-                request.UserAgent = "Mozilla/5.0";
-                request.IgnoreProtocolErrors = true;
-                request.ConnectTimeout = 5000;
-
-                if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
-                if (!string.IsNullOrEmpty(proxy))
-                {
-                    string[] proxyArray = proxy.Split(':');
-                    string username = proxyArray[1];
-                    string password = proxyArray[2];
-                    string host = proxyArray[3];
-                    int port = int.Parse(proxyArray[4]);
-                    request.Proxy = new HttpProxyClient(host, port, username, password);
-                }
-
-                try
-                {
-                    HttpResponse httpResponse = request.Post(rpc, getBlockNumberJsonBody, "application/json");
-                    blockNumberResponse = httpResponse.ToString();
-                }
-                catch (HttpException ex)
-                {
-                    _project.SendErrorToLog("Err HTTPreq: " + ex.Message + ", Status: " + ex.Status);
-                    throw;
-                }
-            }
-
-            JObject blockNumberJson = JObject.Parse(blockNumberResponse);
-            string hexBlockNumber = blockNumberJson["result"] != null ? blockNumberJson["result"].ToString().TrimStart('0', 'x') : "0";
-            long latestBlock = (long)BigInteger.Parse("0" + hexBlockNumber, NumberStyles.AllowHexSpecifier);
-
-            // Итеративно запрашиваем логи с шагом, чтобы уложиться в лимиты RPC
-            long blockStep = 10000; // Размер шага (может быть меньше, зависит от RPC)
-            for (long fromBlock = startBlock; fromBlock <= latestBlock; fromBlock += blockStep)
-            {
-                long toBlock = Math.Min(fromBlock + blockStep - 1, latestBlock);
-                string fromBlockHex = "0x" + fromBlock.ToString("x");
-                string toBlockHex = "0x" + toBlock.ToString("x");
-
-                // Запрашиваем события Transfer, где to = address
-                string getLogsJsonBody = "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getLogs\",\"params\":[{\"fromBlock\":\"" + fromBlockHex + "\",\"toBlock\":\"" + toBlockHex + "\",\"address\":\"" + tokenContract + "\",\"topics\":[\"" + transferTopic + "\",null,\"0x" + paddedAddress + "\"]}],\"id\":1}";
-                string logsResponse;
-                using (HttpRequest request = new HttpRequest())
-                {
-                    request.UserAgent = "Mozilla/5.0";
-                    request.IgnoreProtocolErrors = true;
-                    request.ConnectTimeout = 5000;
-
-                    if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
-                    if (!string.IsNullOrEmpty(proxy))
-                    {
-                        string[] proxyArray = proxy.Split(':');
-                        string username = proxyArray[1];
-                        string password = proxyArray[2];
-                        string host = proxyArray[3];
-                        int port = int.Parse(proxyArray[4]);
-                        request.Proxy = new HttpProxyClient(host, port, username, password);
-                    }
-
-                    try
-                    {
-                        HttpResponse httpResponse = request.Post(rpc, getLogsJsonBody, "application/json");
-                        logsResponse = httpResponse.ToString();
-                    }
-                    catch (HttpException ex)
-                    {
-                        _project.SendErrorToLog("Err HTTPreq: " + ex.Message + ", Status: " + ex.Status);
-                        throw;
-                    }
-                }
-
-                JObject logsJson = JObject.Parse(logsResponse);
-                JArray logs = logsJson["result"] != null ? (JArray)logsJson["result"] : new JArray();
-                foreach (JObject logg in logs)
-                {
-                    string tokenIdHex = logg["data"] != null ? logg["data"].ToString().TrimStart('0', 'x') : "0";
-                    BigInteger tokenId = BigInteger.Parse("0" + tokenIdHex, NumberStyles.AllowHexSpecifier);
-                    tokenOwnership[tokenId] = true; // Получен
-                }
-
-                // Запрашиваем события Transfer, где from = address
-                getLogsJsonBody = "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getLogs\",\"params\":[{\"fromBlock\":\"" + fromBlockHex + "\",\"toBlock\":\"" + toBlockHex + "\",\"address\":\"" + tokenContract + "\",\"topics\":[\"" + transferTopic + "\",\"0x" + paddedAddress + "\",null]}],\"id\":1}";
-                using (HttpRequest request = new HttpRequest())
-                {
-                    request.UserAgent = "Mozilla/5.0";
-                    request.IgnoreProtocolErrors = true;
-                    request.ConnectTimeout = 5000;
-
-                    if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
-                    if (!string.IsNullOrEmpty(proxy))
-                    {
-                        string[] proxyArray = proxy.Split(':');
-                        string username = proxyArray[1];
-                        string password = proxyArray[2];
-                        string host = proxyArray[3];
-                        int port = int.Parse(proxyArray[4]);
-                        request.Proxy = new HttpProxyClient(host, port, username, password);
-                    }
-
-                    try
-                    {
-                        HttpResponse httpResponse = request.Post(rpc, getLogsJsonBody, "application/json");
-                        logsResponse = httpResponse.ToString();
-                    }
-                    catch (HttpException ex)
-                    {
-                        _project.SendErrorToLog("Err HTTPreq: " + ex.Message + ", Status: " + ex.Status);
-                        throw;
-                    }
-                }
-
-                logsJson = JObject.Parse(logsResponse);
-                logs = logsJson["result"] != null ? (JArray)logsJson["result"] : new JArray();
-                foreach (JObject logg in logs)
-                {
-                    string tokenIdHex = logg["data"] != null ? logg["data"].ToString().TrimStart('0', 'x') : "0";
-                    BigInteger tokenId = BigInteger.Parse("0" + tokenIdHex, NumberStyles.AllowHexSpecifier);
-                    tokenOwnership[tokenId] = false; // Отправлен
-                }
-            }
-
-            // Собираем токены, которыми адрес владеет
-            List<BigInteger> tokenIds = new List<BigInteger>();
-            foreach (KeyValuePair<BigInteger, bool> entry in tokenOwnership)
-            {
-                if (entry.Value)
-                {
-                    tokenIds.Add(entry.Key);
-                }
-            }
-
-            // Логируем и возвращаем
-            //Log(address, string.Join(", ", tokenIds), rpc, tokenContract, log);
-            return tokenIds;
-        }
-
 
     }
-
 }

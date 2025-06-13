@@ -38,7 +38,7 @@ namespace ZBSolutions
         public DMail(IZennoPosterProjectModel project, string key = null, bool log = false)
         {
             _project = project;
-            _h = new NetHttp(project, log: log);
+            _h = new NetHttp(_project, log: log);
             _sql = new Sql(project, log: log);
             _logShow = log;
             _key = KeyCheck(key);

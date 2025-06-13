@@ -105,22 +105,24 @@ namespace ZBSolutions
             LogColor color = LogColor.Default;
 
             var colorMap = new Dictionary<string, LogColor>
-    {
-        { "`.", LogColor.Default },
-        { "`w", LogColor.Gray },
-        { "`y", LogColor.Yellow },
-        { "`o", LogColor.Orange },
-        { "`r", LogColor.Red },
-        { "`p", LogColor.Pink },
-        { "`v", LogColor.Violet },
-        { "`b", LogColor.Blue },
-        { "`lb", LogColor.LightBlue },
-        { "`t", LogColor.Turquoise },
-        { "`g", LogColor.Green },
-        { "!W", LogColor.Orange },
-        { "!E", LogColor.Orange },
-        { "relax", LogColor.LightBlue },
-    };
+            {
+                { "`.", LogColor.Default },
+                { "`w", LogColor.Gray },
+                { "`y", LogColor.Yellow },
+                { "`o", LogColor.Orange },
+                { "`r", LogColor.Red },
+                { "`p", LogColor.Pink },
+                { "`v", LogColor.Violet },
+                { "`b", LogColor.Blue },
+                { "`lb", LogColor.LightBlue },
+                { "`t", LogColor.Turquoise },
+                { "`g", LogColor.Green },
+                { "!W", LogColor.Orange },
+                { "!E", LogColor.Orange },
+                { "relax", LogColor.LightBlue },
+                { "success", LogColor.Blue },
+                { "error", LogColor.Orange },
+            };
 
             string combined = (header ?? "") + (toLog ?? "");
             foreach (var pair in colorMap)
@@ -137,6 +139,7 @@ namespace ZBSolutions
 
             return (type, color);
         }
+
         private void Execute(string toSend, LogType type, LogColor color, bool toZp, bool thr0w)
         {
             _project.SendToLog(toSend, type, toZp, color);

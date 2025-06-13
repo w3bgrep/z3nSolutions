@@ -70,6 +70,16 @@ namespace ZBSolutions
             return blockchain.GetAddressFromPrivateKey(key);
         }
 
+        public static string ToSepc256k1(this string seed, int path = 0)
+        {
+            var blockchain = new Blockchain();
+            var mnemonicObj = new Mnemonic(seed);
+            var hdRoot = mnemonicObj.DeriveExtKey();
+            var derivationPath = new NBitcoin.KeyPath($"m/44'/60'/0'/0/{path}");
+            var key = hdRoot.Derive(derivationPath).PrivateKey.ToHex();
+            return key;
+        }
+
         public static string[] TxToString(this string txJson)
         {
             dynamic txData = JsonConvert.DeserializeObject<System.Dynamic.ExpandoObject>(txJson);
@@ -194,7 +204,6 @@ namespace ZBSolutions
                 return "0";
             }
         }
-
 
 
     }
