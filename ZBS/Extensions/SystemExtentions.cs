@@ -69,20 +69,20 @@ namespace ZBSolutions
                             if (Directory.Exists(logsPath))
                             {
                                 Directory.Delete(logsPath, true);
-                                Process process = new Process();
-                                process.StartInfo.FileName = "cmd.exe";
-                                process.StartInfo.Arguments = $"/c mklink /d \"{logsPath}\" \"NUL\"";
-                                process.StartInfo.UseShellExecute = false;
-                                process.StartInfo.CreateNoWindow = true;
-                                process.StartInfo.RedirectStandardOutput = true;
-                                process.StartInfo.RedirectStandardError = true;
+                                using (Process process = new Process())
+                                {
+                                    process.StartInfo.FileName = "cmd.exe";
+                                    process.StartInfo.Arguments = $"/c mklink /d \"{logsPath}\" \"NUL\"";
+                                    process.StartInfo.UseShellExecute = false;
+                                    process.StartInfo.CreateNoWindow = true;
+                                    process.StartInfo.RedirectStandardOutput = true;
+                                    process.StartInfo.RedirectStandardError = true;
 
-                                logBuilder.AppendLine($"Attempting to create symlink: {process.StartInfo.Arguments}");
-
-                                process.Start();
-                                string output = process.StandardOutput.ReadToEnd();
-                                string error = process.StandardError.ReadToEnd();
-                                process.WaitForExit();
+                                    process.Start();
+                                    string output = process.StandardOutput.ReadToEnd();
+                                    string error = process.StandardError.ReadToEnd();
+                                    process.WaitForExit();
+                                }
                             }
                         }
                     }

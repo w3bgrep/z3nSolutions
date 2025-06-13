@@ -20,28 +20,33 @@ namespace ZBSolutions
 
         public static string InputBox(string message = "input data please", int width = 600, int height = 600)
         {
-            System.Windows.Forms.Form form = new System.Windows.Forms.Form();
-            form.Text = message;
-            form.Width = width;
-            form.Height = height;
-            System.Windows.Forms.TextBox smsBox = new System.Windows.Forms.TextBox();
-            smsBox.Multiline = true;
-            smsBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            smsBox.Left = 5;
-            smsBox.Top = 5;
-            smsBox.Width = form.ClientSize.Width - 10;
-            System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
-            okButton.Text = "OK";
-            okButton.Width = form.ClientSize.Width - 10;
-            okButton.Height = 25;
-            okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
-            okButton.Top = form.ClientSize.Height - okButton.Height - 5;
-            okButton.Click += new System.EventHandler((sender, e) => { form.Close(); });
-            smsBox.Height = okButton.Top - smsBox.Top - 5;
-            form.Controls.Add(smsBox);
-            form.Controls.Add(okButton);
-            form.ShowDialog();
-            return smsBox.Text;
+            //System.Windows.Forms.Form form = new System.Windows.Forms.Form();
+            using (System.Windows.Forms.Form form = new System.Windows.Forms.Form())
+            using (System.Windows.Forms.TextBox smsBox = new System.Windows.Forms.TextBox())
+            using (System.Windows.Forms.Button okButton = new System.Windows.Forms.Button())
+            {
+                form.Text = message;
+                form.Width = width;
+                form.Height = height;
+                //System.Windows.Forms.TextBox smsBox = new System.Windows.Forms.TextBox();
+                smsBox.Multiline = true;
+                smsBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+                smsBox.Left = 5;
+                smsBox.Top = 5;
+                smsBox.Width = form.ClientSize.Width - 10;
+                //System.Windows.Forms.Button okButton = new System.Windows.Forms.Button();
+                okButton.Text = "OK";
+                okButton.Width = form.ClientSize.Width - 10;
+                okButton.Height = 25;
+                okButton.Left = (form.ClientSize.Width - okButton.Width) / 2;
+                okButton.Top = form.ClientSize.Height - okButton.Height - 5;
+                okButton.Click += new System.EventHandler((sender, e) => { form.Close(); });
+                smsBox.Height = okButton.Top - smsBox.Top - 5;
+                form.Controls.Add(smsBox);
+                form.Controls.Add(okButton);
+                form.ShowDialog();
+                return smsBox.Text;
+            }
         }
 
         public Dictionary<string, string> GetLinesByKey(
