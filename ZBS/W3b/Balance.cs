@@ -235,13 +235,16 @@ namespace ZBSolutions
             return (T)Convert.ChangeType(balance, typeof(T));
 
         }
-        public T ERC721<T>(string tokenContract, string rpc = null, string address = null, string proxy = null, bool log = false)
+        // Основная функция, возвращает баланс токенов как строку
+        
+        
+        public string ERC721(string tokenContract, string rpc = null, string address = null, string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             address = ChekAdr(address);
             if (string.IsNullOrEmpty(rpc)) rpc = _defRpc;
 
-            string functionSelector = "0x70a08231";
+            string functionSelector = "0x70a08231"; // balanceOf(address)
             string paddedAddress = address.Replace("0x", "").ToLower().PadLeft(64, '0');
             string data = functionSelector + paddedAddress;
             string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_call"", ""params"": [{{ ""to"": ""{tokenContract}"", ""data"": ""{data}"" }}, ""latest""], ""id"": 1 }}";
@@ -276,17 +279,33 @@ namespace ZBSolutions
             var json = JObject.Parse(response);
             string hexBalance = json["result"]?.ToString()?.TrimStart('0', 'x') ?? "0";
             BigInteger balance = BigInteger.Parse("0" + hexBalance, NumberStyles.AllowHexSpecifier);
-            Log(address, balance.ToString(), rpc, tokenContract, log: log);
+            string balanceString = balance.ToString(); // Баланс токенов как строка
+            Log(address, balanceString, rpc, tokenContract, log: log);
+
+            return balanceString;
+        }
+        public T ERC721<T>(string tokenContract, string rpc = null, string address = null, string proxy = null, bool log = false)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            string balanceString = ERC721(tokenContract, rpc, address, proxy, log); // Вызываем основную функцию
+            BigInteger balance = BigInteger.Parse(balanceString); // Парсим строку в BigInteger
+            Log(address, balanceString, rpc, tokenContract, log: log);
 
             if (typeof(T) == typeof(string))
-                return (T)Convert.ChangeType(balance.ToString(), typeof(T));
-
-            return (T)Convert.ChangeType(balance, typeof(T));
+                return (T)(object)balanceString;
+            else if (typeof(T) == typeof(int))
+            {
+                // Проверяем, что balance помещается в int
+                if (balance > int.MaxValue || balance < int.MinValue)
+                    throw new OverflowException($"Balance {balance} exceeds the range of int.");
+                return (T)(object)(int)balance;
+            }
+            else
+                throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
         }
-        
-        
-        
-        
+
+
+
         public T ERC1155<T>(string tokenContract, string tokenId, string rpc = null, string address = null, string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -570,6 +589,52 @@ namespace ZBSolutions
             address = ChekAdr(address);
             if (string.IsNullOrEmpty(rpc)) rpc = _defRpc;
 
+            // Проверка поддержки интерфейса ERC721Enumerable (0x780e9d63)
+            string supportsInterfaceSelector = "0x01ffc9a7";
+            string interfaceId = "780e9d63"; // ERC721Enumerable interface ID
+            string supportsInterfaceData = supportsInterfaceSelector + interfaceId.PadLeft(64, '0');
+            string supportsInterfaceJsonBody = "{\"jsonrpc\":\"2.0\",\"method\":\"eth_call\",\"params\":[{\"to\":\"" + tokenContract + "\",\"data\":\"" + supportsInterfaceData + "\"},\"latest\"],\"id\":1}";
+
+            string supportsInterfaceResponse;
+            using (HttpRequest request = new HttpRequest())
+            {
+                request.UserAgent = "Mozilla/5.0";
+                request.IgnoreProtocolErrors = true;
+                request.ConnectTimeout = 5000;
+
+                if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
+                if (!string.IsNullOrEmpty(proxy))
+                {
+                    string[] proxyArray = proxy.Split(':');
+                    string username = proxyArray[1];
+                    string password = proxyArray[2];
+                    string host = proxyArray[3];
+                    int port = int.Parse(proxyArray[4]);
+                    request.Proxy = new HttpProxyClient(host, port, username, password);
+                }
+
+                try
+                {
+                    HttpResponse httpResponse = request.Post(rpc, supportsInterfaceJsonBody, "application/json");
+                    supportsInterfaceResponse = httpResponse.ToString();
+                }
+                catch (HttpException ex)
+                {
+                    _project.SendErrorToLog("Err HTTPreq: " + ex.Message + ", Status: " + ex.Status);
+                    throw;
+                }
+            }
+
+            JObject supportsInterfaceJson = JObject.Parse(supportsInterfaceResponse);
+            string hexSupportsInterface = supportsInterfaceJson["result"] != null ? supportsInterfaceJson["result"].ToString().TrimStart('0', 'x') : "0";
+            bool supportsEnumerable = hexSupportsInterface != "0" && BigInteger.Parse("0" + hexSupportsInterface, NumberStyles.AllowHexSpecifier) != BigInteger.Zero;
+
+            if (!supportsEnumerable)
+            {
+                _project.SendErrorToLog("Контракт не поддерживает ERC721Enumerable");
+                return new List<BigInteger>(); // Возвращаем пустой список, если интерфейс не поддерживается
+            }
+
             // Шаг 1: Получаем баланс токенов для адреса
             string balanceFunctionSelector = "0x70a08231";
             string paddedAddress = address.Replace("0x", "").ToLower().PadLeft(64, '0');
@@ -612,11 +677,11 @@ namespace ZBSolutions
 
             // Шаг 2: Получаем ID токенов через tokenOfOwnerByIndex
             List<BigInteger> tokenIds = new List<BigInteger>();
-            string tokenIdFunctionSelector = "0x2f745c59"; // Селектор для tokenOfOwnerByIndex(address, index)
+            string tokenIdFunctionSelector = "0x4f6ccce7"; // Правильный селектор для tokenOfOwnerByIndex(address, uint256)
 
             for (BigInteger i = BigInteger.Zero; i < balance; i = i + BigInteger.One)
             {
-                string paddedIndex = i.ToString("x").PadLeft(64, '0'); // Индекс в hex
+                string paddedIndex = i.ToString("x").PadLeft(64, '0');
                 string tokenIdData = tokenIdFunctionSelector + paddedAddress + paddedIndex;
                 string tokenIdJsonBody = "{\"jsonrpc\":\"2.0\",\"method\":\"eth_call\",\"params\":[{\"to\":\"" + tokenContract + "\",\"data\":\"" + tokenIdData + "\"},\"latest\"],\"id\":1}";
 
@@ -657,7 +722,7 @@ namespace ZBSolutions
             }
 
             // Шаг 3: Логируем и возвращаем список ID токенов
-           // Log(address, string.Join(", ", tokenIds), rpc, tokenContract, log);
+            //Log(address, string.Join(", ", tokenIds), rpc, tokenContract, log);
             return tokenIds;
         }
 

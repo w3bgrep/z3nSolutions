@@ -2,12 +2,13 @@
 
 using NBitcoin;
 using Newtonsoft.Json;
-using System.Numerics;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Numerics;
 using System.Text.RegularExpressions;
+using ZennoLab.InterfacesLibrary.ProjectModel;
 
 namespace ZBSolutions
 {
@@ -204,6 +205,28 @@ namespace ZBSolutions
             }
         }
 
+        public static string[] Range(this string accRange)
+        {
+            if (string.IsNullOrEmpty(accRange))  
+                throw new Exception("range cannot be empty");
+            if (accRange.Contains(","))
+                return accRange.Split(',');
+            else if (accRange.Contains("-"))
+            {
+                var rangeParts = accRange.Split('-').Select(int.Parse).ToArray();
+                int rangeS = rangeParts[0];
+                int rangeE = rangeParts[1];
+                accRange = string.Join(",", Enumerable.Range(rangeS, rangeE - rangeS + 1));
+                return accRange.Split(',');
+            }
+            else
+            {
+                int rangeS = 1;
+                int rangeE = int.Parse(accRange);
+                accRange = string.Join(",", Enumerable.Range(rangeS, rangeE - rangeS + 1));
+                return accRange.Split(',');
+            }
+        }
 
     }
 }

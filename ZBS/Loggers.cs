@@ -120,8 +120,7 @@ namespace ZBSolutions
                 { "!W", LogColor.Orange },
                 { "!E", LogColor.Orange },
                 { "relax", LogColor.LightBlue },              
-                { "Error", LogColor.Orange },
-                { "success", LogColor.Blue },
+                { "Err", LogColor.Orange },
             };
 
             string combined = (header ?? "") + (toLog ?? "");
@@ -139,7 +138,6 @@ namespace ZBSolutions
 
             return (type, color);
         }
-
         private void Execute(string toSend, LogType type, LogColor color, bool toZp, bool thr0w)
         {
             _project.SendToLog(toSend, type, toZp, color);

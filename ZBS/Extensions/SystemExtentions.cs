@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
+using static Global.FileSystem.FileHelper;
 
 namespace ZBSolutions
 {
@@ -16,6 +17,8 @@ namespace ZBSolutions
         protected readonly IZennoPosterProjectModel _project;
         protected bool _logShow = false;
         private readonly Logger _logger;
+        private readonly object LockObject = new object();
+        private readonly object FileLock = new object();
 
         public Sys(IZennoPosterProjectModel project, bool log = false, string classEmoji = null)
         {
@@ -116,7 +119,7 @@ namespace ZBSolutions
             }
         }
 
-
+        
 
 
     }
