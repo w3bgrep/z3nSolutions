@@ -295,9 +295,11 @@ namespace ZBSolutions
 
         public void Connect(bool log = false)
         {
+            _project.Deadline();
+
             string action = null;
         getState:
-
+            _project.Deadline(30);
             try
             {
                 action = _instance.HeGet(("div", "innertext", "Approve", "regexp", 0), "last");

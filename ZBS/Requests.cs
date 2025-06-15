@@ -235,132 +235,25 @@ namespace ZBSolutions
                 return null;
             }
         }
-        //public string GET(
-        //    string url,
-        //    string proxyString = "",
-        //    Dictionary<string, string> headers = null,
-        //    bool parse = false,
-        //    [CallerMemberName] string callerName = "",
-        //    bool throwOnFail = false)
-        //{
-        //    string debugHeaders = string.Empty;
-        //    try
-        //    {
-        //        WebProxy proxy = ParseProxy(proxyString);
-        //        var handler = new HttpClientHandler
-        //        {
-        //            Proxy = proxy,
-        //            UseProxy = proxy != null
-        //        };
-
-        //        using (var client = new HttpClient(handler))
-        //        {
-        //            client.Timeout = TimeSpan.FromSeconds(30);
-
-        //            StringBuilder headersString = new StringBuilder();
-        //            headersString.AppendLine("[debugRequestHeaders]:");
-
-        //            string defaultUserAgent = _project.Profile.UserAgent; // Same as in POST
-        //            if (headers == null || !headers.ContainsKey("User-Agent"))
-        //            {
-        //                client.DefaultRequestHeaders.Add("User-Agent", defaultUserAgent);
-        //                headersString.AppendLine($"User-Agent: {defaultUserAgent} (default)");
-        //            }
-
-        //            if (headers != null)
-        //            {
-        //                foreach (var header in headers)
-        //                {
-        //                    client.DefaultRequestHeaders.Add(header.Key, header.Value);
-        //                    headersString.AppendLine($"{header.Key}: {header.Value}");
-        //                    debugHeaders += $"{header.Key}: {header.Value}";
-        //                }
-        //            }
-
-        //            HttpResponseMessage response = client.GetAsync(url).GetAwaiter().GetResult();
-        //            response.EnsureSuccessStatusCode();
-
-        //            StringBuilder responseHeadersString = new StringBuilder();
-        //            responseHeadersString.AppendLine("[debugResponseHeaders]:");
-        //            foreach (var header in response.Headers)
-        //            {
-        //                var value = string.Join(", ", header.Value);
-        //                responseHeadersString.AppendLine($"{header.Key}: {value}");
-        //            }
-
-        //            string cookies = "";
-        //            if (response.Headers.TryGetValues("Set-Cookie", out var cookieValues))
-        //            {
-        //                cookies = cookieValues.Aggregate((a, b) => a + "; " + b);
-        //                _logger.Send($"Set-Cookie found: {cookies}");
-        //            }
-
-        //            try
-        //            {
-        //                _project.Variables["debugCookies"].Value = cookies;
-        //            }
-        //            catch { }
-
-        //            string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-        //            if (parse) ParseJson(result);
-        //            _logger.Send(result);
-        //            return result.Trim();
-        //        }
-        //    }
-        //    catch (HttpRequestException e)
-        //    {
-        //        _logger.Send($"[GET] SERVER Err: [{e.Message}] url:[{url}] (proxy: {(proxyString)}), headers: [{debugHeaders.Trim()}]");
-        //        if (throwOnFail) throw;
-
-        //        return e.Message.Replace("Response status code does not indicate success:", "").Trim('.').Trim(); 
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        _logger.Send($"!W [GET] RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString)}) headers: [{debugHeaders.Trim()}]");
-        //        if (throwOnFail) throw;
-        //        return string.Empty;
-        //    }
-        //}
-
-        //private Dictionary<string, string> BuildHeaders(Dictionary<string, string> inputHeaders = null)
-        //{
-        //    var defaultHeaders = new Dictionary<string, string>
-        //    {
-        //        { "User-Agent", _project.Profile.UserAgent }
-        //        // Add other default headers from _project.Profile here as needed
-        //    };
-
-        //    if (inputHeaders == null || inputHeaders.Count == 0)
-        //    {
-        //        return defaultHeaders;
-        //    }
-
-        //    var mergedHeaders = new Dictionary<string, string>(defaultHeaders);
-        //    foreach (var header in inputHeaders)
-        //    {
-        //        mergedHeaders[header.Key] = header.Value;
-        //    }
-
-        //    return mergedHeaders;
-        //}
+        
 
         private Dictionary<string, string> BuildHeaders(Dictionary<string, string> inputHeaders = null)
         {
             var defaultHeaders = new Dictionary<string, string>
             {
                 { "User-Agent", _project.Profile.UserAgent }, // Already present
-                { "Accept", "application/json" },
-                { "Accept-Encoding", "" },
-                { "Accept-Language", _project.Profile.AcceptLanguage },
-                { "Priority", "u=1, i" },
-                { "Content-Type", "application/json; charset=UTF-8" }, // For GET; POST overrides via StringContent
-                { "Sec-Ch-Ua", "\"Chromium\";v=\"136\", \"Google Chrome\";v=\"136\", \"Not.A/Brand\";v=\"99\"" },
-                { "Sec-Ch-Ua-Mobile", "?0" },
-                { "Sec-Ch-Ua-Platform", "\"Windows\"" },
-                { "Sec-Fetch-Dest", "empty" },
-                { "Sec-Fetch-Mode", "cors" },
-                { "Sec-Fetch-Site", "cross-site" },
-                { "Sec-Fetch-Storage-Access", "active" }
+                //{ "Accept", "application/json" },
+                //{ "Accept-Encoding", "" },
+                //{ "Accept-Language", _project.Profile.AcceptLanguage },
+                //{ "Priority", "u=1, i" },
+                //{ "Content-Type", "application/json; charset=UTF-8" }, // For GET; POST overrides via StringContent
+                //{ "Sec-Ch-Ua", "\"Chromium\";v=\"136\", \"Google Chrome\";v=\"136\", \"Not.A/Brand\";v=\"99\"" },
+                //{ "Sec-Ch-Ua-Mobile", "?0" },
+                //{ "Sec-Ch-Ua-Platform", "\"Windows\"" },
+                //{ "Sec-Fetch-Dest", "empty" },
+                //{ "Sec-Fetch-Mode", "cors" },
+                //{ "Sec-Fetch-Site", "cross-site" },
+                //{ "Sec-Fetch-Storage-Access", "active" }
             };
 
             if (inputHeaders == null || inputHeaders.Count == 0)
@@ -450,99 +343,7 @@ namespace ZBSolutions
 
 
 
-        //public string POST(
-        //    string url,
-        //    string body,
-        //    string proxyString = "",
-        //    Dictionary<string, string> headers = null,
-        //    bool parse = false,
-        //    [CallerMemberName] string callerName = "",
-        //    bool throwOnFail = false)        {
-        //    string debugHeaders = string.Empty;
-        //    try
-        //    {
-        //        WebProxy proxy = ParseProxy(proxyString);
-        //        var handler = new HttpClientHandler
-        //        {
-        //            Proxy = proxy,
-        //            UseProxy = proxy != null
-        //        };
-
-        //        using (var client = new HttpClient(handler))
-        //        {
-        //            client.Timeout = TimeSpan.FromSeconds(30);
-        //            var content = new System.Net.Http.StringContent(body, Encoding.UTF8, "application/json");
-
-        //            StringBuilder headersString = new StringBuilder();
-        //            headersString.AppendLine("[debugRequestHeaders]:");
-
-        //            string defaultUserAgent = _project.Profile.UserAgent;//"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-        //            if (headers == null || !headers.ContainsKey("User-Agent"))
-        //            {
-        //                client.DefaultRequestHeaders.Add("User-Agent", defaultUserAgent);
-        //                headersString.AppendLine($"User-Agent: {defaultUserAgent} (default)");
-        //            }
-
-        //            if (headers != null)
-        //            {
-        //                foreach (var header in headers)
-        //                {
-        //                    client.DefaultRequestHeaders.Add(header.Key, header.Value);
-        //                    headersString.AppendLine($"{header.Key}: {header.Value}");
-        //                    debugHeaders += $"{header.Key}: {header.Value}";
-        //                }
-        //            }
-
-        //            headersString.AppendLine($"Content-Type: application/json; charset=UTF-8");
-
-        //            _logger.Send(body);
-
-        //            HttpResponseMessage response = client.PostAsync(url, content).GetAwaiter().GetResult();
-        //            response.EnsureSuccessStatusCode();
-
-        //            StringBuilder responseHeadersString = new StringBuilder();
-        //            responseHeadersString.AppendLine("[debugResponseHeaders]:");
-        //            foreach (var header in response.Headers)
-        //            {
-        //                var value = string.Join(", ", header.Value);
-        //                responseHeadersString.AppendLine($"{header.Key}: {value}");
-        //            }
-
-        //            string cookies = "";
-        //            if (response.Headers.TryGetValues("Set-Cookie", out var cookieValues))
-        //            {
-        //                cookies = cookieValues.Aggregate((a, b) => a + "; " + b);
-        //                _logger.Send("Set-Cookie found: " + cookies);
-        //            }
-
-        //            try
-        //            {
-        //                _project.Variables["debugCookies"].Value = cookies;
-        //            }
-        //            catch { }
-
-        //            string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-
-        //            _logger.Send(result);
-        //            if (parse) ParseJson(result);
-        //            return result.Trim();
-        //        }
-        //    }
-        //    catch (HttpRequestException e)
-        //    {
-        //        _logger.Send($"[POST] SERVER Err: [{e.Message}] url:[{url}] (proxy: {(proxyString)}), Headers\n{debugHeaders.Trim()}");
-        //        if (throwOnFail) throw;
-        //        return e.Message.Replace("Response status code does not indicate success:", "").Trim('.').Trim();
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        _logger.Send($"!W [POST] RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString)}) Headers\n{debugHeaders.Trim()}");
-        //        if (throwOnFail) throw;
-        //        return string.Empty;
-        //    }
-
-
-        //}
+        
 
         public string POST(
         string url,

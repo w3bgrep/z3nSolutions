@@ -423,7 +423,7 @@ namespace ZBSolutions
                 url: url,
                 proxyString: "+",
                 headers: headers,
-                parse: true
+                parse: false
             );
 
 
@@ -454,7 +454,7 @@ namespace ZBSolutions
                         claimable = jArr[i]["claimable"].ToString();
                         try { link = jArr[i]["meta"]["mint"]["link"]["url"].ToString(); } catch { }
                         try { link = jArr[i]["meta"]["call"]["link"]["url"].ToString(); } catch { }
-                        var toLog = $"Unclaimed [{claimable}]Exp on Zerion  [{kind}]  [{id}] found `b";
+                        var toLog = $"Unclaimed [{claimable}]Exp on Zerion  [{kind}]  [{id}]";
                         if (claimable != "0")
                         {
                             res.Add(id);
