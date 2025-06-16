@@ -1050,6 +1050,8 @@ namespace ZBSolutions
 
         public void ImportDB(schema? schemaValue = null)
         {
+            if (_project.Var("cfgBuildDB") != "True") return;
+            
             try
             {
                 new Sql(_project).DbQ("CREATE SCHEMA IF NOT EXISTS private;");

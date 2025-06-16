@@ -78,7 +78,7 @@ namespace ZBSolutions
             }
             catch (Exception e)
             {
-                _logger.Send(e.Message);
+                _logger.Send(e.Message + $"[{proxyString}]");
                 return null;
             }
         }
