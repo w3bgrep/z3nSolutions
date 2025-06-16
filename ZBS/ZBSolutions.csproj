@@ -92,7 +92,7 @@
     <Compile Include="W3bProtocols\GazZip.cs" />
     <Compile Include="W3bProtocols\Relay.cs" />
     <Compile Include="Extensions\Rnd.cs" />
-    <Compile Include="Sql\Dbuilder.cs" />
+    <Compile Include="Sql\DBuilder.cs" />
     <Compile Include="F0rms.cs" />
     <Compile Include="W3bProtocols\DMail.cs" />
     <Compile Include="Extensions\DictionaryExtentions.cs" />

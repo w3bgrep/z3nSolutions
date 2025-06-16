@@ -71,7 +71,7 @@ namespace ZBSolutions
                 case schema.public_deposits:
                     return new string[] { };
                 case schema.private_google:
-                    return new string[] { "status","last", "cookies", "login", "password", "otpsecret", "otpbackup", "recoveryemail", "recovery_phone" };
+                    return new string[] { "status", "last", "cookies", "login", "password", "otpsecret", "otpbackup", "recoveryemail", "recovery_phone" };
                 case schema.private_twitter:
                     return new string[] { "status", "last", "cookies", "token", "login", "password", "otpsecret", "otpbackup", "email", "emailpass" };
                 case schema.private_discord:
@@ -98,7 +98,7 @@ namespace ZBSolutions
                     return new string[] { "rpc", "explorer", "explorer_api" };
 
                 case schema.public_mail:
-                    return new string[] { "google", "icloud","firstmail" };
+                    return new string[] { "google", "icloud", "firstmail" };
                 case schema.public_google:
                     return new string[] { "status", "last" };
                 case schema.public_twitter:
@@ -130,10 +130,12 @@ namespace ZBSolutions
                 case schema.private_twitter:
                 case schema.private_google:
                 case schema.private_discord:
+                case schema.private_github:
 
                 case schema.public_google:
                 case schema.public_twitter:
                 case schema.public_discord:
+                case schema.public_github:
 
                 case schema.private_blockchain:
                 case schema.public_blockchain:
@@ -169,18 +171,14 @@ namespace ZBSolutions
             return tableStructure;
         }
 
+       
         private string ImportData(string tableName, string[] availableFields, Dictionary<string, string> columnMapping, string formTitle = "title", string message = "Select format (one field per box):", int startFrom = 1)
         {
             TblName(tableName);
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
             int lineCount = 0;
 
-            //int rangeEnd = _rangeEnd;
-            //var acc0 = _project.Variables["acc0"];
-            //acc0.Value = startFrom.ToString();
-
-
-            var formFont = new System.Drawing.Font("Iosevka", 10); //System.Drawing.FontStyle.Bold
+            var formFont = new System.Drawing.Font("Iosevka", 10);
             System.Windows.Forms.Form form = new System.Windows.Forms.Form();
             form.Text = formTitle;
             form.Width = 800;
@@ -192,6 +190,7 @@ namespace ZBSolutions
             List<string> selectedFormat = new List<string>();
             System.Windows.Forms.TextBox formatDisplay = new System.Windows.Forms.TextBox();
             System.Windows.Forms.TextBox dataInput = new System.Windows.Forms.TextBox();
+            System.Windows.Forms.TextBox dividerInput = new System.Windows.Forms.TextBox();
 
             System.Windows.Forms.Label formatLabel = new System.Windows.Forms.Label();
             formatLabel.Font = new System.Drawing.Font("Iosevka", 10, System.Drawing.FontStyle.Bold);
@@ -224,13 +223,36 @@ namespace ZBSolutions
                         if (!string.IsNullOrEmpty(combo.SelectedItem?.ToString()))
                             selectedFormat.Add(combo.SelectedItem.ToString());
                     }
-                    formatDisplay.Text = string.Join(":", selectedFormat);
+                    string divider = dividerInput.Text == "\\t" ? "\t" : dividerInput.Text;
+                    formatDisplay.Text = string.Join(divider, selectedFormat);
                 };
                 form.Controls.Add(formatComboBoxes[i]);
             }
 
+            System.Windows.Forms.Label dividerLabel = new System.Windows.Forms.Label();
+            dividerLabel.Text = "Divider:";
+            dividerLabel.Font = formFont;
+            dividerLabel.AutoSize = true;
+            dividerLabel.Left = 10;
+            dividerLabel.Top = 60;
+            form.Controls.Add(dividerLabel);
+
+            dividerInput.Left = 80;
+            dividerInput.Top = 60;
+            dividerInput.Width = 50;
+            dividerInput.Text = ":";
+            dividerInput.Font = formFont;
+            dividerInput.BackColor = System.Drawing.Color.Black;
+            dividerInput.ForeColor = System.Drawing.Color.White;
+            dividerInput.TextChanged += (s, e) =>
+            {
+                string divider1 = dividerInput.Text == "\\t" ? "\t" : dividerInput.Text;
+                formatDisplay.Text = string.Join(divider1, selectedFormat);
+            };
+            form.Controls.Add(dividerInput);
+
             formatDisplay.Left = 10;
-            formatDisplay.Top = 60;
+            formatDisplay.Top = 90;
             formatDisplay.Font = new System.Drawing.Font("Iosevka", 11, System.Drawing.FontStyle.Bold);
             formatDisplay.BackColor = System.Drawing.Color.Black;
             formatDisplay.ForeColor = System.Drawing.Color.White;
@@ -244,11 +266,11 @@ namespace ZBSolutions
             dataLabel.Font = formFont;
             dataLabel.AutoSize = true;
             dataLabel.Left = 10;
-            dataLabel.Top = 90;
+            dataLabel.Top = 120;
             form.Controls.Add(dataLabel);
 
             dataInput.Left = 10;
-            dataInput.Top = 110;
+            dataInput.Top = 140;
             dataInput.Width = form.ClientSize.Width - 20;
             dataInput.Multiline = true;
             dataInput.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
@@ -287,11 +309,13 @@ namespace ZBSolutions
                     selectedFormat.Add(combo.SelectedItem.ToString());
             }
 
-            if (string.IsNullOrEmpty(dataInput.Text) || selectedFormat.Count == 0)
+            if (string.IsNullOrEmpty(dataInput.Text) || selectedFormat.Count == 0 || string.IsNullOrEmpty(dividerInput.Text))
             {
-                _project.SendWarningToLog("Data or format cannot be empty");
+                _project.SendWarningToLog("Data, format, or divider cannot be empty");
                 return "0";
             }
+
+            string divider0 = dividerInput.Text == "\\t" ? "\t" : dividerInput.Text;
 
             string[] lines = dataInput.Text.Trim().Split('\n');
             _project.SendInfoToLog($"Parsing [{lines.Length}] {tableName} data lines", true);
@@ -306,7 +330,7 @@ namespace ZBSolutions
                 }
                 else
                 {
-                    string[] data_parts = line.Split(':');
+                    string[] data_parts = line.Split(new[] { divider0 }, StringSplitOptions.None);
                     Dictionary<string, string> parsed_data = new Dictionary<string, string>();
 
                     for (int i = 0; i < selectedFormat.Count && i < data_parts.Length; i++)
@@ -325,10 +349,7 @@ namespace ZBSolutions
 
                     try
                     {
-
                         Upd(string.Join(", ", queryParts), _tableName, last: false, acc: acc0unt);
-                        //string dbQuery = $@"UPDATE {_tableName} SET {string.Join(", ", queryParts)} WHERE acc0 = {acc0};";
-                        //DbQ(dbQuery, true);
                         lineCount++;
                     }
                     catch (Exception ex)
@@ -341,7 +362,6 @@ namespace ZBSolutions
             _project.SendInfoToLog($"[{lineCount}] records added to [{_tableName}]", true);
             return lineCount.ToString();
         }
-
         public string ImportKeys(string keyType, int startFrom = 1)
         {
 
@@ -774,16 +794,34 @@ namespace ZBSolutions
                     ImportData(tableSchem.ToString(), googleFields, googleMapping, "Import Google Data");
                     return;
 
+                case schema.private_github:
+                    string[] githubFields = new string[] { "", "LOGIN", "PASSWORD", "TOKEN", "EMAIL", "EMAIL_PASSWORD", "2FA_SECRET", "2FA_BACKUP" };
+                    var githubMapping = new Dictionary<string, string>
+                    {
+                        { "LOGIN", "login" },
+                        { "PASSWORD", "password" },
+
+                        { "EMAIL", "email" },
+                        { "EMAIL_PASSWORD", "emailpass" },
+
+                        { "TOKEN", "token" },
+                        { "2FA_SECRET", "otpsecret" },
+                        { "2FA_BACKUP", "otpbackup" }
+                    };
+                    ImportData(tableSchem.ToString(), githubFields, githubMapping, "Import GitHub Data");
+                    return;
+
+
                 case schema.public_mail:
                     var icloud = _f0rm.GetLinesByKey("icloud", "input data, don't change key!");
-                    Upd(icloud, tableSchem.ToString(),last:false);
+                    Upd(icloud, tableSchem.ToString(), last: false);
                     return;
 
                 case schema.public_profile:
                     var nicknames = _f0rm.GetLinesByKey("nickname", "input data, don't change key!");
                     Upd(nicknames, tableSchem.ToString());
                     var bio = _f0rm.GetLinesByKey("bio", "input data, don't change key!");
-                    Upd(bio, tableSchem.ToString(),last: false);
+                    Upd(bio, tableSchem.ToString(), last: false);
                     return;
 
                 case schema.private_profile:
@@ -1010,94 +1048,101 @@ namespace ZBSolutions
             }
         }
 
-        public void Execute()
+        public void ImportDB(schema? schemaValue = null)
         {
-
             try
             {
                 new Sql(_project).DbQ("CREATE SCHEMA IF NOT EXISTS private;");
                 new Sql(_project).DbQ("CREATE SCHEMA IF NOT EXISTS public;");
                 new Sql(_project).DbQ("CREATE SCHEMA IF NOT EXISTS projects;");
-
             }
             catch (Exception ex) { }
-
 
             var phK = new List<string> {
                 "private_settings",
                 "private_profile",
                 "private_blockchain",
                 "private_api",
-
                 "private_google",
                 "private_twitter",
                 "private_discord",
-
+                "private_github",
                 "public_blockchain",
                 "public_native",
                 "public_deposits",
                 "public_profile",
                 "public_rpc",
                 "public_mail",
-
                 "public_google",
                 "public_twitter",
                 "public_discord",
-                };
+            };
 
-
-             var phV = new List<string> {
+            var phV = new List<string> {
                 "Folders, loggers & etc. general settings",
                 "Proxy, cookies, webgl",
                 "Blockchain keys, seeds, etc. ",
                 "Api keys ",
-
                 "Google Credentials",
                 "Twitter Credentials",
                 "Discord Credentials",
-
+                "GitHub Credentials",
                 "Blockchain addresses",
                 "Balancees",
                 "CEX deposit addresses",
                 "Username, bio, pfp, etc.",
                 "Custom RPC & Explorers list",
                 "All emails",
-
                 "Google Stats",
                 "Twitter Stats",
                 "Discord Stats",
-                };
+            };
 
-
-            var import = _f0rm.GetKeyBoolPairs(phK.Count(), phK, phV, "check boxes to import", prepareUpd: false);
-
-            foreach (KeyValuePair<string, bool> pair in import)
+            // If a specific schema is provided, process only that schema
+            if (schemaValue.HasValue)
             {
-                string tablename = pair.Key;
-                bool execute = pair.Value;
+                string tablename = schemaValue.ToString();
+                if (!Enum.IsDefined(typeof(schema), schemaValue.Value))
+                    throw new Exception($"Error: '{tablename}' is not a valid schema value. Valid values: {string.Join(", ", Enum.GetNames(typeof(schema)))}");
 
-                var table = Enum.TryParse<schema>(pair.Key, true, out var parsed) ? parsed : default;
-                if (!Enum.IsDefined(typeof(schema), table)) throw new Exception($"Error: '{tablename}' is not a valid schema value. Valid values: {string.Join(", ", Enum.GetNames(typeof(schema)))}");
-
-                if (execute)
+                var dic = LoadSchema(schemaValue.Value);
+                TblAdd(tablename, dic);
+                try
                 {
-                    var dic = LoadSchema(table);
-                    TblAdd(tablename, dic);
-                    try
-                    {
-                        AddRange(tablename);
-                    }
-                    catch { }
-                    MapAndImport(table);
+                    AddRange(tablename);
+                }
+                catch { }
+                MapAndImport(schemaValue.Value);
+            }
+            else
+            {
+                // Original behavior: process all selected schemas from the form
+                var import = _f0rm.GetKeyBoolPairs(phK.Count(), phK, phV, "check boxes to import", prepareUpd: false);
 
+                foreach (KeyValuePair<string, bool> pair in import)
+                {
+                    string tablename = pair.Key;
+                    bool execute = pair.Value;
+
+                    var table = Enum.TryParse<schema>(pair.Key, true, out var parsed) ? parsed : default;
+                    if (!Enum.IsDefined(typeof(schema), table))
+                        throw new Exception($"Error: '{tablename}' is not a valid schema value. Valid values: {string.Join(", ", Enum.GetNames(typeof(schema)))}");
+
+                    if (execute)
+                    {
+                        var dic = LoadSchema(table);
+                        TblAdd(tablename, dic);
+                        try
+                        {
+                            AddRange(tablename);
+                        }
+                        catch { }
+                        MapAndImport(table);
+                    }
                 }
             }
-
-
-
-
-
         }
+
 
     }
 }
