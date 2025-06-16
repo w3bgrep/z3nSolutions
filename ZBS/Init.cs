@@ -53,7 +53,7 @@ namespace ZBSolutions
             _project.Variables["varSessionId"].Value = sessionId;
             try { _project.Variables["nameSpace"].Value = dllTitle; } catch { }
 
-            string[] vars = { "cfgPin", "DBsqltPath" };
+            string[] vars = { "cfgAccRange", };
             CheckVariables(vars);
 
             _project.Variables["projectTable"].Value = "projects_" + projectName;

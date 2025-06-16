@@ -94,6 +94,24 @@ namespace ZBSolutions
         }
 
 
+        public string CredsFromDb()
+        {
+
+
+            var resp = new Sql(_project).Get("status, token, login, password, otpsecret", "private_discord");
+
+            string[] discordData = resp.Split('|');
+            _project.Variables["discordSTATUS"].Value = discordData[0].Trim();
+            _project.Variables["discordTOKEN"].Value = discordData[1].Trim();
+            _project.Variables["discordLOGIN"].Value = discordData[2].Trim();
+            _project.Variables["discordPASSWORD"].Value = discordData[3].Trim();
+            _project.Variables["discord2FACODE"].Value = discordData[4].Trim();
+
+            return _project.Variables["discordSTATUS"].Value;
+        }
+
+
+
         private void DSsetToken()
         {
             var jsCode = "function login(token) {\r\n    setInterval(() => {\r\n        document.body.appendChild(document.createElement `iframe`).contentWindow.localStorage.token = `\"${token}\"`\r\n    }, 50);\r\n    setTimeout(() => {\r\n        location.reload();\r\n    }, 1000);\r\n}\r\n    login(\'discordTOKEN\');\r\n".Replace("discordTOKEN", _project.Variables["discordTOKEN"].Value);
@@ -137,7 +155,7 @@ namespace ZBSolutions
         public string DSload(bool log = false)
         {
 
-            _sql.Discord();
+            CredsFromDb();
 
             string state = null;
             var emu = _instance.UseFullMouseEmulation;

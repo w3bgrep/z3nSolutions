@@ -302,7 +302,8 @@ namespace ZBSolutions
             if (!_pstgr) return;
             foreach (string name in schemas) DbQ($"CREATE SCHEMA IF NOT EXISTS {name};");
         }
- 
+
+
         
         public bool TblExist(string tblName)
         {
@@ -491,7 +492,6 @@ namespace ZBSolutions
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
             var resp = Get("proxy", _tableName);
             _project.Variables["proxy"].Value = resp;
-            try { _project.Variables["proxyLeaf"].Value = resp.Replace("//", "").Replace("@", ":"); } catch { }
             return resp;
         }
         public string Bio()
@@ -539,42 +539,7 @@ namespace ZBSolutions
             if (emailMode == "Icloud") resp = emailData[1].Trim();
             return resp;
         }
-        public string Discord()
-        {
 
-                TblName("private_discord");
-                if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-                var resp = Get("status, token, login, password, otpsecret", _tableName);
-
-            string[] discordData = resp.Split('|');
-            _project.Variables["discordSTATUS"].Value = discordData[0].Trim();
-            _project.Variables["discordTOKEN"].Value = discordData[1].Trim();
-            _project.Variables["discordLOGIN"].Value = discordData[2].Trim();
-            _project.Variables["discordPASSWORD"].Value = discordData[3].Trim();
-            _project.Variables["discord2FACODE"].Value = discordData[4].Trim();
-
-            return _project.Variables["discordSTATUS"].Value;
-        }
-        public string Google(string tableName = "google", string schemaName = "accounts")
-        {
-            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
-
-            var resp = DbQ($@"SELECT status, login, password, code2FA, recoveryEmail, recovery2FA FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value};");
-
-            string[] googleData = resp.Split('|');
-            _project.Variables["googleSTATUS"].Value = googleData[0].Trim();
-            _project.Variables["googleLOGIN"].Value = googleData[1].Trim();
-            _project.Variables["googlePASSWORD"].Value = googleData[2].Trim();
-            _project.Variables["google2FACODE"].Value = googleData[3].Trim();
-            _project.Variables["googleSECURITY_MAIL"].Value = googleData[4].Trim();
-            _project.Variables["googleBACKUP_CODES"].Value = googleData[5].Trim();
-            return _project.Variables["googleSTATUS"].Value;
-        }
-        public string BinanceApiKeys(string tableName = "settings", string schemaName = "accounts")
-        {
-            tableName = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
-            return DbQ($"SELECT value FROM {tableName} WHERE var = 'settingsApiBinance';");
-        }
         public string Ref(string refCode = null, bool log = false)
         {
             if (string.IsNullOrEmpty(refCode)) refCode = _project.Variables["cfgRefCode"].Value;
@@ -738,16 +703,15 @@ namespace ZBSolutions
                 case "seed":
                     chainType = "bip39";
                     break;
-                //case "pkFromSeed":
-                  //  chainType = "bip39";
-                    //break;
                 default:
                     throw new Exception("unexpected input. Use (evm|sol|seed|pkFromSeed)");
             }
             
             var resp = Get(chainType, _tableName);
-            var decoded = SAFU.Decode(_project, resp);
-            return decoded;
+            if (!string.IsNullOrEmpty(_project.Var("cfgPin")))
+                return SAFU.Decode(_project, resp);
+            else return resp;
+
 
         }
 

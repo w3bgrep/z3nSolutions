@@ -78,6 +78,7 @@
   <ItemGroup>
     <Compile Include="HanaGarden.cs" />
     <Compile Include="Init.cs" />
+    <Compile Include="Requests\NetHttp.cs" />
     <Compile Include="W3b\Balance.cs" />
     <Compile Include="Browser\BrowserScan.cs" />
     <Compile Include="CexApi\Refuel.cs" />
@@ -129,7 +130,7 @@
     <Compile Include="Sql\SQLite.cs" />
     <Compile Include="Extensions\HtmlExtensions.cs" />
     <Compile Include="Extensions\StringExtentions.cs" />
-    <Compile Include="Requests.cs" />
+    <Compile Include="Requests\Requests.cs" />
     <Compile Include="Extensions\Time.cs" />
     <Compile Include="Extensions\ProjectExtensions.cs" />
     <Compile Include="Wallets\Wlt.cs" />
