@@ -18,7 +18,7 @@ using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using System.Security.Policy;
 using ZennoLab.InterfacesLibrary;
-using ZBSolutions;
+using z3n;
 using NBitcoin;
 
 using System.IO;
