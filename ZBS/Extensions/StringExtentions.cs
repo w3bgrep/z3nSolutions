@@ -228,5 +228,24 @@ namespace ZBSolutions
             }
         }
 
+        public static string KeyType(this string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return string.Empty;
+
+            if (Regex.IsMatch(input, @"^[0-9a-fA-F]{64}$"))
+                return "keyEvm";
+
+            if (Regex.IsMatch(input, @"^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{87,88}$"))
+                return "keySol";
+
+            var words = input.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length == 12 || words.Length == 24)
+                return "seed";
+            
+            return string.Empty;
+        }
+
+
     }
 }

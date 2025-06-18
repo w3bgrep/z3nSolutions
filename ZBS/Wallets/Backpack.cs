@@ -87,7 +87,7 @@ namespace ZBSolutions
             else
                 Unlock(log: log);
             _logger.Send($"checking");
-            var adr = CurrentAddress(log: log);
+            var adr = ActiveAddress(log: log);
             _logger.Send($"using [{adr}]");
             _instance.CloseExtraTabs();
             _instance.UseFullMouseEmulation = em;
@@ -96,10 +96,10 @@ namespace ZBSolutions
 
         public bool Import(bool log = false)
         {
-            _logger.Send("Importing Backpack wallet with private key");
             var key = _key;
             var password = _pass;
             var keyType = KeyType(_key);
+            _logger.Send($"Importing Backpack wallet with {keyType}");
 
             var type = "Solana";
             var source = "key";
@@ -224,7 +224,7 @@ namespace ZBSolutions
 
         }
 
-        public string CurrentAddress(bool log = false)
+        public string ActiveAddress(bool log = false)
         {
             _logger.Send("Checking Backpack wallet address");
             if (_instance.ActiveTab.URL != _popout)

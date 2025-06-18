@@ -1,12 +1,13 @@
 ﻿using NBitcoin;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Numerics;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using ZennoLab.CommandCenter;
@@ -53,6 +54,47 @@ namespace ZBSolutions
                 Log("!seed is empty");
                 //throw new Exception("emptykey");
             return seed;
+        }
+
+        private string KeyLoad(string key)
+        {
+            if (string.IsNullOrEmpty(key)) key = "key";
+
+            switch (key)
+            {
+                case "key":
+                    key = new Sql(_project).Key("evm");
+                    break;
+                case "seed":
+                    key = new Sql(_project).Key("seed");
+                    break;
+                default:
+                    return key;
+            }
+            if (string.IsNullOrEmpty(key)) throw new Exception ("keyIsEmpy");
+            return key;
+        }
+
+
+        public string Launch(string fileName = null, bool log = false, string source = null)
+        {
+            if (string.IsNullOrEmpty(fileName)) fileName = _fileName;
+            string active = null;
+            var em = _instance.UseFullMouseEmulation;
+            _instance.UseFullMouseEmulation = false;
+
+            if (Install(_extId, fileName)) 
+                Import(source, log: log);
+            else
+            {
+                Unlock(log: false);
+                active = ActiveAddress(log: log);
+            }
+            try { TestnetMode(false); }
+            catch { }
+            _instance.CloseExtraTabs();
+            _instance.UseFullMouseEmulation = em;
+            return active;
         }
 
 
@@ -159,23 +201,6 @@ namespace ZBSolutions
                 throw;
             }
         }
-        public void Launch(string fileName = null, bool log = false)
-        {
-            if (string.IsNullOrEmpty(fileName)) fileName = _fileName;
-
-            var em = _instance.UseFullMouseEmulation;
-            _instance.UseFullMouseEmulation = false;
-
-            if (Install(_extId, fileName)) Import(log: log);
-            else
-            {
-                Unlock(log: false);
-                Check(log: true);
-            }
-            try { TestnetMode(false); } catch { }
-            _instance.CloseExtraTabs();
-            _instance.UseFullMouseEmulation = em;
-        }
         public void Connect(bool log = false)
         {
 
@@ -193,6 +218,7 @@ namespace ZBSolutions
             }
 
             _project.L0g(action);
+            _project.L0g(_instance.ActiveTab.URL);
 
             switch (action)
             {
@@ -224,11 +250,14 @@ namespace ZBSolutions
 
 
         }
-        public bool Import(string source = "pkey", string refCode = null, bool log = false)
+        public bool Import(string source = null, string refCode = null, bool log = false)
         {
+            string key = KeyLoad(source);
+            string keyType = key.KeyType();
+
+
             if (string.IsNullOrWhiteSpace(refCode))
             {
-
                 refCode = _sql.DbQ(@"SELECT referralCode
                 FROM projects.zerion
                 WHERE referralCode != '_' 
@@ -236,26 +265,29 @@ namespace ZBSolutions
                 ORDER BY RANDOM()
                 LIMIT 1;");
             }
+            if (string.IsNullOrWhiteSpace(refCode)) refCode = "JZA87YJDS";
 
-            var inputRef = true;
+                var inputRef = true;
             _instance.HeClick(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\?windowType=tab&appMode=onboarding#/onboarding/import", "regexp", 0));
-            if (source == "pkey")
+          
+            if (keyType == "keyEvm")
             {
                 _instance.HeClick(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\?windowType=tab&appMode=onboarding#/onboarding/import/private-key", "regexp", 0));
-                string key = _key;
+                //string key = _key;
                 _instance.ActiveTab.FindElementByName("key").SetValue(key, "Full", false);
             }
             else if (source == "seed")
             {
                 _instance.HeClick(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\?windowType=tab&appMode=onboarding#/onboarding/import/mnemonic", "regexp", 0));
-                string seedPhrase = _seed;
+                //string seedPhrase = _seed;
                 int index = 0;
-                foreach (string word in seedPhrase.Split(' '))
+                foreach (string word in key.Split(' '))
                 {
                     _instance.ActiveTab.FindElementById($"word-{index}").SetValue(word, "Full", false);
                     index++;
                 }
             }
+
             _instance.HeClick(("button", "innertext", "Import\\ wallet", "regexp", 0));
             _instance.HeSet(("input:password", "fulltagname", "input:password", "text", 0), _pass);
             _instance.HeClick(("button", "class", "_primary", "regexp", 0));
@@ -286,7 +318,7 @@ namespace ZBSolutions
             }
             Log(active, log: log);
         }
-        public string Check(bool log = false)
+        public string ActiveAddress(bool log = false)
         {
             if (_instance.ActiveTab.URL != "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/overview")
                 _instance.ActiveTab.Navigate("chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/overview", "");
@@ -298,7 +330,6 @@ namespace ZBSolutions
             Log($"{active} {balance} {pnl}", log: log);
             return active;
         }
-
         public void SwitchSource(string addressToUse = "key")
         {
 
@@ -405,7 +436,7 @@ namespace ZBSolutions
         public List<string> Claimable(string address) 
         {
             var res = new List<string>();
-            var _h = new NetHttp(_project, true);
+            var _h = new NetHttp(_project);
             address = address.ToLower();
 
             string url = $@"https://dna.zerion.io/api/v1/memberships/{address}/quests";

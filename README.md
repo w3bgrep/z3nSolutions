@@ -1,5 +1,4 @@
 # Zennoposter Booster Solutions aka ZBS
-our token ca is only `6wnWNpkNLfnNGRLMrCvjmemREyRDt3FfKpMMg8SSshot`
 
 ## **`ZBS — это web3 (и web2) мултитул для ZennoPoster`** 
 **`aka Web3 Zen L3atherman ;)`**

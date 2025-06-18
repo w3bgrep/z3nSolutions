@@ -115,9 +115,6 @@ namespace ZBSolutions
             return mergedHeaders;
         }
 
-
-
-
         public string GET(
             string url,
             string proxyString = "",
@@ -478,8 +475,6 @@ namespace ZBSolutions
 
             string ipLocal = GET("http://api.ipify.org/", null);
             string ipProxified = GET("http://api.ipify.org/", proxyString);
-
-            //_logger.Send($"ipLocal: {ipLocal}, ipProxified: {ipProxified}");
 
             if (ipProxified != ipLocal)
             {

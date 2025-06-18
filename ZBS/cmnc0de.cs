@@ -2,88 +2,69 @@
 using System.Collections.Generic;
 
 using System.Linq;
-
 using System.Net.Http;
 using System.Net;
-
 using System.Text;
 using System.Text.RegularExpressions;
-
 using System.Threading;
 using Newtonsoft.Json;
 using ZennoLab.InterfacesLibrary.Enums.Browser;
-
 using System.Globalization;
 using System.Runtime.CompilerServices;
-
 using Leaf.xNet;
-
 using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.Enums.Http;
 using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using System.Security.Policy;
-
-#region using
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-
-using System.Linq;
-using ZennoLab.CommandCenter;
-using ZennoLab.InterfacesLibrary.ProjectModel;
 using ZennoLab.InterfacesLibrary;
 using ZBSolutions;
 using NBitcoin;
-using Nethereum.Model;
 
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading;
-using ZennoLab.CommandCenter;
-using ZennoLab.InterfacesLibrary.ProjectModel;
 using System.IO;
-using System.Text.RegularExpressions;
 using System.Diagnostics;
 using System.Reflection;
-
-
-using Leaf.xNet;
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
 using System.Numerics;
-
-using System.Threading;
 using System.Threading.Tasks;
-using ZennoLab.CommandCenter;
-using ZennoLab.InterfacesLibrary.ProjectModel;
 using System.Runtime.InteropServices;
-using System.Runtime.CompilerServices;
-using Nethereum.Model;
-
 using static Leaf.xNet.Services.Cloudflare.CloudflareBypass;
-using Nethereum.Signer;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using ZennoLab.InterfacesLibrary.ProjectModel;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Dynamic;
-using System.Reflection;
-using System.Security.Policy;
-using ZBSolutions;
 
-#endregion
+using Nethereum.Model;
+using Nethereum.Signer;
+using Nethereum.Hex.HexConvertors.Extensions;
+using Nethereum.Util;
+
+using Nethereum.ABI;
+using Nethereum.ABI.FunctionEncoding.Attributes;
+using Nethereum.Web3;
+using Nethereum.Web3.Accounts;
+using Nethereum.Signer;
+using Nethereum.Hex.HexConvertors.Extensions;
+using Nethereum.ABI;
+using Nethereum.Util;
+using System;
+using System.Linq;
+using System.Numerics;
+using System.Text;
+using System.Net;
+using System.IO;
+using System.Collections.Generic;
+using System;
+using System.Linq;
+using System.Numerics;
+using System.Text;
+using System.Net;
+using System.IO;
+using System.Collections.Generic;
+using Newtonsoft.Json;
+using Nethereum.Signer;
+using Nethereum.Hex.HexConvertors.Extensions;
+using Nethereum.ABI;
+using Nethereum.Web3;
+using Nethereum.Web3.Accounts;
+
 
 namespace w3tools //by @w3bgrep
 {
@@ -835,493 +816,384 @@ namespace w3tools //by @w3bgrep
         }
     }
 
-    public class NetHttp2
+
+
+    public class MerkleTree
     {
-        private readonly IZennoPosterProjectModel _project;
-        private readonly Logger _logger;
-        private readonly bool _logShow;
-
-        public NetHttp2(IZennoPosterProjectModel project, bool log = false)
+        public static string GetMerkleRoot(List<string> tokenIds)
         {
-            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            _project = project ?? throw new ArgumentNullException(nameof(project));
-            _logShow = log;
-            _logger = new Logger(project, log: log, classEmoji: "↑↓");
-        }
+            var leaves = tokenIds
+                .Select(tokenId => Sha3Keccack.Current.CalculateHashFromHex(tokenId))
+                .OrderBy(hash => hash)
+                .ToList();
 
-        protected void Log(string message, [CallerMemberName] string callerName = "", bool forceLog = false)
-        {
-            if (!_logShow && !forceLog) return;
-            _logger.Send($"({callerName}) [{message}]");
-        }
-        protected void ParseJson(string json)
-        {
-            try
+            while (leaves.Count > 1)
             {
-                _project.Json.FromString(json);
-            }
-            catch (Exception ex)
-            {
-                _logger.Send($"[!W {ex.Message}] [{json}]");
-            }
-        }
-        public WebProxy ParseProxy(string proxyString, [CallerMemberName] string callerName = "")
-        {
-            if (string.IsNullOrEmpty(proxyString))
-            {
-                return null;
-            }
-            if (proxyString == "+")
-                proxyString = new Sql(_project).Get("proxy", "private_profile");
-            try
-            {
-                WebProxy proxy = new WebProxy();
-
-                if (proxyString.Contains("//")) proxyString = proxyString.Split('/')[2];
-
-                if (proxyString.Contains("@")) // Прокси с авторизацией (login:pass@proxy:port)
+                var newLeaves = new List<string>();
+                for (int i = 0; i < leaves.Count; i += 2)
                 {
-                    string[] parts = proxyString.Split('@');
-                    string credentials = parts[0];
-                    string proxyHost = parts[1];
-
-                    proxy.Address = new Uri("http://" + proxyHost);
-                    string[] creds = credentials.Split(':');
-                    proxy.Credentials = new NetworkCredential(creds[0], creds[1]);
-
+                    var left = leaves[i];
+                    var right = i + 1 < leaves.Count ? leaves[i + 1] : left;
+                    var combined = left.CompareTo(right) < 0 ? left + right : right + left;
+                    newLeaves.Add(Sha3Keccack.Current.CalculateHash(combined));
                 }
-                else // Прокси без авторизации (proxy:port)
-                {
-                    proxy.Address = new Uri("http://" + proxyString);
-                    //_logger.Send($"proxy set: ip:{proxyString}", callerName);
-                }
+                leaves = newLeaves;
+            }
 
-                return proxy;
-            }
-            catch (Exception e)
-            {
-                _logger.Send(e.Message + $"[{proxyString}]");
-                return null;
-            }
+            return leaves.First();
         }
-        private Dictionary<string, string> BuildHeaders(Dictionary<string, string> inputHeaders = null)
-        {
-            var defaultHeaders = new Dictionary<string, string>
-            {
-                { "User-Agent", _project.Profile.UserAgent }, // Already present
-                //{ "Accept", "application/json" },
-                //{ "Accept-Encoding", "" },
-                //{ "Accept-Language", _project.Profile.AcceptLanguage },
-                //{ "Priority", "u=1, i" },
-                //{ "Content-Type", "application/json; charset=UTF-8" }, // For GET; POST overrides via StringContent
-                //{ "Sec-Ch-Ua", "\"Chromium\";v=\"136\", \"Google Chrome\";v=\"136\", \"Not.A/Brand\";v=\"99\"" },
-                //{ "Sec-Ch-Ua-Mobile", "?0" },
-                //{ "Sec-Ch-Ua-Platform", "\"Windows\"" },
-                //{ "Sec-Fetch-Dest", "empty" },
-                //{ "Sec-Fetch-Mode", "cors" },
-                //{ "Sec-Fetch-Site", "cross-site" },
-                //{ "Sec-Fetch-Storage-Access", "active" }
-            };
-
-            if (inputHeaders == null || inputHeaders.Count == 0)
-            {
-                return defaultHeaders;
-            }
-
-            var mergedHeaders = new Dictionary<string, string>(defaultHeaders);
-            foreach (var header in inputHeaders)
-            {
-                mergedHeaders[header.Key] = header.Value; // Input headers override defaults
-            }
-
-            return mergedHeaders;
-        }
-
-
-
-
-        public string GET(
-            string url,
-            string proxyString = "",
-            Dictionary<string, string> headers = null,
-            bool parse = false,
-            [CallerMemberName] string callerName = "",
-            bool throwOnFail = false)
-        {
-            string debugHeaders = "";
-            try
-            {
-                WebProxy proxy = ParseProxy(proxyString);
-                var handler = new HttpClientHandler
-                {
-                    Proxy = proxy,
-                    UseProxy = proxy != null
-                };
-
-                using (var client = new HttpClient(handler))
-                {
-                    client.Timeout = TimeSpan.FromSeconds(30);
-
-                    // Build headers
-                    var requestHeaders = BuildHeaders(headers);
-
-                    // Add headers to client and build debug string
-                    foreach (var header in requestHeaders)
-                    {
-                        client.DefaultRequestHeaders.Add(header.Key, header.Value);
-                        debugHeaders += $"{header.Key}: {header.Value}; ";
-                    }
-
-                    HttpResponseMessage response = client.GetAsync(url).GetAwaiter().GetResult();
-                    response.EnsureSuccessStatusCode();
-
-                    // Build response headers debug string
-                    string responseHeaders = string.Join("; ", response.Headers.Select(h => $"{h.Key}: {string.Join(", ", h.Value)}"));
-
-                    string cookies = "";
-                    if (response.Headers.TryGetValues("Set-Cookie", out var cookieValues))
-                    {
-                        cookies = string.Join("; ", cookieValues);
-                        _logger.Send($"Set-Cookie found: {cookies}");
-                    }
-
-                    try
-                    {
-                        _project.Variables["debugCookies"].Value = cookies;
-                    }
-                    catch { }
-
-                    string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                    if (parse) ParseJson(result);
-                    _logger.Send(result);
-                    return result.Trim();
-                }
-            }
-            catch (HttpRequestException e)
-            {
-                _logger.Send($"[GET] SERVER Err: [{e.Message}] url:[{url}] (proxy: {(proxyString)}), headers: [{debugHeaders.Trim()}]");
-                if (throwOnFail) throw;
-                return e.Message.Replace("Response status code does not indicate success:", "").Trim('.').Trim();
-            }
-            catch (Exception e)
-            {
-                _logger.Send($"!W [GET] RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString)}) headers: [{debugHeaders.Trim()}]");
-                if (throwOnFail) throw;
-                return string.Empty;
-            }
-        }
-
-        public string POST(
-            string url,
-            string body,
-            string proxyString = "",
-            Dictionary<string, string> headers = null,
-            bool parse = false,
-            [CallerMemberName] string callerName = "",
-            bool throwOnFail = false)
-        {
-            string debugHeaders = "";
-            try
-            {
-                WebProxy proxy = ParseProxy(proxyString);
-                var handler = new HttpClientHandler
-                {
-                    Proxy = proxy,
-                    UseProxy = proxy != null
-                };
-
-                using (var client = new HttpClient(handler))
-                {
-                    client.Timeout = TimeSpan.FromSeconds(30);
-                    var content = new System.Net.Http.StringContent(body, Encoding.UTF8, "application/json");
-
-                    // Build headers
-                    var requestHeaders = BuildHeaders(headers);
-
-                    // Add headers to client and build debug string
-                    foreach (var header in requestHeaders)
-                    {
-                        client.DefaultRequestHeaders.Add(header.Key, header.Value);
-                        debugHeaders += $"{header.Key}: {header.Value}; ";
-                    }
-                    debugHeaders += "Content-Type: application/json; charset=UTF-8; ";
-
-                    _logger.Send(body);
-
-                    HttpResponseMessage response = client.PostAsync(url, content).GetAwaiter().GetResult();
-                    response.EnsureSuccessStatusCode();
-
-                    // Build response headers debug string
-                    string responseHeaders = string.Join("; ", response.Headers.Select(h => $"{h.Key}: {string.Join(", ", h.Value)}"));
-
-                    string cookies = "";
-                    if (response.Headers.TryGetValues("Set-Cookie", out var cookieValues))
-                    {
-                        cookies = string.Join("; ", cookieValues);
-                        _logger.Send($"Set-Cookie found: {cookies}");
-                    }
-
-                    try
-                    {
-                        _project.Variables["debugCookies"].Value = cookies;
-                    }
-                    catch { }
-
-                    string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                    _logger.Send(result);
-                    if (parse) ParseJson(result);
-                    return result.Trim();
-                }
-            }
-            catch (HttpRequestException e)
-            {
-                _logger.Send($"[POST] SERVER Err: [{e.Message}] url:[{url}] (proxy: {(proxyString)}), headers: [{debugHeaders.Trim()}]");
-                if (throwOnFail) throw;
-                return e.Message.Replace("Response status code does not indicate success:", "").Trim('.').Trim();
-            }
-            catch (Exception e)
-            {
-                _logger.Send($"!W [POST] RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString)}) headers: [{debugHeaders.Trim()}]");
-                if (throwOnFail) throw;
-                return string.Empty;
-            }
-        }
-
-
-        public string PUT(
-            string url,
-            string body = "",
-            string proxyString = "",
-            Dictionary<string, string> headers = null,
-            bool parse = false,
-            [CallerMemberName] string callerName = "")
-        {
-            try
-            {
-                WebProxy proxy = ParseProxy(proxyString);
-                var handler = new HttpClientHandler
-                {
-                    Proxy = proxy,
-                    UseProxy = proxy != null
-                };
-
-                using (var client = new HttpClient(handler))
-                {
-                    client.Timeout = TimeSpan.FromSeconds(30);
-                    var content = string.IsNullOrEmpty(body) ? null : new System.Net.Http.StringContent(body, Encoding.UTF8, "application/json");
-
-                    StringBuilder headersString = new StringBuilder();
-                    headersString.AppendLine("[debugRequestHeaders]:");
-
-                    string defaultUserAgent = _project.Profile.UserAgent;
-                    if (headers == null || !headers.ContainsKey("User-Agent"))
-                    {
-                        client.DefaultRequestHeaders.Add("User-Agent", defaultUserAgent);
-                        headersString.AppendLine($"User-Agent: {defaultUserAgent} (default)");
-                    }
-
-                    if (headers != null)
-                    {
-                        foreach (var header in headers)
-                        {
-                            client.DefaultRequestHeaders.Add(header.Key, header.Value);
-                            headersString.AppendLine($"{header.Key}: {header.Value}");
-                        }
-                    }
-
-                    if (content != null)
-                    {
-                        headersString.AppendLine($"Content-Type: application/json; charset=UTF-8");
-                        _logger.Send(body);
-                    }
-
-                    HttpResponseMessage response = client.PutAsync(url, content).GetAwaiter().GetResult();
-                    response.EnsureSuccessStatusCode();
-
-                    StringBuilder responseHeadersString = new StringBuilder();
-                    responseHeadersString.AppendLine("[debugResponseHeaders]:");
-                    foreach (var header in response.Headers)
-                    {
-                        var value = string.Join(", ", header.Value);
-                        responseHeadersString.AppendLine($"{header.Key}: {value}");
-                    }
-
-                    string cookies = "";
-                    if (response.Headers.TryGetValues("Set-Cookie", out var cookieValues))
-                    {
-                        cookies = cookieValues.Aggregate((a, b) => a + "; " + b);
-                        _logger.Send("Set-Cookie found: {cookies}");
-                    }
-
-                    try
-                    {
-                        _project.Variables["debugCookies"].Value = cookies;
-                    }
-                    catch { }
-
-                    string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                    _logger.Send(result);
-                    if (parse) ParseJson(result);
-                    return result.Trim();
-                }
-            }
-            catch (HttpRequestException e)
-            {
-                _logger.Send($"!W RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")})");
-                return e.Message;
-            }
-            catch (Exception e)
-            {
-                _logger.Send($"!W UnknownErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")})");
-                return $"Ошибка: {e.Message}";
-            }
-        }
-
-        public string DELETE(
-            string url,
-            string proxyString = "",
-            Dictionary<string, string> headers = null,
-            [CallerMemberName] string callerName = "")
-        {
-
-            string debugHeaders = null;
-            try
-            {
-                WebProxy proxy = ParseProxy(proxyString);
-                var handler = new HttpClientHandler
-                {
-                    Proxy = proxy,
-                    UseProxy = proxy != null
-                };
-
-                using (var client = new HttpClient(handler))
-                {
-                    client.Timeout = TimeSpan.FromSeconds(30);
-
-                    StringBuilder headersString = new StringBuilder();
-                    headersString.AppendLine("[debugRequestHeaders]:");
-
-                    string defaultUserAgent = _project.Profile.UserAgent;
-                    if (headers == null || !headers.ContainsKey("User-Agent"))
-                    {
-                        client.DefaultRequestHeaders.Add("User-Agent", defaultUserAgent);
-                        headersString.AppendLine($"User-Agent: {defaultUserAgent} (default)");
-                    }
-
-                    if (headers != null)
-                    {
-                        foreach (var header in headers)
-                        {
-                            client.DefaultRequestHeaders.Add(header.Key, header.Value);
-                            headersString.AppendLine($"{header.Key}: {header.Value}");
-                            debugHeaders += $"{header.Key}: {header.Value}";
-                        }
-                    }
-
-                    HttpResponseMessage response = client.DeleteAsync(url).GetAwaiter().GetResult();
-                    response.EnsureSuccessStatusCode();
-
-                    StringBuilder responseHeadersString = new StringBuilder();
-                    responseHeadersString.AppendLine("[debugResponseHeaders]:");
-                    foreach (var header in response.Headers)
-                    {
-                        var value = string.Join(", ", header.Value);
-                        responseHeadersString.AppendLine($"{header.Key}: {value}");
-                    }
-
-                    string cookies = "";
-                    if (response.Headers.TryGetValues("Set-Cookie", out var cookieValues))
-                    {
-                        cookies = cookieValues.Aggregate((a, b) => a + "; " + b);
-                        _logger.Send($"Set-Cookie found: {cookies}");
-                    }
-
-                    try
-                    {
-                        _project.Variables["debugCookies"].Value = cookies;
-                    }
-                    catch { }
-
-                    string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                    _logger.Send(result);
-                    return result.Trim();
-                }
-            }
-            catch (HttpRequestException e)
-            {
-                _logger.Send($"!W [DELETE] RequestErr: [{e.Message}] url:[{url}] (proxy: {proxyString}), Headers\n{debugHeaders.Trim()}");
-                return e.Message;
-            }
-            catch (Exception e)
-            {
-                _logger.Send($"!W [DELETE] UnknownErr: [{e.Message}] url:[{url}] (proxy: {proxyString})");
-                return $"Ошибка: {e.Message}";
-            }
-        }
-
-
-        public bool CheckProxy(string proxyString = null)
-        {
-
-            if (string.IsNullOrEmpty(proxyString))
-                proxyString = new Sql(_project).Get("proxy", "private_profile");
-
-            //WebProxy proxy = ParseProxy(proxyString);
-
-            string ipLocal = GET("http://api.ipify.org/", null);
-            string ipProxified = GET("http://api.ipify.org/", proxyString);
-
-            //_logger.Send($"ipLocal: {ipLocal}, ipProxified: {ipProxified}");
-
-            if (ipProxified != ipLocal)
-            {
-                _logger.Send($"proxy `validated: {ipProxified}");
-                _project.Var("proxy", proxyString);
-                return true;
-            }
-            else if (ipProxified.StartsWith("Ошибка") || ipProxified == "Прокси не настроен")
-            {
-                _logger.Send($"!W proxy error: {ipProxified}");
-
-            }
-            else if (ipLocal == ipProxified)
-            {
-                _logger.Send($"!W ip still same. ipLocal: [{ipLocal}], ipProxified: [{ipProxified}]. Proxy was not applyed");
-            }
-            return false;
-        }
-
-        public bool ProxySet(Instance instance, string proxyString = null)
-        {
-
-            if (string.IsNullOrEmpty(proxyString))
-                proxyString = new Sql(_project).Get("proxy", "private_profile");
-
-
-            string ipLocal = GET("http://api.ipify.org/", null);
-            string ipProxified = GET("http://api.ipify.org/", proxyString);
-
-            //_logger.Send($"ipLocal: {ipLocal}, ipProxified: {ipProxified}");
-
-            if (ipProxified != ipLocal)
-            {
-                _logger.Send($"proxy `validated: {ipProxified}");
-                _project.Var("proxy", proxyString);
-                instance.SetProxy(proxyString, true, true, true, true);
-                return true;
-            }
-            else if (ipProxified.StartsWith("Ошибка") || ipProxified == "Proxy not Set")
-            {
-                _logger.Send($"!W proxy error: {ipProxified}");
-            }
-            else if (ipLocal == ipProxified)
-            {
-                _logger.Send($"!W ip still same. ipLocal: [{ipLocal}], ipProxified: [{ipProxified}]. Proxy was not applyed");
-            }
-            return false;
-        }
-
     }
 
 
+
+
+    public class EIP712OrderSigner
+    {
+        public static string SignOrder(
+            string privateKey,
+            string trader,
+            byte side,
+            string collection,
+            BigInteger tokenId,
+            string paymentToken,
+            BigInteger price,
+            BigInteger expirationTime,
+            string merkleRoot,
+            BigInteger salt,
+            string domainName,
+            string domainVersion,
+            BigInteger chainId,
+            string verifyingContract)
+        {
+            // ABI-кодирование домена
+            var domainTypeHash = Sha3Keccack.Current.CalculateHash(
+                System.Text.Encoding.UTF8.GetBytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"));
+            var domainData = new ABIEncode().GetABIEncoded(
+                new ABIValue("bytes32", domainTypeHash),
+                new ABIValue("string", domainName),
+                new ABIValue("string", domainVersion),
+                new ABIValue("uint256", chainId),
+                new ABIValue("address", verifyingContract));
+            var domainHash = Sha3Keccack.Current.CalculateHash(domainData);
+
+            // ABI-кодирование сообщения
+            var orderTypeHash = Sha3Keccack.Current.CalculateHash(
+                System.Text.Encoding.UTF8.GetBytes("Order(address trader,uint8 side,address collection,uint256 tokenId,address paymentToken,uint256 price,uint256 expirationTime,bytes32 merkleRoot,uint256 salt)"));
+            var messageData = new ABIEncode().GetABIEncoded(
+                new ABIValue("bytes32", orderTypeHash),
+                new ABIValue("address", trader),
+                new ABIValue("uint8", side),
+                new ABIValue("address", collection),
+                new ABIValue("uint256", tokenId),
+                new ABIValue("address", paymentToken),
+                new ABIValue("uint256", price),
+                new ABIValue("uint256", expirationTime),
+                new ABIValue("bytes32", merkleRoot),
+                new ABIValue("uint256", salt));
+            var messageHash = Sha3Keccack.Current.CalculateHash(messageData);
+
+            // Финальный хэш
+            var finalData = new byte[] { 0x19, 0x01 }
+                .Concat(domainHash)
+                .Concat(messageHash)
+                .ToArray();
+            var finalHash = Sha3Keccack.Current.CalculateHash(finalData);
+
+            // Подпись
+            var signer = new EthereumMessageSigner();
+            var ethECKey = new EthECKey(privateKey);
+            var signature = signer.Sign(finalHash, ethECKey);
+
+            return signature;
+        }
+    }
+
+
+
+
+
+    public class MarketplaceBidding : W3b
+    {
+        private readonly string _walletAddress;
+        private readonly string _privateKey;
+        private readonly string _nftContractAddress;
+        private readonly string _paymentTokenAddress;
+        private readonly string _marketplaceContractAddress;
+        private readonly string _privyIdToken;
+        private readonly string _chainRpc;
+
+        public MarketplaceBidding(
+            IZennoPosterProjectModel project,
+            string walletAddress,
+            string privateKey,
+            string nftContractAddress,
+            string paymentTokenAddress,
+            string marketplaceContractAddress,
+            string privyIdToken,
+            string chain,
+            bool log = false)
+            : base(project, log)
+        {
+            _walletAddress = walletAddress;
+            _privateKey = ApplyKey(privateKey);
+            _nftContractAddress = nftContractAddress;
+            _paymentTokenAddress = paymentTokenAddress;
+            _marketplaceContractAddress = marketplaceContractAddress;
+            _privyIdToken = privyIdToken;
+            _chainRpc = Rpc(chain);
+        }
+
+        public class BidResponse
+        {
+            public string Id { get; set; }
+        }
+
+        public class CardData
+        {
+            public List<int> TokenIds { get; set; }
+            public string MerkleRoot { get; set; }
+        }
+
+        public Tuple<string, string> CreateBid(int heroId, int rarity, decimal bidAmountEth, CardData cardData)
+        {
+            try
+            {
+                BigInteger bidAmountWei = (BigInteger)(bidAmountEth * 1000000000000000000m);
+                Log("Bid amount in Wei: " + bidAmountWei.ToString());
+
+                if (cardData == null || cardData.TokenIds == null || string.IsNullOrEmpty(cardData.MerkleRoot))
+                {
+                    throw new Exception("Invalid card data");
+                }
+
+                long timestamp = (long)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds + 43200;
+                string salt = new Random().Next(100000, 999999).ToString();
+
+                // Placeholder for signature generation
+                string signature = GetSignature(
+                    _privateKey,
+                    _walletAddress,
+                    0,
+                    0,
+                    bidAmountWei.ToString(),
+                    timestamp,
+                    cardData.MerkleRoot,
+                    int.Parse(salt)
+                );
+
+                Log("Signature: " + signature);
+
+                string handle = FetchUserHandle(_walletAddress, _privyIdToken);
+
+                var payload = new Dictionary<string, object>
+                {
+                    { "trader", _walletAddress },
+                    { "side", 0 },
+                    { "collection", _nftContractAddress },
+                    { "token_id", 0 },
+                    { "token_ids", cardData.TokenIds },
+                    { "payment_token", _paymentTokenAddress },
+                    { "price", bidAmountWei.ToString() },
+                    { "expiration_time", timestamp.ToString() },
+                    { "salt", salt },
+                    { "signature", signature },
+                    { "merkle_root", cardData.MerkleRoot },
+                    { "hero_id", heroId.ToString() },
+                    { "rarity", rarity },
+                    { "bidder_handle", handle }
+                };
+
+                BidResponse response = SubmitBid(payload);
+                if (response != null && !string.IsNullOrEmpty(response.Id))
+                {
+                    string json = JsonConvert.SerializeObject(response, Formatting.Indented);
+                    string filePath = Path.Combine("bids_storage", response.Id + ".json");
+                    Directory.CreateDirectory("bids_storage");
+                    File.WriteAllText(filePath, json);
+                    return new Tuple<string, string>(response.Id, null);
+                }
+                else
+                {
+                    return new Tuple<string, string>(null, "Failed to submit bid");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("Error in CreateBid: " + ex.Message, log: true);
+                return new Tuple<string, string>(null, ex.Message);
+            }
+        }
+
+        private BidResponse SubmitBid(Dictionary<string, object> payload)
+        {
+            try
+            {
+                string url = "https://secret-api.fantasy.top/marketplace/create-bid-order";
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+                request.Method = "POST";
+                request.ContentType = "application/json";
+                request.Headers.Add("Authorization", "Bearer " + _privyIdToken);
+
+                string jsonPayload = JsonConvert.SerializeObject(payload);
+                byte[] byteArray = Encoding.UTF8.GetBytes(jsonPayload);
+                request.ContentLength = byteArray.Length;
+
+                using (Stream dataStream = request.GetRequestStream())
+                {
+                    dataStream.Write(byteArray, 0, byteArray.Length);
+                }
+
+                using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+                {
+                    if (response.StatusCode != System.Net.HttpStatusCode.OK)
+                    {
+                        Log("Non-200 response: " + response.StatusCode, log: true);
+                        using (StreamReader reader = new StreamReader(response.GetResponseStream()))
+                        {
+                            Log("Response: " + reader.ReadToEnd(), log: true);
+                        }
+                        return null;
+                    }
+
+                    using (StreamReader reader = new StreamReader(response.GetResponseStream()))
+                    {
+                        string responseText = reader.ReadToEnd();
+                        return JsonConvert.DeserializeObject<BidResponse>(responseText);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("Failed to submit bid: " + ex.Message, log: true);
+                return null;
+            }
+        }
+
+        public string AcceptBid(Dictionary<string, object> bidData, int specificTokenId)
+        {
+            try
+            {
+                // Placeholder for Merkle proof generation
+                Tuple<List<string>, string> merkleData = GenerateMerkleProof(specificTokenId, (List<int>)bidData["token_ids"]);
+                List<string> merkleProof = merkleData.Item1;
+                string merkleRoot = merkleData.Item2;
+
+                // Prepare order structure (simplified to match Python logic)
+                var order = new
+                {
+                    trader = _walletAddress,
+                    side = 0,
+                    collection = _nftContractAddress,
+                    tokenId = 0,
+                    paymentToken = _paymentTokenAddress,
+                    price = BigInteger.Parse(bidData["price"].ToString()),
+                    expirationTime = long.Parse(bidData["expiration_time"].ToString()),
+                    merkleRoot = bidData["merkle_root"].ToString(),
+                    salt = int.Parse(bidData["salt"].ToString())
+                };
+
+                // Placeholder for encoding (needs actual implementation)
+                string encodedData = EncodeOrder(
+                    order,
+                    bidData["signature"].ToString(),
+                    specificTokenId,
+                    merkleProof
+                );
+
+                // Use Send1559 from W3b.cs (assuming it accepts string RPC)
+                string txHash = Send1559(
+                    _chainRpc,
+                    _marketplaceContractAddress,
+                    "0x00cb1eef" + encodedData,
+                    0m,
+                    _privateKey,
+                    1
+                );
+
+                Log("Transaction hash: " + txHash);
+
+                // Simplified check (no Web3 simulation due to missing methods)
+                if (!string.IsNullOrEmpty(txHash))
+                {
+                    Log("✅ Success with transaction!");
+                    return txHash;
+                }
+                else
+                {
+                    throw new Exception("Transaction failed");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("❌ Error accepting bid: " + ex.Message, log: true);
+                return null;
+            }
+        }
+
+        public string SetApprovalForAll(int specificTokenId)
+        {
+            try
+            {
+                // Placeholder for ABI loading and contract interaction
+                string nftAbi = File.ReadAllText("nft_collection_abi.json");
+
+                // Simplified logic (no contract call due to missing Web3)
+                string approveToContract = "0xf9fe044bdd557c76c8eb0bd566d8b149186425c3";
+                bool isApprovedForAll = false; // Placeholder, needs actual check
+
+                Log("Approved Address: (simulated)");
+                Log("Is approved collection-wide: " + isApprovedForAll.ToString());
+
+                if (!isApprovedForAll)
+                {
+                    Log("[INFO] Collection-wide approval not found. Sending transaction...");
+
+                    // Placeholder encoded data (needs actual function call)
+                    string encodedData = "0x"; // Replace with real encoding
+
+                    string txHash = Send1559(
+                        _chainRpc,
+                        _nftContractAddress,
+                        encodedData,
+                        0m,
+                        _privateKey,
+                        1
+                    );
+
+                    Log("[SUCCESS] Sent setApprovalForAll tx: " + txHash);
+                    return txHash;
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Log("Error in SetApprovalForAll: " + ex.Message, log: true);
+                return null;
+            }
+        }
+
+        // Placeholders (to be implemented based on your code)
+        private string GetSignature(string privateKey, string walletAddress, int side, int tokenId, string price, long expirationTime, string merkleRoot, int salt)
+        {
+            throw new NotImplementedException("GetSignature not implemented. Please provide the Python get_signature code.");
+        }
+
+        private Tuple<List<string>, string> GenerateMerkleProof(int specificTokenId, List<int> tokenIds)
+        {
+            throw new NotImplementedException("GenerateMerkleProof not implemented. Please provide the Python generate_merkle_proof code.");
+        }
+
+        private string FetchUserHandle(string walletAddress, string privyIdToken)
+        {
+            throw new NotImplementedException("FetchUserHandle not implemented. Please provide the Python fetch_user_handle code.");
+        }
+
+        private string EncodeOrder(object order, string signature, int specificTokenId, List<string> merkleProof)
+        {
+            throw new NotImplementedException("EncodeOrder not implemented. Please provide the Python encode function code.");
+        }
+    }
 }
+
+
