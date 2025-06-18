@@ -1,7 +1,7 @@
-# Zennoposter Booster Solutions aka ZBS
+# z3n Solutions
 
-## **`ZBS — это web3 (и web2) мултитул для ZennoPoster`** 
-**`aka Web3 Zen L3atherman ;)`**
+## **`z3n Solutions — это web3 (и web2) мултитул для ZennoPoster`** 
+**`aka Web3 L3ath3rman ;)`**
 
 ---
 Внутри:
