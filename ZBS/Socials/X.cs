@@ -12,7 +12,7 @@ using static System.Net.Mime.MediaTypeNames;
 using System.Reflection;
 
 
-namespace ZBSolutions
+namespace z3n
 {
     public class X
     {

@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 using ZennoLab.InterfacesLibrary.Enums.Http;
 
 
-namespace ZBSolutions
+namespace z3n
 {
     public  class BinanceApi
     {

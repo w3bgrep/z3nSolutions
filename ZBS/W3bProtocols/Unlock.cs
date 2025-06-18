@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 
-namespace ZBSolutions
+namespace z3n
 {
     public class Unlock
     {
@@ -114,7 +114,7 @@ namespace ZBSolutions
             if (toDecode.Length < 64) toDecode = toDecode.PadLeft(64, '0');
 
 
-            var decodedDataExpire = ZBSolutions.Decoder.AbiDataDecode(_abi, function, "0x" + toDecode);
+            var decodedDataExpire = z3n.Decoder.AbiDataDecode(_abi, function, "0x" + toDecode);
             string decodedResultExpire = decodedDataExpire.Count == 1
                 ? decodedDataExpire.First().Value
                 : string.Join("\n", decodedDataExpire.Select(item => $"{item.Key};{item.Value}"));
@@ -140,7 +140,7 @@ namespace ZBSolutions
                 resultExpire = resultExpire.PadLeft(64, '0');
             }
 
-            var decodedDataExpire = ZBSolutions.Decoder.AbiDataDecode(_abi, "keyExpirationTimestampFor", "0x" + resultExpire);
+            var decodedDataExpire = z3n.Decoder.AbiDataDecode(_abi, "keyExpirationTimestampFor", "0x" + resultExpire);
             string decodedResultExpire = decodedDataExpire.Count == 1
                 ? decodedDataExpire.First().Value
                 : string.Join("\n", decodedDataExpire.Select(item => $"{item.Key};{item.Value}"));

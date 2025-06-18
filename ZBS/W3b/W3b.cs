@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 
-namespace ZBSolutions
+namespace z3n
 {
     public class W3b
     {

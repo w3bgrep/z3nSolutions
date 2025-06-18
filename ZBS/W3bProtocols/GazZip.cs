@@ -10,7 +10,7 @@ using System.Threading;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 
 
-namespace ZBSolutions.OnChain
+namespace z3n.OnChain
 {
     public enum GZto
     {

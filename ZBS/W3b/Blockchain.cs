@@ -13,13 +13,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
-using ZBSolutions;
+using z3n;
 
 
 
 
 
-namespace ZBSolutions
+namespace z3n
 {
     #region Nethereum
     public class Blockchain

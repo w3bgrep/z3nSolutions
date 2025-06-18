@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using System.Numerics;
 
-namespace ZBSolutions
+namespace z3n
 {
     public class CommonTx : W3b
     {

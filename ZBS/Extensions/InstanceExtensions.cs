@@ -16,10 +16,10 @@ using ZennoLab.InterfacesLibrary.Enums.Browser;
 using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using ZennoLab.Macros;
-using static ZBSolutions.Requests;
+using static z3n.Requests;
 
 
-namespace ZBSolutions
+namespace z3n
 {
     public static class InstanceExtensions
     {

@@ -8,7 +8,7 @@ using ZennoLab.InterfacesLibrary.ProjectModel;
 
 using Newtonsoft.Json;
 
-namespace ZBSolutions.Socials
+namespace z3n.Socials
 {
     public class Galxe
 

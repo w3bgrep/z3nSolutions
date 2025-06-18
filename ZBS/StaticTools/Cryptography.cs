@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 
 
-namespace ZBSolutions
+namespace z3n
 {
     public static class AES
     {

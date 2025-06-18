@@ -23,7 +23,7 @@ using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using System.Security.Policy;
 
-namespace ZBSolutions
+namespace z3n
 {
     public static class Requests
     {

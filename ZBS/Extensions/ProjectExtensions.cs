@@ -17,7 +17,7 @@ using static Global.Env.EnvironmentVariables;
 
 
 
-namespace ZBSolutions
+namespace z3n
 {
     
     public static class ProjectExtensions

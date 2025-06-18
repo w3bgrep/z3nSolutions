@@ -15,7 +15,7 @@ using System.Runtime.CompilerServices;
 using Nethereum.Model;
 using static Leaf.xNet.Services.Cloudflare.CloudflareBypass;
 
-namespace ZBSolutions
+namespace z3n
 {
 
     public enum GZto

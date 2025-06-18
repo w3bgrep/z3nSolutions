@@ -10,7 +10,7 @@ using ZennoLab.InterfacesLibrary.ProjectModel;
 using System.Text.RegularExpressions;
 using static NBitcoin.Scripting.OutputDescriptor;
 
-namespace ZBSolutions
+namespace z3n
 {
     public class Native : W3b
     {

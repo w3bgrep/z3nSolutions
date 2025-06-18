@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 
 
-namespace ZBSolutions
+namespace z3n
 {
     public class Balance : W3b
     {

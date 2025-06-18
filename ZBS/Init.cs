@@ -8,7 +8,7 @@ using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using System.IO;
 
-namespace ZBSolutions
+namespace z3n
 {
     public class Init
     {

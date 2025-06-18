@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 
-namespace ZBSolutions
+namespace z3n
 {
     public class Sql
     {

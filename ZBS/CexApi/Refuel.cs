@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
 
-namespace ZBSolutions.CexApi
+namespace z3n.CexApi
 {
     public class Refuel
     {

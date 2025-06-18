@@ -9,7 +9,7 @@ using System.IO;
 using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using Nethereum.Model;
-namespace ZBSolutions
+namespace z3n
 {
     public class WebWallet
     {

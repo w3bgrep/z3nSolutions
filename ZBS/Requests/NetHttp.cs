@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 
-namespace ZBSolutions
+namespace z3n
 {
     public class NetHttp
     {

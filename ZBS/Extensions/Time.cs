@@ -1,7 +1,7 @@
 ﻿using System;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 
-namespace ZBSolutions
+namespace z3n
 {
     public static class Time
     {

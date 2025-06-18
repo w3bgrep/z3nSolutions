@@ -10,7 +10,7 @@ using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.ListView;
 
-namespace ZBSolutions
+namespace z3n
 {
     public class Telegram
     {

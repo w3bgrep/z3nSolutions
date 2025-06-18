@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 
-namespace ZBSolutions
+namespace z3n
 {
     /// <summary>
     /// Класс для работы с сетевым трафиком в ZennoPoster.

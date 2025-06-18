@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ZBSolutions.MethodExtensions
+namespace z3n.MethodExtensions
 {
     public static class DictionaryExtentions
     {

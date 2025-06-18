@@ -10,7 +10,7 @@ using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using static Global.FileSystem.FileHelper;
 
-namespace ZBSolutions
+namespace z3n
 {
     public class Sys
     {

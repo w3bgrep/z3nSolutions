@@ -10,7 +10,7 @@ using System.Numerics;
 using System.Text.RegularExpressions;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 
-namespace ZBSolutions
+namespace z3n
 {
     public static class StringExtensions
     {

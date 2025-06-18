@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using ZXing.QrCode.Internal;
 
-namespace ZBSolutions
+namespace z3n
 {
     public class TableSvc : Sql
     {

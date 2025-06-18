@@ -12,7 +12,7 @@ using NBitcoin;
 using System.Collections.Generic;
 using Org.BouncyCastle.Asn1.Crmf;
 
-namespace ZBSolutions
+namespace z3n
 {
     public enum W
     {

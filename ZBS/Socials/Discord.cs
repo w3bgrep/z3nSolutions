@@ -6,7 +6,8 @@ using System.Threading;
 using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using Newtonsoft.Json.Linq;
-namespace ZBSolutions
+
+namespace z3n
 {
     public class Discord
     {
