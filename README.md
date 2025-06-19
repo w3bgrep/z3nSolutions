@@ -1,4 +1,4 @@
-# z3n Solutions
+# z3n Core
 
 ## **`z3n Core — это web3 (и web2) мултитул для ZennoPoster`** 
 **`aka Web3 L3ath3rman ;)`**
