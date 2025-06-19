@@ -143,6 +143,7 @@ namespace z3n
             string proxy = "",
             bool log = false,
             bool parseJson = false,
+            int deadline = 30,
             [CallerMemberName] string callerName = "",
             bool throwOnFail = false)
         {
@@ -165,7 +166,7 @@ namespace z3n
                         proxyString,
                         "UTF-8",
                         ResponceType.BodyOnly,
-                        30000,
+                        deadline * 1000,
                         "",
                         project.Profile.UserAgent,
                         true,
@@ -197,6 +198,7 @@ namespace z3n
             string proxy = "",
             bool log = false,
             bool parseJson = false,
+            int deadline = 30,
             [CallerMemberName] string callerName = "",
             bool throwOnFail = false)
         {
@@ -218,7 +220,7 @@ namespace z3n
                         proxyString,
                         "UTF-8",
                         ResponceType.BodyOnly,
-                        30000,
+                        deadline * 1000,
                         "",
                         project.Profile.UserAgent,
                         true,

@@ -662,36 +662,6 @@ namespace z3n
             project.L0g( "!W badProxy");
             throw new Exception("!W badProxy");
 		}
-        public static List<string> ParseWebGl(this Instance instance, string vendor, int qnt, IZennoPosterProjectModel project)
-        {
-            var result = new List<string>();
-            int tryNo = 0;
-            instance.CanvasRenderMode = CanvasMode.Emulate;
-            while (result.Count < qnt)
-            {
-                tryNo++;
-
-                if (instance.BrowserType == BrowserType.Chromium)
-                    try {
-                         instance.Launch(BrowserType.Firefox45, false); } 
-                    catch (Exception ex) { project.L0g($"Error launching Firefox45: {ex.Message}"); }
-                else
-                    instance.Launch(BrowserType.Chromium, false);
-
-                string webglData = instance.WebGLPreferences.Save();
-                if (webglData.Contains(vendor))
-                {
-                    result.Add(webglData);
-                    project.L0g($"{result.Count}/{qnt} strings collected");
-                }
-                else project.L0g($"tryNo [{tryNo}] vendorNotMatch regenerating...[{webglData}]");
-                Thread.Sleep(1000);
-            }
-            instance.CanvasRenderMode = CanvasMode.Block;
-            return result;
-
-        }
-        
 
         public static void Stargate(this Instance instance, string srcChain, string dstChain, string srcToken = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", string dstToken = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE")
         {

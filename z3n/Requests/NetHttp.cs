@@ -71,7 +71,6 @@ namespace z3n
                 else // Прокси без авторизации (proxy:port)
                 {
                     proxy.Address = new Uri("http://" + proxyString);
-                    //_logger.Send($"proxy set: ip:{proxyString}", callerName);
                 }
 
                 return proxy;
@@ -120,6 +119,7 @@ namespace z3n
             string proxyString = "",
             Dictionary<string, string> headers = null,
             bool parse = false,
+            int deadline = 15,
             [CallerMemberName] string callerName = "",
             bool throwOnFail = false)
         {
@@ -135,12 +135,10 @@ namespace z3n
 
                 using (var client = new HttpClient(handler))
                 {
-                    client.Timeout = TimeSpan.FromSeconds(30);
+                    client.Timeout = TimeSpan.FromSeconds(deadline);
 
-                    // Build headers
                     var requestHeaders = BuildHeaders(headers);
 
-                    // Add headers to client and build debug string
                     foreach (var header in requestHeaders)
                     {
                         client.DefaultRequestHeaders.Add(header.Key, header.Value);
@@ -150,7 +148,6 @@ namespace z3n
                     HttpResponseMessage response = client.GetAsync(url).GetAwaiter().GetResult();
                     response.EnsureSuccessStatusCode();
 
-                    // Build response headers debug string
                     string responseHeaders = string.Join("; ", response.Headers.Select(h => $"{h.Key}: {string.Join(", ", h.Value)}"));
 
                     string cookies = "";
@@ -192,6 +189,7 @@ namespace z3n
             string proxyString = "",
             Dictionary<string, string> headers = null,
             bool parse = false,
+            int deadline = 15,
             [CallerMemberName] string callerName = "",
             bool throwOnFail = false)
             {
@@ -207,13 +205,11 @@ namespace z3n
 
                     using (var client = new HttpClient(handler))
                     {
-                        client.Timeout = TimeSpan.FromSeconds(30);
+                        client.Timeout = TimeSpan.FromSeconds(deadline);
                         var content = new System.Net.Http.StringContent(body, Encoding.UTF8, "application/json");
 
-                        // Build headers
                         var requestHeaders = BuildHeaders(headers);
 
-                        // Add headers to client and build debug string
                         foreach (var header in requestHeaders)
                         {
                             client.DefaultRequestHeaders.Add(header.Key, header.Value);
@@ -226,7 +222,6 @@ namespace z3n
                         HttpResponseMessage response = client.PostAsync(url, content).GetAwaiter().GetResult();
                         response.EnsureSuccessStatusCode();
 
-                        // Build response headers debug string
                         string responseHeaders = string.Join("; ", response.Headers.Select(h => $"{h.Key}: {string.Join(", ", h.Value)}"));
 
                         string cookies = "";
