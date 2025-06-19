@@ -4,8 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using ZennoLab.CommandCenter;
+using ZennoLab.InterfacesLibrary.Enums.Browser;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 
 namespace z3n
@@ -742,7 +744,6 @@ namespace z3n
             _project.SendInfoToLog($"[{lineCount}] strings added to [{_tableName}]", true);
             return lineCount.ToString();
         }
-
         public void MapAndImport(schema tableSchem, int startFrom = 1)
         {
             _project.Variables["acc0"].Value = startFrom.ToString();
@@ -840,9 +841,18 @@ namespace z3n
 
                     var vendor = _f0rm.GetSelectedItem(vendors);
 
+                    var versions = new List<string> {
+                     "my zennoposter version >= 7.8.0",
+                     "my zennoposter version <= 7.7.21",
+                     };
+
+                    string version = _f0rm.GetSelectedItem(versions);
+
+                    bool before78 = (version.Contains("7.7.21"));
+
                     if (!string.IsNullOrEmpty(vendor))
                     {
-                        var webGl = _instance.ParseWebGl(vendor, _range, _project);
+                        var webGl = ParseWebGl(vendor, _range, before78);//_instance.ParseWebGl(vendor, _range, _project);
                         Upd(webGl, "webgl", tableSchem.ToString(), last: false);
                     }
                     else Log("!W empty input");
@@ -946,7 +956,6 @@ namespace z3n
             }
 
         }
-
         public void CopyTable(string sourceTable, string targetTable)
         {
             // Обрабатываем имена таблиц
@@ -1009,7 +1018,6 @@ namespace z3n
                 _project.SendInfoToLog($"Table {sourceTableName} successfully copied to {targetTableName}");
             }
         }
-
         public void RenameColumns(string tblName, Dictionary<string, string> renameMap)
         {
             Log($"{_tableName} {tblName} {_pstgr}`b");
@@ -1047,7 +1055,6 @@ namespace z3n
                 _project.SendInfoToLog($"Renamed column [{oldName}] to [{newName}] in table {_tableName}");
             }
         }
-
         public void ImportDB(schema? schemaValue = null)
         {
             if (_project.Var("cfgBuildDB") != "True") return;
@@ -1145,6 +1152,30 @@ namespace z3n
             }
         }
 
+        public List<string> ParseWebGl( string vendor, int qnt, bool before78 = false)
+        {
+            var result = new List<string>();
+            _instance.CanvasRenderMode = CanvasMode.Emulate;
+            var alterBrowser = BrowserType.Firefox45;
+            if (before78) alterBrowser = BrowserType.WithoutBrowser;
+            while (result.Count < qnt)
+            {
+                if (_instance.BrowserType == BrowserType.Chromium)
+                    try { _instance.Launch(alterBrowser, false); }
+                    catch (Exception ex) { _project.L0g($"Error launching: {ex.Message}"); }
 
+                _instance.Launch(BrowserType.Chromium, false);
+
+                string webglData = _instance.WebGLPreferences.Save();
+                if (webglData.Contains(vendor))
+                {
+                    result.Add(webglData);
+                    _project.L0g($"{result.Count}/{qnt} strings collected");
+                }
+                Thread.Sleep(1000);
+            }
+            _instance.CanvasRenderMode = CanvasMode.Block;
+            return result;
+        }
     }
 }
