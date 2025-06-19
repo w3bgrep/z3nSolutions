@@ -1,6 +1,6 @@
-# z3n Core
+# z3nCore
 
-## **`z3n Core — это web3 (и web2) мултитул для ZennoPoster`** 
+## **`z3nCore — это web3 (и web2) мултитул для ZennoPoster`** 
 **`aka Web3 L3ath3rman ;)`**
 
 ---
