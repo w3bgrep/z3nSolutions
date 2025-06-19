@@ -1,6 +1,6 @@
 # z3n Solutions
 
-## **`z3n Solutions — это web3 (и web2) мултитул для ZennoPoster`** 
+## **`z3n Core — это web3 (и web2) мултитул для ZennoPoster`** 
 **`aka Web3 L3ath3rman ;)`**
 
 ---
