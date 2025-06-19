@@ -1,4 +1,8 @@
 ﻿using System;
+using System.Management; // Для ManagementObjectSearcher и ManagementObject
+using System.Linq; 
+
+
 using System.Collections.Concurrent;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 
@@ -21,16 +25,16 @@ namespace z3n
     {
         public string Encode(IZennoPosterProjectModel project, string toEncrypt, bool log)
         {
-            if (project.Variables["debug"].Value == "True") log = true;
-            if (log) project.SendInfoToLog($"[SimpleSAFU.Encode] input: ['{toEncrypt}'] key: ['{project.Variables["cfgPin"].Value}']");
+
+            if (project.Variables["cfgPin"].Value == "") return toEncrypt;
             if (string.IsNullOrEmpty(toEncrypt)) return string.Empty;
             return AES.EncryptAES(toEncrypt, project.Variables["cfgPin"].Value, true);
         }
 
         public string Decode(IZennoPosterProjectModel project, string toDecrypt, bool log)
         {
-            if (project.Variables["debug"].Value == "True") log = true;
-            if (log) project.SendInfoToLog($"[SimpleSAFU.Decode] input: ['{toDecrypt}'] key: ['{project.Variables["cfgPin"].Value}']");
+
+            if (project.Variables["cfgPin"].Value == "") return toDecrypt;
             if (string.IsNullOrEmpty(toDecrypt)) return string.Empty;
             try
             {
@@ -46,9 +50,9 @@ namespace z3n
 
         public string HWPass(IZennoPosterProjectModel project, bool log)
         {
-            if (project.Variables["debug"].Value == "True") log = true;
-            if (log) project.SendInfoToLog($"[SimpleSAFU.HWPass] pass: ['{project.Variables["cfgPin"].Value}']");
-            return project.Variables["cfgPin"].Value;
+            string hwmb = new ManagementObjectSearcher("SELECT SerialNumber FROM Win32_BaseBoard").Get().Cast<ManagementObject>().First().GetPropertyValue("SerialNumber").ToString();
+            string pass = hwmb + project.Var("acc0");
+            return pass;
         }
     }
 
@@ -71,30 +75,24 @@ namespace z3n
 
         public static string Encode(IZennoPosterProjectModel project, string toEncrypt, bool log = false)
         {
+            if (string.IsNullOrEmpty(project.Variables["cfgPin"].Value)) return toEncrypt;
             var encodeFunc = (Func<IZennoPosterProjectModel, string, bool, string>)FunctionStorage.Functions["SAFU_Encode"];
-            if (log) project.SendInfoToLog($"SAFU.Encode: toEncrypt = '{toEncrypt}'");
             string result = encodeFunc(project, toEncrypt, log);
-            if (log) project.SendInfoToLog($"SAFU.Encode: result = '{result}'");
             return result;
         }
 
         public static string Decode(IZennoPosterProjectModel project, string toDecrypt, bool log = false)
         {
+            if (string.IsNullOrEmpty(project.Variables["cfgPin"].Value)) return toDecrypt;
             var decodeFunc = (Func<IZennoPosterProjectModel, string, bool, string>)FunctionStorage.Functions["SAFU_Decode"];
-            if (log)
-                project.SendInfoToLog($"SAFU.Decode: Вызов с toDecrypt = '{toDecrypt}'");
             string result = decodeFunc(project, toDecrypt, log);
-            if (log)
-                project.SendInfoToLog($"SAFU.Decode: Результат = '{result}'");
             return result;
         }
 
         public static string HWPass(IZennoPosterProjectModel project, bool log = false)
         {
             var hwPassFunc = (Func<IZennoPosterProjectModel, bool, string>)FunctionStorage.Functions["SAFU_HWPass"];
-            if (log) project.SendInfoToLog("SAFU.HWPass: call");
             string result = hwPassFunc(project, log);
-            if (log) project.SendInfoToLog($"SAFU.HWPass: result = '{result}'");
             return result;
         }
     }
