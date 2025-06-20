@@ -16,7 +16,6 @@ using ZennoLab.InterfacesLibrary.Enums.Browser;
 using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using ZennoLab.Macros;
-using static z3n.Requests;
 
 
 namespace z3n
