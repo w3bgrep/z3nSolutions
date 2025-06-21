@@ -83,8 +83,8 @@ public void SetBrowser(bool strictProxy = true, string cookies = null)
 
 ## Внутренние методы
 
-- **Logo(string author, string dllTitle)**: Формирует и выводит ASCII-логотип с версией, названием сборки и автором.
-- **CheckVariables(string[] vars)**: Проверяет наличие и заполненность обязательных переменных, выбрасывает исключение при ошибке.
+- `Logo(string author, string dllTitle)`: Формирует и выводит ASCII-логотип с версией, названием сборки и автором.
+- `CheckVariables(string[] vars)`: Проверяет наличие и заполненность обязательных переменных, выбрасывает исключение при ошибке.
 
 ---
 
