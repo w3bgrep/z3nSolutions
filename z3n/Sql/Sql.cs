@@ -1,7 +1,9 @@
 ﻿
+using Global.IE;
 using Nethereum.ABI.CompilationMetadata;
 using Nethereum.Contracts.QueryHandlers.MultiCall;
 using Nethereum.Signer;
+using OtpNet;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -248,17 +250,25 @@ namespace z3n
 
 
 
-        public string Get(string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "acc0", string acc = null)
+        public string Get(string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "acc0", string acc = null, string where = "")
         {
+            toGet = QuoteColumnNames(toGet.Trim().TrimEnd(','));
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
             TblName(tableName);
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
-            if (string.IsNullOrEmpty(acc)) acc = _project.Variables["acc0"].Value;
-            if (key == "acc0") return DbQ($@"SELECT {toGet.Trim().TrimEnd(',')} from {_tableName} WHERE acc0 = {acc};", log: log, throwOnEx: throwOnEx);
-            else return DbQ($@"SELECT {toGet.Trim().TrimEnd(',')} from {_tableName} WHERE key = '{key}';", log: log, throwOnEx: throwOnEx);
+            if (string.IsNullOrEmpty(where))
+                {
+                if (string.IsNullOrEmpty(acc)) 
+                    acc = _project.Variables["acc0"].Value;
+                if (key == "acc0") 
+                    return DbQ($@"SELECT {toGet} from {_tableName} WHERE acc0 = {acc};", log: log, throwOnEx: throwOnEx);
+                else 
+                    return DbQ($@"SELECT {toGet} from {_tableName} WHERE key = '{key}';", log: log, throwOnEx: throwOnEx);
+            }
+            else
+                 return DbQ($@"SELECT {toGet} from {_tableName} WHERE {where};", log: log, throwOnEx: throwOnEx);
         }
-
 
         public string GetRandom(string toGet, string tableName = null, bool log = false, bool acc = false, bool throwOnEx = false, int range = 0, bool single = true, bool invert = false)
         {

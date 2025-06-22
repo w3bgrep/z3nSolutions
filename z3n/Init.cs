@@ -143,7 +143,69 @@ namespace z3n
 
         }
 
+        public void FilterAccList(List<string> dbQueries, bool log = false, bool filterSocials = true)
+        {
+            if (!string.IsNullOrEmpty(_project.Variables["acc0Forced"].Value))
+            {
+                _project.Lists["accs"].Clear();
+                _project.Lists["accs"].Add(_project.Variables["acc0Forced"].Value);
+                _logger.Send($@"manual mode on with {_project.Variables["acc0Forced"].Value}");
+                return;
+            }
 
+            var allAccounts = new HashSet<string>();
+            foreach (var query in dbQueries)
+            {
+                try
+                {
+                    var accsByQuery = _sql.DbQ(query).Trim();
+                    if (!string.IsNullOrWhiteSpace(accsByQuery))
+                    {
+                        var accounts = accsByQuery.Split('\n').Select(x => x.Trim().TrimStart(','));
+                        allAccounts.UnionWith(accounts);
+                    }
+                }
+                catch
+                {
+
+                    _logger.Send($"{query}");
+                }
+            }
+
+            if (allAccounts.Count == 0)
+            {
+                _project.Variables["noAccsToDo"].Value = "True";
+                _logger.Send($"♻ noAccountsAvailable by queries [{string.Join(" | ", dbQueries)}]");
+                return;
+            }
+            _logger.Send($"Initial availableAccounts: [{string.Join(", ", allAccounts)}]");
+
+
+            if (filterSocials)
+            {
+                if (!string.IsNullOrEmpty(_project.Variables["requiredSocial"].Value))
+                {
+                    string[] demanded = _project.Variables["requiredSocial"].Value.Split(',');
+                    _logger.Send($"Filtering by socials: [{string.Join(", ", demanded)}]");
+
+                    foreach (string social in demanded)
+                    {
+                        string tableName = $"private_{social.Trim().ToLower()}";
+
+                        var notOK = _sql.Get("acc0", tableName, where: "status NOT LIKE '%ok%'")//DbQ($"SELECT acc0 FROM {_tableName} WHERE status NOT LIKE '%ok%'", log)
+                            .Split('\n')
+                            .Select(x => x.Trim())
+                            .Where(x => !string.IsNullOrEmpty(x));
+                        allAccounts.ExceptWith(notOK);
+                        _logger.Send($"After {social} filter: [{string.Join("|", allAccounts)}]");
+                    }
+                }
+            }
+
+            _project.Lists["accs"].Clear();
+            _project.Lists["accs"].AddRange(allAccounts);
+            _logger.Send($"final list [{string.Join("|", _project.Lists["accs"])}]");
+        }
 
 
     }
