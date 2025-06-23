@@ -76,7 +76,7 @@ namespace z3n
         }
 
 
-        public string Launch(string fileName = null, bool log = false, string source = null)
+        public string Launch(string fileName = null, bool log = false, string source = null, string refCode = null)
         {
             if (string.IsNullOrEmpty(fileName)) fileName = _fileName;
             string active = null;
@@ -84,7 +84,7 @@ namespace z3n
             _instance.UseFullMouseEmulation = false;
 
             if (Install(_extId, fileName)) 
-                Import(source, log: log);
+                Import(source, refCode, log: log);
             else
             {
                 Unlock(log: false);

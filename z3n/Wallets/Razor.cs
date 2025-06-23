@@ -21,7 +21,7 @@ namespace z3n
             : base(project, instance, log)
         {
             _extId = "fdcnegogpncmfejlfnffnofpngdiejii";
-            _fileName = "Razor2.0.9.crx";
+            _fileName = "Razor2.0.15.crx";
             _key = KeyCheck(key);
             _seed = SeedCheck(seed);
         }
