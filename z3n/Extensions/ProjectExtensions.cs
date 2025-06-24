@@ -202,31 +202,6 @@ namespace z3n
             return result;
         }
 
-        public static bool ChooseSingleAcc(this IZennoPosterProjectModel project)
-        {
-            var listAccounts = project.Lists["accs"];
-
-        check:
-            if (listAccounts.Count == 0)
-            {
-                project.Variables["noAccsToDo"].Value = "True";
-                project.SendToLog($"♻ noAccoutsAvaliable", LogType.Info, true, LogColor.Turquoise);
-                project.Variables["acc0"].Value = "";
-                return false;
-                throw new Exception($"TimeToChill");
-            }
-
-            int randomAccount = new Random().Next(0, listAccounts.Count);
-            project.Variables["acc0"].Value = listAccounts[randomAccount];
-            listAccounts.RemoveAt(randomAccount);
-            if (!project.GlobalSet())
-                goto check;
-            project.Var("pathProfileFolder", $"{project.Var("profiles_folder")}accounts\\profilesFolder\\{project.Var("acc0")}");
-            project.L0g($"`working with: [acc{project.Var("acc0")}] accs left: [{listAccounts.Count}]");
-            return true;
-        }
-
-
         #endregion
 
         #region GlobalVars
@@ -363,7 +338,29 @@ namespace z3n
 
 
 
+        public static bool ChooseSingleAcc(this IZennoPosterProjectModel project)
+        {
+            var listAccounts = project.Lists["accs"];
 
+        check:
+            if (listAccounts.Count == 0)
+            {
+                project.Variables["noAccsToDo"].Value = "True";
+                project.SendToLog($"♻ noAccoutsAvaliable", LogType.Info, true, LogColor.Turquoise);
+                project.Variables["acc0"].Value = "";
+                return false;
+                throw new Exception($"TimeToChill");
+            }
+
+            int randomAccount = new Random().Next(0, listAccounts.Count);
+            project.Variables["acc0"].Value = listAccounts[randomAccount];
+            listAccounts.RemoveAt(randomAccount);
+            if (!project.GlobalSet())
+                goto check;
+            project.Var("pathProfileFolder", $"{project.Var("profiles_folder")}accounts\\profilesFolder\\{project.Var("acc0")}");
+            project.L0g($"`working with: [acc{project.Var("acc0")}] accs left: [{listAccounts.Count}]");
+            return true;
+        }
         public static string GetNewCreds(this IZennoPosterProjectModel project, string dataType)
         {
             string pathFresh = $"{project.Path}.data\\fresh\\{dataType}.txt";

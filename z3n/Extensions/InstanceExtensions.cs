@@ -255,45 +255,6 @@ namespace z3n
             HtmlElement heParent = he.ParentElement; heParent.RemoveChild(he);
         }
 
-        public static string GetTx(this Instance instance, string format = "hash", int deadline = 5)
-        {
-            string pattern = @"0x[a-fA-F0-9]{64}";
-            Regex regex = new Regex(pattern);
-            DateTime functionStart = DateTime.Now;
-
-        wait:
-
-            if ((DateTime.Now - functionStart).TotalSeconds > deadline)
-            {
-                throw new Exception($"Hashes not found in {deadline}s");
-            }
-
-            var Hrefs = instance.ActiveTab.FindElementsByAttribute("a", "href", "https://", "regexp").ToList();
-
-            if (Hrefs.Count == 0) goto wait;
-
-            var Txs = new List<string>();
-            foreach (HtmlElement tx in Hrefs)
-            {
-                string href = tx.GetAttribute("href");
-                if (regex.IsMatch(href)) Txs.Add(href);
-
-            }
-            if (Txs.Count == 0) goto wait;
-
-
-            if (format == "link")
-                return Txs[0];
-
-            else if (format == "hash")
-                return Txs[0].GetTxHash();
-
-            else if (format == "all")
-                return string.Join("\n", Txs);
-            else
-                throw new Exception($"unsupported format [{format}]");
-        }
-
         //js
         public static string JsClick(this Instance instance, string selector, int delay = 2)
         {

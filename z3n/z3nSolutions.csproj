@@ -90,7 +90,6 @@
     <Compile Include="W3b\CommonTx.cs" />
     <Compile Include="Loggers.cs" />
     <Compile Include="Extensions\SystemExtentions.cs" />
-    <Compile Include="Extensions\ObjectExtentions.cs" />
     <Compile Include="W3b\Native.cs" />
     <Compile Include="W3bProtocols\GazZip.cs" />
     <Compile Include="W3bProtocols\Relay.cs" />
