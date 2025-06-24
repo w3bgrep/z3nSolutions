@@ -1237,7 +1237,7 @@ namespace w3tools //by @w3bgrep
             _instance.Go("youtube.com");
             Thread.Sleep(5000);
             _instance.Go("https://myaccount.google.com/");
-            new Cookies(_project,_instance).Save();
+            //new Cookies(_project,_instance).Save();
         }
 
     }

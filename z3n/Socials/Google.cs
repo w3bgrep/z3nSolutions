@@ -47,18 +47,16 @@ namespace z3n
             try { _cookies = creds[6]; _project.Variables["googleCOOKIES"].Value = _cookies; } catch (Exception ex) { _logger.Send(ex.Message); }
             _logger.Send(_status);
         }
-
-
-        public string Load(bool log = false)
+        public string Load(bool log = false, bool cookieBackup = true)
         {
-        _instance.Go("https://myaccount.google.com/");
-            _project.Deadline();
-        check:
-            _project.Deadline(60);
+            if (!_instance.ActiveTab.URL.Contains("google")) _instance.Go("https://myaccount.google.com/");
+            check:
+            Thread.Sleep(1000);
             string state = GetState();
             switch (state)
             {
                 case "ok":
+                    if (cookieBackup) SaveCookies();
                     return state;
 
                 case "wrong":
@@ -87,8 +85,11 @@ namespace z3n
                     goto check;
 
                 case "CAPCHA":
-                    _sql.Upd("status = 'status = '!WCapcha'", "google");
-                    _sql.Upd("status = 'status = '!W fail.Google Capcha or Locked'");
+                    try { _project.CapGuru(); } catch { }
+                    _instance.HeClick(("button", "innertext", "Next", "regexp", 0));
+                    //_sql.Upd("status = 'status = '!WCapcha'", "google");
+                    //_sql.Upd("status = 'status = '!W fail.Google Capcha or Locked'");
+                    goto check;
                     throw new Exception("CAPCHA");
 
                 case "badBrowser":
@@ -112,6 +113,12 @@ namespace z3n
             if (!_instance.ActiveTab.FindElementByAttribute("a", "href", "https://accounts.google.com/SignOutOptions\\?", "regexp", 0).IsVoid)
                 status = "signedIn";
 
+            else if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Verify\\ it’s\\ you", "regexp", 0).IsVoid)
+                status = "CAPCHA";
+
+            else if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Try\\ using\\ a\\ different\\ browser.", "regexp", 0).IsVoid)
+                status = "BadBrowser";
+
             else if ((!_instance.ActiveTab.FindElementByAttribute("input:email", "fulltagname", "input:email", "text", 0).IsVoid) &&
                     (_instance.ActiveTab.FindElementByAttribute("input:email", "fulltagname", "input:email", "text", 0).GetAttribute("value") == ""))
                 status = "inputLogin";
@@ -128,11 +135,7 @@ namespace z3n
                     _instance.ActiveTab.FindElementById("totpPin").GetAttribute("value") == "")
                 status = "addRecoveryPhone";
 
-            else if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Verify\\ it’s\\ you", "regexp", 0).IsVoid)
-                status = "CAPCHA";
 
-            else if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Try\\ using\\ a\\ different\\ browser.", "regexp", 0).IsVoid)
-                status = "BadBrowser";
 
             else status = "undefined";
 
@@ -206,10 +209,13 @@ namespace z3n
                 return "FAIL. No loggined Users Found";
             }
         }
-
-
-
-
+        public void SaveCookies()
+        {
+            _instance.Go("youtube.com");
+            Thread.Sleep(5000);
+            _instance.Go("https://myaccount.google.com/");
+            new Cookies(_project, _instance).Save();
+        }
 
 
 
