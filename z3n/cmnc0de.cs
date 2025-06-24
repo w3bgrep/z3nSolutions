@@ -1058,18 +1058,6 @@ namespace w3tools //by @w3bgrep
 
         }
 
-        //private void Log(string tolog = "", [CallerMemberName] string callerName = "", bool log = false)
-        //{
-        //    if (!_logShow && !log) return;
-
-        //    var stackFrame = new StackFrame(1);
-        //    var callingMethod = stackFrame.GetMethod();
-        //    if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
-        //    _project.L0g($"[ ▶  {callerName}] [{tolog}] ");
-        //}
-
-
-
         private void DbCreds()
         {
 

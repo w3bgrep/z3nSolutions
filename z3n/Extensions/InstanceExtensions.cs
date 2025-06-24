@@ -801,6 +801,13 @@ namespace z3n
                 try { instance.UninstallExtension(ext); } catch { }
         }
 
+
+        public static void F5(this Instance instance)
+        {
+            instance.ActiveTab.MainDocument.EvaluateScript("location.reload(true)");
+        }
+
+
     }
 
 
