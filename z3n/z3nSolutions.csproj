@@ -78,7 +78,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Browser\Cookies.cs" />
-    <Compile Include="Extensions\Capcha.cs" />
+    <Compile Include="Browser\Capcha.cs" />
     <Compile Include="W3bProtocols\HanaGarden.cs" />
     <Compile Include="Init.cs" />
     <Compile Include="Requests\NetHttp.cs" />
@@ -88,12 +88,12 @@
     <Compile Include="Browser\ChromeExt.cs" />
     <Compile Include="Browser\Traffic.cs" />
     <Compile Include="W3b\CommonTx.cs" />
-    <Compile Include="Logger.cs" />
+    <Compile Include="Tools\Logger.cs" />
     <Compile Include="Extensions\SystemExtentions.cs" />
     <Compile Include="W3b\Native.cs" />
     <Compile Include="W3bProtocols\GazZip.cs" />
     <Compile Include="W3bProtocols\Relay.cs" />
-    <Compile Include="Extensions\Rnd.cs" />
+    <Compile Include="Tools\Rnd.cs" />
     <Compile Include="Sql\DBuilder.cs" />
     <Compile Include="Extensions\F0rms.cs" />
     <Compile Include="W3bProtocols\DMail.cs" />
@@ -115,14 +115,14 @@
     <Compile Include="Wallets\MetaMask.cs" />
     <Compile Include="Wallets\Razor.cs" />
     <Compile Include="Socials\Google.cs" />
-    <Compile Include="StaticTools\Converter.cs" />
-    <Compile Include="StaticTools\Cryptography.cs" />
+    <Compile Include="Tools\Converter.cs" />
+    <Compile Include="Tools\Cryptography.cs" />
     <Compile Include="Sql\DataImporter.cs" />
     <Compile Include="Socials\Discord.cs" />
     <Compile Include="Extensions\InstanceExtensions.cs" />
-    <Compile Include="StaticTools\ISAFU.cs" />
+    <Compile Include="Tools\ISAFU.cs" />
     <Compile Include="CexApi\OKXApi.cs" />
-    <Compile Include="StaticTools\OTP.cs" />
+    <Compile Include="Tools\OTP.cs" />
     <Compile Include="Sql\PostgreSQL.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -131,7 +131,7 @@
     <Compile Include="Extensions\HtmlExtensions.cs" />
     <Compile Include="Extensions\StringExtentions.cs" />
     <Compile Include="Requests\Requests.cs" />
-    <Compile Include="Extensions\Time.cs" />
+    <Compile Include="Tools\Time.cs" />
     <Compile Include="Extensions\ProjectExtensions.cs" />
     <Compile Include="Wallets\Wlt.cs" />
     <Compile Include="Socials\X.cs" />
