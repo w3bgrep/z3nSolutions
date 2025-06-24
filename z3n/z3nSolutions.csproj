@@ -97,7 +97,6 @@
     <Compile Include="Sql\DBuilder.cs" />
     <Compile Include="F0rms.cs" />
     <Compile Include="W3bProtocols\DMail.cs" />
-    <Compile Include="Extensions\DictionaryExtentions.cs" />
     <Compile Include="W3b\W3bWrite.cs" />
     <Compile Include="Socials\Galxe.cs" />
     <Compile Include="Sql\TableSvc.cs" />

@@ -131,7 +131,9 @@ namespace z3n
         }
         private string XgetToken()
         {
-            var cookJson = _instance.GetCookies(_project,".");
+            //var cookJson = _instance.GetCookies(_project,".");
+            var cookJson = new Cookies(_project, _instance).Get(".");//_instance.GetCookies(_project, ".");
+
             JArray toParse = JArray.Parse(cookJson);
             int i = 0; var token = "";
             while (token == "")

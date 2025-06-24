@@ -19,9 +19,6 @@ namespace ZBS
             }
             catch (Exception) { return "qrError"; }
         }
-
-
-
         public static string GetTxHash(HtmlElement element)
         {
             string hash;
@@ -46,8 +43,5 @@ namespace ZBS
         }
 
     }
-
-
-
 
 }
