@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using ZennoLab.CommandCenter;
 
-namespace z3n.Browser
+namespace z3n
 {
     public class Cookies
     {

@@ -1070,7 +1070,7 @@ namespace w3tools //by @w3bgrep
             try { _cookies = creds[6]; _project.Variables["googleCOOKIES"].Value = _cookies; } catch (Exception ex) { _logger.Send(ex.Message); }
             _logger.Send(_status);
         }
-        public string Load(bool log = false)
+        public string Load(bool log = false, bool cookieBackup = true)
         {
             if (!_instance.ActiveTab.URL.Contains("google")) _instance.Go("https://myaccount.google.com/");
         check:
@@ -1079,6 +1079,7 @@ namespace w3tools //by @w3bgrep
             switch (state)
             {
                 case "ok":
+                    if (cookieBackup) SaveCookies();
                     return state;
 
                 case "wrong":
@@ -1231,7 +1232,13 @@ namespace w3tools //by @w3bgrep
                 return "FAIL. No loggined Users Found";
             }
         }
-
+        public void SaveCookies()
+        {
+            _instance.Go("youtube.com");
+            Thread.Sleep(5000);
+            _instance.Go("https://myaccount.google.com/");
+            new Cookies(_project,_instance).Save();
+        }
 
     }
 
