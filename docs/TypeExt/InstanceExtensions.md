@@ -4,27 +4,39 @@
 
 ### Назначение
 
-`InstanceExtensions` — набор extension-методов для класса `Instance` в ZennoPoster, обеспечивающих универсальный интерфейс поиска, получения, клика, установки значений HTML-элементов, а также взаимодействия с DOM через JavaScript и работу с Cloudflare Turnstile.
+Расширяет возможности объекта `Instance` в ZennoPoster: универсальный поиск и взаимодействие с HTML-элементами, управление вводом, кликами, удалением, а также выполнение и автоматизация действий через JavaScript и работу с Cloudflare Turnstile.
 
 ---
 
 ### Примеры использования
 
 ```csharp
-// Получить HtmlElement по id
-HtmlElement el = instance.GetHe(("myId", "id"));
+// Поиск элемента по ID
+var el = instance.GetHe(("myId", "id"));
 
-// Получить текст элемента по селектору, с таймаутом 5 секунд
-string text = instance.HeGet(("myId", "id"), deadline: 5, atr: "innertext");
+// Получить текст элемента
+string text = instance.HeGet(("myId", "id"), atr: "innertext");
 
 // Клик по элементу с эмуляцией мыши
-instance.HeClick(("myId", "id"), emu: 1);
+instance.HeClick(("submit", "name"), emu: 1);
 
-// Установить значение в input по name
+// Закликивание элемента до исчезновения
+instance.HeClick(("popup-close", "class"), method: "clickOut");
+
+// Установить значение в input
 instance.HeSet(("login", "name"), "mylogin");
 
-// Клик через JS
-instance.JsClick("document.querySelector('#myBtn')");
+// Удалить элемент из DOM
+instance.HeDrop(() => instance.GetHe(("ad-banner", "id")));
+
+// Клик по элементу через JS
+instance.JsClick("document.querySelector('.btn')");
+
+// Установить значение через JS
+instance.JsSet("document.querySelector('#input')", "value");
+
+// Выполнить произвольный JS
+instance.JsPost("document.body.style.background = 'red'");
 
 // Решить Cloudflare Turnstile
 instance.ClFlv2();
@@ -41,11 +53,12 @@ instance.ClFlv2();
 public static HtmlElement GetHe(this Instance instance, object obj, string method = "")
 ```
 
-- Универсальный поиск элемента по:
-    - `HtmlElement` (возвращает как есть, если не void)
-    - Кортежу (string, string): (значение, "id"/"name")
-    - Кортежу (string, string, string, string, int): (tag, attribute, pattern, mode, position)
-- В случае неудачи выбрасывает исключение с деталями поиска.
+- Универсальный поиск элемента:
+    - Если передан `HtmlElement` — возвращает его (ошибка, если IsVoid).
+    - Кортеж (значение, "id"/"name") — поиск по id или name.
+    - Кортеж (tag, attribute, pattern, mode, pos) — поиск по атрибуту и позиции.
+    - Для поиска последнего совпадения по атрибуту используйте `method == "last"`.
+- Исключение при неудаче поиска.
 
 ---
 
@@ -55,10 +68,10 @@ public static HtmlElement GetHe(this Instance instance, object obj, string metho
 public static string HeGet(this Instance instance, object obj, string method = "", int deadline = 10, string atr = "innertext", int delay = 1, string comment = "", bool thr0w = true)
 ```
 
-- Возвращает значение атрибута (по умолчанию `innertext`) найденного элемента.
-- Повторяет попытки до истечения таймаута (`deadline`), с задержкой (`delay`).
-- Если `method == "!"`, ожидает отсутствие элемента (возвращает null или кидает исключение).
-- В случае ошибки — возвращает null или выбрасывает исключение в зависимости от `thr0w`.
+- Получение значения атрибута (`atr`, по умолчанию "innertext") найденного элемента.
+- Повторяет попытки поиска до истечения `deadline` (секунды), с задержкой между попытками (`delay`).
+- Если `method == "!"` — ожидает отсутствие элемента (возвращает null при успехе).
+- При ошибке или таймауте — возвращает null или выбрасывает исключение (по `thr0w`).
 
 ---
 
@@ -68,10 +81,10 @@ public static string HeGet(this Instance instance, object obj, string method = "
 public static void HeClick(this Instance instance, object obj, string method = "", int deadline = 10, int delay = 1, string comment = "", bool thr0w = true, int emu = 0)
 ```
 
-- Кликает по найденному элементу.
-- Можно включить/выключить эмуляцию мыши (`emu`).
-- Поддерживает режим "clickOut" — клик вне элемента.
-- Таймаут и задержка настраиваются.
+- Клик по найденному элементу.
+- `emu > 0` — включает эмуляцию мыши, `< 0` — выключает, `0` — не меняет.
+- Если `method == "clickOut"` — кликает по элементу в цикле, пока он не исчезнет или не истечёт `deadline`.
+- При ошибке или таймауте — выбрасывает исключение или завершает работу (по `thr0w`).
 
 ---
 
@@ -82,8 +95,8 @@ public static void HeSet(this Instance instance, object obj, string value, strin
 ```
 
 - Устанавливает значение в найденный input/textarea.
-- Использует задержку и повторяет попытки до таймаута.
-- Имитация ручного ввода через `WaitFieldEmulationDelay`.
+- Имитация ручного ввода через задержку (`WaitFieldEmulationDelay`).
+- Таймаут и задержка между попытками.
 
 ---
 
@@ -93,7 +106,7 @@ public static void HeSet(this Instance instance, object obj, string value, strin
 public static void HeDrop(this Instance instance, Func elementSearch)
 ```
 
-- Удаляет найденный элемент из DOM (через его родителя).
+- Удаляет найденный элемент из DOM через его родителя.
 
 ---
 
@@ -103,9 +116,8 @@ public static void HeDrop(this Instance instance, Func elementSearch)
 public static string JsClick(this Instance instance, string selector, int delay = 2)
 ```
 
-- Выполняет клик по элементу через JS (например, `document.querySelector(...)`).
-- Задержка перед выполнением.
-- Возвращает результат или сообщение об ошибке.
+- Выполняет клик по элементу через JavaScript.
+- Возвращает строку результата или сообщение об ошибке.
 
 ---
 
@@ -115,9 +127,8 @@ public static string JsClick(this Instance instance, string selector, int delay 
 public static string JsSet(this Instance instance, string selector, string value, int delay = 2)
 ```
 
-- Устанавливает значение поля через JS.
-- Генерирует событие `input` для корректной работы.
-- Возвращает результат или ошибку.
+- Устанавливает значение поля через JavaScript и генерирует событие `input`.
+- Возвращает строку результата или сообщение об ошибке.
 
 ---
 
@@ -138,27 +149,28 @@ public static string JsPost(this Instance instance, string script, int delay = 0
 public static void ClFlv2(this Instance instance)
 ```
 
-- Автоматизация решения Cloudflare Turnstile:
-    - Ищет элемент с id `cf-turnstile`.
-    - Получает координаты и кликает по центру.
-    - Ждёт появления токена (`cf-turnstile-response`).
-    - Возвращает токен или кидает исключение при неудаче.
+- Решение Cloudflare Turnstile:
+    - Поиск элемента с id `cf-turnstile`.
+    - Клик по центру элемента.
+    - Ожидание появления токена ответа (`cf-turnstile-response`).
+    - Возвращает токен или выбрасывает исключение при таймауте.
 
 ---
 
-## Вспомогательные (внутренние) методы
+## Вспомогательные (внутренние) детали
 
-- `ClipboardLock`, `ClipboardSemaphore`, `LockObject`: Для потокобезопасной работы с буфером обмена и критическими секциями.
-- Вспомогательные try-catch блоки для устойчивости к ошибкам поиска и взаимодействия с DOM.
+- `ClipboardLock`, `ClipboardSemaphore`, `LockObject`: для потокобезопасности.
+- Все методы используют try-catch с возвратом понятных ошибок.
+- Таймауты и задержки настраиваются.
+- Эмуляция мыши восстанавливается после операций.
 
 ---
 
 ## Особенности
 
-- Универсальный интерфейс поиска и работы с элементами: поддержка разных форматов задания цели.
-- Все методы поддерживают таймауты, задержки, подробные сообщения об ошибках.
-- Поддержка эмуляции мыши, ручного и JS-взаимодействия.
-- Подходит для сложных сценариев автоматизации и парсинга в ZennoPoster.
-
-
+- Все методы реализованы как extension для `Instance`.
+- Поддержка сложных сценариев поиска и взаимодействия с элементами.
+- Универсальный интерфейс для работы с DOM и JS.
+- Корректная обработка ошибок и таймаутов.
+- Поддержка автоматизации решения Cloudflare Turnstile.
 
