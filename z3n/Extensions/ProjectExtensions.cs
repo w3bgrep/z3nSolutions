@@ -601,7 +601,6 @@ namespace z3n
                 bool res = project.ExecuteProject(tempFilePath, null, true, true, true);
                 if (File.Exists(tempFilePath)) { File.Delete(tempFilePath); }
                 return res;
-                if (!res) { throw new Exception("Что-то пошло не так!"); }
             }
 
             string getplugin()
