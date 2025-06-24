@@ -78,6 +78,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Browser\Cookies.cs" />
+    <Compile Include="Extensions\Capcha.cs" />
     <Compile Include="HanaGarden.cs" />
     <Compile Include="Init.cs" />
     <Compile Include="Requests\NetHttp.cs" />
@@ -115,7 +116,6 @@
     <Compile Include="Wallets\MetaMask.cs" />
     <Compile Include="Wallets\Razor.cs" />
     <Compile Include="Socials\Google.cs" />
-    <Compile Include="Browser\Starter.cs" />
     <Compile Include="StaticTools\Converter.cs" />
     <Compile Include="StaticTools\Cryptography.cs" />
     <Compile Include="Sql\DataImporter.cs" />

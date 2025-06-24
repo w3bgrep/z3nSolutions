@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using ZennoLab.CommandCenter;
+using ZennoLab.InterfacesLibrary.Enums.Browser;
 using ZennoLab.InterfacesLibrary.ProjectModel;
-using System.IO;
+using Newtonsoft.Json.Linq;
 
 namespace z3n
 {
@@ -102,7 +104,7 @@ namespace z3n
             _logger.Send($"init browser in port: {_instance.Port}");
 
             string webGlData = _sql.Get("webgl", "private_profile");
-            _instance.SetDisplay(webGlData, _project);
+            SetDisplay(webGlData);
 
             bool goodProxy = new NetHttp(_project, true).ProxySet(_instance);
             if (strictProxy && !goodProxy) throw new Exception($"!E bad proxy");
@@ -207,6 +209,53 @@ namespace z3n
             _logger.Send($"final list [{string.Join("|", _project.Lists["accs"])}]");
         }
 
+        public void SetDisplay(string webGl)
+        {
+            if (!string.IsNullOrEmpty(webGl))
+            {
+                var jsonObject = JObject.Parse(webGl);
+                var mapping = new Dictionary<string, string>
+                {
+                    {"Renderer", "RENDERER"},
+                    {"Vendor", "VENDOR"},
+                    {"Version", "VERSION"},
+                    {"ShadingLanguageVersion", "SHADING_LANGUAGE_VERSION"},
+                    {"UnmaskedRenderer", "UNMASKED_RENDERER_WEBGL"},
+                    {"UnmaskedVendor", "UNMASKED_VENDOR"},
+                    {"MaxCombinedTextureImageUnits", "MAX_COMBINED_TEXTURE_IMAGE_UNITS"},
+                    {"MaxCubeMapTextureSize", "MAX_CUBE_MAP_TEXTURE_SIZE"},
+                    {"MaxFragmentUniformVectors", "MAX_FRAGMENT_UNIFORM_VECTORS"},
+                    {"MaxTextureSize", "MAX_TEXTURE_SIZE"},
+                    {"MaxVertexAttribs", "MAX_VERTEX_ATTRIBS"}
+                };
 
+                foreach (var pair in mapping)
+                {
+                    string value = "";
+                    if (jsonObject["parameters"]["default"][pair.Value] != null) value = jsonObject["parameters"]["default"][pair.Value].ToString();
+                    else if (jsonObject["parameters"]["webgl"][pair.Value] != null) value = jsonObject["parameters"]["webgl"][pair.Value].ToString();
+                    else if (jsonObject["parameters"]["webgl2"][pair.Value] != null) value = jsonObject["parameters"]["webgl2"][pair.Value].ToString();
+                    if (!string.IsNullOrEmpty(value)) _instance.WebGLPreferences.Set((WebGLPreference)Enum.Parse(typeof(WebGLPreference), pair.Key), value);
+
+                }
+            }
+            else _logger.Send("!W WebGL string is empty. Please parse WebGL data into the database. Otherwise, any antifraud system will fuck you up like it’s a piece of cake.");
+
+            try
+            {
+                _instance.SetWindowSize(1280, 720);
+                _project.Profile.AcceptLanguage = "en-US,en;q=0.9";
+                _project.Profile.Language = "EN";
+                _project.Profile.UserAgentBrowserLanguage = "en-US";
+                _instance.UseMedia = false;
+
+            }
+            catch (Exception ex)
+            {
+                _project.GlobalNull();
+                _logger.Send(ex.Message, thr0w: true);
+            }
+
+        }
     }
 }
