@@ -84,7 +84,7 @@
     <Compile Include="W3b\Balance.cs" />
     <Compile Include="Browser\BrowserScan.cs" />
     <Compile Include="CexApi\Refuel.cs" />
-    <Compile Include="Extensions\ChromeExtentions.cs" />
+    <Compile Include="Browser\ChromeExt.cs" />
     <Compile Include="Browser\Traffic.cs" />
     <Compile Include="W3b\CommonTx.cs" />
     <Compile Include="Loggers.cs" />

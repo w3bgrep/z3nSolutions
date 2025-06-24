@@ -15,8 +15,7 @@ namespace z3n
 
         public static string GET(
             this IZennoPosterProjectModel project,
-            string url,
-            
+            string url,            
             string proxy = "",
             string[] headers = null,
             bool log = false,

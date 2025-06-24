@@ -428,25 +428,7 @@ namespace z3n
             if (blank)instance.ActiveTab.Navigate("about:blank", "");
         }
 
-        public static void CtrlV(this Instance instance, string ToPaste)
-        {
-            lock (new object()) 
-            {
-                string originalClipboard = null;
-                try
-                {
-                    if (System.Windows.Forms.Clipboard.ContainsText())
-                        originalClipboard = System.Windows.Forms.Clipboard.GetText();
 
-                    System.Windows.Forms.Clipboard.SetText(ToPaste);
-                    instance.ActiveTab.KeyEvent("v", "press", "ctrl");
-
-                    if (!string.IsNullOrEmpty(originalClipboard))
-                        System.Windows.Forms.Clipboard.SetText(originalClipboard);
-                }
-                catch { }
-            }
-        }
         public static void Go(this Instance instance, string url, bool strict = false)
         {
             bool go = false;
@@ -632,38 +614,32 @@ namespace z3n
             }
 
         }
-        public static void SetProxy(this Instance instance, string proxy, IZennoPosterProjectModel project)
-		{
-            if (string.IsNullOrEmpty(proxy))
-            {
-                project.L0g("!W proxy string is EMPTY");
-                throw new Exception("!W EMPTY Proxy");
-            }
+  //      public static void SetProxy(this Instance instance, string proxy, IZennoPosterProjectModel project)
+		//{
+  //          if (string.IsNullOrEmpty(proxy))
+  //          {
+  //              project.L0g("!W proxy string is EMPTY");
+  //              throw new Exception("!W EMPTY Proxy");
+  //          }
 
-                long uTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds(); 
-			string ipLocal = project.GET($"http://api.ipify.org/");
+  //              long uTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds(); 
+		//	string ipLocal = project.GET($"http://api.ipify.org/");
 
-			while (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - uTime < 60)
-			{
-				instance.SetProxy(proxy, true, true, true, true); Thread.Sleep(2000);
-				string ipProxy = project.GET($"http://api.ipify.org/",proxy);
-                project.L0g($"local:[{ipLocal}]?proxyfied:[{ipProxy}]");
-				project.Variables["ip"].Value = ipProxy;
-				project.Variables["proxy"].Value = proxy;
-				if (ipLocal != ipProxy) return;
-			}
+		//	while (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - uTime < 60)
+		//	{
+		//		instance.SetProxy(proxy, true, true, true, true); Thread.Sleep(2000);
+		//		string ipProxy = project.GET($"http://api.ipify.org/",proxy);
+  //              project.L0g($"local:[{ipLocal}]?proxyfied:[{ipProxy}]");
+		//		project.Variables["ip"].Value = ipProxy;
+		//		project.Variables["proxy"].Value = proxy;
+		//		if (ipLocal != ipProxy) return;
+		//	}
 
-            project.L0g( "!W badProxy");
-            throw new Exception("!W badProxy");
-		}
+  //          project.L0g( "!W badProxy");
+  //          throw new Exception("!W badProxy");
+		//}
 
-        public static void Stargate(this Instance instance, string srcChain, string dstChain, string srcToken = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", string dstToken = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE")
-        {
 
-            string url = "https://stargate.finance/bridge?" + $"srcChain={srcChain}" + $"&srcToken={srcToken}" + $"&dstChain={dstChain}" + $"&dstToken={dstToken}";
-            instance.ActiveTab.Navigate(url, "");
-
-        }
         public static void Relay(this Instance instance, string fromChainId, string to, string toCurrency = "0x0000000000000000000000000000000000000000", string fromCurrency = "0x0000000000000000000000000000000000000000")
         {
 
@@ -672,136 +648,154 @@ namespace z3n
 
         }
 
-        public static string Traffic(this Instance instance, string url,  string parametr , IZennoPosterProjectModel project, bool reload = false, string method = null)
-        {
-            project.Deadline();
-            instance.UseTrafficMonitoring = true;
-            if (reload) instance.ActiveTab.MainDocument.EvaluateScript("location.reload(true)");
+        //public static string Traffic(this Instance instance, string url,  string parametr , IZennoPosterProjectModel project, bool reload = false, string method = null)
+        //{
+        //    project.Deadline();
+        //    instance.UseTrafficMonitoring = true;
+        //    if (reload) instance.ActiveTab.MainDocument.EvaluateScript("location.reload(true)");
 
-            get:
-            project.Deadline(10);
-            Thread.Sleep(1000);
-            var traffic = instance.ActiveTab.GetTraffic();
-            //project.SendInfoToLog(traffic.Count().ToString());
-            var data = new Dictionary<string, string>();
-            string param;
-            foreach (var t in traffic)
-            {
-                if (t.Url.Contains(url))
-                {
-                    //project.SendInfoToLog("found url");
+        //    get:
+        //    project.Deadline(10);
+        //    Thread.Sleep(1000);
+        //    var traffic = instance.ActiveTab.GetTraffic();
+        //    //project.SendInfoToLog(traffic.Count().ToString());
+        //    var data = new Dictionary<string, string>();
+        //    string param;
+        //    foreach (var t in traffic)
+        //    {
+        //        if (t.Url.Contains(url))
+        //        {
+        //            //project.SendInfoToLog("found url");
                                     
-                    var Method = t.Method;
-                    var ResultCode = t.ResultCode.ToString();
-                    var Url = t.Url;
-                    var ResponseContentType = t.ResponseContentType;
-                    var RequestHeaders = t.RequestHeaders;
-                    var RequestCookies = t.RequestCookies;
-                    var RequestBody = t.RequestBody;
-                    var ResponseHeaders = t.ResponseHeaders;
-                    var ResponseCookies = t.ResponseCookies;
-                    var ResponseBody = t.ResponseBody == null ? "" : Encoding.UTF8.GetString(t.ResponseBody, 0, t.ResponseBody.Length);
+        //            var Method = t.Method;
+        //            var ResultCode = t.ResultCode.ToString();
+        //            var Url = t.Url;
+        //            var ResponseContentType = t.ResponseContentType;
+        //            var RequestHeaders = t.RequestHeaders;
+        //            var RequestCookies = t.RequestCookies;
+        //            var RequestBody = t.RequestBody;
+        //            var ResponseHeaders = t.ResponseHeaders;
+        //            var ResponseCookies = t.ResponseCookies;
+        //            var ResponseBody = t.ResponseBody == null ? "" : Encoding.UTF8.GetString(t.ResponseBody, 0, t.ResponseBody.Length);
 
-                    if (Method == "OPTIONS") continue;
-                    data.Add("Method", Method);
-                    data.Add("ResultCode", ResultCode);
-                    data.Add("Url", Url);
-                    data.Add("ResponseContentType", ResponseContentType);
-                    data.Add("RequestHeaders", RequestHeaders);
-                    data.Add("RequestCookies", RequestCookies);
-                    data.Add("RequestBody", RequestBody);
-                    data.Add("ResponseHeaders", ResponseHeaders);
-                    data.Add("ResponseCookies", ResponseCookies);
-                    data.Add("ResponseBody", ResponseBody);
-                    break;
-                }
+        //            if (Method == "OPTIONS") continue;
+        //            data.Add("Method", Method);
+        //            data.Add("ResultCode", ResultCode);
+        //            data.Add("Url", Url);
+        //            data.Add("ResponseContentType", ResponseContentType);
+        //            data.Add("RequestHeaders", RequestHeaders);
+        //            data.Add("RequestCookies", RequestCookies);
+        //            data.Add("RequestBody", RequestBody);
+        //            data.Add("ResponseHeaders", ResponseHeaders);
+        //            data.Add("ResponseCookies", ResponseCookies);
+        //            data.Add("ResponseBody", ResponseBody);
+        //            break;
+        //        }
 
-            }
-            if (data.Count == 0) goto get;
+        //    }
+        //    if (data.Count == 0) goto get;
 
-            if (string.IsNullOrEmpty(parametr)) 
-                return string.Join("\n", data.Select(kvp => $"{kvp.Key}-{kvp.Value}"));
-            else data.TryGetValue ( parametr, out param);
-                return param;
-            //return data.TryGetValue(parametr, out string param);
-
-
-        }
+        //    if (string.IsNullOrEmpty(parametr)) 
+        //        return string.Join("\n", data.Select(kvp => $"{kvp.Key}-{kvp.Value}"));
+        //    else data.TryGetValue ( parametr, out param);
+        //        return param;
+        //    //return data.TryGetValue(parametr, out string param);
 
 
-        public static void ExtSwitch(this Instance instance, IZennoPosterProjectModel project,string toUse = "", bool log = false)
-        {
-            project.L0g($"switching extentions  {toUse}");
+        //}
 
-            if (instance.BrowserType.ToString() == "Chromium")
-            {
-                var wlt = new Wlt(project, instance, log);
-                string fileName = $"One-Click-Extensions-Manager.crx";
-                var managerId = "pbgjpgbpljobkekbhnnmlikbbfhbhmem";
-                instance.ExtAdd(project, managerId, fileName);
-                wlt.Install(managerId, fileName, log);
 
-                var em = instance.UseFullMouseEmulation;
+        //public static void ExtSwitch(this Instance instance, IZennoPosterProjectModel project,string toUse = "", bool log = false)
+        //{
+        //    project.L0g($"switching extentions  {toUse}");
 
-                int i = 0; string extStatus = "enabled";
+        //    if (instance.BrowserType.ToString() == "Chromium")
+        //    {
+        //        var wlt = new Wlt(project, instance, log);
+        //        string fileName = $"One-Click-Extensions-Manager.crx";
+        //        var managerId = "pbgjpgbpljobkekbhnnmlikbbfhbhmem";
+        //        instance.ExtAdd(project, managerId, fileName);
+        //        wlt.Install(managerId, fileName, log);
 
-                while (instance.ActiveTab.URL != "chrome-extension://pbgjpgbpljobkekbhnnmlikbbfhbhmem/index.html")
-                {
-                    instance.ActiveTab.Navigate("chrome-extension://pbgjpgbpljobkekbhnnmlikbbfhbhmem/index.html", "");
-                    instance.CloseExtraTabs();
-                    project.L0g($"URL is correct {instance.ActiveTab.URL}");
-                }
+        //        var em = instance.UseFullMouseEmulation;
 
-                while (!instance.ActiveTab.FindElementByAttribute("button", "class", "ext-name", "regexp", i).IsVoid)
-                {
-                    string extName = Regex.Replace(instance.ActiveTab.FindElementByAttribute("button", "class", "ext-name", "regexp", i).GetAttribute("innertext"), @" Wallet", "");
-                    string outerHtml = instance.ActiveTab.FindElementByAttribute("li", "class", "ext\\ type-normal", "regexp", i).GetAttribute("outerhtml");
-                    string extId = Regex.Match(outerHtml, @"extension-icon/([a-z0-9]+)").Groups[1].Value;
-                    if (outerHtml.Contains("disabled")) extStatus = "disabled";
-                    if (toUse.Contains(extName) && extStatus == "disabled" || toUse.Contains(extId) && extStatus == "disabled" || !toUse.Contains(extName) && !toUse.Contains(extId) && extStatus == "enabled")
-                        instance.HeClick(("button", "class", "ext-name", "regexp", i));
-                    i++;
-                }
+        //        int i = 0; string extStatus = "enabled";
 
-                instance.CloseExtraTabs();
-                instance.UseFullMouseEmulation = em;
-                project.L0g($"Enabled  {toUse}");
-            }
+        //        while (instance.ActiveTab.URL != "chrome-extension://pbgjpgbpljobkekbhnnmlikbbfhbhmem/index.html")
+        //        {
+        //            instance.ActiveTab.Navigate("chrome-extension://pbgjpgbpljobkekbhnnmlikbbfhbhmem/index.html", "");
+        //            instance.CloseExtraTabs();
+        //            project.L0g($"URL is correct {instance.ActiveTab.URL}");
+        //        }
 
-        }
-        public static bool ExtAdd(this Instance instance, IZennoPosterProjectModel project, string extId, string fileName)
-        {
-            string path = $"{project.Path}.crx\\{fileName}";
+        //        while (!instance.ActiveTab.FindElementByAttribute("button", "class", "ext-name", "regexp", i).IsVoid)
+        //        {
+        //            string extName = Regex.Replace(instance.ActiveTab.FindElementByAttribute("button", "class", "ext-name", "regexp", i).GetAttribute("innertext"), @" Wallet", "");
+        //            string outerHtml = instance.ActiveTab.FindElementByAttribute("li", "class", "ext\\ type-normal", "regexp", i).GetAttribute("outerhtml");
+        //            string extId = Regex.Match(outerHtml, @"extension-icon/([a-z0-9]+)").Groups[1].Value;
+        //            if (outerHtml.Contains("disabled")) extStatus = "disabled";
+        //            if (toUse.Contains(extName) && extStatus == "disabled" || toUse.Contains(extId) && extStatus == "disabled" || !toUse.Contains(extName) && !toUse.Contains(extId) && extStatus == "enabled")
+        //                instance.HeClick(("button", "class", "ext-name", "regexp", i));
+        //            i++;
+        //        }
 
-            if (!File.Exists(path))
-            {
-                project.L0g($"File not found: {path}");
-                throw new FileNotFoundException($"CRX file not found: {path}");
-            }
+        //        instance.CloseExtraTabs();
+        //        instance.UseFullMouseEmulation = em;
+        //        project.L0g($"Enabled  {toUse}");
+        //    }
 
-            var extListString = string.Join("\n", instance.GetAllExtensions().Select(x => $"{x.Name}:{x.Id}"));
-            if (!extListString.Contains(extId))
-            {
-                project.L0g($"installing {path}");
-                instance.InstallCrxExtension(path);
-                return true;
-            }
-            return false;
-        }
+        //}
+        //public static bool ExtAdd(this Instance instance, IZennoPosterProjectModel project, string extId, string fileName)
+        //{
+        //    string path = $"{project.Path}.crx\\{fileName}";
 
-        public static void ExtRm(this Instance instance, string[] ExtToRemove)
-        {
-            if (ExtToRemove != null && ExtToRemove.Length > 0)
-            foreach (string ext in ExtToRemove)
-                try { instance.UninstallExtension(ext); } catch { }
-        }
+        //    if (!File.Exists(path))
+        //    {
+        //        project.L0g($"File not found: {path}");
+        //        throw new FileNotFoundException($"CRX file not found: {path}");
+        //    }
+
+        //    var extListString = string.Join("\n", instance.GetAllExtensions().Select(x => $"{x.Name}:{x.Id}"));
+        //    if (!extListString.Contains(extId))
+        //    {
+        //        project.L0g($"installing {path}");
+        //        instance.InstallCrxExtension(path);
+        //        return true;
+        //    }
+        //    return false;
+        //}
+
+        //public static void ExtRm(this Instance instance, string[] ExtToRemove)
+        //{
+        //    if (ExtToRemove != null && ExtToRemove.Length > 0)
+        //    foreach (string ext in ExtToRemove)
+        //        try { instance.UninstallExtension(ext); } catch { }
+        //}
 
 
         public static void F5(this Instance instance)
         {
             instance.ActiveTab.MainDocument.EvaluateScript("location.reload(true)");
         }
+        public static void CtrlV(this Instance instance, string ToPaste)
+        {
+            lock (new object())
+            {
+                string originalClipboard = null;
+                try
+                {
+                    if (System.Windows.Forms.Clipboard.ContainsText())
+                        originalClipboard = System.Windows.Forms.Clipboard.GetText();
 
+                    System.Windows.Forms.Clipboard.SetText(ToPaste);
+                    instance.ActiveTab.KeyEvent("v", "press", "ctrl");
+
+                    if (!string.IsNullOrEmpty(originalClipboard))
+                        System.Windows.Forms.Clipboard.SetText(originalClipboard);
+                }
+                catch { }
+            }
+        }
 
     }
 
