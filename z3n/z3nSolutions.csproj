@@ -79,7 +79,7 @@
   <ItemGroup>
     <Compile Include="Browser\Cookies.cs" />
     <Compile Include="Extensions\Capcha.cs" />
-    <Compile Include="HanaGarden.cs" />
+    <Compile Include="W3bProtocols\HanaGarden.cs" />
     <Compile Include="Init.cs" />
     <Compile Include="Requests\NetHttp.cs" />
     <Compile Include="W3b\Balance.cs" />
@@ -88,14 +88,14 @@
     <Compile Include="Browser\ChromeExt.cs" />
     <Compile Include="Browser\Traffic.cs" />
     <Compile Include="W3b\CommonTx.cs" />
-    <Compile Include="Loggers.cs" />
+    <Compile Include="Logger.cs" />
     <Compile Include="Extensions\SystemExtentions.cs" />
     <Compile Include="W3b\Native.cs" />
     <Compile Include="W3bProtocols\GazZip.cs" />
     <Compile Include="W3bProtocols\Relay.cs" />
     <Compile Include="Extensions\Rnd.cs" />
     <Compile Include="Sql\DBuilder.cs" />
-    <Compile Include="F0rms.cs" />
+    <Compile Include="Extensions\F0rms.cs" />
     <Compile Include="W3bProtocols\DMail.cs" />
     <Compile Include="W3b\W3bWrite.cs" />
     <Compile Include="Socials\Galxe.cs" />
