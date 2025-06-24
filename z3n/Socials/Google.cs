@@ -51,8 +51,10 @@ namespace z3n
 
         public string Load(bool log = false)
         {
-        //_instance.Go("https://myaccount.google.com/");
+        _instance.Go("https://myaccount.google.com/");
+            _project.Deadline();
         check:
+            _project.Deadline(60);
             string state = GetState();
             switch (state)
             {

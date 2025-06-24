@@ -1060,36 +1060,21 @@ namespace w3tools //by @w3bgrep
 
         private void DbCreds()
         {
-
-            string[] Creds = _sql.Get("status,  login, password, otpsecret, recoveryemail, otpbackup, cookies", "private_google").Split('|');
-            _status = Creds[0];
-            _login = Creds[1];
-            _pass = Creds[2];
-            _2fa = Creds[3];
-            _recoveryMail = Creds[4];
-            _recoveryCodes = Creds[5];
-            _cookies = Creds[6];
-            try
-            {
-                _project.Variables["googleSTATUS"].Value = _status;
-                _project.Variables["googleLOGIN"].Value = _login;
-                _project.Variables["googlePASSWORD"].Value = _pass;
-                _project.Variables["google2FACODE"].Value = _2fa;
-                _project.Variables["googleSECURITY_MAIL"].Value = _recoveryMail;
-                _project.Variables["googleBACKUP_CODES"].Value = _recoveryCodes;
-                _project.Variables["googleCOOKIES"].Value = _cookies;
-            }
-            catch (Exception ex)
-            {
-                _logger.Send(ex.Message);
-            }
+            string[] creds = _sql.Get("status, login, password, otpsecret, recoveryemail, otpbackup, cookies", "private_google").Split('|');
+            try { _status = creds[0]; _project.Variables["googleSTATUS"].Value = _status; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _login = creds[1]; _project.Variables["googleLOGIN"].Value = _login; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _pass = creds[2]; _project.Variables["googlePASSWORD"].Value = _pass; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _2fa = creds[3]; _project.Variables["google2FACODE"].Value = _2fa; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _recoveryMail = creds[4]; _project.Variables["googleSECURITY_MAIL"].Value = _recoveryMail; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _recoveryCodes = creds[5]; _project.Variables["googleBACKUP_CODES"].Value = _recoveryCodes; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _cookies = creds[6]; _project.Variables["googleCOOKIES"].Value = _cookies; } catch (Exception ex) { _logger.Send(ex.Message); }
             _logger.Send(_status);
-            //return _status;
         }
         public string Load(bool log = false)
         {
-            //_instance.Go("https://myaccount.google.com/");
+            if (!_instance.ActiveTab.URL.Contains("google")) _instance.Go("https://myaccount.google.com/");
         check:
+            Thread.Sleep(1000);
             string state = GetState();
             switch (state)
             {
@@ -1122,8 +1107,11 @@ namespace w3tools //by @w3bgrep
                     goto check;
 
                 case "CAPCHA":
-                    _sql.Upd("status = 'status = '!WCapcha'", "google");
-                    _sql.Upd("status = 'status = '!W fail.Google Capcha or Locked'");
+                    try { _project.CapGuru(); } catch { }
+                    _instance.HeClick(("button", "innertext", "Next", "regexp", 0));
+                    //_sql.Upd("status = 'status = '!WCapcha'", "google");
+                    //_sql.Upd("status = 'status = '!W fail.Google Capcha or Locked'");
+                    goto check;
                     throw new Exception("CAPCHA");
 
                 case "badBrowser":
@@ -1147,6 +1135,12 @@ namespace w3tools //by @w3bgrep
             if (!_instance.ActiveTab.FindElementByAttribute("a", "href", "https://accounts.google.com/SignOutOptions\\?", "regexp", 0).IsVoid)
                 status = "signedIn";
 
+            else if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Verify\\ it’s\\ you", "regexp", 0).IsVoid)
+                status = "CAPCHA";
+
+            else if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Try\\ using\\ a\\ different\\ browser.", "regexp", 0).IsVoid)
+                status = "BadBrowser";
+
             else if ((!_instance.ActiveTab.FindElementByAttribute("input:email", "fulltagname", "input:email", "text", 0).IsVoid) && 
                     (_instance.ActiveTab.FindElementByAttribute("input:email", "fulltagname", "input:email", "text", 0).GetAttribute("value") == ""))
                 status = "inputLogin";
@@ -1163,11 +1157,7 @@ namespace w3tools //by @w3bgrep
                     _instance.ActiveTab.FindElementById("totpPin").GetAttribute("value") == "")
                 status = "addRecoveryPhone";
 
-            else if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Verify\\ it’s\\ you", "regexp", 0).IsVoid)
-                status = "CAPCHA";
 
-            else if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Try\\ using\\ a\\ different\\ browser.", "regexp", 0).IsVoid) 
-                status = "BadBrowser";
 
             else status = "undefined";
 

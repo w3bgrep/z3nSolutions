@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Xml.Linq;
 using ZennoLab.CommandCenter;
@@ -586,22 +587,22 @@ namespace z3n
             }
             return tableStructure;
         }
-        public static void CapGuru(this IZennoPosterProjectModel project)
+        public static bool CapGuru(this IZennoPosterProjectModel project)
         {
             var _sql = new Sql(project);
             var key = _sql.Get("apikey", "private_api",key:"capguru");
             project.Context["capguru_key"] = key; 
-
-
-
             byte[] fileBytes = Convert.FromBase64String(getplugin());
             string tempFilePath = Path.Combine(Path.GetTempPath(), "Cap.Guru.20.zp");
-            File.WriteAllBytes(tempFilePath, fileBytes);
-            bool res = project.ExecuteProject(tempFilePath, null, true, true, true);
-            if (File.Exists(tempFilePath)) { File.Delete(tempFilePath); }
-
-            if (!res) { throw new Exception("Что то пошло не так!"); }
-
+            
+            lock (LockObject) // Используем уникальный объект для блокировки
+            {
+                File.WriteAllBytes(tempFilePath, fileBytes);
+                bool res = project.ExecuteProject(tempFilePath, null, true, true, true);
+                if (File.Exists(tempFilePath)) { File.Delete(tempFilePath); }
+                return res;
+                if (!res) { throw new Exception("Что-то пошло не так!"); }
+            }
 
             string getplugin()
             {
