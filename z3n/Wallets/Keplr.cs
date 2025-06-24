@@ -351,7 +351,7 @@ namespace z3n
             var imported = "";
             int i = 0;
             _instance.HeGet(("button", "innertext", "Add\\ Wallet", "regexp", 0));
-            _project.Sleep(1, 1);
+            Thread.Sleep(1000);
             try
             {
                 while (true)

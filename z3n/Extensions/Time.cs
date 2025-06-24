@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Globalization;
+using System.Threading;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 
 namespace z3n
@@ -17,8 +19,6 @@ namespace z3n
                 throw new ArgumentException("Invalid format. Use 'unix' or 'iso'.");
             }
         }
-
-
         public static string cd(object input = null, string o = "unix")
         {
             DateTime utcNow = DateTime.UtcNow;
@@ -44,6 +44,70 @@ namespace z3n
                 else if (o == "iso") return futureTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"); // ISO 8601
             }
             throw new ArgumentException("Неподдерживаемый тип входного параметра");
+        }
+
+
+        public static int TimeElapsed(this IZennoPosterProjectModel project, string varName = "varSessionId")
+        {
+            var start = project.Variables[varName].Value;
+            long currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            long startTime = long.Parse(start);
+            int difference = (int)(currentTime - startTime);
+
+            return difference;
+        }
+        public static T Age<T>(this IZennoPosterProjectModel project)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            long start;
+            try
+            {
+                start = long.Parse(project.Variables["varSessionId"].Value);
+            }
+            catch
+            {
+                project.Variables["varSessionId"].Value = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+                start = long.Parse(project.Variables["varSessionId"].Value);
+            }
+
+            long Age = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - start;
+
+
+            if (typeof(T) == typeof(string))
+            {
+                string result = TimeSpan.FromSeconds(Age).ToString();
+                return (T)(object)result;
+            }
+            else if (typeof(T) == typeof(TimeSpan))
+            {
+                TimeSpan result = TimeSpan.FromSeconds(Age);
+                return (T)(object)result;
+            }
+            else
+            {
+                return (T)Convert.ChangeType(Age, typeof(T));
+            }
+
+        }
+        public static void TimeOut(this IZennoPosterProjectModel project, int min = 30)
+        {
+            if (project.TimeElapsed() > 60 * min) throw new Exception("GlobalTimeout");
+        }
+        public static void Deadline(this IZennoPosterProjectModel project, int sec = 0)
+        {
+            if (sec != 0)
+            {
+                var start = project.Variables[$"t0"].Value;
+                long currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                long startTime = long.Parse(start);
+                int difference = (int)(currentTime - startTime);
+                if (difference > sec) throw new Exception("Timeout");
+
+            }
+            else
+            {
+                project.Variables["t0"].Value = (DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString();
+            }
         }
 
     }

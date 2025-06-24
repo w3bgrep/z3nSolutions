@@ -115,7 +115,7 @@ namespace z3n
             if (txBoxList.Count > 1)
             {
                 _project.L0g(txBoxText);
-                _project.Sleep(gap, gap);
+                Thread.Sleep(2000);
                 goto check;
             }
 
