@@ -97,7 +97,7 @@ namespace z3n
             if (string.IsNullOrEmpty(source))
                 source = "project";
             if (string.IsNullOrEmpty(target))
-                source = "db";
+                target = "db";
 
             string cookies = null;
             switch (source)
@@ -108,7 +108,7 @@ namespace z3n
                     return;
                 case "all":
                     cookies = Get();
-                    if (source == "db")
+                    if (target == "db")
                         new Sql(_project).Upd($"cookies= '{cookies}'", "private_profile");
                     else
                     {
@@ -212,8 +212,5 @@ namespace z3n
             }
         }
 
-
     }
-
-
 }

@@ -80,7 +80,7 @@
     <Compile Include="Browser\Cookies.cs" />
     <Compile Include="Browser\Capcha.cs" />
     <Compile Include="W3bProtocols\HanaGarden.cs" />
-    <Compile Include="Init.cs" />
+    <Compile Include="Tools\Init.cs" />
     <Compile Include="Requests\NetHttp.cs" />
     <Compile Include="W3b\Balance.cs" />
     <Compile Include="Browser\BrowserScan.cs" />
@@ -95,7 +95,7 @@
     <Compile Include="W3bProtocols\Relay.cs" />
     <Compile Include="Tools\Rnd.cs" />
     <Compile Include="Sql\DBuilder.cs" />
-    <Compile Include="Extensions\F0rms.cs" />
+    <Compile Include="Tools\F0rms.cs" />
     <Compile Include="W3bProtocols\DMail.cs" />
     <Compile Include="W3b\W3bWrite.cs" />
     <Compile Include="Socials\Galxe.cs" />

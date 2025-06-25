@@ -325,9 +325,9 @@ namespace z3n
             .GetCustomAttribute<AssemblyTitleAttribute>()
             ?.Title ?? "Unknown";
             try
-            {
-                project.Var("acc0",null);
+            {               
                 project.GlobalVariables[nameSpase, $"acc{project.Variables["acc0"].Value}"].Value = null;
+                project.Var("acc0", null);
             }
             catch { }
 
