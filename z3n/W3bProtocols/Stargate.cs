@@ -67,7 +67,7 @@ namespace z3n
             {
                 _instance.HeClick(unconnectedButton, emu: 1);
                 _instance.HeClick(("button", "innertext", "Zerion\\nConnect", "regexp", 0));
-                new ZerionWallet(_project, _instance).ZerionConnect();
+                new ZerionWallet(_project, _instance).Connect();
                 goto check;
 
             }
@@ -90,7 +90,7 @@ namespace z3n
                 _project.L0g($"unknown state {connectedButton.InnerText}  {unconnectedButton.InnerText}");
                 _instance.HeClick(unconnectedButton, emu: 1);
                 _instance.HeClick(("button", "innertext", "Zerion\\nConnect", "regexp", 0));
-                new ZerionWallet(_project, _instance).ZerionConnect();
+                new ZerionWallet(_project, _instance).Connect();
 
                 goto check;
             }

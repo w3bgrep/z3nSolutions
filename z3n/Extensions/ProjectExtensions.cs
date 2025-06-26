@@ -341,6 +341,7 @@ namespace z3n
         public static bool ChooseSingleAcc(this IZennoPosterProjectModel project)
         {
             var listAccounts = project.Lists["accs"];
+            string pathProfiles = project.Var("profiles_folder");
 
         check:
             if (listAccounts.Count == 0)
@@ -353,12 +354,14 @@ namespace z3n
             }
 
             int randomAccount = new Random().Next(0, listAccounts.Count);
-            project.Variables["acc0"].Value = listAccounts[randomAccount];
+            string acc0 = listAccounts[randomAccount];
+            project.Var("acc0", acc0);
             listAccounts.RemoveAt(randomAccount);
             if (!project.GlobalSet())
                 goto check;
-            project.Var("pathProfileFolder", $"{project.Var("profiles_folder")}accounts\\profilesFolder\\{project.Var("acc0")}");
-            project.L0g($"`working with: [acc{project.Var("acc0")}] accs left: [{listAccounts.Count}]");
+            project.Var("pathProfileFolder", $"{pathProfiles}accounts\\profilesFolder\\{acc0}");
+            project.Var("pathCookies", $"{pathProfiles}accounts\\cookies\\{acc0}.json");
+            project.L0g($"`working with: [acc{acc0}] accs left: [{listAccounts.Count}]");
             return true;
         }
         public static string GetNewCreds(this IZennoPosterProjectModel project, string dataType)

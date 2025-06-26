@@ -162,1085 +162,510 @@ namespace w3tools //by @w3bgrep
 
 
     }
-  
-    public static class HanaGarden
+
+
+
+
+    public class ZerionWallet2
     {
-        private static readonly string GRAPHQL_URL = "https://hanafuda-backend-app-520478841386.us-central1.run.app/graphql";
-        private static readonly string API_KEY = "AIzaSyDipzN0VRfTPnMGhQ5PSzO27Cxm3DohJGY";
-
-        private static string ExecuteGraphQLQuery(IZennoPosterProjectModel project, string query, string variables = null)
-        {
-            // Получаем токен и проверяем его
-            string token = project.Variables["TOKEN_CURRENT"].Value.Trim();
-
-            if (string.IsNullOrEmpty(token))
-            {
-                project.SendErrorToLog("Token is empty or null");
-                return null;
-            }
-
-            // Форматируем заголовки, убедившись что токен передается корректно
-            string[] headers = new string[] {
-                "Content-Type: application/json",
-                $"Authorization: Bearer {token.Trim()}"
-            };
-
-            // Форматируем GraphQL запрос, удаляя лишние пробелы и табуляции
-            query = query.Replace("\t", "").Replace("\n", " ").Replace("\r", "").Trim();
-
-            //string jsonBody = JsonConvert.SerializeObject(new { query = query });
-            string jsonBody;
-            if (variables != null)
-            {
-                jsonBody = JsonConvert.SerializeObject(new { query = query, variables = JsonConvert.DeserializeObject(variables) });
-            }
-            else
-            {
-                jsonBody = JsonConvert.SerializeObject(new { query = query });
-            }
-
-
-
-
-            try
-            {
-                string response = ZennoPoster.HttpPost(
-                    GRAPHQL_URL,
-                    Encoding.UTF8.GetBytes(jsonBody),
-                    "application/json",
-                    project.Variables["proxy"].Value,
-                    "UTF-8",
-                    ZennoLab.InterfacesLibrary.Enums.Http.ResponceType.BodyOnly,
-                    30000,
-                    "",
-                    "HANA/v1",
-                    true,
-                    5,
-                    headers,
-                    "",
-                    true
-                );
-
-                return response;
-            }
-            catch (Exception ex)
-            {
-                project.SendErrorToLog($"GraphQL request failed: {ex.Message}");
-                return null;
-            }
-        }
-        public static string RefreshToken(IZennoPosterProjectModel project, string currentToken)
-        {
-            string url = $"https://securetoken.googleapis.com/v1/token?key={API_KEY}";
-
-            string jsonBody = JsonConvert.SerializeObject(new
-            {
-                grant_type = "refresh_token",
-                refresh_token = currentToken
-            });
-
-
-            string[] headers = new string[] {
-                "Content-Type: application/json"
-            };
-
-            try
-            {
-                string response = ZennoPoster.HttpPost(
-                    url,
-                    Encoding.UTF8.GetBytes(jsonBody),
-                    "application/json",
-                    project.Variables["proxy"].Value,
-                    "UTF-8",
-                    ZennoLab.InterfacesLibrary.Enums.Http.ResponceType.BodyOnly,
-                    30000,
-                    "",
-                    "Firebase/v1",
-                    true,
-                    5,
-                    headers,
-                    "",
-                    true
-                );
-
-
-                dynamic tokenData = JObject.Parse(response);
-                string newToken = tokenData.access_token;
-
-                // Сохраняем новый токен в переменную проекта
-                project.Variables["TOKEN_CURRENT"].Value = newToken;
-
-                return newToken;
-            }
-            catch (Exception ex)
-            {
-                project.SendErrorToLog($"Failed to refresh token: {ex.Message}");
-                return null;
-            }
-        }
-
-
-
-
-        private static dynamic GetUserInfo(IZennoPosterProjectModel project)
-        {
-            string query = @"
-			query CurrentUser {
-				currentUser {
-					id
-					sub
-					name
-					totalPoint
-					evmAddress {
-						userId
-						address
-					}
-				}
-			}";
-
-            string response = ExecuteGraphQLQuery(project, query);
-            return JObject.Parse(response);
-        }// Получение информации о картах пользователя
-        public static string GetUserYakuInfo(IZennoPosterProjectModel project)
-        {
-            string query = @"
-			query GetYakuList {
-				getYakuListForCurrentUser {
-					cardId
-					group
-				}
-			}";
-
-            return ExecuteGraphQLQuery(project, query);
-        }
-        public static string GetUserYakuInfo2(IZennoPosterProjectModel project)
-        {
-            string query = @"
-			query GetMasterData {
-				masterData {
-					yaku {
-					cardId
-					group
-					}
-				}
-			}";
-
-            return ExecuteGraphQLQuery(project, query);
-        }
-
-        // Получение информации о саде
-        public static string GetGardenInfo(IZennoPosterProjectModel project)
-        {
-            project.SendInfoToLog("Getting garden info...");
-            string query = @"
-			query GetGardenForCurrentUser {
-				getGardenForCurrentUser {
-					id
-					inviteCode
-					gardenDepositCount
-					gardenStatus {
-						id
-						activeEpoch
-						growActionCount
-						gardenRewardActionCount
-					}
-					gardenMembers {
-						id
-						sub
-						name
-						iconPath
-						depositCount
-					}
-				}
-			}";
-
-            return ExecuteGraphQLQuery(project, query);
-        }
-
-        public static void ProcessGarden(IZennoPosterProjectModel project)
-        {
-            try
-            {
-                // Получаем и обновляем токен
-                string currentToken = project.Variables["TOKEN_CURRENT"].Value;
-                project.SendInfoToLog($"Initial token: {currentToken}");
-
-                string refreshedToken = RefreshToken(project, currentToken);
-                if (string.IsNullOrEmpty(refreshedToken))
-                {
-                    project.SendErrorToLog("Failed to refresh token");
-                    return;
-                }
-
-                project.SendInfoToLog($"Successfully refreshed token: {refreshedToken}");
-
-                // Получаем информацию о саде
-                project.SendInfoToLog("Getting garden info...");
-                string gardenResponse = ExecuteGraphQLQuery(project, @"
-					query GetGardenForCurrentUser {
-						getGardenForCurrentUser {
-							id
-							inviteCode
-							gardenDepositCount
-							gardenStatus {
-								id
-								activeEpoch
-								growActionCount
-								gardenRewardActionCount
-							}
-							gardenMembers {
-								id
-								sub
-								name
-								iconPath
-								depositCount
-							}
-						}
-					}");
-
-                project.SendInfoToLog($"Garden response received: {gardenResponse.Substring(0, Math.Min(100, gardenResponse.Length))}...");
-
-                if (string.IsNullOrEmpty(gardenResponse))
-                {
-                    project.SendErrorToLog("Garden response is empty!");
-                    return;
-                }
-
-                dynamic gardenData = JObject.Parse(gardenResponse);
-
-                if (gardenData.data == null || gardenData.data.getGardenForCurrentUser == null)
-                {
-                    project.SendErrorToLog($"Invalid garden data structure: {gardenResponse}");
-                    return;
-                }
-
-                dynamic gardenStatus = gardenData.data.getGardenForCurrentUser.gardenStatus;
-                dynamic gardenMembers = gardenData.data.getGardenForCurrentUser.gardenMembers;
-
-                // Проверяем наличие необходимых данных
-                if (gardenStatus == null)
-                {
-                    project.SendErrorToLog("Garden status is null!");
-                    return;
-                }
-
-                int totalGrows = (int)gardenStatus.growActionCount;
-                int totalRewards = (int)gardenStatus.gardenRewardActionCount;
-
-                project.SendInfoToLog($"Found actions - Grows: {totalGrows}, Rewards: {totalRewards}");
-
-                string accountName = "Unknown";
-                string accountId = "Unknown";
-
-                if (gardenMembers != null && gardenMembers.Count > 0)
-                {
-                    accountName = gardenMembers[0].name;
-                    accountId = gardenMembers[0].id;
-                }
-
-                project.SendInfoToLog($"Processing account: {accountName} (ID: {accountId})");
-
-
-
-                //grow
-                string growQuery = @"
-				mutation {
-					executeGrowAction(withAll: true) {
-						baseValue
-						leveragedValue
-						totalValue
-						multiplyRate
-						limit
-					}
-				}";
-
-                project.SendInfoToLog($"Executing grow all action");
-                string growResponse = ExecuteGraphQLQuery(project, growQuery);
-                project.SendInfoToLog($"Grow response: {growResponse}");
-
-                dynamic growData = JObject.Parse(growResponse);
-                if (growData.data != null && growData.data.executeGrowAction != null)
-                {
-                    var result = growData.data.executeGrowAction;
-                    project.SendInfoToLog($"Grow results: Base={result.baseValue}, " +
-                                        $"Leveraged={result.leveragedValue}, " +
-                                        $"Total={result.totalValue}, " +
-                                        $"Rate={result.multiplyRate}, " +
-                                        $"Limit={result.limit}");
-                }
-
-
-                // Получаем обновленные очки
-                string userInfoResponse = ExecuteGraphQLQuery(project, @"
-					query CurrentUser {
-						currentUser {
-							totalPoint
-						}
-					}");
-
-                dynamic userInfo = JObject.Parse(userInfoResponse);
-                int totalPoints = (int)userInfo.data.currentUser.totalPoint;
-
-                project.SendInfoToLog($"Grow action completed. Current Total Points: {totalPoints}");
-
-                int delay = new Random().Next(1000, 5000);
-                project.SendInfoToLog($"Waiting for {delay}ms before next action");
-                Thread.Sleep(delay);
-
-
-                // Получение наград
-                if (totalRewards > 0)
-                {
-                    project.SendInfoToLog($"Starting reward collection. Total rewards: {totalRewards}");
-
-                    string rewardQuery = @"
-					mutation executeGardenRewardAction($limit: Int!) {
-						executeGardenRewardAction(limit: $limit) {
-							data { cardId, group }
-							isNew
-						}
-					}";
-
-                    int steps = (int)Math.Ceiling(totalRewards / 10.0);
-                    project.SendInfoToLog($"Will process rewards in {steps} steps");
-
-                    for (int i = 0; i < steps; i++)
-                    {
-                        try
-                        {
-                            project.SendInfoToLog($"Processing rewards step {i + 1} of {steps}");
-                            string variables = @"{""limit"": 10}";
-                            string rewardResponse = ExecuteGraphQLQuery(project, rewardQuery, variables);
-                            project.SendInfoToLog($"Reward response: {rewardResponse}");
-
-                            dynamic rewardData = JObject.Parse(rewardResponse);
-
-                            foreach (var reward in rewardData.data.executeGardenRewardAction)
-                            {
-                                if ((bool)reward.isNew)
-                                {
-                                    project.SendInfoToLog($"New card received: ID {reward.data.cardId}, Group: {reward.data.group}");
-                                }
-                            }
-
-                            delay = new Random().Next(1000, 5000);
-                            project.SendInfoToLog($"Waiting for {delay}ms before next reward collection");
-                            Thread.Sleep(delay);
-                        }
-                        catch (Exception ex)
-                        {
-                            project.SendErrorToLog($"Error during reward collection: {ex.Message}\nStack trace: {ex.StackTrace}");
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                project.SendErrorToLog($"Major error in garden processing: {ex.Message}\nStack trace: {ex.StackTrace}");
-            }
-        }
-
-
-        // Выполнение всех доступных действий роста
-        public static string ExecuteGrowAll(IZennoPosterProjectModel project)
-        {
-            string query = @"
-			mutation {
-				executeGrowAction(withAll: true) {
-					baseValue
-					leveragedValue
-					totalValue
-					multiplyRate
-					limit
-				}
-			}";
-
-            return ExecuteGraphQLQuery(project, query);
-        }
-
-        // Получение текущих очков пользователя
-        public static string GetUserPoints(IZennoPosterProjectModel project)
-        {
-            string query = @"
-			query CurrentUser {
-				currentUser {
-					totalPoint
-				}
-			}";
-
-            return ExecuteGraphQLQuery(project, query);
-        }
-
-        // Получение наград с указанным лимитом
-        public static string CollectRewards(IZennoPosterProjectModel project, int limit)
-        {
-            string query = @"
-			mutation executeGardenRewardAction($limit: Int!) {
-				executeGardenRewardAction(limit: $limit) {
-					data { 
-						cardId
-						group 
-					}
-					isNew
-				}
-			}";
-
-            string variables = $"{{\"limit\": {limit}}}";
-            return ExecuteGraphQLQuery(project, query, variables);
-        }
-
-
-
-
-
-
-
-
-    }
-    public static class HanaAPI
-    {
-        private static readonly string GRAPHQL_URL = "https://hanafuda-backend-app-520478841386.us-central1.run.app/graphql";
-
-        public static string GetSchemaInfo(IZennoPosterProjectModel project)
-        {
-            string introspectionQuery = @"
-			query {
-				__schema {
-					types {
-						name
-						fields {
-							name
-							type {
-								name
-								kind
-							}
-						}
-					}
-					mutationType {
-						fields {
-							name
-							type {
-								name
-							}
-							args {
-								name
-								type {
-									name
-								}
-							}
-						}
-					}
-				}
-			}";
-
-            string[] headers = new string[] {
-                "Content-Type: application/json",
-                $"Authorization: Bearer {project.Variables["TOKEN_CURRENT"].Value}"
-            };
-
-            string jsonBody = JsonConvert.SerializeObject(new { query = introspectionQuery });
-
-            return ZennoPoster.HttpPost(
-                GRAPHQL_URL,
-                Encoding.UTF8.GetBytes(jsonBody),
-                "application/json",
-                "",
-                "UTF-8",
-                ZennoLab.InterfacesLibrary.Enums.Http.ResponceType.BodyOnly,
-                30000,
-                "",
-                "HANA/v1",
-                true,
-                5,
-                headers,
-                "",
-                true
-            );
-        }
-    }
-
-
-
-    public class MerkleTree
-    {
-        public static string GetMerkleRoot(List<string> tokenIds)
-        {
-            var leaves = tokenIds
-                .Select(tokenId => Sha3Keccack.Current.CalculateHashFromHex(tokenId))
-                .OrderBy(hash => hash)
-                .ToList();
-
-            while (leaves.Count > 1)
-            {
-                var newLeaves = new List<string>();
-                for (int i = 0; i < leaves.Count; i += 2)
-                {
-                    var left = leaves[i];
-                    var right = i + 1 < leaves.Count ? leaves[i + 1] : left;
-                    var combined = left.CompareTo(right) < 0 ? left + right : right + left;
-                    newLeaves.Add(Sha3Keccack.Current.CalculateHash(combined));
-                }
-                leaves = newLeaves;
-            }
-
-            return leaves.First();
-        }
-    }
-    public class EIP712OrderSigner
-    {
-        public static string SignOrder(
-            string privateKey,
-            string trader,
-            byte side,
-            string collection,
-            BigInteger tokenId,
-            string paymentToken,
-            BigInteger price,
-            BigInteger expirationTime,
-            string merkleRoot,
-            BigInteger salt,
-            string domainName,
-            string domainVersion,
-            BigInteger chainId,
-            string verifyingContract)
-        {
-            // ABI-кодирование домена
-            var domainTypeHash = Sha3Keccack.Current.CalculateHash(
-                System.Text.Encoding.UTF8.GetBytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"));
-            var domainData = new ABIEncode().GetABIEncoded(
-                new ABIValue("bytes32", domainTypeHash),
-                new ABIValue("string", domainName),
-                new ABIValue("string", domainVersion),
-                new ABIValue("uint256", chainId),
-                new ABIValue("address", verifyingContract));
-            var domainHash = Sha3Keccack.Current.CalculateHash(domainData);
-
-            // ABI-кодирование сообщения
-            var orderTypeHash = Sha3Keccack.Current.CalculateHash(
-                System.Text.Encoding.UTF8.GetBytes("Order(address trader,uint8 side,address collection,uint256 tokenId,address paymentToken,uint256 price,uint256 expirationTime,bytes32 merkleRoot,uint256 salt)"));
-            var messageData = new ABIEncode().GetABIEncoded(
-                new ABIValue("bytes32", orderTypeHash),
-                new ABIValue("address", trader),
-                new ABIValue("uint8", side),
-                new ABIValue("address", collection),
-                new ABIValue("uint256", tokenId),
-                new ABIValue("address", paymentToken),
-                new ABIValue("uint256", price),
-                new ABIValue("uint256", expirationTime),
-                new ABIValue("bytes32", merkleRoot),
-                new ABIValue("uint256", salt));
-            var messageHash = Sha3Keccack.Current.CalculateHash(messageData);
-
-            // Финальный хэш
-            var finalData = new byte[] { 0x19, 0x01 }
-                .Concat(domainHash)
-                .Concat(messageHash)
-                .ToArray();
-            var finalHash = Sha3Keccack.Current.CalculateHash(finalData);
-
-            // Подпись
-            var signer = new EthereumMessageSigner();
-            var ethECKey = new EthECKey(privateKey);
-            var signature = signer.Sign(finalHash, ethECKey);
-
-            return signature;
-        }
-    }
-    public class MarketplaceBidding : W3b
-    {
-        private readonly string _walletAddress;
-        private readonly string _privateKey;
-        private readonly string _nftContractAddress;
-        private readonly string _paymentTokenAddress;
-        private readonly string _marketplaceContractAddress;
-        private readonly string _privyIdToken;
-        private readonly string _chainRpc;
-
-        public MarketplaceBidding(
-            IZennoPosterProjectModel project,
-            string walletAddress,
-            string privateKey,
-            string nftContractAddress,
-            string paymentTokenAddress,
-            string marketplaceContractAddress,
-            string privyIdToken,
-            string chain,
-            bool log = false)
-            : base(project, log)
-        {
-            _walletAddress = walletAddress;
-            _privateKey = ApplyKey(privateKey);
-            _nftContractAddress = nftContractAddress;
-            _paymentTokenAddress = paymentTokenAddress;
-            _marketplaceContractAddress = marketplaceContractAddress;
-            _privyIdToken = privyIdToken;
-            _chainRpc = Rpc(chain);
-        }
-
-        public class BidResponse
-        {
-            public string Id { get; set; }
-        }
-
-        public class CardData
-        {
-            public List<int> TokenIds { get; set; }
-            public string MerkleRoot { get; set; }
-        }
-
-        public Tuple<string, string> CreateBid(int heroId, int rarity, decimal bidAmountEth, CardData cardData)
-        {
-            try
-            {
-                BigInteger bidAmountWei = (BigInteger)(bidAmountEth * 1000000000000000000m);
-                Log("Bid amount in Wei: " + bidAmountWei.ToString());
-
-                if (cardData == null || cardData.TokenIds == null || string.IsNullOrEmpty(cardData.MerkleRoot))
-                {
-                    throw new Exception("Invalid card data");
-                }
-
-                long timestamp = (long)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds + 43200;
-                string salt = new Random().Next(100000, 999999).ToString();
-
-                // Placeholder for signature generation
-                string signature = GetSignature(
-                    _privateKey,
-                    _walletAddress,
-                    0,
-                    0,
-                    bidAmountWei.ToString(),
-                    timestamp,
-                    cardData.MerkleRoot,
-                    int.Parse(salt)
-                );
-
-                Log("Signature: " + signature);
-
-                string handle = FetchUserHandle(_walletAddress, _privyIdToken);
-
-                var payload = new Dictionary<string, object>
-                {
-                    { "trader", _walletAddress },
-                    { "side", 0 },
-                    { "collection", _nftContractAddress },
-                    { "token_id", 0 },
-                    { "token_ids", cardData.TokenIds },
-                    { "payment_token", _paymentTokenAddress },
-                    { "price", bidAmountWei.ToString() },
-                    { "expiration_time", timestamp.ToString() },
-                    { "salt", salt },
-                    { "signature", signature },
-                    { "merkle_root", cardData.MerkleRoot },
-                    { "hero_id", heroId.ToString() },
-                    { "rarity", rarity },
-                    { "bidder_handle", handle }
-                };
-
-                BidResponse response = SubmitBid(payload);
-                if (response != null && !string.IsNullOrEmpty(response.Id))
-                {
-                    string json = JsonConvert.SerializeObject(response, Formatting.Indented);
-                    string filePath = Path.Combine("bids_storage", response.Id + ".json");
-                    Directory.CreateDirectory("bids_storage");
-                    File.WriteAllText(filePath, json);
-                    return new Tuple<string, string>(response.Id, null);
-                }
-                else
-                {
-                    return new Tuple<string, string>(null, "Failed to submit bid");
-                }
-            }
-            catch (Exception ex)
-            {
-                Log("Error in CreateBid: " + ex.Message, log: true);
-                return new Tuple<string, string>(null, ex.Message);
-            }
-        }
-
-        private BidResponse SubmitBid(Dictionary<string, object> payload)
-        {
-            try
-            {
-                string url = "https://secret-api.fantasy.top/marketplace/create-bid-order";
-                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
-                request.Method = "POST";
-                request.ContentType = "application/json";
-                request.Headers.Add("Authorization", "Bearer " + _privyIdToken);
-
-                string jsonPayload = JsonConvert.SerializeObject(payload);
-                byte[] byteArray = Encoding.UTF8.GetBytes(jsonPayload);
-                request.ContentLength = byteArray.Length;
-
-                using (Stream dataStream = request.GetRequestStream())
-                {
-                    dataStream.Write(byteArray, 0, byteArray.Length);
-                }
-
-                using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
-                {
-                    if (response.StatusCode != System.Net.HttpStatusCode.OK)
-                    {
-                        Log("Non-200 response: " + response.StatusCode, log: true);
-                        using (StreamReader reader = new StreamReader(response.GetResponseStream()))
-                        {
-                            Log("Response: " + reader.ReadToEnd(), log: true);
-                        }
-                        return null;
-                    }
-
-                    using (StreamReader reader = new StreamReader(response.GetResponseStream()))
-                    {
-                        string responseText = reader.ReadToEnd();
-                        return JsonConvert.DeserializeObject<BidResponse>(responseText);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Log("Failed to submit bid: " + ex.Message, log: true);
-                return null;
-            }
-        }
-
-        public string AcceptBid(Dictionary<string, object> bidData, int specificTokenId)
-        {
-            try
-            {
-                // Placeholder for Merkle proof generation
-                Tuple<List<string>, string> merkleData = GenerateMerkleProof(specificTokenId, (List<int>)bidData["token_ids"]);
-                List<string> merkleProof = merkleData.Item1;
-                string merkleRoot = merkleData.Item2;
-
-                // Prepare order structure (simplified to match Python logic)
-                var order = new
-                {
-                    trader = _walletAddress,
-                    side = 0,
-                    collection = _nftContractAddress,
-                    tokenId = 0,
-                    paymentToken = _paymentTokenAddress,
-                    price = BigInteger.Parse(bidData["price"].ToString()),
-                    expirationTime = long.Parse(bidData["expiration_time"].ToString()),
-                    merkleRoot = bidData["merkle_root"].ToString(),
-                    salt = int.Parse(bidData["salt"].ToString())
-                };
-
-                // Placeholder for encoding (needs actual implementation)
-                string encodedData = EncodeOrder(
-                    order,
-                    bidData["signature"].ToString(),
-                    specificTokenId,
-                    merkleProof
-                );
-
-                // Use Send1559 from W3b.cs (assuming it accepts string RPC)
-                string txHash = Send1559(
-                    _chainRpc,
-                    _marketplaceContractAddress,
-                    "0x00cb1eef" + encodedData,
-                    0m,
-                    _privateKey,
-                    1
-                );
-
-                Log("Transaction hash: " + txHash);
-
-                // Simplified check (no Web3 simulation due to missing methods)
-                if (!string.IsNullOrEmpty(txHash))
-                {
-                    Log("✅ Success with transaction!");
-                    return txHash;
-                }
-                else
-                {
-                    throw new Exception("Transaction failed");
-                }
-            }
-            catch (Exception ex)
-            {
-                Log("❌ Error accepting bid: " + ex.Message, log: true);
-                return null;
-            }
-        }
-
-        public string SetApprovalForAll(int specificTokenId)
-        {
-            try
-            {
-                // Placeholder for ABI loading and contract interaction
-                string nftAbi = File.ReadAllText("nft_collection_abi.json");
-
-                // Simplified logic (no contract call due to missing Web3)
-                string approveToContract = "0xf9fe044bdd557c76c8eb0bd566d8b149186425c3";
-                bool isApprovedForAll = false; // Placeholder, needs actual check
-
-                Log("Approved Address: (simulated)");
-                Log("Is approved collection-wide: " + isApprovedForAll.ToString());
-
-                if (!isApprovedForAll)
-                {
-                    Log("[INFO] Collection-wide approval not found. Sending transaction...");
-
-                    // Placeholder encoded data (needs actual function call)
-                    string encodedData = "0x"; // Replace with real encoding
-
-                    string txHash = Send1559(
-                        _chainRpc,
-                        _nftContractAddress,
-                        encodedData,
-                        0m,
-                        _privateKey,
-                        1
-                    );
-
-                    Log("[SUCCESS] Sent setApprovalForAll tx: " + txHash);
-                    return txHash;
-                }
-
-                return null;
-            }
-            catch (Exception ex)
-            {
-                Log("Error in SetApprovalForAll: " + ex.Message, log: true);
-                return null;
-            }
-        }
-
-        // Placeholders (to be implemented based on your code)
-        private string GetSignature(string privateKey, string walletAddress, int side, int tokenId, string price, long expirationTime, string merkleRoot, int salt)
-        {
-            throw new NotImplementedException("GetSignature not implemented. Please provide the Python get_signature code.");
-        }
-
-        private Tuple<List<string>, string> GenerateMerkleProof(int specificTokenId, List<int> tokenIds)
-        {
-            throw new NotImplementedException("GenerateMerkleProof not implemented. Please provide the Python generate_merkle_proof code.");
-        }
-
-        private string FetchUserHandle(string walletAddress, string privyIdToken)
-        {
-            throw new NotImplementedException("FetchUserHandle not implemented. Please provide the Python fetch_user_handle code.");
-        }
-
-        private string EncodeOrder(object order, string signature, int specificTokenId, List<string> merkleProof)
-        {
-            throw new NotImplementedException("EncodeOrder not implemented. Please provide the Python encode function code.");
-        }
-    }
-
-
-
-    public class Google2
-    {
-        protected readonly IZennoPosterProjectModel _project;
-        protected readonly Instance _instance;
+        private readonly IZennoPosterProjectModel _project;
+        private readonly Instance _instance;
         private readonly Logger _logger;
-        protected readonly bool _logShow;
-        protected readonly Sql _sql;
 
-        protected string _status;
-        protected string _login;
-        protected string _pass;
-        protected string _2fa;
-        protected string _recoveryMail;
-        protected string _recoveryCodes;
-        protected string _cookies;
+        private readonly string _key;
+        private readonly string _pass;
+        private readonly string _fileName;
+        private string _expectedAddress;
 
-        public Google2(IZennoPosterProjectModel project, Instance instance, bool log = false)
+
+        private readonly string _extId = "klghhnkeealcohjjanjjdaeeggmfmlpl";
+        private readonly string _sidepanelUrl = "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#";
+
+        private readonly string _urlOnboardingTab = "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html?windowType=tab&appMode=onboarding#/onboarding/import";
+        private readonly string _urlPopup = "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html#";
+        private readonly string _urlImport = "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html#/get-started/import";
+        private readonly string _urlWalletSelect = "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html#/wallet-select";
+
+
+        public ZerionWallet2(IZennoPosterProjectModel project, Instance instance, bool log = false, string key = null, string fileName = "Zerion1.21.3.crx")
         {
-
             _project = project;
             _instance = instance;
-            _sql = new Sql(_project);
-            _logger = new Logger(project, log: log, classEmoji: "G");
-            DbCreds();
+            _fileName = fileName;
+
+            _key = KeyLoad(key);
+            _pass = SAFU.HWPass(_project);
+            _logger = new Logger(project, log: log, classEmoji: "🇿");
 
         }
 
-        private void DbCreds()
+
+        private string KeyLoad(string key)
         {
-            string[] creds = _sql.Get("status, login, password, otpsecret, recoveryemail, otpbackup, cookies", "private_google").Split('|');
-            try { _status = creds[0]; _project.Variables["googleSTATUS"].Value = _status; } catch (Exception ex) { _logger.Send(ex.Message); }
-            try { _login = creds[1]; _project.Variables["googleLOGIN"].Value = _login; } catch (Exception ex) { _logger.Send(ex.Message); }
-            try { _pass = creds[2]; _project.Variables["googlePASSWORD"].Value = _pass; } catch (Exception ex) { _logger.Send(ex.Message); }
-            try { _2fa = creds[3]; _project.Variables["google2FACODE"].Value = _2fa; } catch (Exception ex) { _logger.Send(ex.Message); }
-            try { _recoveryMail = creds[4]; _project.Variables["googleSECURITY_MAIL"].Value = _recoveryMail; } catch (Exception ex) { _logger.Send(ex.Message); }
-            try { _recoveryCodes = creds[5]; _project.Variables["googleBACKUP_CODES"].Value = _recoveryCodes; } catch (Exception ex) { _logger.Send(ex.Message); }
-            try { _cookies = creds[6]; _project.Variables["googleCOOKIES"].Value = _cookies; } catch (Exception ex) { _logger.Send(ex.Message); }
-            _logger.Send(_status);
+            if (string.IsNullOrEmpty(key)) key = "key";
+
+            switch (key)
+            {
+                case "key":
+                    key = new Sql(_project).Key("evm");
+                    break;
+                case "seed":
+                    key = new Sql(_project).Key("seed");
+                    break;
+                default:
+                    return key;
+            }
+            if (string.IsNullOrEmpty(key)) throw new Exception("keyIsEmpy");
+
+            _expectedAddress = key.ToPubEvm();
+            return key;
         }
-        public string Load(bool log = false, bool cookieBackup = true)
+
+        public string Launch(string fileName = null, bool log = false, string source = null, string refCode = null)
         {
-            if (!_instance.ActiveTab.URL.Contains("google")) _instance.Go("https://myaccount.google.com/");
+            if (string.IsNullOrEmpty(fileName)) 
+                fileName = _fileName;
+            if (string.IsNullOrEmpty(source))
+                source = "key";
+            string active = null;
+            var em = _instance.UseFullMouseEmulation;
+            _instance.UseFullMouseEmulation = false;
+
+            new ChromeExt(_project, _instance).Install(_extId, fileName, log);
+
         check:
-            Thread.Sleep(1000);
             string state = GetState();
+            _logger.Send(state);
             switch (state)
             {
-                case "ok":
-                    if (cookieBackup) SaveCookies();
-                    return state;
-
-                case "wrong":
-                    _instance.CloseAllTabs();
-                    _instance.ClearCookie("google.com");
-                    _instance.ClearCookie("google.com");
+                case "onboarding":
+                    Import(source, refCode, log: log);
                     goto check;
-
-                case "inputLogin":
-                    _instance.HeSet(("identifierId", "id"), _login);
-                    _instance.HeClick(("button", "innertext", "Next", "regexp", 0));
+                case "noTab":
+                    _instance.Go(_urlPopup);
                     goto check;
-
-                case "inputPassword":
-                    _instance.HeSet(("Passwd", "name"), _pass, deadline: 5);
-                    _instance.HeClick(("button", "innertext", "Next", "regexp", 0));
+                case "unlock":
+                    Unlock();
                     goto check;
-
-                case "inputOtp":
-                    _instance.HeSet(("totpPin", "id"), OTP.Offline(_2fa));
-                    _instance.HeClick(("button", "innertext", "Next", "regexp", 0));
-                    goto check;
-
-                case "addRecoveryPhone":
-                    _instance.HeClick(("button", "innertext", "Cancel", "regexp", 0));
-                    goto check;
-
-                case "CAPCHA":
-                    try { _project.CapGuru(); } catch { }
-                    _instance.HeClick(("button", "innertext", "Next", "regexp", 0));
-                    //_sql.Upd("status = 'status = '!WCapcha'", "google");
-                    //_sql.Upd("status = 'status = '!W fail.Google Capcha or Locked'");
-                    goto check;
-                    throw new Exception("CAPCHA");
-
-                case "badBrowser":
-                    _sql.Upd("status = 'status = '!W BadBrowser'", "google");
-                    _sql.Upd("status = 'status = '!W fail.Google BadBrowser'");
-                    throw new Exception("BadBrowser");
-
+                case "overview":
+                    SwitchSource(source);
+                    break;
                 default:
-                    return state;
-
+                    goto check;
             }
 
+            try { TestnetMode(false); } catch { }
+            GetActive();
+            _instance.CloseExtraTabs();
+            _instance.UseFullMouseEmulation = em;
+            return _expectedAddress;
         }
-        public string GetState(bool log = false)
+
+
+        private void Add(string source = null, bool log = false)
         {
-            
+            string key = KeyLoad(source);
+            _instance.Go(_urlImport);
 
-        check:
-            var status = "";
-
-            if (!_instance.ActiveTab.FindElementByAttribute("a", "href", "https://accounts.google.com/SignOutOptions\\?", "regexp", 0).IsVoid)
-                status = "signedIn";
-
-            else if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Verify\\ it’s\\ you", "regexp", 0).IsVoid)
-                status = "CAPCHA";
-
-            else if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Try\\ using\\ a\\ different\\ browser.", "regexp", 0).IsVoid)
-                status = "BadBrowser";
-
-            else if ((!_instance.ActiveTab.FindElementByAttribute("input:email", "fulltagname", "input:email", "text", 0).IsVoid) && 
-                    (_instance.ActiveTab.FindElementByAttribute("input:email", "fulltagname", "input:email", "text", 0).GetAttribute("value") == ""))
-                status = "inputLogin";
-
-            else if ((!_instance.ActiveTab.FindElementByAttribute("input:password", "fulltagname", "input:password", "text", 0).IsVoid) &&
-                    _instance.ActiveTab.FindElementByAttribute("input:password", "fulltagname", "input:password", "text", 0).GetAttribute("value") == "")
-                status = "inputPassword";
-
-            else if ((!_instance.ActiveTab.FindElementById("totpPin").IsVoid) &&
-                    _instance.ActiveTab.FindElementById("totpPin").GetAttribute("value") == "")
-                status = "inputOtp";
-
-            else if ((!_instance.ActiveTab.FindElementByAttribute("input:password", "fulltagname", "input:password", "text", 0).IsVoid) &&
-                    _instance.ActiveTab.FindElementById("totpPin").GetAttribute("value") == "")
-                status = "addRecoveryPhone";
-
-
-
-            else status = "undefined";
-
-
-
-            _logger.Send(status);
-
-            switch (status)
-            {
-                case "signedIn":
-                    var currentAcc = _instance.HeGet(("a", "href", "https://accounts.google.com/SignOutOptions\\?", "regexp", 0), atr: "aria-label").Split('\n')[1];
-                    if (currentAcc.ToLower().Contains(_login.ToLower())) 
-                    {
-                        _logger.Send($"{currentAcc} is Correct. Login done");
-                        status = "ok";
-                    }
-                        
-                    else
-                    {
-                        _logger.Send($"!W {currentAcc} is InCorrect. MustBe {_login}");
-                        status = "wrong";
-                    }
-                    break;
-
-                case "undefined":
-                    _instance.HeClick(("a", "class", "h-c-header__cta-li-link\\ h-c-header__cta-li-link--primary\\ button-standard-mobile", "regexp", 1), deadline: 1, thr0w: false);
-                    goto check;
-
-                default:
-                    break;
-
-            }
-            return status;
-        }
-        public string GAuth(bool log = false)
-        {
+            _instance.HeSet(("seedOrPrivateKey", "name"), key);
+            _instance.HeClick(("button", "innertext", "Import", "regexp", 0));
+            _instance.HeSet(("input:password", "fulltagname", "input:password", "text", 0), _pass);
+            _instance.HeClick(("button", "class", "_primary", "regexp", 0));
             try
             {
-                var userContainer = _instance.HeGet(("div", "data-authuser", "0", "regexp", 0));
-                _logger.Send($"container:{userContainer} catched");
-                if (userContainer.IndexOf(_login, StringComparison.OrdinalIgnoreCase) >= 0)
+                _instance.HeClick(("button", "class", "_option", "regexp", 0));
+                _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+            }
+            catch { }
+
+        }
+        public bool Sign(bool log = false)
+        {
+            var urlNow = _instance.ActiveTab.URL;
+            try
+            {
+
+                var type = "null";
+                var data = "null";
+                var origin = "null";
+
+                var parts = urlNow.Split('?').ToList();
+
+                foreach (string part in parts)
                 {
-                    _logger.Send($"correct user found: {_login}");
-                    _instance.HeClick(("div", "data-authuser", "0", "regexp", 0), delay: 3);
-                    Thread.Sleep(5000);
-                    if (!_instance.ActiveTab.FindElementByAttribute("div", "data-authuser", "0", "regexp", 0).IsVoid)
+                    //project.SendInfoToLog(part);
+                    if (part.StartsWith("windowType"))
                     {
-                        while (true) _instance.HeClick(("div", "data-authuser", "0", "regexp", 0), "clickOut", deadline: 5, delay: 3);
+                        type = part.Split('=')[1];
                     }
+                    if (part.StartsWith("origin"))
+                    {
+                        origin = part.Split('=')[1];
+                        data = part.Split('=')[2];
+                        data = data.Split('&')[0].Trim();
+                    }
+
+                }
+                dynamic txData = JsonConvert.DeserializeObject<System.Dynamic.ExpandoObject>(data);
+                var gas = txData.gas.ToString();
+                var value = txData.value.ToString();
+                var sender = txData.from.ToString();
+                var recipient = txData.to.ToString();
+                var datastring = $"{txData.data}";
+
+
+                BigInteger gasWei = BigInteger.Parse("0" + gas.TrimStart('0', 'x'), NumberStyles.AllowHexSpecifier);
+                decimal gasGwei = (decimal)gasWei / 1000000000m;
+                _logger.Send($"Sending {datastring} to {recipient}, gas: {gasGwei}");
+
+            }
+            catch { }
+
+            try
+            {
+                var button = _instance.HeGet(("button", "class", "_primary", "regexp", 0));
+                _logger.Send(button);
+                _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.Send($"!W {ex.Message}");
+                throw;
+            }
+        }
+ 
+        public void Connect(bool log = false)
+        {
+
+            string action = null;
+        getState:
+
+            try
+            {
+                action = _instance.HeGet(("button", "class", "_primary", "regexp", 0));
+            }
+            catch (Exception ex)
+            {
+                _project.L0g($"No Wallet tab found. 0");
+                return;
+            }
+
+            _project.L0g(action);
+            _project.L0g(_instance.ActiveTab.URL);
+
+            switch (action)
+            {
+                case "Add":
+                    _project.L0g($"adding {_instance.HeGet(("input:url", "fulltagname", "input:url", "text", 0), atr: "value")}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                    goto getState;
+                case "Close":
+                    _project.L0g($"added {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                    goto getState;
+                case "Connect":
+                    _project.L0g($"connecting {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                    goto getState;
+                case "Sign":
+                    _project.L0g($"sign {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                    goto getState;
+                case "Sign In":
+                    _project.L0g($"sign {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                    goto getState;
+
+                default:
+                    goto getState;
+
+            }
+
+
+        }
+
+        private void Import(string source = null, string refCode = null, bool log = false)
+        {
+            string key = KeyLoad(source);
+            _logger.Send(key);
+            key = key.Trim().StartsWith("0x") ? key.Substring(2) : key;
+            string keyType = key.KeyType();
+            _instance.Go(_urlOnboardingTab);
+
+            if (string.IsNullOrWhiteSpace(refCode))
+            {
+                refCode = new Sql(_project).DbQ(@"SELECT referralCode
+                FROM projects.zerion
+                WHERE referralCode != '_' 
+                AND TRIM(referralCode) != ''
+                ORDER BY RANDOM()
+                LIMIT 1;");
+            }
+            if (string.IsNullOrWhiteSpace(refCode)) refCode = "JZA87YJDS";
+
+            _logger.Send(keyType);
+            var inputRef = true;
+
+            _logger.Send(keyType);
+            if (keyType == "keyEvm")
+            {
+                _instance.HeClick(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\?windowType=tab&appMode=onboarding#/onboarding/import/private-key", "regexp", 0));
+                _instance.ActiveTab.FindElementByName("key").SetValue(key, "Full", false);
+            }
+            else if (keyType == "seed")
+            {
+                _instance.HeClick(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\?windowType=tab&appMode=onboarding#/onboarding/import/mnemonic", "regexp", 0));
+                int index = 0;
+                foreach (string word in key.Split(' '))
+                {
+                    _instance.ActiveTab.FindElementById($"word-{index}").SetValue(word, "Full", false);
+                    index++;
+                }
+            }
+
+            _instance.HeClick(("button", "innertext", "Import\\ wallet", "regexp", 0));
+            _instance.HeSet(("input:password", "fulltagname", "input:password", "text", 0), _pass);
+            _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+            _instance.HeSet(("input:password", "fulltagname", "input:password", "text", 0), _pass);
+            _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+            if (inputRef)
+            {
+                _instance.HeClick(("button", "innertext", "Enter\\ Referral\\ Code", "regexp", 0));
+                _instance.HeSet((("referralCode", "name")), refCode);
+                _instance.HeClick(("button", "class", "_regular", "regexp", 0));
+            }
+            _instance.CloseExtraTabs(true);
+            _instance.Go(_urlPopup);
+        }
+
+        private void Unlock(bool log = false)
+        {
+            //Go();
+            //string active = null;
+            try
+            {
+                _instance.HeSet(("input:password", "fulltagname", "input:password", "text", 0), _pass, deadline:3);
+                _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+            }
+            catch (Exception ex)
+            {
+                _logger.Send(ex.Message);
+            }
+        }
+ 
+        public void SwitchSource(string addressToUse = "key")
+        {
+
+            _project.Deadline();
+
+            if (addressToUse == "key") addressToUse = new Sql(_project).Key("evm").ToPubEvm();
+            else if (addressToUse == "seed") addressToUse = new Sql(_project).Key("seed").ToPubEvm();
+            else throw new Exception("supports \"key\" | \"seed\" only");
+            _expectedAddress = addressToUse;
+
+        go:
+            _instance.Go(_urlWalletSelect);
+            Thread.Sleep(1000);
+
+        waitWallets:
+            _project.Deadline(60);
+            if (_instance.ActiveTab.FindElementByAttribute("button", "class", "_wallet", "regexp", 0).IsVoid) goto waitWallets;
+
+            var wallets = _instance.ActiveTab.FindElementsByAttribute("button", "class", "_wallet", "regexp").ToList();
+
+            foreach (HtmlElement wallet in wallets)
+            {
+                string masked = "";
+                string balance = "";
+                string ens = "";
+
+                if (wallet.InnerHtml.Contains("M18 21a2.9 2.9 0 0 1-2.125-.875A2.9 2.9 0 0 1 15 18q0-1.25.875-2.125A2.9 2.9 0 0 1 18 15a3.1 3.1 0 0 1 .896.127 1.5 1.5 0 1 0 1.977 1.977Q21 17.525 21 18q0 1.25-.875 2.125A2.9 2.9 0 0 1 18 21")) continue;
+                if (wallet.InnerText.Contains("·"))
+                {
+                    ens = wallet.InnerText.Split('\n')[0].Split('·')[0];
+                    masked = wallet.InnerText.Split('\n')[0].Split('·')[1];
+                    balance = wallet.InnerText.Split('\n')[1].Trim();
+
+                }
+                else
+                {
+                    masked = wallet.InnerText.Split('\n')[0];
+                    balance = wallet.InnerText.Split('\n')[1];
+                }
+                masked = masked.Trim();
+
+                _logger.Send($"[{masked}]{masked.ChkAddress(addressToUse)}[{addressToUse}]");
+
+                if (masked.ChkAddress(addressToUse))
+                {
+                    _instance.HeClick(wallet);
+                    return;
+                }
+            }
+            _logger.Send("address not found");
+            Add("seed");
+
+            _instance.CloseExtraTabs(true);
+            goto go;
+
+
+        }
+
+        private void TestnetMode(bool testMode = false)
+        {
+            bool current;
+
+            string testmode = _instance.HeGet(("input:checkbox", "fulltagname", "input:checkbox", "text", 0), deadline:1, atr: "value");
+
+            if (testmode == "True")
+                current = true;
+            else
+                current = false;
+
+            if (testMode != current)
+                _instance.HeClick(("input:checkbox", "fulltagname", "input:checkbox", "text", 0));
+
+        }
+  
+        public bool WaitTx(int deadline = 60, bool log = false)
+        {
+            DateTime functionStart = DateTime.Now;
+        check:
+            bool result;
+            if ((DateTime.Now - functionStart).TotalSeconds > deadline) throw new Exception($"!W Deadline [{deadline}]s exeeded");
+
+
+            if (!_instance.ActiveTab.URL.Contains("chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/overview/history"))
+            {
+                Tab tab = _instance.NewTab("zw");
+                if (tab.IsBusy) tab.WaitDownloading();
+                _instance.ActiveTab.Navigate("chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/overview/history", "");
+
+            }
+            Thread.Sleep(2000);
+
+            var status = _instance.HeGet(("div", "style", "padding: 0px 16px;", "regexp", 0));
+
+
+
+            if (status.Contains("Pending")) goto check;
+            else if (status.Contains("Failed")) result = false;
+            else if (status.Contains("Execute")) result = true;
+            else
+            {
+                _logger.Send($"unknown status {status}");
+                goto check;
+            }
+            _instance.CloseExtraTabs();
+            return result;
+
+        }
+ 
+        public List<string> Claimable(string address)
+        {
+            var res = new List<string>();
+            var _h = new NetHttp(_project);
+            address = address.ToLower();
+
+            string url = $@"https://dna.zerion.io/api/v1/memberships/{address}/quests";
+
+            var headers = new Dictionary<string, string>
+            {
+                { "Accept", "*/*" },
+                { "Accept-Language", "en-US,en;q=0.9" },
+                { "Origin", "https://app.zerion.io" },
+                { "Referer", "https://app.zerion.io" },
+                { "Priority", "u=1, i" }
+            };
+
+            string response = _h.GET(
+                url: url,
+                proxyString: "+",
+                headers: headers,
+                parse: false
+            );
+
+
+            int i = 0;
+            try
+            {
+                JArray jArr = JArray.Parse(response);
+                while (true)
+                {
+                    var id = "";
+                    var kind = "";
+                    var link = "";
+                    var reward = "";
+                    var kickoff = "";
+                    var deadline = "";
+                    var recurring = "";
+                    var claimable = "";
+
                     try
                     {
-                        _instance.HeClick(("button", "innertext", "Continue", "regexp", 0), deadline: 2, delay: 1);
-                        return "SUCCESS with continue";
+
+                        id = jArr[i]["id"].ToString();
+                        kind = jArr[i]["kind"].ToString();
+                        recurring = jArr[i]["recurring"].ToString();
+                        reward = jArr[i]["reward"].ToString();
+                        kickoff = jArr[i]["kickoff"].ToString();
+                        deadline = jArr[i]["deadline"].ToString();
+                        claimable = jArr[i]["claimable"].ToString();
+                        try { link = jArr[i]["meta"]["mint"]["link"]["url"].ToString(); } catch { }
+                        try { link = jArr[i]["meta"]["call"]["link"]["url"].ToString(); } catch { }
+                        var toLog = $"Unclaimed [{claimable}]Exp on Zerion  [{kind}]  [{id}]";
+                        if (claimable != "0")
+                        {
+                            res.Add(id);
+                            _project.L0g(toLog);
+                        }
+                        i++;
                     }
                     catch
                     {
-                        return "SUCCESS. without confirmation";
+                        break;
                     }
-                }
-                else
-                {
-                    _logger.Send($"!Wrong account [{userContainer}]. Expected: {_login}. Cleaning");
-                    _instance.CloseAllTabs();
-                    _instance.ClearCookie("google.com");
-                    _instance.ClearCookie("google.com");
-                    return "FAIL. Wrong account";
                 }
             }
             catch
             {
-                return "FAIL. No loggined Users Found";
+                _project.L0g($"!W failed to parse : [{response}] ");
             }
+            return res;
+
         }
-        public void SaveCookies()
+
+        private string GetState()
         {
-            _instance.Go("youtube.com");
-            Thread.Sleep(5000);
-            _instance.Go("https://myaccount.google.com/");
-            //new Cookies(_project,_instance).Save();
+            check:
+            string state = null;
+            //Thread.Sleep(1000);
+            if (!_instance.ActiveTab.URL.Contains(_extId))
+                state = "noTab";
+            else if (_instance.ActiveTab.URL.Contains("onboarding"))
+                state = "onboarding";
+            else if (_instance.ActiveTab.URL.Contains("login"))
+                state = "unlock";
+            else if (_instance.ActiveTab.URL.Contains("overview"))
+                state = "overview";
+
+            else 
+                goto check;
+            return state;
+        }
+
+        private string GetActive()
+        {
+            string activeWallet = _instance.HeGet(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\#/wallet-select", "regexp", 0));
+            string total = _instance.HeGet(("div", "style", "display:\\ grid;\\ gap:\\ 0px;\\ grid-template-columns:\\ minmax\\(0px,\\ auto\\);\\ align-items:\\ start;", "regexp", 0)).Split('\n')[0];
+            _logger.Send($"wallet Now {activeWallet}  [{total}]");
+            return activeWallet;
         }
 
     }
+
 
 
 

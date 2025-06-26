@@ -92,30 +92,23 @@ namespace z3n
             _instance.SetCookie(cookieSourse);
 
         }
-        public void Save(string source = null, string target = null, string jsonPath = null)
+        public void Save(string source = null, string jsonPath = null)
         {
             if (string.IsNullOrEmpty(source))
                 source = "project";
-            if (string.IsNullOrEmpty(target))
-                target = "db";
 
             string cookies = null;
             switch (source)
             {
                 case "project":
-                    cookies = Get(".");
+                    cookies = Get(".").Replace("'", "''").Trim(); ;
                     new Sql(_project).Upd($"cookies = '{cookies}'");
                     return;
                 case "all":
-                    cookies = Get();
-                    if (target == "db")
-                        new Sql(_project).Upd($"cookies= '{cookies}'", "private_profile");
-                    else
-                    {
-                        if (string.IsNullOrEmpty(jsonPath))
-                            jsonPath = $"{_project.Variables["profiles_folder"].Value}accounts\\cookies\\{_project.Variables["acc0"].Value}.json";
+                    cookies = Get().Replace("'", "''").Trim();
+                    new Sql(_project).Upd($"cookies= '{cookies}'", "private_profile");
+                    if (!string.IsNullOrEmpty(jsonPath)) 
                         lock (LockObject) { File.WriteAllText(jsonPath, cookies); }
-                    }
                     return;
                 default:
                     throw new Exception($"unsupported input {source}. Use [null|project|all]");

@@ -42,7 +42,7 @@ namespace z3n
                         new RazorWallet(_project, _instance, log).RazorLnch(log: log);
                         break;
                     case W.Zerion:
-                        new ZerionWallet(_project, _instance, log).ZerionLnch(log: log);
+                        new ZerionWallet(_project, _instance, log).Launch(log: log);
                         break;
                     case W.Keplr:
                         new KeplrWallet(_project, _instance, log).KeplrLaunch(log: log);
@@ -167,7 +167,7 @@ namespace z3n
                     new KeplrWallet(_project, _instance, log).KeplrApprove(log: log);
                     break;
                 case W.Zerion:
-                    new ZerionWallet(_project, _instance, log).ZerionApprove(log: log);
+                    new ZerionWallet(_project, _instance, log).Sign(log: log);
                     break;
                 default:
                     WalLog($"Approve not supported for wallet: {wallet}", log: log);

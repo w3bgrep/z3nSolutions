@@ -231,8 +231,10 @@ namespace z3n
         public static string KeyType(this string input)
         {
             if (string.IsNullOrWhiteSpace(input))
-                return string.Empty;
+                throw new Exception($"input isNullOrEmpty");
 
+            input = input.Trim().StartsWith("0x") ? input.Substring(2) : input;
+            
             if (Regex.IsMatch(input, @"^[0-9a-fA-F]{64}$"))
                 return "keyEvm";
 
@@ -243,7 +245,7 @@ namespace z3n
             if (words.Length == 12 || words.Length == 24)
                 return "seed";
             
-            return string.Empty;
+            throw new Exception ($"not recognized as any key or seed {input}");
         }
 
 
