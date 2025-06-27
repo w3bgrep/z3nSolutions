@@ -53,7 +53,7 @@ namespace z3n
                         false,
                         project.Profile.CookieContainer);
                     if (parseJson) ParseJson(project, response, logger);
-                    if (log) logger.Send($"json received: [{response}]");
+                    if (log) logger.Send($"response: [{response}]");
                 }
 
 
@@ -108,9 +108,9 @@ namespace z3n
                         project.Profile.CookieContainer);
                 }
 
-                if (log) logger.Send($"body sent: [{body}]");
+                //if (log) logger.Send($"body sent: [{body}]");
                 if (parseJson) ParseJson(project, response, logger);
-                if (log) logger.Send($"json received: [{response}]");
+                if (log) logger.Send($"response: [{response}]");
                 return response.Trim();
             }
             catch (Exception e)

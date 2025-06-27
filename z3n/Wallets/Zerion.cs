@@ -97,6 +97,7 @@ namespace z3n
                     Unlock();
                     goto check;
                 case "overview":
+                    //string current = GetActive();
                     SwitchSource(source);
                     break;
                 default:
@@ -315,12 +316,14 @@ namespace z3n
             _expectedAddress = addressToUse;
 
         go:
-            _instance.Go(_urlWalletSelect);
+            //_instance.Go(_urlWalletSelect);
+            _instance.HeClick(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\#/wallet-select", "regexp", 0));
             Thread.Sleep(1000);
 
         waitWallets:
             _project.Deadline(60);
-            if (_instance.ActiveTab.FindElementByAttribute("button", "class", "_wallet", "regexp", 0).IsVoid) goto waitWallets;
+            if (_instance.ActiveTab.FindElementByAttribute("button", "class", "_wallet", "regexp", 0).IsVoid) 
+                goto waitWallets;
 
             var wallets = _instance.ActiveTab.FindElementsByAttribute("button", "class", "_wallet", "regexp").ToList();
 

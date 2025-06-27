@@ -88,26 +88,49 @@ namespace z3n
             if (data.Count == 0) goto get;
             return data;
         }
-        public string GetHeader(string url, string headerToGet = "Authorization", bool trim = true, bool reload = false)
+        //public string GetHeader(string url, string headerToGet = "Authorization", bool trim = true, bool reload = false)
+        //{
+        //    Dictionary<string, string> data = Get(url, reload);
+        //    data.TryGetValue("RequestHeaders", out string headersString);
+
+        //    var headers = headersString.Split('\n');
+
+        //    foreach (string header in headers)
+        //    {
+        //        string headerName = header.Split(':')[0];
+        //        string headerValue = header.Split(':')[1];
+        //        data.Add(headerName, headerValue);
+        //    }
+
+        //    data.TryGetValue(headerToGet, out string Value);
+
+        //    if (trim) Value = Value.Replace("Bearer", "").Trim();
+        //    return Value;
+
+        //}
+        public string GetHeader(string url, string headerToGet = "Authorization", bool reload = false)
         {
             Dictionary<string, string> data = Get(url, reload);
             data.TryGetValue("RequestHeaders", out string headersString);
+
+            if (string.IsNullOrEmpty(headersString))
+                return string.Empty;
 
             var headers = headersString.Split('\n');
 
             foreach (string header in headers)
             {
-                string headerName = header.Split(':')[0];
-                string headerValue = header.Split(':')[1];
-                data.Add(headerName, headerValue);
+                var parts = header.Split(':');
+                if (parts.Length >= 2) // Проверка на корректный формат заголовка
+                {
+                    string headerName = parts[0].Trim();
+                    string headerValue = parts[1].Trim();
+                    data[headerName] = headerValue; // Обновление или добавление значения
+                }
             }
 
-            data.TryGetValue(headerToGet, out string Value);
-
-            if (trim) Value = Value.Replace("Bearer", "").Trim();
-            return Value;
-
+            data.TryGetValue(headerToGet, out string value);
+            return value?.Trim() ?? string.Empty; // Возвращаем пустую строку, если значение не найдено
         }
-
     }
 }

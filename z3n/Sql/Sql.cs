@@ -662,11 +662,11 @@ namespace z3n
                 {
                     string tableName = TblName($"private_{social.Trim().ToLower()}");
 
-                    TblName(tableName);
-                    if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+                    //TblName(tableName);
+                    //if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+                    var notOK = Get($"acc0", _tableName, where: "status NOT LIKE '%ok%'", log:log)
 
-
-                    var notOK = DbQ($"SELECT acc0 FROM {_tableName} WHERE status NOT LIKE '%ok%'", log)
+                    //var notOK = DbQ($"SELECT acc0 FROM {_tableName} WHERE status NOT LIKE '%ok%'", log)
                         .Split('\n')
                         .Select(x => x.Trim())
                         .Where(x => !string.IsNullOrEmpty(x));
