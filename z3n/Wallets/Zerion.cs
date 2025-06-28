@@ -132,51 +132,16 @@ namespace z3n
         }
         public bool Sign(bool log = false)
         {
-            var urlNow = _instance.ActiveTab.URL;
+            parseURL();
             try
             {
+                int i = 0;
+            scan:
 
-                var type = "null";
-                var data = "null";
-                var origin = "null";
-
-                var parts = urlNow.Split('?').ToList();
-
-                foreach (string part in parts)
-                {
-                    //project.SendInfoToLog(part);
-                    if (part.StartsWith("windowType"))
-                    {
-                        type = part.Split('=')[1];
-                    }
-                    if (part.StartsWith("origin"))
-                    {
-                        origin = part.Split('=')[1];
-                        data = part.Split('=')[2];
-                        data = data.Split('&')[0].Trim();
-                    }
-
-                }
-                dynamic txData = JsonConvert.DeserializeObject<System.Dynamic.ExpandoObject>(data);
-                var gas = txData.gas.ToString();
-                var value = txData.value.ToString();
-                var sender = txData.from.ToString();
-                var recipient = txData.to.ToString();
-                var datastring = $"{txData.data}";
-
-
-                BigInteger gasWei = BigInteger.Parse("0" + gas.TrimStart('0', 'x'), NumberStyles.AllowHexSpecifier);
-                decimal gasGwei = (decimal)gasWei / 1000000000m;
-                _logger.Send($"Sending {datastring} to {recipient}, gas: {gasGwei}");
-
-            }
-            catch { }
-
-            try
-            {
-                var button = _instance.HeGet(("button", "class", "_primary", "regexp", 0));
-                _logger.Send(button);
-                _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                var button = _instance.GetHe(("button", "class", "_primary", "regexp", i));
+                if (button.Width == -1) { i++; goto scan; }
+                _logger.Send(button.InnerText);
+                _instance.HeClick(button);
                 return true;
             }
             catch (Exception ex)
@@ -516,7 +481,48 @@ namespace z3n
             return activeWallet;
         }
 
+        private void parseURL()
+        {
+            var urlNow = _instance.ActiveTab.URL;
+            try
+            {
 
+                var type = "null";
+                var data = "null";
+                var origin = "null";
+
+                var parts = urlNow.Split('?').ToList();
+
+                foreach (string part in parts)
+                {
+                    //project.SendInfoToLog(part);
+                    if (part.StartsWith("windowType"))
+                    {
+                        type = part.Split('=')[1];
+                    }
+                    if (part.StartsWith("origin"))
+                    {
+                        origin = part.Split('=')[1];
+                        data = part.Split('=')[2];
+                        data = data.Split('&')[0].Trim();
+                    }
+
+                }
+                dynamic txData = JsonConvert.DeserializeObject<System.Dynamic.ExpandoObject>(data);
+                var gas = txData.gas.ToString();
+                var value = txData.value.ToString();
+                var sender = txData.from.ToString();
+                var recipient = txData.to.ToString();
+                var datastring = $"{txData.data}";
+
+
+                BigInteger gasWei = BigInteger.Parse("0" + gas.TrimStart('0', 'x'), NumberStyles.AllowHexSpecifier);
+                decimal gasGwei = (decimal)gasWei / 1000000000m;
+                _logger.Send($"Sending {datastring} to {recipient}, gas: {gasGwei}");
+
+            }
+            catch { }
+        }
 
     }
 
