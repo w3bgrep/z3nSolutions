@@ -293,18 +293,23 @@ namespace z3n
         }
 
 
-        public string GetColumns(string tableName, string schemaName = "accounts", bool log = false)
+        public string GetColumns(string tableName,  bool log = false)
         {
-            string Q; string name;
-            if (tableName.Contains(".")) {
-                schemaName = tableName.Split('.')[0];
-                name = tableName.Split('.')[1];
-            }
-            else name = tableName;
-
-            if (_dbMode == "PostgreSQL") Q = $@"SELECT column_name FROM information_schema.columns WHERE table_schema = '{schemaName}' AND table_name = '{name}'";
-            else Q = $@"SELECT name FROM pragma_table_info('{name}')";
+            TblName(tableName);
+            string Q; 
+            if (_pstgr) Q = $@"SELECT column_name FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}'";
+            else Q = $@"SELECT name FROM pragma_table_info('{_tableName}')";
             return DbQ(Q, log: log).Replace("\n", ", ").Trim(',').Trim();
+        }
+
+        public List<string> GetColumnList(string tableName,  bool log = false)
+        {
+            TblName(tableName);
+            string Q;
+            if (_pstgr) Q = $@"SELECT column_name FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}'";
+            else Q = $@"SELECT name FROM pragma_table_info('{_tableName}')";
+
+            return DbQ(Q, log: log).Split('\n').ToList();
         }
 
         public void CreateShemas(string[] schemas)

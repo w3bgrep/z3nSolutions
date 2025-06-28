@@ -82,6 +82,7 @@
     <Compile Include="W3bProtocols\HanaGarden.cs" />
     <Compile Include="Tools\Init.cs" />
     <Compile Include="Requests\NetHttp.cs" />
+    <Compile Include="W3b\Accountant.cs" />
     <Compile Include="W3b\Balance.cs" />
     <Compile Include="Browser\BrowserScan.cs" />
     <Compile Include="CexApi\Refuel.cs" />

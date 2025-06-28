@@ -85,7 +85,8 @@ namespace z3n
             decimal balance = (decimal)balanceWei / 1000000000000000000m;
 
             string balanceString = FloorDecimal<string>(balance, int.Parse("18"));
-            Log(address, balanceString, rpc, log: log);
+            _logger.Send($"NativeBal: [{balanceString}] by {rpc} ({address})");
+            //Log(address, balanceString, rpc, log: log);
             return balanceString;
 
             //if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(balanceString, typeof(T));
@@ -96,7 +97,8 @@ namespace z3n
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             string balanceString = EVM(rpc, address, proxy, log);//FloorDecimal<string>(balance, int.Parse("18"));
             decimal balance = decimal.Parse(balanceString);
-            Log(address, balanceString, rpc, log: log);
+            //_logger.Send($"NativeBal: [{balanceString}] by {rpc} ({address})");
+            //Log(address, balanceString, rpc, log: log);
             if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(balanceString, typeof(T));
             return (T)Convert.ChangeType(balance, typeof(T));
         }
@@ -141,7 +143,8 @@ namespace z3n
             decimal balance = decimal.Parse(tokenDecimal) / 1000000000m; // Solana uses 9 decimal places (lamports)
 
             string balanceString = FloorDecimal<string>(balance, 9); // Fixed precision to 9 for Solana
-            Log(address, balanceString, rpc, log: log);
+            _logger.Send($"NativeBal: [{balanceString}] by {rpc} ({address})");
+            //Log(address, balanceString, rpc, log: log);
             return balanceString;
         }
         public T SOL<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
@@ -226,7 +229,8 @@ namespace z3n
             }
 
             string balanceString = FloorDecimal<string>(balance, 8);
-            Log(address, balanceString, rpc, log: log);
+            _logger.Send($"NativeBal: [{balanceString}] by {rpc} ({address})");
+            //Log(address, balanceString, rpc, log: log);
             return balanceString;
         }
         public T APT<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
@@ -244,7 +248,7 @@ namespace z3n
                 if (typeof(T) == typeof(string)) return (T)(object)"0";
                 return (T)(object)0m;
             }
-            Log(address, balanceString, rpc, log: log);
+            //Log(address, balanceString, rpc, log: log);
             if (typeof(T) == typeof(string)) return (T)(object)balanceString;
             return (T)Convert.ChangeType(balance, typeof(T));
         }
@@ -309,7 +313,8 @@ namespace z3n
             }
 
             string balanceString = FloorDecimal<string>(balance, 9); // 9 decimals for consistency
-            Log(address, balanceString, rpc, log: log);
+            _logger.Send($"NativeBal: [{balanceString}] by {rpc} ({address})");
+            //Log(address, balanceString, rpc, log: log);
             return balanceString;
         }
         public T SUI<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
@@ -327,7 +332,7 @@ namespace z3n
                 if (typeof(T) == typeof(string)) return (T)(object)"0";
                 return (T)(object)0m;
             }
-            Log(address, balanceString, rpc, log: log);
+            //Log(address, balanceString, rpc, log: log);
             if (typeof(T) == typeof(string)) return (T)(object)balanceString;
             return (T)Convert.ChangeType(balance, typeof(T));
         }

@@ -165,6 +165,9 @@ namespace w3tools //by @w3bgrep
 
         }
 
+
+
+
     }
 
 
@@ -672,103 +675,399 @@ namespace w3tools //by @w3bgrep
     }
 
 
-    public class Traffic2
+
+    public class Accountant
     {
         private readonly IZennoPosterProjectModel _project;
-        private readonly Instance _instance;
+        private readonly Sql _sql;
         private readonly Logger _logger;
+        private int _offset; 
 
-
-        public Traffic2(IZennoPosterProjectModel project, Instance instance, bool log = false)
+        public Accountant(IZennoPosterProjectModel project,  bool log = false)
         {
             _project = project;
-            _instance = instance;
-            _logger = new Logger(project, log: log, classEmoji: "🌎");
+  
+            _logger = new Logger(project, log: log, classEmoji: "$");
+            _sql = new Sql(project, log: log);
         }
 
-        /// <summary>
-        /// Получает данные сетевого трафика для указанного URL.
-        /// </summary>
-        /// <param name="url">Часть URL для фильтрации трафика.</param>
-        /// <param name="parametr">Конкретный параметр трафика для возврата. Доступные параметры: Method, ResultCode, Url, ResponseContentType, RequestHeaders, RequestCookies, RequestBody, ResponseHeaders, ResponseCookies, ResponseBody. Если null или пустая строка, возвращаются все параметры в формате "ключ-значение".</param>
-        /// <param name="reload">Если true, выполняется перезагрузка страницы (по умолчанию false).</param>
-        /// <param name="method">Не используется в текущей реализации (по умолчанию null).</param>
-        /// <returns>Значение указанного параметра трафика или строка со всеми параметрами, если parametr не указан.</returns>
-        public string Get(string url, string parametr, bool reload = false)
+        public void ShowBalanceTable(string chains = null)
         {
-            string param;
-            Dictionary<string, string> data = Get(url, reload);
-            if (string.IsNullOrEmpty(parametr))
-                return string.Join("\n", data.Select(kvp => $"{kvp.Key}-{kvp.Value}"));
-            else data.TryGetValue(parametr, out param);
-            return param;
-        }
-        public Dictionary<string, string> Get(string url, bool reload = false)
-        {
-            _project.Deadline();
-            _instance.UseTrafficMonitoring = true;
-            if (reload) _instance.ActiveTab.MainDocument.EvaluateScript("location.reload(true)");
+            var tableName = "public_native";
+            var columns = new List<string>();
+            
+            if (string.IsNullOrEmpty(chains))
+                columns = new Sql(_project).GetColumnList("public_native");
 
-            get:
-            _project.Deadline(10);
-            Thread.Sleep(1000);
-            var traffic = _instance.ActiveTab.GetTraffic();
-            var data = new Dictionary<string, string>();
-            string param;
-            foreach (var t in traffic)
+            else
+                columns = chains.Split(',').ToList();
+
+
+            int pageSize = 100;
+            _offset = 0; // Инициализируем offset
+            int totalRows = int.Parse(_project.Variables["rangeEnd"].Value);
+
+            var form = CreateForm();
+            var panel = CreatePaginationPanel(form);
+            var prevButton = CreatePreviousButton(panel);
+            var nextButton = CreateNextButton(panel);
+            var grid = CreateDataGridView(form);
+
+            Action loadData = () => LoadData(grid, columns, tableName, pageSize, ref _offset, totalRows, prevButton, nextButton);
+            loadData();
+
+            ConfigurePaginationEvents(prevButton, nextButton, pageSize, totalRows, loadData);
+            ConfigureCellFormatting(grid, columns);
+
+            form.ShowDialog();
+        }
+
+        private System.Windows.Forms.Form CreateForm()
+        {
+            var form = new System.Windows.Forms.Form
             {
-                if (t.Url.Contains(url))
+                Text = "Balance Table",
+                Width = 1008,
+                Height = 800,
+                StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen,
+            };
+            form.BackColor = System.Drawing.Color.White;
+            form.TopMost = true;
+            return form;
+        }
+
+        private System.Windows.Forms.Panel CreatePaginationPanel(System.Windows.Forms.Form form)
+        {
+            var panel = new System.Windows.Forms.Panel
+            {
+                Dock = System.Windows.Forms.DockStyle.Bottom,
+                Height = 40
+            };
+            form.Controls.Add(panel);
+            return panel;
+        }
+
+        private System.Windows.Forms.Button CreatePreviousButton(System.Windows.Forms.Panel panel)
+        {
+            var prevButton = new System.Windows.Forms.Button
+            {
+                Text = "Previous",
+                Width = 100,
+                Height = 30,
+                Left = 10,
+                Top = 5,
+                Enabled = false
+            };
+            panel.Controls.Add(prevButton);
+            return prevButton;
+        }
+
+        private System.Windows.Forms.Button CreateNextButton(System.Windows.Forms.Panel panel)
+        {
+            var nextButton = new System.Windows.Forms.Button
+            {
+                Text = "Next",
+                Width = 100,
+                Height = 30,
+                Left = 120,
+                Top = 5
+            };
+            panel.Controls.Add(nextButton);
+            return nextButton;
+        }
+
+        private System.Windows.Forms.DataGridView CreateDataGridView(System.Windows.Forms.Form form)
+        {
+            var grid = new System.Windows.Forms.DataGridView
+            {
+                Dock = System.Windows.Forms.DockStyle.Fill,
+                AllowUserToResizeColumns = true,
+                AllowUserToResizeRows = true,
+                ScrollBars = System.Windows.Forms.ScrollBars.Both,
+                AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.AllCells,
+                ReadOnly = true,
+                BackgroundColor = System.Drawing.Color.White
+            };
+            form.Controls.Add(grid);
+            grid.BringToFront();
+            return grid;
+        }
+
+        private void LoadData(System.Windows.Forms.DataGridView grid, List<string> columns, string tableName, int pageSize, ref int offset, int totalRows, System.Windows.Forms.Button prevButton, System.Windows.Forms.Button nextButton)
+        {
+            string result = new Sql(_project).Get($"{string.Join(",", columns)}", tableName, where: $"acc0 <= '{_project.Var("rangeEnd")}' ORDER BY acc0");
+                
+
+            if (string.IsNullOrEmpty(result))
+            {
+                _project.SendWarningToLog("No data found in balance table");
+                grid.Rows.Clear();
+                return;
+            }
+
+            var rows = result.Trim().Split('\n');
+            _project.SendInfoToLog($"Loaded {rows.Length} rows from {tableName}, offset {offset}", false);
+
+            grid.Columns.Clear();
+            grid.Rows.Clear();
+
+            foreach (var col in columns)
+            {
+                var column = new System.Windows.Forms.DataGridViewColumn
                 {
-                    var Method = t.Method;
-                    var ResultCode = t.ResultCode.ToString();
-                    var Url = t.Url;
-                    var ResponseContentType = t.ResponseContentType;
-                    var RequestHeaders = t.RequestHeaders;
-                    var RequestCookies = t.RequestCookies;
-                    var RequestBody = t.RequestBody;
-                    var ResponseHeaders = t.ResponseHeaders;
-                    var ResponseCookies = t.ResponseCookies;
-                    var ResponseBody = t.ResponseBody == null ? "" : Encoding.UTF8.GetString(t.ResponseBody, 0, t.ResponseBody.Length);
-
-                    if (Method == "OPTIONS") continue;
-                    data.Add("Method", Method);
-                    data.Add("ResultCode", ResultCode);
-                    data.Add("Url", Url);
-                    data.Add("ResponseContentType", ResponseContentType);
-                    data.Add("RequestHeaders", RequestHeaders);
-                    data.Add("RequestCookies", RequestCookies);
-                    data.Add("RequestBody", RequestBody);
-                    data.Add("ResponseHeaders", ResponseHeaders);
-                    data.Add("ResponseCookies", ResponseCookies);
-                    data.Add("ResponseBody", ResponseBody);
-                    break;
-                }
+                    Name = col.Trim(),
+                    HeaderText = col.Trim(),
+                    CellTemplate = new System.Windows.Forms.DataGridViewTextBoxCell(),
+                    SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
+                };
+                grid.Columns.Add(column);
             }
-            if (data.Count == 0) goto get;
-            return data;
-        }
-        public string GetHeader(string url, string headerToGet = "Authorization", bool trim = true, bool reload = false)
-        {
-            Dictionary<string, string> data = Get(url, reload);
-            data.TryGetValue("RequestHeaders", out string headersString);
 
-            var headers = headersString.Split('\n');
-
-            foreach (string header in headers)
+            foreach (var row in rows)
             {
-                string headerName = header.Split(':')[0];
-                string headerValue = header.Split(':')[1];
-                data.Add(headerName, headerValue);
+                var values = row.Split('|');
+                if (values.Length != columns.Count)
+                {
+                    _project.SendWarningToLog($"Invalid row format: {row}. Expected {columns.Count} columns, got {values.Length}", false);
+                    continue;
+                }
+
+                var formattedValues = new string[values.Length];
+                formattedValues[0] = values[0]; // acc0 без изменений
+                for (int i = 1; i < values.Length; i++)
+                {
+                    if (string.IsNullOrWhiteSpace(values[i]))
+                    {
+                        formattedValues[i] = "0.0000000";
+                        continue;
+                    }
+                    try
+                    {
+                        string val = values[i].Replace(",", ".");
+                        if (decimal.TryParse(val, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out decimal balance))
+                        {
+                            formattedValues[i] = balance.ToString("0.0000000", System.Globalization.CultureInfo.InvariantCulture);
+                        }
+                        else
+                        {
+                            formattedValues[i] = "0.0000000";
+                            _project.SendWarningToLog($"Invalid format in {columns[i]}, row {grid.Rows.Count + 1}: '{values[i]}'", false);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        formattedValues[i] = "0.0000000";
+                        _project.SendWarningToLog($"Error formatting in {columns[i]}, row {grid.Rows.Count + 1}: {ex.Message}", false);
+                    }
+                }
+                grid.Rows.Add(formattedValues);
             }
 
-            data.TryGetValue(headerToGet, out string Value);
+            prevButton.Enabled = offset > 0;
+            nextButton.Enabled = offset + pageSize < totalRows;
 
-            if (trim) Value = Value.Replace("Bearer", "").Trim();
-            return Value;
+            int totalWidth = grid.Columns.Cast<System.Windows.Forms.DataGridViewColumn>().Sum(col => col.Width);
+            if (totalWidth < 1000) totalWidth = 1000;
+            grid.Width = totalWidth;
+            grid.FindForm().Width = Math.Min(totalWidth - 100, System.Windows.Forms.Screen.PrimaryScreen.WorkingArea.Width);
+
+            var sumRow = CalculateColumnSums(grid, columns);
+            grid.Rows.Add(sumRow);
+
+            // Визуальное выделение строки суммы
+            var lastRow = grid.Rows[grid.Rows.Count - 1];
+            lastRow.DefaultCellStyle.Font = new System.Drawing.Font(grid.Font, System.Drawing.FontStyle.Bold);
+            lastRow.DefaultCellStyle.BackColor = System.Drawing.Color.LightGray;
 
         }
+
+        private void ConfigurePaginationEvents(System.Windows.Forms.Button prevButton, System.Windows.Forms.Button nextButton, int pageSize, int totalRows, Action loadData)
+        {
+            prevButton.Click += (s, e) =>
+            {
+                if (_offset >= pageSize) // Используем поле _offset
+                {
+                    _offset -= pageSize;
+                    loadData();
+                }
+            };
+            nextButton.Click += (s, e) =>
+            {
+                if (_offset + pageSize < totalRows)
+                {
+                    _offset += pageSize;
+                    loadData();
+                }
+            };
+        }
+
+        private void ConfigureCellFormatting(System.Windows.Forms.DataGridView grid, List<string> columns)
+        {
+            grid.CellFormatting += (s, e) =>
+            {
+                if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
+                if (grid.Columns[e.ColumnIndex].Name == "acc0")
+                {
+                    e.CellStyle.Font = new System.Drawing.Font("Lucida Console", 9, System.Drawing.FontStyle.Bold);
+                    e.CellStyle.BackColor = System.Drawing.Color.Black;
+                    e.CellStyle.ForeColor = System.Drawing.Color.White;
+                    return;
+                }
+
+                string value = grid[e.ColumnIndex, e.RowIndex].Value?.ToString();
+                if (string.IsNullOrWhiteSpace(value)) return;
+
+                try
+                {
+                    if (decimal.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out decimal balance))
+                    {
+                        e.CellStyle.Font = new System.Drawing.Font("Lucida Console", 9);
+                        if (balance >= 0.1m)
+                            e.CellStyle.BackColor = System.Drawing.Color.SteelBlue;
+                        else if (balance >= 0.01m)
+                            e.CellStyle.BackColor = System.Drawing.Color.Green;
+                        else if (balance >= 0.001m)
+                            e.CellStyle.BackColor = System.Drawing.Color.YellowGreen;
+                        else if (balance >= 0.0001m)
+                            e.CellStyle.BackColor = System.Drawing.Color.Khaki;
+                        else if (balance >= 0.00001m)
+                            e.CellStyle.BackColor = System.Drawing.Color.LightSalmon;
+                        else if (balance > 0)
+                            e.CellStyle.BackColor = System.Drawing.Color.IndianRed;
+                        else if (balance == 0)
+                        {
+                            e.CellStyle.BackColor = System.Drawing.Color.White;
+                            e.CellStyle.ForeColor = System.Drawing.Color.White;
+                        }
+                        else
+                            e.CellStyle.BackColor = System.Drawing.Color.White;
+                    }
+                    else
+                    {
+                        _project.SendWarningToLog($"Invalid balance format in {grid.Columns[e.ColumnIndex].Name}, row {e.RowIndex + 1}: '{value}'", false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _project.SendWarningToLog($"Error parsing balance in {grid.Columns[e.ColumnIndex].Name}, row {e.RowIndex + 1}: {ex.Message}", false);
+                }
+            };
+        }
+
+        private string[] CalculateColumnSums(System.Windows.Forms.DataGridView grid, List<string> columns)
+        {
+            var sums = new string[columns.Count];
+            sums[0] = "ИТОГО"; // Первый столбец — подпись
+
+            for (int col = 1; col < columns.Count; col++)
+            {
+                decimal sum = 0;
+                foreach (System.Windows.Forms.DataGridViewRow row in grid.Rows)
+                {
+                    if (row.IsNewRow) continue;
+                    var val = row.Cells[col].Value?.ToString();
+                    if (decimal.TryParse(val, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out decimal d))
+                        sum += d;
+                }
+                sums[col] = sum.ToString("0.0000000", System.Globalization.CultureInfo.InvariantCulture);
+            }
+            return sums;
+        }
+
+        public void ShowBalanceTableFromList(List<string> data)
+        {
+            var columns = new List<string> { "Счет", "Баланс" };
+
+            // Создаём форму и грид
+            var form = CreateForm();
+            var grid = CreateDataGridView(form);
+
+            // Очищаем и настраиваем грид
+            grid.Columns.Clear();
+            grid.Rows.Clear();
+            grid.AllowUserToAddRows = false;
+            grid.RowHeadersVisible = false;
+            grid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+            grid.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+
+            // Добавляем столбцы
+            grid.Columns.Add("acc", "Счет");
+            grid.Columns.Add("balance", "Баланс");
+
+            // Заполняем строки из списка
+            decimal sum = 0;
+            foreach (var line in data)
+            {
+                var parts = line.Split(':');
+                if (parts.Length != 2)
+                    continue;
+                string acc = parts[0].Trim();
+                string balanceStr = parts[1].Replace(",", ".").Trim();
+                if (!decimal.TryParse(balanceStr, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out decimal balance))
+                    balance = 0;
+                sum += balance;
+                grid.Rows.Add(acc, balance.ToString("0.0000000", System.Globalization.CultureInfo.InvariantCulture));
+            }
+
+            // Добавляем итоговую строку
+            int sumRowIdx = grid.Rows.Add("TOTAL", sum.ToString("0.0000000", System.Globalization.CultureInfo.InvariantCulture));
+            var sumRow = grid.Rows[sumRowIdx];
+            sumRow.DefaultCellStyle.Font = new System.Drawing.Font(grid.Font, System.Drawing.FontStyle.Bold);
+            sumRow.DefaultCellStyle.BackColor = System.Drawing.Color.LightGray;
+
+            // Жирная линия под итоговой строкой
+            grid.CellPainting += (s, e) =>
+            {
+                if (e.RowIndex == sumRowIdx && e.RowIndex >= 0)
+                {
+                    e.Paint(e.CellBounds, System.Windows.Forms.DataGridViewPaintParts.All);
+                    using (var pen = new System.Drawing.Pen(System.Drawing.Color.Black, 3))
+                    {
+                        e.Graphics.DrawLine(pen, e.CellBounds.Left, e.CellBounds.Bottom - 1, e.CellBounds.Right, e.CellBounds.Bottom - 1);
+                    }
+                    e.Handled = true;
+                }
+            };
+
+            // Форматирование балансов (цвета)
+            grid.CellFormatting += (s, e) =>
+            {
+                if (e.RowIndex < 0 || e.ColumnIndex != 1) return;
+                string value = grid[e.ColumnIndex, e.RowIndex].Value?.ToString();
+                if (string.IsNullOrWhiteSpace(value)) return;
+                if (decimal.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out decimal balance))
+                {
+                    e.CellStyle.Font = new System.Drawing.Font("Lucida Console", 9);
+                    if (balance >= 0.1m)
+                        e.CellStyle.BackColor = System.Drawing.Color.SteelBlue;
+                    else if (balance >= 0.01m)
+                        e.CellStyle.BackColor = System.Drawing.Color.Green;
+                    else if (balance >= 0.001m)
+                        e.CellStyle.BackColor = System.Drawing.Color.YellowGreen;
+                    else if (balance >= 0.0001m)
+                        e.CellStyle.BackColor = System.Drawing.Color.Khaki;
+                    else if (balance >= 0.00001m)
+                        e.CellStyle.BackColor = System.Drawing.Color.LightSalmon;
+                    else if (balance > 0)
+                        e.CellStyle.BackColor = System.Drawing.Color.IndianRed;
+                    else if (balance == 0)
+                    {
+                        e.CellStyle.BackColor = System.Drawing.Color.White;
+                        e.CellStyle.ForeColor = System.Drawing.Color.White;
+                    }
+                    else
+                        e.CellStyle.BackColor = System.Drawing.Color.White;
+                }
+            };
+
+            form.ShowDialog();
+        }
+
+
 
     }
+
+
 
 
     public class ChainOperaAI 
