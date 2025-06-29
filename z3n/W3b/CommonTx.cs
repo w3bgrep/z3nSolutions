@@ -132,7 +132,7 @@ namespace z3n
             Log($"[WRAP] {value} native to {contract}...");
             return txHash;
         }
-        public string Send(string to, decimal amount, string rpc = "")
+        public string SendNative(string to, decimal amount, string rpc = "")
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
@@ -167,8 +167,48 @@ namespace z3n
             Log($"[SEND_NATIVE] {amount} to {to}...");
             return txHash;
         }
+        public string SendERC20(string contract, string to, decimal amount, string rpc = "")
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
 
+            string txHash = null;
 
+            try
+            {
+
+                string abi = @"[{""inputs"":[{""name"":""to"",""type"":""address""},{""name"":""amount"",""type"":""uint256""}],""name"":""transfer"",""outputs"":[{""name"":"""",""type"":""bool""}],""stateMutability"":""nonpayable"",""type"":""function""}]";
+                string[] types = { "address", "uint256" };
+                decimal scaledAmount = amount * 1000000000000000000m;
+                BigInteger amountValue = (BigInteger)Math.Floor(scaledAmount); 
+                object[] values = { to, amountValue };
+                string encoded = z3n.Encoder.EncodeTransactionData(abi, "transfer", types, values);
+                txHash = SendLegacy(
+                    rpc,
+                    contract,
+                     encoded,
+                    0,
+                    _key,
+                    3
+                );
+                try
+                {
+                    _project.Variables["blockchainHash"].Value = txHash;
+                }
+                catch (Exception ex)
+                {
+                    _logger.Send($"!W:{ex.Message}", show:true);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Send($"!W:{ex.Message}", show:true);
+                throw;
+            }
+
+            _logger.Send($"sent [{amount}] of [{contract}]  to [{to}] by [{rpc}] [{txHash}]");
+            return txHash;
+        }
 
     }
 }

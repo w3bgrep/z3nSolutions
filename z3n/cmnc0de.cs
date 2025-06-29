@@ -166,510 +166,363 @@ namespace w3tools //by @w3bgrep
         }
 
 
+    }
 
+    public class Rnd2
+    {
+
+
+        public string Seed()
+        {
+            return Blockchain.GenerateMnemonic("English", 12);
+        }
+        public string RandomHex(int length)
+        {
+            const string chars = "0123456789abcdef";
+            var random = new Random();
+            var result = new char[length];
+            for (int i = 0; i < length; i++)
+            {
+                result[i] = chars[random.Next(chars.Length)];
+            }
+            return "0x" + new string(result);
+        }
+        public string RandomHash(int length)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            var random = new Random();
+            return new string(Enumerable.Repeat(chars, length)
+                .Select(s => s[random.Next(s.Length)]).ToArray());
+        }
+        public string Nickname()
+        {
+            string[] adjectives = {
+                "Sunny", "Mystic", "Wild", "Cosmic", "Shadow", "Lunar", "Blaze", "Dream", "Star", "Vivid",
+                "Frost", "Neon", "Gloomy", "Swift", "Silent", "Fierce", "Radiant", "Dusk", "Nova", "Spark",
+                "Crimson", "Azure", "Golden", "Midnight", "Velvet", "Stormy", "Echo", "Vortex", "Phantom", "Bright",
+                "Chill", "Rogue", "Daring", "Lush", "Savage", "Twilight", "Crystal", "Zesty", "Bold", "Hazy",
+                "Vibrant", "Gleam", "Frosty", "Wicked", "Serene", "Bliss", "Rusty", "Hollow", "Sleek", "Pale"
+            };
+
+            string[] nouns = {
+                "Wolf", "Viper", "Falcon", "Spark", "Catcher", "Rider", "Echo", "Flame", "Voyage", "Knight",
+                "Raven", "Hawk", "Storm", "Tide", "Drift", "Shade", "Quest", "Blaze", "Wraith", "Comet",
+                "Lion", "Phantom", "Star", "Cobra", "Dawn", "Arrow", "Ghost", "Sky", "Vortex", "Wave",
+                "Tiger", "Ninja", "Dreamer", "Seeker", "Glider", "Rebel", "Spirit", "Hunter", "Flash", "Beacon",
+                "Jaguar", "Drake", "Scout", "Path", "Glow", "Riser", "Shadow", "Bolt", "Zephyr", "Forge"
+            };
+
+            string[] suffixes = { "", "", "", "", "", "X", "Z", "Vibe", "Glow", "Rush", "Peak", "Core", "Wave", "Zap" };
+
+            Random random = new Random(Guid.NewGuid().GetHashCode());
+
+            string adjective = adjectives[random.Next(adjectives.Length)];
+            string noun = nouns[random.Next(nouns.Length)];
+            string suffix = suffixes[random.Next(suffixes.Length)];
+
+            string nickname = $"{adjective}{noun}{suffix}";
+
+            if (nickname.Length > 15)
+            {
+                nickname = nickname.Substring(0, 15);
+            }
+
+            return nickname;
+        }
+        public int Int(IZennoPosterProjectModel project, string Var)
+        {
+            string value = string.Empty;
+            try
+            {
+                value = project.Variables[Var].Value;
+            }
+            catch (Exception e)
+            {
+                project.SendInfoToLog(e.Message);
+            }
+            if (value == string.Empty) project.L0g($"no Value from [{Var}] `w");
+
+            if (value.Contains("-"))
+            {
+                var min = int.Parse(value.Split('-')[0].Trim());
+                var max = int.Parse(value.Split('-')[1].Trim());
+                return new Random().Next(min, max);
+            }
+            return int.Parse(value.Trim());
+        }
+
+        public double RndPercent(double input, double percent, double maxPercent)
+        {
+            if (percent < 0 || maxPercent < 0 || percent > 100 || maxPercent > 100)
+                throw new ArgumentException("Percent and MaxPercent must be between 0 and 100");
+
+            if (!double.TryParse(input.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out double number))
+                throw new ArgumentException("Input cannot be converted to double");
+
+            double percentageValue = number * (percent / 100.0);
+
+            Random random = new Random();
+            double randomReductionPercent = random.NextDouble() * maxPercent;
+            double reduction = percentageValue * (randomReductionPercent / 100.0);
+
+            double result = percentageValue - reduction;
+
+            if (result <= 0)
+            {
+                result = Math.Max(percentageValue * 0.01, 0.0001);
+            }
+
+            return result;
+        }
+        public double RndPercent(decimal input, double percent, double maxPercent)
+        {
+            if (percent < 0 || maxPercent < 0 || percent > 100 || maxPercent > 100)
+                throw new ArgumentException("Percent and MaxPercent must be between 0 and 100");
+
+            if (!double.TryParse(input.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out double number))
+                throw new ArgumentException("Input cannot be converted to double");
+
+            double percentageValue = number * (percent / 100.0);
+
+            Random random = new Random();
+            double randomReductionPercent = random.NextDouble() * maxPercent;
+            double reduction = percentageValue * (randomReductionPercent / 100.0);
+
+            double result = percentageValue - reduction;
+
+            if (result <= 0)
+            {
+                result = Math.Max(percentageValue * 0.01, 0.0001);
+            }
+
+            return result;
+        }
+
+        public decimal Decimal(IZennoPosterProjectModel project, string Var)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            string value = string.Empty;
+            try
+            {
+                value = project.Variables[Var].Value;
+            }
+            catch (Exception e)
+            {
+                project.SendInfoToLog(e.Message);
+            }
+            if (value == string.Empty) project.L0g($"no Value from [{Var}] `w");
+
+            if (value.Contains("-"))
+            {
+                var min = decimal.Parse(value.Split('-')[0].Trim());
+                var max = decimal.Parse(value.Split('-')[1].Trim());
+                Random rand = new Random();
+                return min + (decimal)(rand.NextDouble() * (double)(max - min));
+            }
+            return decimal.Parse(value.Trim());
+        }
 
     }
 
-
-
-
-    public class ZerionWallet2
+    public class CommonTx2 : W3b
     {
-        private readonly IZennoPosterProjectModel _project;
-        private readonly Instance _instance;
-        private readonly Logger _logger;
 
-        private readonly string _key;
-        private readonly string _pass;
-        private readonly string _fileName;
-        private string _expectedAddress;
-
-
-        private readonly string _extId = "klghhnkeealcohjjanjjdaeeggmfmlpl";
-        private readonly string _sidepanelUrl = "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#";
-
-        private readonly string _urlOnboardingTab = "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html?windowType=tab&appMode=onboarding#/onboarding/import";
-        private readonly string _urlPopup = "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html#";
-        private readonly string _urlImport = "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html#/get-started/import";
-        private readonly string _urlWalletSelect = "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html#/wallet-select";
-
-
-        public ZerionWallet2(IZennoPosterProjectModel project, Instance instance, bool log = false, string key = null, string fileName = "Zerion1.21.3.crx")
+        private readonly W3bRead _read;
+        public CommonTx2(IZennoPosterProjectModel project, string key = null, bool log = false)
+        : base(project, log)
         {
-            _project = project;
-            _instance = instance;
-            _fileName = fileName;
-
-            _key = KeyLoad(key);
-            _pass = SAFU.HWPass(_project);
-            _logger = new Logger(project, log: log, classEmoji: "🇿");
-
+            _key = ApplyKey(key);
+            _adrEvm = _key.ToPubEvm();//_sql.Address("evm");
+            _read = new W3bRead(project);
         }
 
 
-        private string KeyLoad(string key)
-        {
-            if (string.IsNullOrEmpty(key)) key = "key";
 
-            switch (key)
+        public string Approve(string contract, string spender, string amount, string rpc = "")
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
+            string key = _sql.Key("EVM");
+
+            string abi = @"[{""inputs"":[{""name"":""spender"",""type"":""address""},{""name"":""amount"",""type"":""uint256""}],""name"":""approve"",""outputs"":[{""name"":"""",""type"":""bool""}],""stateMutability"":""nonpayable"",""type"":""function""}]";
+
+            string txHash = null;
+
+            string[] types = { "address", "uint256" };
+            BigInteger amountValue;
+
+
+            if (amount.ToLower() == "max")
             {
-                case "key":
-                    key = new Sql(_project).Key("evm");
-                    break;
-                case "seed":
-                    key = new Sql(_project).Key("seed");
-                    break;
-                default:
-                    return key;
+                amountValue = BigInteger.Parse("115792089237316195423570985008687907853269984665640564039457584007913129639935"); // max uint256
             }
-            if (string.IsNullOrEmpty(key)) throw new Exception("keyIsEmpy");
-
-            _expectedAddress = key.ToPubEvm();
-            return key;
-        }
-
-        public string Launch(string fileName = null, bool log = false, string source = null, string refCode = null)
-        {
-            if (string.IsNullOrEmpty(fileName)) 
-                fileName = _fileName;
-            if (string.IsNullOrEmpty(source))
-                source = "key";
-            string active = null;
-            var em = _instance.UseFullMouseEmulation;
-            _instance.UseFullMouseEmulation = false;
-
-            new ChromeExt(_project, _instance).Install(_extId, fileName, log);
-
-        check:
-            string state = GetState();
-            _logger.Send(state);
-            switch (state)
+            else if (amount.ToLower() == "cancel")
             {
-                case "onboarding":
-                    Import(source, refCode, log: log);
-                    goto check;
-                case "noTab":
-                    _instance.Go(_urlPopup);
-                    goto check;
-                case "unlock":
-                    Unlock();
-                    goto check;
-                case "overview":
-                    string current = GetActive();
-                    SwitchSource(source);
-                    break;
-                default:
-                    goto check;
+                amountValue = BigInteger.Zero;
             }
-
-            try { TestnetMode(false); } catch { }
-            GetActive();
-            _instance.CloseExtraTabs();
-            _instance.UseFullMouseEmulation = em;
-            return _expectedAddress;
-        }
-
-
-        private void Add(string source = null, bool log = false)
-        {
-            string key = KeyLoad(source);
-            _instance.Go(_urlImport);
-
-            _instance.HeSet(("seedOrPrivateKey", "name"), key);
-            _instance.HeClick(("button", "innertext", "Import", "regexp", 0));
-            _instance.HeSet(("input:password", "fulltagname", "input:password", "text", 0), _pass);
-            _instance.HeClick(("button", "class", "_primary", "regexp", 0));
-            try
+            else
             {
-                _instance.HeClick(("button", "class", "_option", "regexp", 0));
-                _instance.HeClick(("button", "class", "_primary", "regexp", 0));
-                _instance.HeClick(("button", "class", "_primary", "regexp", 0));
-            }
-            catch { }
-
-        }
-        public bool Sign(bool log = false)
-        {
-            var urlNow = _instance.ActiveTab.URL;
-            try
-            {
-
-                var type = "null";
-                var data = "null";
-                var origin = "null";
-
-                var parts = urlNow.Split('?').ToList();
-
-                foreach (string part in parts)
+                try
                 {
-                    //project.SendInfoToLog(part);
-                    if (part.StartsWith("windowType"))
-                    {
-                        type = part.Split('=')[1];
-                    }
-                    if (part.StartsWith("origin"))
-                    {
-                        origin = part.Split('=')[1];
-                        data = part.Split('=')[2];
-                        data = data.Split('&')[0].Trim();
-                    }
-
+                    amountValue = BigInteger.Parse(amount);
+                    if (amountValue < 0)
+                        throw new ArgumentException("Amount cannot be negative");
                 }
-                dynamic txData = JsonConvert.DeserializeObject<System.Dynamic.ExpandoObject>(data);
-                var gas = txData.gas.ToString();
-                var value = txData.value.ToString();
-                var sender = txData.from.ToString();
-                var recipient = txData.to.ToString();
-                var datastring = $"{txData.data}";
-
-
-                BigInteger gasWei = BigInteger.Parse("0" + gas.TrimStart('0', 'x'), NumberStyles.AllowHexSpecifier);
-                decimal gasGwei = (decimal)gasWei / 1000000000m;
-                _logger.Send($"Sending {datastring} to {recipient}, gas: {gasGwei}");
-
+                catch (Exception ex)
+                {
+                    throw new Exception($"Failed to parse amount '{amount}': {ex.Message}");
+                }
             }
-            catch { }
+
+            object[] values = { spender, amountValue };
 
             try
             {
-                var button = _instance.HeGet(("button", "class", "_primary", "regexp", 0));
-                _logger.Send(button);
-                _instance.HeClick(("button", "class", "_primary", "regexp", 0));
-                return true;
+                txHash = SendLegacy(
+                    rpc,
+                    contract,
+                    z3n.Encoder.EncodeTransactionData(abi, "approve", types, values),
+                    0,
+                    key,
+                    3
+                );
+                try
+                {
+                    _project.Variables["blockchainHash"].Value = txHash;
+                }
+                catch (Exception ex)
+                {
+                    Log($"!W:{ex.Message}");
+                }
+
             }
             catch (Exception ex)
             {
-                _logger.Send($"!W {ex.Message}");
+                Log($"!W:{ex.Message}");
                 throw;
             }
-        }
- 
-        public void Connect(bool log = false)
-        {
 
-            string action = null;
-        getState:
+            Log($"[APPROVE] {contract} for spender {spender} with amount {amount}...");
+            return txHash;
+        }
+        public string Wrap(string contract, decimal value, string rpc = "")
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
+            string key = _sql.Key("EVM");
+
+            string abi = @"[{""inputs"":[],""name"":""deposit"",""outputs"":[],""stateMutability"":""payable"",""type"":""function""}]";
+
+            string txHash = null;
+
+            string[] types = { };
+            object[] values = { };
 
             try
             {
-                action = _instance.HeGet(("button", "class", "_primary", "regexp", 0));
+                txHash = SendLegacy(
+                    rpc,
+                    contract,
+                     z3n.Encoder.EncodeTransactionData(abi, "deposit", types, values),
+                    value,
+                    key,
+                    3
+                );
+                try
+                {
+                    _project.Variables["blockchainHash"].Value = txHash;
+                }
+                catch (Exception ex)
+                {
+                    Log($"!W:{ex.Message}");
+                }
             }
             catch (Exception ex)
             {
-                _project.L0g($"No Wallet tab found. 0");
-                return;
+                Log($"!W:{ex.Message}");
+                throw;
             }
 
-            _project.L0g(action);
-            _project.L0g(_instance.ActiveTab.URL);
-
-            switch (action)
-            {
-                case "Add":
-                    _project.L0g($"adding {_instance.HeGet(("input:url", "fulltagname", "input:url", "text", 0), atr: "value")}");
-                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
-                    goto getState;
-                case "Close":
-                    _project.L0g($"added {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
-                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
-                    goto getState;
-                case "Connect":
-                    _project.L0g($"connecting {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
-                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
-                    goto getState;
-                case "Sign":
-                    _project.L0g($"sign {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
-                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
-                    goto getState;
-                case "Sign In":
-                    _project.L0g($"sign {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
-                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
-                    goto getState;
-
-                default:
-                    goto getState;
-
-            }
-
-
+            Log($"[WRAP] {value} native to {contract}...");
+            return txHash;
         }
-
-        private void Import(string source = null, string refCode = null, bool log = false)
+        public string Send(string to, decimal amount, string rpc = "")
         {
-            string key = KeyLoad(source);
-            _logger.Send(key);
-            key = key.Trim().StartsWith("0x") ? key.Substring(2) : key;
-            string keyType = key.KeyType();
-            _instance.Go(_urlOnboardingTab);
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
 
-            if (string.IsNullOrWhiteSpace(refCode))
-            {
-                refCode = new Sql(_project).DbQ(@"SELECT referralCode
-                FROM projects.zerion
-                WHERE referralCode != '_' 
-                AND TRIM(referralCode) != ''
-                ORDER BY RANDOM()
-                LIMIT 1;");
-            }
-            if (string.IsNullOrWhiteSpace(refCode)) refCode = "JZA87YJDS";
+            string txHash = null;
 
-            _logger.Send(keyType);
-            var inputRef = true;
-
-            _logger.Send(keyType);
-            if (keyType == "keyEvm")
-            {
-                _instance.HeClick(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\?windowType=tab&appMode=onboarding#/onboarding/import/private-key", "regexp", 0));
-                _instance.ActiveTab.FindElementByName("key").SetValue(key, "Full", false);
-            }
-            else if (keyType == "seed")
-            {
-                _instance.HeClick(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\?windowType=tab&appMode=onboarding#/onboarding/import/mnemonic", "regexp", 0));
-                int index = 0;
-                foreach (string word in key.Split(' '))
-                {
-                    _instance.ActiveTab.FindElementById($"word-{index}").SetValue(word, "Full", false);
-                    index++;
-                }
-            }
-
-            _instance.HeClick(("button", "innertext", "Import\\ wallet", "regexp", 0));
-            _instance.HeSet(("input:password", "fulltagname", "input:password", "text", 0), _pass);
-            _instance.HeClick(("button", "class", "_primary", "regexp", 0));
-            _instance.HeSet(("input:password", "fulltagname", "input:password", "text", 0), _pass);
-            _instance.HeClick(("button", "class", "_primary", "regexp", 0));
-            if (inputRef)
-            {
-                _instance.HeClick(("button", "innertext", "Enter\\ Referral\\ Code", "regexp", 0));
-                _instance.HeSet((("referralCode", "name")), refCode);
-                _instance.HeClick(("button", "class", "_regular", "regexp", 0));
-            }
-            _instance.CloseExtraTabs(true);
-            _instance.Go(_urlPopup);
-        }
-
-        private void Unlock(bool log = false)
-        {
-            //Go();
-            //string active = null;
             try
             {
-                _instance.HeSet(("input:password", "fulltagname", "input:password", "text", 0), _pass, deadline:3);
-                _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                txHash = SendLegacy(
+                    rpc,
+                    to,
+                    "",
+                    amount,
+                    _key,
+                    3
+                );
+                try
+                {
+                    _project.Variables["blockchainHash"].Value = txHash;
+                }
+                catch (Exception ex)
+                {
+                    Log($"!W:{ex.Message}");
+                }
             }
             catch (Exception ex)
             {
-                _logger.Send(ex.Message);
+                Log($"!W:{ex.Message}");
+                throw;
             }
-        }
- 
-        public void SwitchSource(string addressToUse = "key")
-        {
 
-            _project.Deadline();
-
-            if (addressToUse == "key") addressToUse = new Sql(_project).Key("evm").ToPubEvm();
-            else if (addressToUse == "seed") addressToUse = new Sql(_project).Key("seed").ToPubEvm();
-            else throw new Exception("supports \"key\" | \"seed\" only");
-            _expectedAddress = addressToUse;
-
-        go:
-            _instance.Go(_urlWalletSelect);
-            Thread.Sleep(1000);
-
-        waitWallets:
-            _project.Deadline(60);
-            if (_instance.ActiveTab.FindElementByAttribute("button", "class", "_wallet", "regexp", 0).IsVoid) goto waitWallets;
-
-            var wallets = _instance.ActiveTab.FindElementsByAttribute("button", "class", "_wallet", "regexp").ToList();
-
-            foreach (HtmlElement wallet in wallets)
-            {
-                string masked = "";
-                string balance = "";
-                string ens = "";
-
-                if (wallet.InnerHtml.Contains("M18 21a2.9 2.9 0 0 1-2.125-.875A2.9 2.9 0 0 1 15 18q0-1.25.875-2.125A2.9 2.9 0 0 1 18 15a3.1 3.1 0 0 1 .896.127 1.5 1.5 0 1 0 1.977 1.977Q21 17.525 21 18q0 1.25-.875 2.125A2.9 2.9 0 0 1 18 21")) continue;
-                if (wallet.InnerText.Contains("·"))
-                {
-                    ens = wallet.InnerText.Split('\n')[0].Split('·')[0];
-                    masked = wallet.InnerText.Split('\n')[0].Split('·')[1];
-                    balance = wallet.InnerText.Split('\n')[1].Trim();
-
-                }
-                else
-                {
-                    masked = wallet.InnerText.Split('\n')[0];
-                    balance = wallet.InnerText.Split('\n')[1];
-                }
-                masked = masked.Trim();
-
-                _logger.Send($"[{masked}]{masked.ChkAddress(addressToUse)}[{addressToUse}]");
-
-                if (masked.ChkAddress(addressToUse))
-                {
-                    _instance.HeClick(wallet);
-                    return;
-                }
-            }
-            _logger.Send("address not found");
-            Add("seed");
-
-            _instance.CloseExtraTabs(true);
-            goto go;
-
-
+            Log($"[SEND_NATIVE] {amount} to {to}...");
+            return txHash;
         }
 
-        private void TestnetMode(bool testMode = false)
+        public string SendERC20(string contract, string to, decimal amount, string rpc = "")
         {
-            bool current;
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
 
-            string testmode = _instance.HeGet(("input:checkbox", "fulltagname", "input:checkbox", "text", 0), deadline:1, atr: "value");
+            string txHash = null;
 
-            if (testmode == "True")
-                current = true;
-            else
-                current = false;
-
-            if (testMode != current)
-                _instance.HeClick(("input:checkbox", "fulltagname", "input:checkbox", "text", 0));
-
-        }
-  
-        public bool WaitTx(int deadline = 60, bool log = false)
-        {
-            DateTime functionStart = DateTime.Now;
-        check:
-            bool result;
-            if ((DateTime.Now - functionStart).TotalSeconds > deadline) throw new Exception($"!W Deadline [{deadline}]s exeeded");
-
-
-            if (!_instance.ActiveTab.URL.Contains("chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/overview/history"))
-            {
-                Tab tab = _instance.NewTab("zw");
-                if (tab.IsBusy) tab.WaitDownloading();
-                _instance.ActiveTab.Navigate("chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/sidepanel.21ca0c41.html#/overview/history", "");
-
-            }
-            Thread.Sleep(2000);
-
-            var status = _instance.HeGet(("div", "style", "padding: 0px 16px;", "regexp", 0));
-
-
-
-            if (status.Contains("Pending")) goto check;
-            else if (status.Contains("Failed")) result = false;
-            else if (status.Contains("Execute")) result = true;
-            else
-            {
-                _logger.Send($"unknown status {status}");
-                goto check;
-            }
-            _instance.CloseExtraTabs();
-            return result;
-
-        }
- 
-        public List<string> Claimable(string address)
-        {
-            var res = new List<string>();
-            var _h = new NetHttp(_project);
-            address = address.ToLower();
-
-            string url = $@"https://dna.zerion.io/api/v1/memberships/{address}/quests";
-
-            var headers = new Dictionary<string, string>
-            {
-                { "Accept", "*/*" },
-                { "Accept-Language", "en-US,en;q=0.9" },
-                { "Origin", "https://app.zerion.io" },
-                { "Referer", "https://app.zerion.io" },
-                { "Priority", "u=1, i" }
-            };
-
-            string response = _h.GET(
-                url: url,
-                proxyString: "+",
-                headers: headers,
-                parse: false
-            );
-
-
-            int i = 0;
             try
             {
-                JArray jArr = JArray.Parse(response);
-                while (true)
+
+                string abi = @"[{""inputs"":[{""name"":""to"",""type"":""address""},{""name"":""amount"",""type"":""uint256""}],""name"":""transfer"",""outputs"":[{""name"":"""",""type"":""bool""}],""stateMutability"":""nonpayable"",""type"":""function""}]";
+                string[] types = { "address", "uint256" };
+                decimal scaledAmount = amount * 1000000000000000000m;
+                BigInteger amountValue = (BigInteger)Math.Floor(scaledAmount);
+                object[] values = { to, amountValue };
+                string encoded = z3n.Encoder.EncodeTransactionData(abi, "transfer", types, values);
+                txHash = SendLegacy(
+                    rpc,
+                    contract,
+                     encoded,
+                    0,
+                    _key,
+                    3
+                );
+                try
                 {
-                    var id = "";
-                    var kind = "";
-                    var link = "";
-                    var reward = "";
-                    var kickoff = "";
-                    var deadline = "";
-                    var recurring = "";
-                    var claimable = "";
-
-                    try
-                    {
-
-                        id = jArr[i]["id"].ToString();
-                        kind = jArr[i]["kind"].ToString();
-                        recurring = jArr[i]["recurring"].ToString();
-                        reward = jArr[i]["reward"].ToString();
-                        kickoff = jArr[i]["kickoff"].ToString();
-                        deadline = jArr[i]["deadline"].ToString();
-                        claimable = jArr[i]["claimable"].ToString();
-                        try { link = jArr[i]["meta"]["mint"]["link"]["url"].ToString(); } catch { }
-                        try { link = jArr[i]["meta"]["call"]["link"]["url"].ToString(); } catch { }
-                        var toLog = $"Unclaimed [{claimable}]Exp on Zerion  [{kind}]  [{id}]";
-                        if (claimable != "0")
-                        {
-                            res.Add(id);
-                            _project.L0g(toLog);
-                        }
-                        i++;
-                    }
-                    catch
-                    {
-                        break;
-                    }
+                    _project.Variables["blockchainHash"].Value = txHash;
+                }
+                catch (Exception ex)
+                {
+                    _logger.Send($"!W:{ex.Message}", show: true);
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                _project.L0g($"!W failed to parse : [{response}] ");
+                _logger.Send($"!W:{ex.Message}", show: true);
+                throw;
             }
-            return res;
 
-        }
-
-        private string GetState()
-        {
-            check:
-            string state = null;
-            //Thread.Sleep(1000);
-            if (!_instance.ActiveTab.URL.Contains(_extId))
-                state = "noTab";
-            else if (_instance.ActiveTab.URL.Contains("onboarding"))
-                state = "onboarding";
-            else if (_instance.ActiveTab.URL.Contains("login"))
-                state = "unlock";
-            else if (_instance.ActiveTab.URL.Contains("overview"))
-                state = "overview";
-
-            else 
-                goto check;
-            return state;
-        }
-
-        private string GetActive()
-        {
-            string activeWallet = _instance.HeGet(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\#/wallet-select", "regexp", 0));
-            string total = _instance.HeGet(("div", "style", "display:\\ grid;\\ gap:\\ 0px;\\ grid-template-columns:\\ minmax\\(0px,\\ auto\\);\\ align-items:\\ start;", "regexp", 0)).Split('\n')[0];
-            _logger.Send($"wallet Now {activeWallet}  [{total}]");
-            return activeWallet;
+            _logger.Send($"sent [{amount}] of [{contract}]  to {to} by {rpc}\n{txHash}");
+            return txHash;
         }
 
     }

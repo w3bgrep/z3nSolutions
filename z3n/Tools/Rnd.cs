@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 
@@ -138,7 +139,29 @@ namespace z3n
             return result;
         }
 
+        public decimal Decimal(IZennoPosterProjectModel project, string Var)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            string value = string.Empty;
+            try
+            {
+                value = project.Variables[Var].Value;
+            }
+            catch (Exception e)
+            {
+                project.SendInfoToLog(e.Message);
+            }
+            if (value == string.Empty) project.L0g($"no Value from [{Var}] `w");
 
+            if (value.Contains("-"))
+            {
+                var min = decimal.Parse(value.Split('-')[0].Trim());
+                var max = decimal.Parse(value.Split('-')[1].Trim());
+                Random rand = new Random();
+                return min + (decimal)(rand.NextDouble() * (double)(max - min));
+            }
+            return decimal.Parse(value.Trim());
+        }
 
     }
 }
