@@ -18,14 +18,14 @@ using static Leaf.xNet.Services.Cloudflare.CloudflareBypass;
 namespace z3n
 {
 
-    public enum GZto
-    {
-        Sepolia,
-        Soneum,
-        BNB,
-        Gravity,
-        Zero,
-    }
+    //public enum GZto
+    //{
+    //    Sepolia,
+    //    Soneum,
+    //    BNB,
+    //    Gravity,
+    //    Zero,
+    //}
 
     public class W3bWrite : W3b
     {

@@ -130,7 +130,7 @@ namespace z3n
             catch { }
 
         }
-        public bool Sign(bool log = false)
+        public bool Sign(bool log = false,int deadline = 10)
         {
             parseURL();
             try
@@ -138,10 +138,12 @@ namespace z3n
                 int i = 0;
             scan:
 
-                var button = _instance.GetHe(("button", "class", "_primary", "regexp", i));
-                if (button.Width == -1) { i++; goto scan; }
-                _logger.Send(button.InnerText);
-                _instance.HeClick(button);
+                var button = _instance.HeGet(("button", "class", "_primary", "regexp", i));
+                if (_instance.GetHe(("button", "class", "_primary", "regexp", i)).Width == -1) 
+                    { i++; goto scan; }
+                //if (button.Width == -1) { i++; goto scan; }
+                _logger.Send(button);
+                _instance.HeClick(("button", "class", "_primary", "regexp", i));
                 return true;
             }
             catch (Exception ex)
