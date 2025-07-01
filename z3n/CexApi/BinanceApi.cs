@@ -28,7 +28,7 @@ namespace z3n
         public BinanceApi(IZennoPosterProjectModel project, bool log = false)
         {
             _project = project;
-            _logger = new Logger(project, log: log, classEmoji: "💸");
+            _logger = new Logger(project, log: log, classEmoji: "BINANCE");
             LoadKeys();
         }
 
@@ -44,6 +44,7 @@ namespace z3n
             string url = "https://api.binance.com/sapi/v1/capital/withdraw/apply";
 
             var result = Post(url, payload);
+            _logger.Send($" => {address} [{amount} {coin} by {network}]: {result}");
             return result;
 
         }

@@ -7,7 +7,7 @@ using ZennoLab.InterfacesLibrary.ProjectModel;
 
 namespace z3n
 {
-    internal class Accountant
+    public class Accountant
     {
         private readonly IZennoPosterProjectModel _project;
         private readonly Sql _sql;
@@ -17,6 +17,7 @@ namespace z3n
         public Accountant(IZennoPosterProjectModel project, bool log = false)
         {
             _project = project;
+
             _logger = new Logger(project, log: log, classEmoji: "$");
             _sql = new Sql(project, log: log);
         }
@@ -51,7 +52,6 @@ namespace z3n
 
             form.ShowDialog();
         }
-
 
         private System.Windows.Forms.Form CreateForm()
         {
