@@ -87,8 +87,6 @@ namespace z3n
                 case "CAPCHA":
                     try { _project.CapGuru(); } catch { }
                     _instance.HeClick(("button", "innertext", "Next", "regexp", 0));
-                    //_sql.Upd("status = 'status = '!WCapcha'", "google");
-                    //_sql.Upd("status = 'status = '!W fail.Google Capcha or Locked'");
                     goto check;
                     throw new Exception("CAPCHA");
                 case "phoneVerify":

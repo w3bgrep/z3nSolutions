@@ -1,69 +1,41 @@
-﻿using System;
+﻿using Leaf.xNet;
+using NBitcoin;
+using Nethereum.ABI;
+using Nethereum.ABI.FunctionEncoding.Attributes;
+using Nethereum.Hex.HexConvertors.Extensions;
+using Nethereum.Model;
+using Nethereum.Signer;
+using Nethereum.Util;
+using Nethereum.Web3;
+using Nethereum.Web3.Accounts;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
+using System.Dynamic;
+using System.Globalization;
+using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Net;
+using System.Net.Http;
+using System.Numerics;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Security.Policy;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using Newtonsoft.Json;
-using ZennoLab.InterfacesLibrary.Enums.Browser;
-using System.Globalization;
-using System.Runtime.CompilerServices;
-using Leaf.xNet;
+using System.Threading.Tasks;
 using ZennoLab.CommandCenter;
+using ZennoLab.InterfacesLibrary;
+using ZennoLab.InterfacesLibrary.Enums.Browser;
 using ZennoLab.InterfacesLibrary.Enums.Http;
 using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
-using System.Security.Policy;
-using ZennoLab.InterfacesLibrary;
 using z3n;
-using NBitcoin;
-
-using System.IO;
-using System.Diagnostics;
-using System.Reflection;
-using System.Numerics;
-using System.Threading.Tasks;
-using System.Runtime.InteropServices;
 using static Leaf.xNet.Services.Cloudflare.CloudflareBypass;
-using Newtonsoft.Json.Linq;
-using System.Dynamic;
-
-using Nethereum.Model;
-using Nethereum.Signer;
-using Nethereum.Hex.HexConvertors.Extensions;
-using Nethereum.Util;
-
-using Nethereum.ABI;
-using Nethereum.ABI.FunctionEncoding.Attributes;
-using Nethereum.Web3;
-using Nethereum.Web3.Accounts;
-using Nethereum.Signer;
-using Nethereum.Hex.HexConvertors.Extensions;
-using Nethereum.ABI;
-using Nethereum.Util;
-using System;
-using System.Linq;
-using System.Numerics;
-using System.Text;
-using System.Net;
-using System.IO;
-using System.Collections.Generic;
-using System;
-using System.Linq;
-using System.Numerics;
-using System.Text;
-using System.Net;
-using System.IO;
-using System.Collections.Generic;
-using Newtonsoft.Json;
-using Nethereum.Signer;
-using Nethereum.Hex.HexConvertors.Extensions;
-using Nethereum.ABI;
-using Nethereum.Web3;
-using Nethereum.Web3.Accounts;
 
 
 namespace w3tools //by @w3bgrep
@@ -72,474 +44,166 @@ namespace w3tools //by @w3bgrep
     public  static class TestStatic
     {
 
-        public static string UnixToHuman(this IZennoPosterProjectModel project, string decodedResultExpire = null)
-        {
-            var _log = new Logger(project, classEmoji: "☻");
-            if (string.IsNullOrEmpty(decodedResultExpire)) decodedResultExpire = project.Var("varSessionId");
-            if (!string.IsNullOrEmpty(decodedResultExpire))
-            {
-                int intEpoch = int.Parse(decodedResultExpire);
-                string converted = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(intEpoch).ToShortDateString();
-                _log.Send(converted);
-                return converted;
-
-                
-            }
-            return string.Empty;
-        }
-        public static decimal Math(this IZennoPosterProjectModel project, string varA, string operation, string varB, string varRslt = "a_")
-        {
-            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            decimal a = decimal.Parse(project.Var(varA));
-            decimal b = decimal.Parse(project.Var(varB));
-            decimal result;
-            switch (operation)
-            {
-                case "+":
-
-                    result = a + b;
-                    break;
-                case "-":
-                    result = a - b;
-                    break;
-                case "*":
-                    result = a * b;
-                    break;
-                case "/":
-                    result = a / b;
-                    break;
-                default:
-                    throw new Exception($"unsuppoted operation {operation}");
-            }
-            try { project.Var(varRslt, $"{result}"); } catch { }
-            return result;
-        }
-        public static string CookiesToJson(string cookies)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(cookies))
-                {
-                    return "[]";
-                }
-
-                var result = new List<Dictionary<string, string>>();
-                var cookiePairs = cookies.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-
-                foreach (var pair in cookiePairs)
-                {
-                    var trimmedPair = pair.Trim();
-                    if (string.IsNullOrEmpty(trimmedPair))
-                        continue;
-
-                    var keyValue = trimmedPair.Split(new[] { '=' }, 2);
-                    if (keyValue.Length != 2)
-                    {
-                        continue;
-                    }
-
-                    var key = keyValue[0].Trim();
-                    var value = keyValue[1].Trim();
-                    if (!string.IsNullOrEmpty(key))
-                    {
-                        result.Add(new Dictionary<string, string>
-                    {
-                        { "name", key },
-                        { "value", value }
-                    });
-                    }
-                }
-
-                string json = JsonConvert.SerializeObject(result, Formatting.Indented);
-                return json;
-            }
-            catch (Exception ex)
-            {
-                return "[]";
-            }
-        }
-
-        public static void Sleep(this IZennoPosterProjectModel project,int min, int max)
-        {
-            Thread.Sleep(new Random().Next(min, min) * 1000);
-
-        }
 
 
     }
 
-    public class Rnd2
+
+
+    public class ChainOperaAI 
     {
 
+        private readonly IZennoPosterProjectModel _project;
+        private readonly Instance _instance;
+        private readonly Logger _logger;
 
-        public string Seed()
+        public ChainOperaAI(IZennoPosterProjectModel project, Instance instance, bool log = false)
         {
-            return Blockchain.GenerateMnemonic("English", 12);
+            _project = project;
+            _instance = instance;
+            _logger = new Logger(project, log: log, classEmoji: "ChainOpera");
+
         }
-        public string RandomHex(int length)
+        public void GetAuthData()
         {
-            const string chars = "0123456789abcdef";
-            var random = new Random();
-            var result = new char[length];
-            for (int i = 0; i < length; i++)
+            var url = "https://chat.chainopera.ai/userCenter/api/v1/";
+
+            _project.Deadline();
+            _instance.UseTrafficMonitoring = true;
+
+            _instance.HeClick(("button", "class", "inline-flex\\ items-center\\ justify-center\\ whitespace-nowrap\\ text-sm\\ font-medium\\ transition-colors\\ focus-visible:outline-hidden\\ focus-visible:ring-1\\ focus-visible:ring-primary\\ disabled:pointer-events-none\\ disabled:opacity-50\\ border\\ bg-background\\ hover:border-primary/50\\ shadow-xs\\ hover:bg-primary\\ hover:text-primary-foreground\\ hover:ring-primary/60\\ hover:ring-2\\ active:bg-background\\ active:text-primary\\ active:ring-0\\ px-4\\ py-2\\ h-10\\ truncate\\ rounded-full\\ pr-1\\ w-auto\\ gap-4", "regexp", 0));
+
+
+        get:
+            _project.Deadline(10);
+            Thread.Sleep(1000);
+            var traffic = _instance.ActiveTab.GetTraffic();
+            var data = new Dictionary<string, string>();
+            //string param;
+            foreach (var t in traffic)
             {
-                result[i] = chars[random.Next(chars.Length)];
+                if (t.Url.Contains(url))
+                {
+
+                    var Method = t.Method;
+                    var ResultCode = t.ResultCode.ToString();
+                    var Url = t.Url;
+                    var ResponseContentType = t.ResponseContentType;
+                    var RequestHeaders = t.RequestHeaders;
+                    var RequestCookies = t.RequestCookies;
+                    var RequestBody = t.RequestBody;
+                    var ResponseHeaders = t.ResponseHeaders;
+                    var ResponseCookies = t.ResponseCookies;
+                    var ResponseBody = t.ResponseBody == null ? "" : Encoding.UTF8.GetString(t.ResponseBody, 0, t.ResponseBody.Length);
+
+                    if (Method == "OPTIONS") continue;
+                    data.Add("Method", Method);
+                    data.Add("ResultCode", ResultCode);
+                    data.Add("Url", Url);
+                    data.Add("ResponseContentType", ResponseContentType);
+                    data.Add("RequestHeaders", RequestHeaders);
+                    data.Add("RequestCookies", RequestCookies);
+                    data.Add("RequestBody", RequestBody);
+                    data.Add("ResponseHeaders", ResponseHeaders);
+                    data.Add("ResponseCookies", ResponseCookies);
+                    data.Add("ResponseBody", ResponseBody);
+                    break;
+                }
+
             }
-            return "0x" + new string(result);
+            if (data.Count == 0) goto get;
+
+
+            string headersString = data["RequestHeaders"].Trim();//RequestCookies
+            _project.L0g(headersString);
+
+            string headerToGet = "authorization";
+            var headers = headersString.Split('\n');
+
+            foreach (string header in headers)
+            {
+                if (header.ToLower().Contains("authorization"))
+                {
+                    _project.Var("token", header.Split(':')[1]);
+                }
+                if (header.ToLower().Contains("cookie"))
+                {
+                    _project.Var("cookie", header.Split(':')[1]);
+                }
+
+            }
+            _instance.HeClick(("button", "class", "inline-flex\\ items-center\\ justify-center\\ whitespace-nowrap\\ text-sm\\ font-medium\\ transition-colors\\ focus-visible:outline-hidden\\ focus-visible:ring-1\\ focus-visible:ring-primary\\ disabled:pointer-events-none\\ disabled:opacity-50\\ border\\ bg-background\\ hover:border-primary/50\\ shadow-xs\\ hover:bg-primary\\ hover:text-primary-foreground\\ hover:ring-primary/60\\ hover:ring-2\\ active:bg-background\\ active:text-primary\\ active:ring-0\\ px-4\\ py-2\\ h-10\\ truncate\\ rounded-full\\ pr-1\\ w-auto\\ gap-4", "regexp", 0), emu: 1);
+
         }
-        public string RandomHash(int length)
+
+        public string ReqGet(string path, bool parse = false , bool log = false)
         {
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-            var random = new Random();
-            return new string(Enumerable.Repeat(chars, length)
-                .Select(s => s[random.Next(s.Length)]).ToArray());
-        }
-        public string Nickname()
-        {
-            string[] adjectives = {
-                "Sunny", "Mystic", "Wild", "Cosmic", "Shadow", "Lunar", "Blaze", "Dream", "Star", "Vivid",
-                "Frost", "Neon", "Gloomy", "Swift", "Silent", "Fierce", "Radiant", "Dusk", "Nova", "Spark",
-                "Crimson", "Azure", "Golden", "Midnight", "Velvet", "Stormy", "Echo", "Vortex", "Phantom", "Bright",
-                "Chill", "Rogue", "Daring", "Lush", "Savage", "Twilight", "Crystal", "Zesty", "Bold", "Hazy",
-                "Vibrant", "Gleam", "Frosty", "Wicked", "Serene", "Bliss", "Rusty", "Hollow", "Sleek", "Pale"
+
+            string token = _project.Variables["token"].Value;
+            string cookie = _project.Variables["cookie"].Value;
+
+            var headers = new Dictionary<string, string>
+            {
+                { "authority", "chat.chainopera.ai" },
+                { "authorization", $"{token}" },
+                { "method", "GET" },
+                { "path", path },
+                { "accept", "application/json, text/plain, */*" },
+                { "accept-encoding", "gzip, deflate, br" },
+                { "accept-language", "en-US,en;q=0.9" },
+                { "content-type", "application/json" },
+                { "origin", "https://chat.chainopera.ai" },
+                { "priority", "u=1, i" },
+
+                { "sec-ch-ua", "\"Chromium\";v=\"134\", \"Not:A-Brand\";v=\"24\", \"Google Chrome\";v=\"134\"" },
+                { "sec-ch-ua-mobile", "?0" },
+                { "sec-ch-ua-platform", "\"Windows\"" },
+                { "sec-fetch-dest", "empty" },
+                { "sec-fetch-mode", "cors" },
+                { "sec-fetch-site", "same-site" },
+
+                { "cookie", $"{cookie}" },
             };
 
-            string[] nouns = {
-                "Wolf", "Viper", "Falcon", "Spark", "Catcher", "Rider", "Echo", "Flame", "Voyage", "Knight",
-                "Raven", "Hawk", "Storm", "Tide", "Drift", "Shade", "Quest", "Blaze", "Wraith", "Comet",
-                "Lion", "Phantom", "Star", "Cobra", "Dawn", "Arrow", "Ghost", "Sky", "Vortex", "Wave",
-                "Tiger", "Ninja", "Dreamer", "Seeker", "Glider", "Rebel", "Spirit", "Hunter", "Flash", "Beacon",
-                "Jaguar", "Drake", "Scout", "Path", "Glow", "Riser", "Shadow", "Bolt", "Zephyr", "Forge"
-            };
 
-            string[] suffixes = { "", "", "", "", "", "X", "Z", "Vibe", "Glow", "Rush", "Peak", "Core", "Wave", "Zap" };
 
-            Random random = new Random(Guid.NewGuid().GetHashCode());
+            string[] headerArray = headers.Select(header => $"{header.Key}:{header.Value}").ToArray();
+            string url = $"https://chat.chainopera.ai{path}";
+            string response;
 
-            string adjective = adjectives[random.Next(adjectives.Length)];
-            string noun = nouns[random.Next(nouns.Length)];
-            string suffix = suffixes[random.Next(suffixes.Length)];
-
-            string nickname = $"{adjective}{noun}{suffix}";
-
-            if (nickname.Length > 15)
-            {
-                nickname = nickname.Substring(0, 15);
-            }
-
-            return nickname;
-        }
-        public int Int(IZennoPosterProjectModel project, string Var)
-        {
-            string value = string.Empty;
             try
             {
-                value = project.Variables[Var].Value;
+                response = _project.GET(url, "+", headerArray, log: false, parse);
+                _logger.Send(response);
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                project.SendInfoToLog(e.Message);
+                _project.SendErrorToLog($"Err HTTPreq: {ex.Message}");
+                throw;
             }
-            if (value == string.Empty) project.L0g($"no Value from [{Var}] `w");
+            
+            return response;
 
-            if (value.Contains("-"))
-            {
-                var min = int.Parse(value.Split('-')[0].Trim());
-                var max = int.Parse(value.Split('-')[1].Trim());
-                return new Random().Next(min, max);
-            }
-            return int.Parse(value.Trim());
+
+
+
+
+
         }
 
-        public double RndPercent(double input, double percent, double maxPercent)
-        {
-            if (percent < 0 || maxPercent < 0 || percent > 100 || maxPercent > 100)
-                throw new ArgumentException("Percent and MaxPercent must be between 0 and 100");
-
-            if (!double.TryParse(input.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out double number))
-                throw new ArgumentException("Input cannot be converted to double");
-
-            double percentageValue = number * (percent / 100.0);
-
-            Random random = new Random();
-            double randomReductionPercent = random.NextDouble() * maxPercent;
-            double reduction = percentageValue * (randomReductionPercent / 100.0);
-
-            double result = percentageValue - reduction;
-
-            if (result <= 0)
-            {
-                result = Math.Max(percentageValue * 0.01, 0.0001);
-            }
-
-            return result;
-        }
-        public double RndPercent(decimal input, double percent, double maxPercent)
-        {
-            if (percent < 0 || maxPercent < 0 || percent > 100 || maxPercent > 100)
-                throw new ArgumentException("Percent and MaxPercent must be between 0 and 100");
-
-            if (!double.TryParse(input.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out double number))
-                throw new ArgumentException("Input cannot be converted to double");
-
-            double percentageValue = number * (percent / 100.0);
-
-            Random random = new Random();
-            double randomReductionPercent = random.NextDouble() * maxPercent;
-            double reduction = percentageValue * (randomReductionPercent / 100.0);
-
-            double result = percentageValue - reduction;
-
-            if (result <= 0)
-            {
-                result = Math.Max(percentageValue * 0.01, 0.0001);
-            }
-
-            return result;
-        }
-
-        public decimal Decimal(IZennoPosterProjectModel project, string Var)
-        {
-            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            string value = string.Empty;
-            try
-            {
-                value = project.Variables[Var].Value;
-            }
-            catch (Exception e)
-            {
-                project.SendInfoToLog(e.Message);
-            }
-            if (value == string.Empty) project.L0g($"no Value from [{Var}] `w");
-
-            if (value.Contains("-"))
-            {
-                var min = decimal.Parse(value.Split('-')[0].Trim());
-                var max = decimal.Parse(value.Split('-')[1].Trim());
-                Random rand = new Random();
-                return min + (decimal)(rand.NextDouble() * (double)(max - min));
-            }
-            return decimal.Parse(value.Trim());
-        }
 
     }
-
-    public class CommonTx2 : W3b
-    {
-
-        private readonly W3bRead _read;
-        public CommonTx2(IZennoPosterProjectModel project, string key = null, bool log = false)
-        : base(project, log)
-        {
-            _key = ApplyKey(key);
-            _adrEvm = _key.ToPubEvm();//_sql.Address("evm");
-            _read = new W3bRead(project);
-        }
-
-
-
-        public string Approve(string contract, string spender, string amount, string rpc = "")
-        {
-            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
-            string key = _sql.Key("EVM");
-
-            string abi = @"[{""inputs"":[{""name"":""spender"",""type"":""address""},{""name"":""amount"",""type"":""uint256""}],""name"":""approve"",""outputs"":[{""name"":"""",""type"":""bool""}],""stateMutability"":""nonpayable"",""type"":""function""}]";
-
-            string txHash = null;
-
-            string[] types = { "address", "uint256" };
-            BigInteger amountValue;
-
-
-            if (amount.ToLower() == "max")
-            {
-                amountValue = BigInteger.Parse("115792089237316195423570985008687907853269984665640564039457584007913129639935"); // max uint256
-            }
-            else if (amount.ToLower() == "cancel")
-            {
-                amountValue = BigInteger.Zero;
-            }
-            else
-            {
-                try
-                {
-                    amountValue = BigInteger.Parse(amount);
-                    if (amountValue < 0)
-                        throw new ArgumentException("Amount cannot be negative");
-                }
-                catch (Exception ex)
-                {
-                    throw new Exception($"Failed to parse amount '{amount}': {ex.Message}");
-                }
-            }
-
-            object[] values = { spender, amountValue };
-
-            try
-            {
-                txHash = SendLegacy(
-                    rpc,
-                    contract,
-                    z3n.Encoder.EncodeTransactionData(abi, "approve", types, values),
-                    0,
-                    key,
-                    3
-                );
-                try
-                {
-                    _project.Variables["blockchainHash"].Value = txHash;
-                }
-                catch (Exception ex)
-                {
-                    Log($"!W:{ex.Message}");
-                }
-
-            }
-            catch (Exception ex)
-            {
-                Log($"!W:{ex.Message}");
-                throw;
-            }
-
-            Log($"[APPROVE] {contract} for spender {spender} with amount {amount}...");
-            return txHash;
-        }
-        public string Wrap(string contract, decimal value, string rpc = "")
-        {
-            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
-            string key = _sql.Key("EVM");
-
-            string abi = @"[{""inputs"":[],""name"":""deposit"",""outputs"":[],""stateMutability"":""payable"",""type"":""function""}]";
-
-            string txHash = null;
-
-            string[] types = { };
-            object[] values = { };
-
-            try
-            {
-                txHash = SendLegacy(
-                    rpc,
-                    contract,
-                     z3n.Encoder.EncodeTransactionData(abi, "deposit", types, values),
-                    value,
-                    key,
-                    3
-                );
-                try
-                {
-                    _project.Variables["blockchainHash"].Value = txHash;
-                }
-                catch (Exception ex)
-                {
-                    Log($"!W:{ex.Message}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Log($"!W:{ex.Message}");
-                throw;
-            }
-
-            Log($"[WRAP] {value} native to {contract}...");
-            return txHash;
-        }
-        public string Send(string to, decimal amount, string rpc = "")
-        {
-            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
-
-            string txHash = null;
-
-            try
-            {
-                txHash = SendLegacy(
-                    rpc,
-                    to,
-                    "",
-                    amount,
-                    _key,
-                    3
-                );
-                try
-                {
-                    _project.Variables["blockchainHash"].Value = txHash;
-                }
-                catch (Exception ex)
-                {
-                    Log($"!W:{ex.Message}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Log($"!W:{ex.Message}");
-                throw;
-            }
-
-            Log($"[SEND_NATIVE] {amount} to {to}...");
-            return txHash;
-        }
-
-        public string SendERC20(string contract, string to, decimal amount, string rpc = "")
-        {
-            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
-
-            string txHash = null;
-
-            try
-            {
-
-                string abi = @"[{""inputs"":[{""name"":""to"",""type"":""address""},{""name"":""amount"",""type"":""uint256""}],""name"":""transfer"",""outputs"":[{""name"":"""",""type"":""bool""}],""stateMutability"":""nonpayable"",""type"":""function""}]";
-                string[] types = { "address", "uint256" };
-                decimal scaledAmount = amount * 1000000000000000000m;
-                BigInteger amountValue = (BigInteger)Math.Floor(scaledAmount);
-                object[] values = { to, amountValue };
-                string encoded = z3n.Encoder.EncodeTransactionData(abi, "transfer", types, values);
-                txHash = SendLegacy(
-                    rpc,
-                    contract,
-                     encoded,
-                    0,
-                    _key,
-                    3
-                );
-                try
-                {
-                    _project.Variables["blockchainHash"].Value = txHash;
-                }
-                catch (Exception ex)
-                {
-                    _logger.Send($"!W:{ex.Message}", show: true);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.Send($"!W:{ex.Message}", show: true);
-                throw;
-            }
-
-            _logger.Send($"sent [{amount}] of [{contract}]  to {to} by {rpc}\n{txHash}");
-            return txHash;
-        }
-
-    }
-
-
-
-    public class Accountant
+    public class Accountant2
     {
         private readonly IZennoPosterProjectModel _project;
         private readonly Sql _sql;
         private readonly Logger _logger;
-        private int _offset; 
+        private int _offset;
 
-        public Accountant(IZennoPosterProjectModel project,  bool log = false)
+        public Accountant2(IZennoPosterProjectModel project, bool log = false)
         {
             _project = project;
-  
+
             _logger = new Logger(project, log: log, classEmoji: "$");
             _sql = new Sql(project, log: log);
         }
@@ -548,7 +212,7 @@ namespace w3tools //by @w3bgrep
         {
             var tableName = "public_native";
             var columns = new List<string>();
-            
+
             if (string.IsNullOrEmpty(chains))
                 columns = new Sql(_project).GetColumnList("public_native");
 
@@ -649,7 +313,6 @@ namespace w3tools //by @w3bgrep
         private void LoadData(System.Windows.Forms.DataGridView grid, List<string> columns, string tableName, int pageSize, ref int offset, int totalRows, System.Windows.Forms.Button prevButton, System.Windows.Forms.Button nextButton)
         {
             string result = new Sql(_project).Get($"{string.Join(",", columns)}", tableName, where: $"acc0 <= '{_project.Var("rangeEnd")}' ORDER BY acc0");
-                
 
             if (string.IsNullOrEmpty(result))
             {
@@ -676,6 +339,16 @@ namespace w3tools //by @w3bgrep
                 grid.Columns.Add(column);
             }
 
+            // Добавляем столбец для суммы
+            var sumColumn = new System.Windows.Forms.DataGridViewColumn
+            {
+                Name = "RowSum",
+                HeaderText = "RowSum",
+                CellTemplate = new System.Windows.Forms.DataGridViewTextBoxCell(),
+                SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
+            };
+            grid.Columns.Add(sumColumn);
+
             foreach (var row in rows)
             {
                 var values = row.Split('|');
@@ -685,8 +358,9 @@ namespace w3tools //by @w3bgrep
                     continue;
                 }
 
-                var formattedValues = new string[values.Length];
+                var formattedValues = new string[values.Length + 1];
                 formattedValues[0] = values[0]; // acc0 без изменений
+                decimal rowSum = 0;
                 for (int i = 1; i < values.Length; i++)
                 {
                     if (string.IsNullOrWhiteSpace(values[i]))
@@ -700,6 +374,7 @@ namespace w3tools //by @w3bgrep
                         if (decimal.TryParse(val, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out decimal balance))
                         {
                             formattedValues[i] = balance.ToString("0.0000000", System.Globalization.CultureInfo.InvariantCulture);
+                            rowSum += balance;
                         }
                         else
                         {
@@ -713,6 +388,7 @@ namespace w3tools //by @w3bgrep
                         _project.SendWarningToLog($"Error formatting in {columns[i]}, row {grid.Rows.Count + 1}: {ex.Message}", false);
                     }
                 }
+                formattedValues[values.Length] = rowSum.ToString("0.0000000", System.Globalization.CultureInfo.InvariantCulture);
                 grid.Rows.Add(formattedValues);
             }
 
@@ -731,8 +407,8 @@ namespace w3tools //by @w3bgrep
             var lastRow = grid.Rows[grid.Rows.Count - 1];
             lastRow.DefaultCellStyle.Font = new System.Drawing.Font(grid.Font, System.Drawing.FontStyle.Bold);
             lastRow.DefaultCellStyle.BackColor = System.Drawing.Color.LightGray;
-
         }
+  
 
         private void ConfigurePaginationEvents(System.Windows.Forms.Button prevButton, System.Windows.Forms.Button nextButton, int pageSize, int totalRows, Action loadData)
         {
@@ -920,155 +596,99 @@ namespace w3tools //by @w3bgrep
 
     }
 
-
-
-
-    public class ChainOperaAI 
+    public class FirstMail
     {
 
         private readonly IZennoPosterProjectModel _project;
-        private readonly Instance _instance;
         private readonly Logger _logger;
 
-        public ChainOperaAI(IZennoPosterProjectModel project, Instance instance, bool log = false)
+        private string _key;
+        private string _login;
+        private string _pass;
+
+        public FirstMail(IZennoPosterProjectModel project, bool log = false)
         {
             _project = project;
-            _instance = instance;
-            _logger = new Logger(project, log: log, classEmoji: "ChainOpera");
-
+            _logger = new Logger(project, log: log, classEmoji: "FirstMail");
+            LoadKeys();
         }
-        public void GetAuthData()
+
+        private void LoadKeys()
         {
-            var url = "https://chat.chainopera.ai/userCenter/api/v1/";
+            var creds = new Sql(_project).Get("apikey, apisecret, passphrase", "private_api", where: "key = 'firstmail'").Split('|');
 
-            _project.Deadline();
-            _instance.UseTrafficMonitoring = true;
-
-            _instance.HeClick(("button", "class", "inline-flex\\ items-center\\ justify-center\\ whitespace-nowrap\\ text-sm\\ font-medium\\ transition-colors\\ focus-visible:outline-hidden\\ focus-visible:ring-1\\ focus-visible:ring-primary\\ disabled:pointer-events-none\\ disabled:opacity-50\\ border\\ bg-background\\ hover:border-primary/50\\ shadow-xs\\ hover:bg-primary\\ hover:text-primary-foreground\\ hover:ring-primary/60\\ hover:ring-2\\ active:bg-background\\ active:text-primary\\ active:ring-0\\ px-4\\ py-2\\ h-10\\ truncate\\ rounded-full\\ pr-1\\ w-auto\\ gap-4", "regexp", 0));
-
-
-        get:
-            _project.Deadline(10);
-            Thread.Sleep(1000);
-            var traffic = _instance.ActiveTab.GetTraffic();
-            var data = new Dictionary<string, string>();
-            //string param;
-            foreach (var t in traffic)
-            {
-                if (t.Url.Contains(url))
-                {
-
-                    var Method = t.Method;
-                    var ResultCode = t.ResultCode.ToString();
-                    var Url = t.Url;
-                    var ResponseContentType = t.ResponseContentType;
-                    var RequestHeaders = t.RequestHeaders;
-                    var RequestCookies = t.RequestCookies;
-                    var RequestBody = t.RequestBody;
-                    var ResponseHeaders = t.ResponseHeaders;
-                    var ResponseCookies = t.ResponseCookies;
-                    var ResponseBody = t.ResponseBody == null ? "" : Encoding.UTF8.GetString(t.ResponseBody, 0, t.ResponseBody.Length);
-
-                    if (Method == "OPTIONS") continue;
-                    data.Add("Method", Method);
-                    data.Add("ResultCode", ResultCode);
-                    data.Add("Url", Url);
-                    data.Add("ResponseContentType", ResponseContentType);
-                    data.Add("RequestHeaders", RequestHeaders);
-                    data.Add("RequestCookies", RequestCookies);
-                    data.Add("RequestBody", RequestBody);
-                    data.Add("ResponseHeaders", ResponseHeaders);
-                    data.Add("ResponseCookies", ResponseCookies);
-                    data.Add("ResponseBody", ResponseBody);
-                    break;
-                }
-
-            }
-            if (data.Count == 0) goto get;
-
-
-            string headersString = data["RequestHeaders"].Trim();//RequestCookies
-            _project.L0g(headersString);
-
-            string headerToGet = "authorization";
-            var headers = headersString.Split('\n');
-
-            foreach (string header in headers)
-            {
-                if (header.ToLower().Contains("authorization"))
-                {
-                    _project.Var("token", header.Split(':')[1]);
-                }
-                if (header.ToLower().Contains("cookie"))
-                {
-                    _project.Var("cookie", header.Split(':')[1]);
-                }
-
-            }
-            _instance.HeClick(("button", "class", "inline-flex\\ items-center\\ justify-center\\ whitespace-nowrap\\ text-sm\\ font-medium\\ transition-colors\\ focus-visible:outline-hidden\\ focus-visible:ring-1\\ focus-visible:ring-primary\\ disabled:pointer-events-none\\ disabled:opacity-50\\ border\\ bg-background\\ hover:border-primary/50\\ shadow-xs\\ hover:bg-primary\\ hover:text-primary-foreground\\ hover:ring-primary/60\\ hover:ring-2\\ active:bg-background\\ active:text-primary\\ active:ring-0\\ px-4\\ py-2\\ h-10\\ truncate\\ rounded-full\\ pr-1\\ w-auto\\ gap-4", "regexp", 0), emu: 1);
+            _key = creds[0];
+            _login = creds[1];
+            _pass = creds[2];
 
         }
 
-        public string ReqGet(string path, bool parse = false , bool log = false)
+
+
+        public string GetMail(string email)
         {
+            string encodedLogin = Uri.EscapeDataString(_login);
+            string encodedPass = Uri.EscapeDataString(_pass);
 
-            string token = _project.Variables["token"].Value;
-            string cookie = _project.Variables["cookie"].Value;
+            string url = $"https://api.firstmail.ltd/v1/mail/one?username={encodedLogin}&password={encodedPass}";
 
-            var headers = new Dictionary<string, string>
+            string[] headers = new string[]
             {
-                { "authority", "chat.chainopera.ai" },
-                { "authorization", $"{token}" },
-                { "method", "GET" },
-                { "path", path },
-                { "accept", "application/json, text/plain, */*" },
-                { "accept-encoding", "gzip, deflate, br" },
-                { "accept-language", "en-US,en;q=0.9" },
-                { "content-type", "application/json" },
-                { "origin", "https://chat.chainopera.ai" },
-                { "priority", "u=1, i" },
-
-                { "sec-ch-ua", "\"Chromium\";v=\"134\", \"Not:A-Brand\";v=\"24\", \"Google Chrome\";v=\"134\"" },
-                { "sec-ch-ua-mobile", "?0" },
-                { "sec-ch-ua-platform", "\"Windows\"" },
-                { "sec-fetch-dest", "empty" },
-                { "sec-fetch-mode", "cors" },
-                { "sec-fetch-site", "same-site" },
-
-                { "cookie", $"{cookie}" },
+                $"accept: application/json",
+                "accept-encoding: gzip, deflate, br",
+                $"accept-language: {_project.Profile.AcceptLanguage}",
+                "sec-ch-ua-mobile: ?0",
+                "sec-ch-ua-platform: \"Windows\"",
+                "sec-fetch-dest: document",
+                "sec-fetch-mode: navigate",
+                "sec-fetch-site: none",
+                "sec-fetch-user: ?1",
+                "upgrade-insecure-requests: 1",
+                $"X-API-KEY: {_key}"
             };
 
+            string result = ZennoPoster.HttpGet(
+                url,
+                "",
+                "UTF-8",
+                ZennoLab.InterfacesLibrary.Enums.Http.ResponceType.BodyOnly,
+                5000,
+                "",
+                _project.Profile.UserAgent,
+                true,
+                5,
+                headers,
+                "",
+                false);
 
-
-            string[] headerArray = headers.Select(header => $"{header.Key}:{header.Value}").ToArray();
-            string url = $"https://chat.chainopera.ai{path}";
-            string response;
-
-            try
-            {
-                response = _project.GET(url, "+", headerArray, log: false, parse);
-                _logger.Send(response);
-            }
-            catch (Exception ex)
-            {
-                _project.SendErrorToLog($"Err HTTPreq: {ex.Message}");
-                throw;
-            }
-            
-            return response;
-
-
-
-
-
+            _project.Json.FromString(result);
+            return result;
 
         }
 
+        public string GetOTP(string email)
+        {
+            
+            string json = GetMail(email);
+            _project.Json.FromString(json);
+            string deliveredTo = _project.Json.to[0];
+            string text = _project.Json.text;
+            string html = _project.Json.html;
+
+
+            if (!deliveredTo.Contains(email)) throw new Exception($"Fmail: Email {email} not found in last message");
+            else
+            {
+                Match match = Regex.Match(text, @"\b\d{6}\b");
+                if (match.Success) return match.Value;
+                match = Regex.Match(html, @"\b\d{6}\b");
+                if (match.Success) return match.Value;
+                else throw new Exception("Fmail: OTP not found in message with correct email");
+            }
+
+        }
 
     }
-
-
-    
 
 
 

@@ -507,6 +507,17 @@ namespace z3n
             if (typeof(T) == typeof(string)) return FloorDecimal<T>(balance, int.Parse(octas));
             return (T)Convert.ChangeType(balance, typeof(T));
         }
+
+        public string INITIA(string address, string chain = "interwoven-1", bool parse = false)
+        {
+            string url = $"https://celatone-api-prod.alleslabs.dev/v1/initia/{chain}/accounts/{address}/balances";
+
+            string jsonString = _project.GET(url, parseJson:parse);
+            return jsonString;
+
+        }
+
+
         public T INITt<T>(string address = null, string chain = "interwoven-1", string token = "uinit", bool log = false)
         {
             if (string.IsNullOrEmpty(address))
@@ -520,14 +531,8 @@ namespace z3n
                     throw;
                 }
 
+            string jsonString = INITIA(address, chain);
 
-
-            string url = $"https://celatone-api-prod.alleslabs.dev/v1/initia/{chain}/accounts/{address}/balances";
-
-            string jsonString = _project.GET(url);
-
-            _project.L0g(jsonString, show: log);
-            _project.Json.FromString(jsonString);
             try
             {
                 JArray balances = JArray.Parse(jsonString);
@@ -562,6 +567,9 @@ namespace z3n
             }
 
         }
+
+
+
 
         public Dictionary<string, decimal> DicToken(string[] chainsToUse = null, bool log = false, string tokenEVM = null, string tokenSPL = null) //usde fallback
         {

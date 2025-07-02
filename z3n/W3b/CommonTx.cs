@@ -155,16 +155,16 @@ namespace z3n
                 }
                 catch (Exception ex)
                 {
-                    Log($"!W:{ex.Message}");
+                    _logger.Send($"!W:{ex.Message}",show:true);
                 }
             }
             catch (Exception ex)
             {
-                Log($"!W:{ex.Message}");
+                _logger.Send($"!W:{ex.Message}", show: true);
                 throw;
             }
+            _logger.Send($"sent [{amount}] to [{to}] by [{rpc}] [{txHash}]");
 
-            Log($"[SEND_NATIVE] {amount} to {to}...");
             return txHash;
         }
         public string SendERC20(string contract, string to, decimal amount, string rpc = "")
@@ -209,6 +209,44 @@ namespace z3n
             _logger.Send($"sent [{amount}] of [{contract}]  to [{to}] by [{rpc}] [{txHash}]");
             return txHash;
         }
+        public string SendERC721(string contract, string to, BigInteger tokenId, string rpc = "")
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            if (string.IsNullOrEmpty(rpc)) rpc = _read._defRpc;
 
+            string txHash = null;
+
+            try
+            {
+                string abi = @"[{""inputs"":[{""name"":""from"",""type"":""address""},{""name"":""to"",""type"":""address""},{""name"":""tokenId"",""type"":""uint256""}],""name"":""safeTransferFrom"",""outputs"":[],""stateMutability"":""nonpayable"",""type"":""function""}]";
+                string[] types = { "address", "address", "uint256" };
+                object[] values = { _key.ToPubEvm(), to, tokenId };
+                string encoded = z3n.Encoder.EncodeTransactionData(abi, "safeTransferFrom", types, values);
+                txHash = SendLegacy(
+                    rpc,
+                    contract,
+                    encoded,
+                    0,
+                    _key,
+                    3
+                );
+                try
+                {
+                    _project.Variables["blockchainHash"].Value = txHash;
+                }
+                catch (Exception ex)
+                {
+                    _logger.Send($"!W:{ex.Message}", show: true);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Send($"!W:{ex.Message}", show: true);
+                throw;
+            }
+
+            _logger.Send($"sent ERC721 token [{tokenId}] of [{contract}] to [{to}] by [{rpc}] [{txHash}]");
+            return txHash;
+        }
     }
 }

@@ -128,7 +128,6 @@ namespace z3n
         {
             string result = new Sql(_project).Get($"{string.Join(",", columns)}", tableName, where: $"acc0 <= '{_project.Var("rangeEnd")}' ORDER BY acc0");
 
-
             if (string.IsNullOrEmpty(result))
             {
                 _project.SendWarningToLog("No data found in balance table");
@@ -154,6 +153,16 @@ namespace z3n
                 grid.Columns.Add(column);
             }
 
+            // Добавляем столбец для суммы
+            var sumColumn = new System.Windows.Forms.DataGridViewColumn
+            {
+                Name = "RowSum",
+                HeaderText = "RowSum",
+                CellTemplate = new System.Windows.Forms.DataGridViewTextBoxCell(),
+                SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable
+            };
+            grid.Columns.Add(sumColumn);
+
             foreach (var row in rows)
             {
                 var values = row.Split('|');
@@ -163,8 +172,9 @@ namespace z3n
                     continue;
                 }
 
-                var formattedValues = new string[values.Length];
+                var formattedValues = new string[values.Length + 1];
                 formattedValues[0] = values[0]; // acc0 без изменений
+                decimal rowSum = 0;
                 for (int i = 1; i < values.Length; i++)
                 {
                     if (string.IsNullOrWhiteSpace(values[i]))
@@ -178,6 +188,7 @@ namespace z3n
                         if (decimal.TryParse(val, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out decimal balance))
                         {
                             formattedValues[i] = balance.ToString("0.0000000", System.Globalization.CultureInfo.InvariantCulture);
+                            rowSum += balance;
                         }
                         else
                         {
@@ -191,6 +202,7 @@ namespace z3n
                         _project.SendWarningToLog($"Error formatting in {columns[i]}, row {grid.Rows.Count + 1}: {ex.Message}", false);
                     }
                 }
+                formattedValues[values.Length] = rowSum.ToString("0.0000000", System.Globalization.CultureInfo.InvariantCulture);
                 grid.Rows.Add(formattedValues);
             }
 
@@ -209,7 +221,6 @@ namespace z3n
             var lastRow = grid.Rows[grid.Rows.Count - 1];
             lastRow.DefaultCellStyle.Font = new System.Drawing.Font(grid.Font, System.Drawing.FontStyle.Bold);
             lastRow.DefaultCellStyle.BackColor = System.Drawing.Color.LightGray;
-
         }
 
         private void ConfigurePaginationEvents(System.Windows.Forms.Button prevButton, System.Windows.Forms.Button nextButton, int pageSize, int totalRows, Action loadData)
