@@ -16,7 +16,6 @@ namespace z3n
         {
             _project = project;
             _logShow = log || _project.Var("debug") == "True";
-            //if (!log) _logShow = _project.Var("debug") == "True";
             _emoji = classEmoji;
         }
 
@@ -65,7 +64,7 @@ namespace z3n
             try
             {
                 var callingMethod = stackFrame.GetMethod();
-                if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno"))
+                if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno") || callingMethod.Name == "L0g")   
                     formated += $" 🔳  [{_project.Name.Replace(".zp", "")}]";//🔳
                 else
                     formated += $" 🔲  [{callingMethod.DeclaringType.Name}.{callerName}]";

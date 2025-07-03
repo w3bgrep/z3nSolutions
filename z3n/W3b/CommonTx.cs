@@ -245,7 +245,7 @@ namespace z3n
                 throw;
             }
 
-            _logger.Send($"sent ERC721 token [{tokenId}] of [{contract}] to [{to}] by [{rpc}] [{txHash}]");
+            _logger.Send($"sent [{contract}/{tokenId}] to [{to}] by [{rpc}] [{txHash}]");
             return txHash;
         }
     }
