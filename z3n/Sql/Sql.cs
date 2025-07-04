@@ -398,17 +398,15 @@ namespace z3n
             else return true;
 
         }
-        public void ClmnAdd(string tblName, string clmnName, string defaultValue = "TEXT DEFAULT \"\"")
+        public void ClmnAdd(string tblName, string clmnName, string defaultValue = "TEXT DEFAULT ''")
         {
             TblName(tblName);
             var current = TblColumns(tblName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-
             if (!current.Contains(clmnName))
             {
+                clmnName = QuoteColumnNames(clmnName);
                 DbQ($@"ALTER TABLE {_tableName} ADD COLUMN {clmnName} {defaultValue};", log: _logShow);
             }
-
         }
         public void ClmnAdd(string tblName, Dictionary<string, string> tableStructure)
         {
