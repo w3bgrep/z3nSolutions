@@ -14,7 +14,7 @@ using System.Xml.Linq;
 using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
-using static Global.Env.EnvironmentVariables;
+//using static Global.Env.EnvironmentVariables;
 
 
 
@@ -87,6 +87,13 @@ namespace z3n
         {
             project.Variables["acc0"].Value = acc0?.ToString() ?? string.Empty;
         }
+        public static void NullVars(this IZennoPosterProjectModel project, object acc0)
+        {
+            project.GlobalNull();
+            project.Var("acc0", null);
+
+        }
+
         public static int Range(this IZennoPosterProjectModel project, string accRange = null, string output = null, bool log = false)
         {
             if (string.IsNullOrEmpty(accRange)) accRange = project.Variables["cfgAccRange"].Value;
