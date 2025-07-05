@@ -148,11 +148,11 @@ namespace z3n
 
             return value;
         }
-        public static string Var(this IZennoPosterProjectModel project, string var, string value)
+        public static string Var(this IZennoPosterProjectModel project, string var, object value)
         {
             try
             {
-               project.Variables[var].Value = value;
+               project.Variables[var].Value = value.ToString();
             }
             catch (Exception e)
             {

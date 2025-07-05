@@ -80,6 +80,7 @@
   <ItemGroup>
     <Compile Include="Browser\Cookies.cs" />
     <Compile Include="Browser\Capcha.cs" />
+    <Compile Include="Protocols\Guild.cs" />
     <Compile Include="Socials\GitHub.cs" />
     <Compile Include="Tools\Accountant.cs" />
     <Compile Include="Protocols\FirstMail.cs" />
@@ -102,7 +103,7 @@
     <Compile Include="Tools\F0rms.cs" />
     <Compile Include="Protocols\DMail.cs" />
     <Compile Include="W3b\W3bWrite.cs" />
-    <Compile Include="Socials\Galxe.cs" />
+    <Compile Include="Protocols\Galxe.cs" />
     <Compile Include="Sql\TableSvc.cs" />
     <Compile Include="W3b\W3bRead.cs" />
     <Compile Include="Protocols\Stargate.cs" />

@@ -2,9 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using ZennoLab.InterfacesLibrary.ProjectModel;
 using ZennoLab.CommandCenter;
+using ZennoLab.InterfacesLibrary.ProjectModel;
 
 namespace z3n
 {
@@ -28,27 +29,53 @@ namespace z3n
             _project = project;
             _instance = instance;
             _sql = new Sql(_project);
-            _logger = new Logger(project, log: log, classEmoji: "🐱");
+            _logger = new Logger(project, log: log, classEmoji: "GitHub");
             LoadCreds();
 
         }
-        private void LoadCreds()
+        public void LoadCreds()
         {
             string[] creds = _sql.Get("status, login, password, otpsecret, cookies", "private_github").Split('|');
             try { _status = creds[0]; _project.Variables["googleSTATUS"].Value = _status; } catch (Exception ex) { _logger.Send(ex.Message); }
             try { _login = creds[1]; _project.Variables["github_login"].Value = _login; } catch (Exception ex) { _logger.Send(ex.Message); }
             try { _pass = creds[2]; _project.Variables["github_pass"].Value = _pass; } catch (Exception ex) { _logger.Send(ex.Message); }
             try { _2fa = creds[3]; _project.Variables["github_code"].Value = _2fa; } catch (Exception ex) { _logger.Send(ex.Message); }
-
+            if (string.IsNullOrEmpty(_login) || string.IsNullOrEmpty(_pass))
+                throw new Exception($"invalid credentials login:[{_login}] pass:[{_pass}]");
         }
 
-        private void InputCreds()
+        public void InputCreds()
         {
-        
-        
-        
+            _instance.HeSet(("login_field", "id"), _login);
+            _instance.HeSet(("password", "id"), _pass);
+            _instance.HeClick(("input:submit", "name", "commit", "regexp", 0), emu: 1);
+            _instance.HeSet(("app_totp", "id"), OTP.Offline(_2fa), thr0w: false);
         }
 
+        public void Go()
+        {
+            Tab tab = _instance.NewTab("github");
+            if (tab.IsBusy) tab.WaitDownloading();
+            _instance.Go("https://github.com/login");
+            _instance.HeClick(("button", "innertext", "Accept", "regexp", 0), deadline: 3, thr0w: false);
+
+        }
+        public void Verify2fa()
+        {
+            _instance.HeClick(("button", "innertext", "Verify\\ 2FA\\ now", "regexp", 0));
+            Thread.Sleep(20000);
+            _instance.HeSet(("app_totp", "id"), OTP.Offline(_2fa));
+            _instance.HeClick(("button", "class", "btn-primary\\ btn\\ btn-block", "regexp", 0), emu: 1);
+            _instance.HeClick(("a", "innertext", "Done", "regexp", 0), emu: 1);
+
+        }
+        public void Load()
+        {
+            Go();
+            InputCreds();
+            try { Verify2fa(); } catch { }
+
+        }
 
 
     }
