@@ -628,16 +628,42 @@ namespace w3tools //by @w3bgrep
             try { _login = creds[1]; _project.Variables["github_login"].Value = _login; } catch (Exception ex) { _logger.Send(ex.Message); }
             try { _pass = creds[2]; _project.Variables["github_pass"].Value = _pass; } catch (Exception ex) { _logger.Send(ex.Message); }
             try { _2fa = creds[3]; _project.Variables["github_code"].Value = _2fa; } catch (Exception ex) { _logger.Send(ex.Message); }
-
+            if (string.IsNullOrEmpty(_login) || string.IsNullOrEmpty(_pass)) 
+                throw new Exception($"invalid credentials login:[{_login}] pass:[{_pass}]");
         }
 
-        private void InputCreds()
+        public void InputCreds()
         {
-
-
-
+            _instance.HeSet(("login_field", "id"), _login);
+            _instance.HeSet(("password", "id"), _pass);
+            _instance.HeClick(("input:submit", "name", "commit", "regexp", 0), emu: 1);
+            _instance.HeSet(("app_totp", "id"), OTP.Offline(_2fa), thr0w: false);
         }
 
+        public void Go()
+        {
+            Tab tab = _instance.NewTab("github");
+            if (tab.IsBusy) tab.WaitDownloading();
+            _instance.Go("https://github.com/login");
+            _instance.HeClick(("button", "innertext", "Accept", "regexp", 0), deadline: 3, thr0w: false);
+
+        }
+        public void Verify2fa()
+        {
+            _instance.HeClick(("button", "innertext", "Verify\\ 2FA\\ now", "regexp", 0));
+            Thread.Sleep(20000);
+            _instance.HeSet(("app_totp", "id"), OTP.Offline(_2fa));
+            _instance.HeClick(("button", "class", "btn-primary\\ btn\\ btn-block", "regexp", 0), emu: 1);
+            _instance.HeClick(("a", "innertext", "Done", "regexp", 0), emu: 1);
+
+        }
+        public void Load()
+        {
+            Go();
+            InputCreds();
+            try { Verify2fa(); } catch { }
+
+        }
 
 
     }
@@ -1363,6 +1389,93 @@ namespace w3tools //by @w3bgrep
         }
 
     }
+
+
+    public class Guild
+    {
+        protected readonly IZennoPosterProjectModel _project;
+        protected readonly Instance _instance;
+        private readonly Logger _logger;
+
+        protected readonly bool _logShow;
+        protected readonly Sql _sql;
+
+        protected string _status;
+        protected string _login;
+        protected string _pass;
+        protected string _2fa;
+
+        public Guild(IZennoPosterProjectModel project, Instance instance, bool log = false)
+        {
+
+            _project = project;
+            _instance = instance;
+            _sql = new Sql(_project, log);
+            _logger = new Logger(project, log: log, classEmoji: "GUILD");
+
+        }
+
+        public void ParseRoles(string tablename)
+        {
+            //var sql = new Sql2(_project, true);
+            var done = new List<string>();
+            var undone = new List<string>();
+           
+            
+
+            var roles = _instance.ActiveTab.FindElementsByAttribute("div", "id", "role-", "regexp").ToList();
+            _sql.ClmnAdd(tablename, "guild_done");
+            _sql.ClmnAdd(tablename, "guild_undone");
+
+
+            foreach (HtmlElement role in roles)
+            {
+                string name = role.FindChildByAttribute("div", "class", "flex\\ items-center\\ gap-3\\ p-5", "regexp", 0).InnerText;
+                string state = role.FindChildByAttribute("div", "class", "mb-4\\ flex\\ items-center\\ justify-between\\ p-5\\ pb-0\\ transition-transform\\ md:mb-6", "regexp", 0).InnerText;
+                string total = name.Split('\n')[1];
+                name = name.Split('\n')[0];
+                state = state.Split('\n')[1];
+
+                if (state.Contains("No access") || state.Contains("Join Guild"))
+                {
+                    string undoneT = "";
+                    var tasksHe = role.FindChildByAttribute("div", "class", "flex\\ flex-col\\ p-5\\ pt-0", "regexp", 0);
+                    var tasks = tasksHe.FindChildrenByAttribute("div", "class", "w-full\\ transition-all\\ duration-200\\ translate-y-0\\ opacity-100", "regexp").ToList();
+                    foreach (HtmlElement task in tasks)
+                    {
+                        string taskText = task.InnerText.Split('\n')[0];
+                        if (task.InnerHtml.Contains("M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z"))
+                        {
+                            _logger.Send($"[!Undone]: {taskText}");
+                            undoneT += taskText + ", ";
+                        }
+                    }
+                    undoneT = undoneT.Trim().Trim(',');
+                    undone.Add($"[{name}]: {undoneT}");
+                }
+                else if (state.Contains("You have access"))
+                {
+                    done.Add($"[{name}] ({total})");
+                }
+                else if (state.Contains("Reconnect"))
+                {
+                    undone.Add($"[{name}]: reconnect");
+                }
+                string wDone = string.Join("; ", done);
+                string wUndone = string.Join("; ", undone);
+                _project.Var("guildUndone", wUndone);
+
+                _sql.Upd($"guild_done = '{wDone}', guild_undone = '{wUndone}'", tablename);
+                _logger.Send($"{name}({total}) :  {state}");
+            }
+
+        }
+
+
+
+
+    }
+
 
 
 }

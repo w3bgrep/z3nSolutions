@@ -61,22 +61,6 @@ namespace z3n
             };
 
             string result = _project.GET(url,"", headers);
-                
-                
-                //ZennoPoster.HttpGet(
-                //url,
-                //"",
-                //"UTF-8",
-                //ZennoLab.InterfacesLibrary.Enums.Http.ResponceType.BodyOnly,
-                //5000,
-                //"",
-                //_project.Profile.UserAgent,
-                //true,
-                //5,
-                //headers,
-                //"",
-                //false);
-
             _project.Json.FromString(result);
             return result;
 
