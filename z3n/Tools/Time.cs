@@ -19,31 +19,32 @@ namespace z3n
                 throw new ArgumentException("Invalid format. Use 'unix' or 'iso'.");
             }
         }
-        public static string cd(object input = null, string o = "unix")
+        public static string cd(object input = null, string o = "iso")
         {
-            DateTime utcNow = DateTime.UtcNow;
+            DateTime t = DateTime.UtcNow;
             if (input == null)
             {
-                DateTime todayEnd = utcNow.Date.AddHours(23).AddMinutes(59).AddSeconds(59);
-                if (o == "unix") return ((int)(todayEnd - new DateTime(1970, 1, 1)).TotalSeconds).ToString();
-                else if (o == "iso") return todayEnd.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"); // ISO 8601
+                t = t.Date.AddHours(23).AddMinutes(59).AddSeconds(59);
             }
             else if (input is decimal || input is int)
             {
                 decimal minutes = Convert.ToDecimal(input);
-                int secondsToAdd = (int)Math.Round(minutes * 60);
-                DateTime futureTime = utcNow.AddSeconds(secondsToAdd);
-                if (o == "unix") return ((int)(futureTime - new DateTime(1970, 1, 1)).TotalSeconds).ToString();
-                else if (o == "iso") return futureTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"); // ISO 8601
+                if (minutes == 0m) minutes = 999999999m;
+                long secondsToAdd = (long)Math.Round(minutes * 60);
+                t = t.AddSeconds(secondsToAdd);
             }
             else if (input is string timeString)
             {
                 TimeSpan parsedTime = TimeSpan.Parse(timeString);
-                DateTime futureTime = utcNow.Add(parsedTime);
-                if (o == "unix") return ((int)(futureTime - new DateTime(1970, 1, 1)).TotalSeconds).ToString();
-                else if (o == "iso") return futureTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"); // ISO 8601
+                t = t.Add(parsedTime);
             }
-            throw new ArgumentException("Неподдерживаемый тип входного параметра");
+
+            if (o == "unix") 
+                return ((long)(t - new DateTime(1970, 1, 1)).TotalSeconds).ToString();
+            else if (o == "iso") 
+                return t.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"); // ISO 8601
+            else
+                throw new ArgumentException($"unexpected format {o}");
         }
 
 
@@ -109,7 +110,6 @@ namespace z3n
                 project.Variables["t0"].Value = (DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString();
             }
         }
-
         public static void Sleep(this IZennoPosterProjectModel project, int min = 0, int max = 0)
         {
             if (max == 0)

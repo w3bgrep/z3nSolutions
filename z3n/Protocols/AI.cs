@@ -16,7 +16,7 @@ namespace z3n
         {
             var _project = project;
             _project.Variables["api_response"].Value = "";
-            var _logger = new Logger(project, true);
+            var _logger = new Logger(project, log);
 
             var requestBody = new
             {

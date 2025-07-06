@@ -116,12 +116,18 @@ namespace z3n
         }
         public static void Finish(this IZennoPosterProjectModel project, Instance instance)
         {
-            if (!string.IsNullOrEmpty(project.Var("acc0")))
+            try
+            {
+                if (!string.IsNullOrEmpty(project.Var("acc0")))
                 new Logger(project).SendToTelegram();
-
-            if (instance.BrowserType.ToString() == "Chromium"
-                && !string.IsNullOrEmpty(project.Var("acc0"))
-                && string.IsNullOrEmpty(project.Var("accRnd")))
+            }
+            catch (Exception ex)
+            {
+                project.L0g(ex.Message);
+            }
+            var browser = string.Empty;
+            try { browser = instance.BrowserType.ToString(); } catch { }
+            if (browser == "Chromium" && !string.IsNullOrEmpty(project.Var("acc0")) && string.IsNullOrEmpty(project.Var("accRnd")))
                 new Cookies(project, instance).Save("all", project.Var("pathCookies"));
             
             project.NullVars();
@@ -223,7 +229,7 @@ namespace z3n
         public static void NullVars(this IZennoPosterProjectModel project)
         {
             project.GlobalNull();
-            project.Var("acc0", null);
+            project.Var("acc0", "");
         }
         public static bool ChooseSingleAcc(this IZennoPosterProjectModel project)
         {
@@ -374,8 +380,8 @@ namespace z3n
             ?.Title ?? "Unknown";
             try
             {
-                project.GlobalVariables[nameSpase, $"acc{project.Variables["acc0"].Value}"].Value = null;
-                project.Var("acc0", null);
+                project.GlobalVariables[nameSpase, $"acc{project.Variables["acc0"].Value}"].Value = "";
+                project.Var("acc0", "");
             }
             catch { }
 
