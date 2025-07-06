@@ -44,7 +44,30 @@ namespace w3tools //by @w3bgrep
     public  static class TestStatic
     {
 
+        public static string GetLink(this string text)
+        {
+            int startIndex = text.IndexOf("https://");
+            if (startIndex == -1) startIndex = text.IndexOf("http://");
+            if (startIndex == -1) throw new Exception($"No Link found in message {text}");
 
+            string potentialLink = text.Substring(startIndex);
+            int endIndex = potentialLink.IndexOfAny(new[] { ' ', '\n', '\r', '\t', '"' });
+            if (endIndex != -1)
+                potentialLink = potentialLink.Substring(0, endIndex);
+
+            return Uri.TryCreate(potentialLink, UriKind.Absolute, out _)
+                ? potentialLink
+                : throw new Exception($"No Link found in message {text}");
+        }
+
+        public static string GetOTP(this string text)
+        {
+            Match match = Regex.Match(text, @"\b\d{6}\b");
+            if (match.Success)
+                return match.Value;
+            else
+                throw new Exception($"Fmail: OTP not found in [{text}]");
+        }
 
     }
 
@@ -610,6 +633,8 @@ namespace w3tools //by @w3bgrep
         protected string _login;
         protected string _pass;
         protected string _2fa;
+        protected string _mail;
+
 
         public GitHub2(IZennoPosterProjectModel project, Instance instance, bool log = false)
         {
@@ -623,20 +648,25 @@ namespace w3tools //by @w3bgrep
         }
         public void LoadCreds()
         {
-            string[] creds = _sql.Get("status, login, password, otpsecret, cookies", "private_github").Split('|');
-            try { _status = creds[0]; _project.Variables["googleSTATUS"].Value = _status; } catch (Exception ex) { _logger.Send(ex.Message); }
-            try { _login = creds[1]; _project.Variables["github_login"].Value = _login; } catch (Exception ex) { _logger.Send(ex.Message); }
-            try { _pass = creds[2]; _project.Variables["github_pass"].Value = _pass; } catch (Exception ex) { _logger.Send(ex.Message); }
-            try { _2fa = creds[3]; _project.Variables["github_code"].Value = _2fa; } catch (Exception ex) { _logger.Send(ex.Message); }
+            string[] creds = _sql.Get("status, login, password,  otpsecret, email, cookies", "private_github").Split('|');
+            try { _status = creds[0].Trim(); _project.Variables["github_status"].Value = _status; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _login = creds[1].Trim(); _project.Variables["github_login"].Value = _login; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _pass = creds[2].Trim(); _project.Variables["github_pass"].Value = _pass; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _2fa = creds[3].Trim(); _project.Variables["github_code"].Value = _2fa; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _mail = creds[4].Trim(); _project.Variables["github_mail"].Value = _mail; } catch (Exception ex) { _logger.Send(ex.Message); }
+
             if (string.IsNullOrEmpty(_login) || string.IsNullOrEmpty(_pass)) 
                 throw new Exception($"invalid credentials login:[{_login}] pass:[{_pass}]");
         }
 
         public void InputCreds()
         {
-            _instance.HeSet(("login_field", "id"), _login);
+            string allert = null;
+            _instance.HeSet(("login_field", "id"), _mail);
             _instance.HeSet(("password", "id"), _pass);
             _instance.HeClick(("input:submit", "name", "commit", "regexp", 0), emu: 1);
+            allert = _instance.HeGet(("div", "class", "js-flash-alert", "regexp", 0), thr0w:false);
+            if (allert != null) throw new Exception(allert);
             _instance.HeSet(("app_totp", "id"), OTP.Offline(_2fa), thr0w: false);
         }
 
@@ -645,26 +675,47 @@ namespace w3tools //by @w3bgrep
             Tab tab = _instance.NewTab("github");
             if (tab.IsBusy) tab.WaitDownloading();
             _instance.Go("https://github.com/login");
-            _instance.HeClick(("button", "innertext", "Accept", "regexp", 0), deadline: 3, thr0w: false);
-
+            _instance.HeClick(("button", "innertext", "Accept", "regexp", 0), deadline: 2, thr0w: false);
         }
         public void Verify2fa()
         {
-            _instance.HeClick(("button", "innertext", "Verify\\ 2FA\\ now", "regexp", 0));
+            _instance.HeClick(("button", "innertext", "Verify\\ 2FA\\ now", "regexp", 0),deadline:3);
             Thread.Sleep(20000);
             _instance.HeSet(("app_totp", "id"), OTP.Offline(_2fa));
             _instance.HeClick(("button", "class", "btn-primary\\ btn\\ btn-block", "regexp", 0), emu: 1);
             _instance.HeClick(("a", "innertext", "Done", "regexp", 0), emu: 1);
 
         }
-        public void Load()
+        public string Load()
         {
+            _project.Deadline();
             Go();
-            InputCreds();
+        check:
+            _project.Deadline(60);
+            string current = string.Empty;
+            
+            try { current = Current(); } 
+            catch (Exception ex) { _logger.Send(ex.Message); } 
+            
+            if (string.IsNullOrEmpty(current)) InputCreds();
+            
             try { Verify2fa(); } catch { }
 
-        }
+            if (string.IsNullOrEmpty(current)) 
+                goto check;
 
+            if (!current.ToLower().Contains( _login.ToLower())) throw new Exception($"!Wrong acc: [{current}]. Expected: [{_login}]");
+
+            return current;
+
+        }
+        public string Current()
+        {
+            _instance.HeClick(("img", "class", "avatar\\ circle", "regexp", 0),deadline:3);
+            string current = _instance.HeGet(("div", "aria-label", "User navigation", "text", 0));
+            _instance.HeClick(("a", "class", "AppHeader-logo\\ ml-1\\ ", "regexp", 0));
+            return current;
+        }
 
     }
 
@@ -1391,7 +1442,7 @@ namespace w3tools //by @w3bgrep
     }
 
 
-    public class Guild
+    public class Guild2
     {
         protected readonly IZennoPosterProjectModel _project;
         protected readonly Instance _instance;
@@ -1405,7 +1456,7 @@ namespace w3tools //by @w3bgrep
         protected string _pass;
         protected string _2fa;
 
-        public Guild(IZennoPosterProjectModel project, Instance instance, bool log = false)
+        public Guild2(IZennoPosterProjectModel project, Instance instance, bool log = false)
         {
 
             _project = project;
@@ -1476,7 +1527,116 @@ namespace w3tools //by @w3bgrep
 
     }
 
+    public class FS
+    {
+        public static string GetRandomFile(string directoryPath, IZennoPosterProjectModel project)
+        {
+        readrandom:
+            try
+            {
+                var files = Directory.GetFiles(directoryPath, "*", SearchOption.AllDirectories);
+                if (files.Length == 0) return null;
+                var random = new Random();
+                return files[random.Next(files.Length)];
+            }
+            catch (Exception ex)
+            {
 
+                project.L0g(ex.Message);
+                goto readrandom;
+            }
+        }
+    }
+
+    public class AI
+    {
+        public static string OptimizeCode(IZennoPosterProjectModel project, string content,  bool log = false)
+        {
+            var _project = project;
+            _project.Variables["api_response"].Value = "";
+            var _logger = new Logger(project, true);
+
+            var requestBody = new
+            {
+                model = "sonar",
+                messages = new[]
+                {
+                    new
+                    {
+                        role = "system",
+                       content = "You are a web3 developer. Optimize the following code. Return only the optimized code. Do not add explanations, comments, or formatting. Output code only, in plain text."
+
+
+                    },
+                    new
+                    {
+                        role = "user",
+                        content = content
+                    }
+                },
+                temperature = 0.8,
+                top_p = 0.9,
+                top_k = 0,
+                stream = false,
+                presence_penalty = 0,
+                frequency_penalty = 1
+            };
+
+            string jsonBody = Newtonsoft.Json.JsonConvert.SerializeObject(requestBody, Newtonsoft.Json.Formatting.None);
+
+            string[] headers = new string[]
+            {
+                "Content-Type: application/json",
+                $"Authorization: Bearer {_project.Variables["settingsApiPerplexity"].Value}"
+            };
+        gen:
+            string response;
+            using (var request = new HttpRequest())
+            {
+                request.UserAgent = "Mozilla/5.0";
+                request.IgnoreProtocolErrors = true;
+                request.ConnectTimeout = 30000;
+
+                foreach (var header in headers)
+                {
+                    var parts = header.Split(new[] { ": " }, 2, StringSplitOptions.None);
+                    if (parts.Length == 2)
+                    {
+                        request.AddHeader(parts[0], parts[1]);
+                    }
+                }
+
+                try
+                {
+                    HttpResponse httpResponse = request.Post("https://api.perplexity.ai/chat/completions", jsonBody, "application/json");
+                    response = httpResponse.ToString();
+                }
+                catch (HttpException ex)
+                {
+                    _logger.Send($"Ошибка HTTP-запроса: {ex.Message}, Status: {ex.Status}");
+                    throw;
+                }
+            }
+
+            _project.Variables["api_response"].Value = response;
+
+            _logger.Send($"Full response: {response}");
+
+            try
+            {
+                var jsonResponse = Newtonsoft.Json.Linq.JObject.Parse(response);
+                string Text = jsonResponse["choices"][0]["message"]["content"].ToString();
+                _logger.Send(Text);
+                return Text;
+            }
+            catch (Exception ex)
+            {
+                _logger.Send($"!W Error parsing response: {ex.Message}");
+                throw;
+            }
+        }
+
+    }
 
 }
 

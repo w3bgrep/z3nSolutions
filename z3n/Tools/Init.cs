@@ -39,7 +39,7 @@ namespace z3n
 
         public void InitVariables(string author = "")
         {
-            new Sys(_project).DisableLogs();
+            new FS(_project).DisableLogs();
 
             string sessionId = (DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString();
             string projectName = _project.ExecuteMacro(_project.Name).Split('.')[0];

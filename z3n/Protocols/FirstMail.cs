@@ -88,5 +88,61 @@ namespace z3n
 
         }
 
+        //public string GetLink(string email)
+        //{
+        //    string json = GetMail(email);
+        //    _project.Json.FromString(json);
+        //    string deliveredTo = _project.Json.to[0];
+        //    string text = _project.Json.text;
+
+        //    if (!deliveredTo.Contains(email)) 
+        //        throw new Exception($"Fmail: Email {email} not found in last message");
+        //    else
+        //    {
+
+        //        int httpIndex = text.IndexOf("http://");
+        //        int httpsIndex = text.IndexOf("https://");
+        //        int startIndex = httpIndex != -1 && (httpsIndex == -1 || httpIndex < httpsIndex) ? httpIndex : httpsIndex;
+
+        //        if (startIndex == -1) return "";
+
+        //        string potentialLink = text.Substring(startIndex);
+        //        int endIndex = potentialLink.IndexOfAny(new[] { ' ', '\n', '\r', '\t', '"' });
+        //        if (endIndex != -1)
+        //        {
+        //            potentialLink = potentialLink.Substring(0, endIndex);
+        //        }
+
+        //        if (Uri.TryCreate(potentialLink, UriKind.Absolute, out _))
+        //        {
+        //            return potentialLink;
+        //        }
+        //        throw new Exception($"No Link found in message {text}");
+        //    }
+
+        //}
+        public string GetLink(string email)
+        {
+            string json = GetMail(email);
+            _project.Json.FromString(json);
+            string deliveredTo = _project.Json.to[0];
+            string text = _project.Json.text;
+
+            if (!deliveredTo.Contains(email))
+                throw new Exception($"Fmail: Email {email} not found in last message");
+
+            int startIndex = text.IndexOf("https://");
+            if (startIndex == -1) startIndex = text.IndexOf("http://");
+            if (startIndex == -1) throw new Exception($"No Link found in message {text}");
+
+            string potentialLink = text.Substring(startIndex);
+            int endIndex = potentialLink.IndexOfAny(new[] { ' ', '\n', '\r', '\t', '"' });
+            if (endIndex != -1)
+                potentialLink = potentialLink.Substring(0, endIndex);
+
+            return Uri.TryCreate(potentialLink, UriKind.Absolute, out _)
+                ? potentialLink
+                : throw new Exception($"No Link found in message {text}");
+        }
     }
 }

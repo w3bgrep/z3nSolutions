@@ -12,7 +12,7 @@ using ZennoLab.InterfacesLibrary.ProjectModel;
 
 namespace z3n
 {
-    public class Sys
+    public class FS
     {
         protected readonly IZennoPosterProjectModel _project;
         protected bool _logShow = false;
@@ -20,7 +20,7 @@ namespace z3n
         private readonly object LockObject = new object();
         private readonly object FileLock = new object();
 
-        public Sys(IZennoPosterProjectModel project, bool log = false, string classEmoji = null)
+        public FS(IZennoPosterProjectModel project, bool log = false, string classEmoji = null)
         {
             _project = project;
             if (!log) _logShow = _project.Var("debug") == "True";
@@ -96,7 +96,6 @@ namespace z3n
                 _logger.Send(ex.Message);
             }
         }
-
         public void CopyDir(string sourceDir, string destDir)
         {
             if (!Directory.Exists(sourceDir)) throw new DirectoryNotFoundException("Source directory does not exist: " + sourceDir);
@@ -119,8 +118,21 @@ namespace z3n
             }
         }
 
+        public static string GetRandomFile(string directoryPath)
+        {
+        readrandom:
+            try
+            {
+                var files = Directory.GetFiles(directoryPath, "*", SearchOption.AllDirectories);
+                if (files.Length == 0) return null;
+                var random = new Random();
+                return files[random.Next(files.Length)];
+            }
+            catch (Exception ex)
+            {
+                goto readrandom;
+            }
+        }
         
-
-
     }
 }

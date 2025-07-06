@@ -248,6 +248,29 @@ namespace z3n
             throw new Exception ($"not recognized as any key or seed {input}");
         }
 
+        public static string GetLink(this string text)
+        {
+            int startIndex = text.IndexOf("https://");
+            if (startIndex == -1) startIndex = text.IndexOf("http://");
+            if (startIndex == -1) throw new Exception($"No Link found in message {text}");
 
+            string potentialLink = text.Substring(startIndex);
+            int endIndex = potentialLink.IndexOfAny(new[] { ' ', '\n', '\r', '\t', '"' });
+            if (endIndex != -1)
+                potentialLink = potentialLink.Substring(0, endIndex);
+
+            return Uri.TryCreate(potentialLink, UriKind.Absolute, out _)
+                ? potentialLink
+                : throw new Exception($"No Link found in message {text}");
+        }
+
+        public static string GetOTP(this string text)
+        {
+            Match match = Regex.Match(text, @"\b\d{6}\b");
+            if (match.Success)
+                return match.Value;
+            else
+                throw new Exception($"Fmail: OTP not found in [{text}]");
+        }
     }
 }

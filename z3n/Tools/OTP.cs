@@ -13,8 +13,8 @@ namespace z3n
         {
             if (string.IsNullOrEmpty(keyString))
                 throw new Exception($"invalid input:[{keyString}]");
-
-            var key = OtpNet.Base32Encoding.ToBytes(keyString);
+            
+            var key = OtpNet.Base32Encoding.ToBytes(keyString.Trim());
             var otp = new OtpNet.Totp(key);
             string code = otp.ComputeTotp();
             int remainingSeconds = otp.RemainingSeconds();
