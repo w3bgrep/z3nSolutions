@@ -80,6 +80,8 @@
   <ItemGroup>
     <Compile Include="Browser\Cookies.cs" />
     <Compile Include="Browser\Capcha.cs" />
+    <Compile Include="Extensions\Utils.cs" />
+    <Compile Include="Protocols\AI.cs" />
     <Compile Include="Protocols\Guild.cs" />
     <Compile Include="Socials\GitHub.cs" />
     <Compile Include="Tools\Accountant.cs" />

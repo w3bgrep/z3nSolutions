@@ -133,6 +133,46 @@ namespace z3n
                 goto readrandom;
             }
         }
-        
+        public  string GetNewCreds(string dataType)
+        {
+            string pathFresh = $"{_project.Path}.data\\fresh\\{dataType}.txt";
+            string pathUsed = $"{_project.Path}.data\\used\\{dataType}.txt";
+
+            lock (LockObject)
+            {
+                try
+                {
+                    if (!File.Exists(pathFresh))
+                    {
+                        _logger.Send($"File not found: {pathFresh}");
+                        return null;
+                    }
+
+                    var freshAccs = File.ReadAllLines(pathFresh).ToList();
+                    _logger.Send($"Loaded {freshAccs.Count} accounts from {pathFresh}");
+
+                    if (freshAccs.Count == 0)
+                    {
+                        _logger.Send($"No accounts available in {pathFresh}");
+                        return string.Empty;
+                    }
+
+                    string creds = freshAccs[0];
+                    freshAccs.RemoveAt(0);
+
+                    File.WriteAllLines(pathFresh, freshAccs);
+                    File.AppendAllText(pathUsed, creds + Environment.NewLine);
+
+                    return creds;
+                }
+                catch (Exception ex)
+                {
+                    _logger.Send($"Error processing files for {dataType}: {ex.Message}");
+                    return null;
+                }
+            }
+
+        }
+
     }
 }

@@ -371,7 +371,6 @@ namespace z3n
             }
             if (!string.IsNullOrEmpty(dynamicToDo)) 
             {
-                //dynamicToDo = dynamicToDo.ToLower();
                 string[] toDoItems = (dynamicToDo ?? "").Split(',');
                 foreach (string taskId in toDoItems)
                 {
@@ -384,7 +383,6 @@ namespace z3n
             }
             return tableStructure;
         }
-
 
         public bool ClmnExist(string tblName, string clmnName)
         {
