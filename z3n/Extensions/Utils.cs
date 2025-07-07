@@ -19,55 +19,55 @@ namespace z3n
         {
             new Logger(project).Send(toLog, show: show, thr0w: thr0w, toZp: toZp);
         }
-        public static string[] GetErr(this IZennoPosterProjectModel project, Instance instance)
+        public static string[] GetErr(this IZennoPosterProjectModel project, Instance instance, bool log = false)
         {
-            var error = project.GetLastError();
-            var ActionId = error.ActionId.ToString();
-            var ActionComment = error.ActionComment;
+            var error = project?.GetLastError();
+            if (error == null) return null;
+
+            var actionId = error.ActionId.ToString() ?? string.Empty;
+            var actionComment = error.ActionComment ?? string.Empty;
             var exception = error.Exception;
+            if (exception == null) return null;
 
-            if (exception != null)
-            {
-                var typeEx = exception.GetType();
-                string type = typeEx.Name;
-                string msg = exception.Message;
-                string StackTrace = exception.StackTrace;
-                StackTrace = StackTrace.Split('в')[1].Trim();
-                string innerMsg = string.Empty;
+            var typeEx = exception.GetType();
+            string type = typeEx?.Name ?? "Unknown";
+            string msg = exception.Message ?? string.Empty;
+            string stackTrace = exception.StackTrace ?? string.Empty;
+            stackTrace = stackTrace.Split(new[] { 'в' }, StringSplitOptions.None).Skip(1).FirstOrDefault()?.Trim() ?? string.Empty;
+            string innerMsg = exception.InnerException?.Message ?? string.Empty;
 
-                var innerException = exception.InnerException;
-                if (innerException != null) innerMsg = innerException.Message;
+            string toLog = $"{actionId}\n{type}\n{msg}\n{stackTrace}\n{innerMsg}";
+            if (log) project?.SendWarningToLog(toLog);
+
+            string failReport = $"⛔️\\#fail  \\#{project?.Name?.EscapeMarkdown() ?? "Unknown"} \\#{project?.Variables?["acc0"]?.Value ?? "Unknown"} \n" +
+                               $"Error: `{actionId.EscapeMarkdown()}` \n" +
+                               $"Type: `{type.EscapeMarkdown()}` \n" +
+                               $"Msg: `{msg.EscapeMarkdown()}` \n" +
+                               $"Trace: `{stackTrace.EscapeMarkdown()}` \n";
+            if (!string.IsNullOrEmpty(innerMsg))
+                failReport += $"Inner: `{innerMsg.EscapeMarkdown()}` \n";
+            if (log) project?.SendWarningToLog("1");
+
+            var browser = string.Empty;
+            try { browser = instance.BrowserType.ToString(); } catch { }
+            if (browser == "Chromium") failReport += $"Page: `{instance.ActiveTab?.URL?.EscapeMarkdown() ?? "Unknown"}`";
 
 
-                string toLog = $"{ActionId}\n{type}\n{msg}\n{StackTrace}\n{innerMsg}";
-
-                project.SendErrorToLog(toLog);
-
-                string failReport = $"⛔️\\#fail  \\#{project.Name.EscapeMarkdown()} \\#{project.Variables["acc0"].Value} \n" +
-                                    $"Error: `{ActionId.EscapeMarkdown()}` \n" +
-                                    $"Type: `{type.EscapeMarkdown()}` \n" +
-                                    $"Msg: `{msg.EscapeMarkdown()}` \n" +
-                                    $"Trace: `{StackTrace.EscapeMarkdown()}` \n";
-
-                if (!string.IsNullOrEmpty(innerMsg)) failReport += $"Inner: `{innerMsg.EscapeMarkdown()}` \n";
-                if (instance.GetType().ToString() != "ZennoLab.CommandCenter.EmptyInstance")
-                {
-                    if (instance.BrowserType.ToString() == "Chromium") failReport += $"Page: `{instance.ActiveTab.URL.EscapeMarkdown()}`";
-                }
+            if (log) project?.SendWarningToLog("2");
+            if (project?.Variables?["failReport"] != null)
                 project.Variables["failReport"].Value = failReport;
-                try
-                {
-                    string path = $"{project.Path}.failed\\{project.Variables["projectName"].Value}\\{project.Name} • {project.Variables["acc0"].Value} • {project.LastExecutedActionId} • {ActionId}.jpg";
-                    ZennoPoster.ImageProcessingResizeFromScreenshot(instance.Port, path, 50, 50, "percent", true, false);
-                }
-                catch (Exception e) { project.SendInfoToLog(e.Message); }
-                return new string[] { ActionId, type, msg, StackTrace, innerMsg };
 
+            try
+            {
+                string path = $"{project?.Path ?? ""}.failed\\{project?.Variables?["projectName"]?.Value ?? "Unknown"}\\{project?.Name ?? "Unknown"} • {project?.Variables?["acc0"]?.Value ?? "Unknown"} • {project?.LastExecutedActionId ?? "Unknown"} • {actionId}.jpg";
+                ZennoPoster.ImageProcessingResizeFromScreenshot(instance?.Port ?? 0, path, 50, 50, "percent", true, false);
+            }
+            catch (Exception e)
+            {
+                if (log) project?.SendInfoToLog(e.Message ?? "Error during screenshot processing");
             }
 
-            return null;
-
-
+            return new string[] { actionId, type, msg, stackTrace, innerMsg };
         }
         public static int Range(this IZennoPosterProjectModel project, string accRange = null, string output = null, bool log = false)
         {
@@ -250,7 +250,7 @@ namespace z3n
             string acc0 = listAccounts[randomAccount];
             project.Var("acc0", acc0);
             listAccounts.RemoveAt(randomAccount);
-            if (!project.GlobalSet())
+            if (!project.GlobalSet(set:false))
                 goto check;
             project.Var("pathProfileFolder", $"{pathProfiles}accounts\\profilesFolder\\{acc0}");
             project.Var("pathCookies", $"{pathProfiles}accounts\\cookies\\{acc0}.json");
@@ -260,11 +260,13 @@ namespace z3n
 
         #region GlobalVars
 
-        public static bool GlobalSet(this IZennoPosterProjectModel project, bool log = false)
+        public static bool GlobalSet(this IZennoPosterProjectModel project, bool log = false , bool set = true, bool clean = false )
         {
             string nameSpase = Assembly.GetExecutingAssembly()
             .GetCustomAttribute<AssemblyTitleAttribute>()
             ?.Title ?? "Unknown";
+            clean = (project.Variables["cleanGlobal"].Value == "True");
+
 
             var cleaned = new List<int>();
             var notDeclared = new List<int>();
@@ -285,11 +287,8 @@ namespace z3n
                             if (globalVar != null)
                             {
                                 if (!string.IsNullOrEmpty(globalVar.Value))
-                                {
-                                    //busyAccounts.Add(i);
                                     busyAccounts.Add($"{i}:{globalVar.Value}");
-                                }
-                                if (project.Variables["cleanGlobal"].Value == "True")
+                                if (clean)
                                 {
                                     globalVar.Value = string.Empty;
                                     cleaned.Add(i);
@@ -299,19 +298,17 @@ namespace z3n
                         }
                         catch { notDeclared.Add(i); }
                     }
-                    if (project.Variables["cleanGlobal"].Value == "True")
-                    {
 
+                    if (clean)
                         project.L0g($"!W cleanGlobal is [on] Cleaned: {string.Join(",", cleaned)}");
-                    }
                     else
-                    {
                         project.L0g($"buzy Accounts: [{string.Join(" | ", busyAccounts)}]");
-                    }
+
                     int currentThread = int.Parse(project.Variables["acc0"].Value);
                     string currentThreadKey = $"acc{currentThread}";
                     if (!busyAccounts.Any(x => x.StartsWith($"{currentThread}:"))) //
                     {
+                        if (!set) return true;
                         try
                         {
                             project.GlobalVariables.SetVariable(nameSpase, currentThreadKey, project.Variables["projectName"].Value);

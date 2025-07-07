@@ -30,7 +30,7 @@ namespace z3n
             _project = project;
             _instance = instance;
             _sql = new Sql(_project);
-            _logger = new Logger(project, log: log, classEmoji: "GitHub");
+            _logger = new Logger(project, log: log, classEmoji: "GITHUB");
             LoadCreds();
 
         }
@@ -55,13 +55,13 @@ namespace z3n
             _instance.HeClick(("input:submit", "name", "commit", "regexp", 0), emu: 1);
             allert = _instance.HeGet(("div", "class", "js-flash-alert", "regexp", 0), thr0w: false);
             if (allert != null) throw new Exception(allert);
-            _instance.HeSet(("app_totp", "id"), OTP.Offline(_2fa), thr0w: false);
+            try { _instance.HeSet(("app_totp", "id"), OTP.Offline(_2fa)); } catch { }
         }
 
         public void Go()
         {
-            Tab tab = _instance.NewTab("github");
-            if (tab.IsBusy) tab.WaitDownloading();
+            //Tab tab = _instance.NewTab("github");
+            //if (tab.IsBusy) tab.WaitDownloading();
             _instance.Go("https://github.com/login");
             _instance.HeClick(("button", "innertext", "Accept", "regexp", 0), deadline: 2, thr0w: false);
         }
@@ -92,24 +92,64 @@ namespace z3n
             if (string.IsNullOrEmpty(current))
                 goto check;
 
-            if (!current.ToLower().Contains(_login.ToLower())) throw new Exception($"!Wrong acc: [{current}]. Expected: [{_login}]");
-
+            if (!current.ToLower().Contains(_login.ToLower()))
+            {
+                _instance.CloseAllTabs();
+                _instance.ClearCookie("github.com");
+                _instance.ClearCache("github.com");
+                throw new Exception($"!Wrong acc: [{current}]. Expected: [{_login}]");
+            }
+            SaveCookies();
             return current;
 
         }
         public string Current()
         {
-            _instance.HeClick(("img", "class", "avatar\\ circle", "regexp", 0), deadline: 3);
+            _instance.HeClick(("img", "class", "avatar\\ circle", "regexp", 0), deadline: 3, delay: 2);
             string current = _instance.HeGet(("div", "aria-label", "User navigation", "text", 0));
             _instance.HeClick(("a", "class", "AppHeader-logo\\ ml-1\\ ", "regexp", 0));
             return current;
+        }
+        public void ChangePass(string password = null)
+        {
+            _instance.HeClick(("forgot-password", "id"));
+            _instance.HeSet(("email_field", "id"), _mail);
+            _project.Deadline();
+            int i = 0;
+
+        cap:
+            _project.Deadline(108);
+
+            _project.CapGuru();
+            _instance.HeClick(("commit", "name"));
+
+            try
+            {
+                _instance.HeGet(("p", "innertext", "Check\\ your\\ email\\ for\\ a\\ link", "regexp", 0));
+            }
+            catch
+            {
+                _project.L0g($"!W captcha notSolved. iteration {i}");
+                goto cap;
+            }
+
+            Thread.Sleep(8000);
+
+            string resetUrl = new FirstMail(_project, true).GetLink(_mail);
+            _instance.ActiveTab.Navigate(resetUrl, "");
+            try { _instance.HeSet(("otp", "id"), OTP.Offline(_project.Var("github_code"))); } catch { }
+
+            _instance.HeSet(("password", "id"), _project.Variables["github_pass"].Value);
+            _instance.HeSet(("password_confirmation", "id"), _pass);
+
+            _instance.HeClick(("commit", "name"));
+
+
         }
         public void SaveCookies()
         {
             string gCookies = new Cookies(_project, _instance).Get(".");
             _sql.Upd($"cookies = '{gCookies}'", "projects_github");
         }
-
-
     }
 }

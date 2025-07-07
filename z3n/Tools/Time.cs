@@ -19,7 +19,7 @@ namespace z3n
                 throw new ArgumentException("Invalid format. Use 'unix' or 'iso'.");
             }
         }
-        public static string cd(object input = null, string o = "iso")
+        public static string Cd(object input = null, string o = "iso")
         {
             DateTime t = DateTime.UtcNow;
             if (input == null)
@@ -46,7 +46,6 @@ namespace z3n
             else
                 throw new ArgumentException($"unexpected format {o}");
         }
-
 
         public static int TimeElapsed(this IZennoPosterProjectModel project, string varName = "varSessionId")
         {
@@ -117,6 +116,14 @@ namespace z3n
             else
                 Thread.Sleep(new Random().Next(min, max) * 1000);
         }
+
+        #region obsolete
+
+        public static string cd(object input = null, string o = "unix")
+        {
+            return Cd(input, o);
+        }
+        #endregion
 
     }
 }

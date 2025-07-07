@@ -82,6 +82,7 @@
     <Compile Include="Browser\Capcha.cs" />
     <Compile Include="Extensions\Utils.cs" />
     <Compile Include="Protocols\AI.cs" />
+    <Compile Include="Protocols\ChainOperaAI.cs" />
     <Compile Include="Protocols\Guild.cs" />
     <Compile Include="Socials\GitHub.cs" />
     <Compile Include="Tools\Accountant.cs" />

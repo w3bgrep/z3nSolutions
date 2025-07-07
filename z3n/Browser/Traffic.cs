@@ -9,9 +9,7 @@ using ZennoLab.InterfacesLibrary.ProjectModel;
 
 namespace z3n
 {
-    /// <summary>
-    /// Класс для работы с сетевым трафиком в ZennoPoster.
-    /// </summary>
+
 
     public class Traffic
     {
@@ -27,14 +25,7 @@ namespace z3n
             _logger = new Logger(project, log: log, classEmoji: "🌎");
         }
 
-        /// <summary>
-        /// Получает данные сетевого трафика для указанного URL.
-        /// </summary>
-        /// <param name="url">Часть URL для фильтрации трафика.</param>
-        /// <param name="parametr">Конкретный параметр трафика для возврата. Доступные параметры: Method, ResultCode, Url, ResponseContentType, RequestHeaders, RequestCookies, RequestBody, ResponseHeaders, ResponseCookies, ResponseBody. Если null или пустая строка, возвращаются все параметры в формате "ключ-значение".</param>
-        /// <param name="reload">Если true, выполняется перезагрузка страницы (по умолчанию false).</param>
-        /// <param name="method">Не используется в текущей реализации (по умолчанию null).</param>
-        /// <returns>Значение указанного параметра трафика или строка со всеми параметрами, если parametr не указан.</returns>
+
         public string Get(string url, string parametr, bool reload = false)
         {
             string param;
@@ -44,14 +35,14 @@ namespace z3n
             else data.TryGetValue(parametr, out param);
             return param;
         }
-        public Dictionary<string, string> Get(string url, bool reload = false)
+        public Dictionary<string, string> Get(string url, bool reload = false,int deadline = 10)
         {
             _project.Deadline();
             _instance.UseTrafficMonitoring = true;
             if (reload) _instance.ActiveTab.MainDocument.EvaluateScript("location.reload(true)");
 
             get:
-            _project.Deadline(10);
+            _project.Deadline(deadline);
             Thread.Sleep(1000);
             var traffic = _instance.ActiveTab.GetTraffic();
             var data = new Dictionary<string, string>();
