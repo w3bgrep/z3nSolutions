@@ -722,13 +722,21 @@ namespace z3n
 
         }
 
+        public string[] columnsDefault = {
+                        "status",
+                        "last",
+                        };
 
-
-
+        public string[] columnsSocial = {
+                        "status",
+                        "last",
+                        "cookie",
+                        "login",
+                        "pass",
+                        "otpsecret",
+                        "email",
+                        "recovery",
+                        };
     }
-
-
-
-
 
 }

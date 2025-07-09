@@ -85,6 +85,8 @@
     <Compile Include="Protocols\ChainOperaAI.cs" />
     <Compile Include="Protocols\Guild.cs" />
     <Compile Include="Socials\GitHub.cs" />
+    <Compile Include="SqlNew\N.cs" />
+    <Compile Include="SqlNew\SqlNew.cs" />
     <Compile Include="Tools\Accountant.cs" />
     <Compile Include="Protocols\FirstMail.cs" />
     <Compile Include="Protocols\HanaGarden.cs" />

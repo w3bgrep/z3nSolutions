@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,7 +9,6 @@ using System.Threading.Tasks;
 using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.Enums.Browser;
 using ZennoLab.InterfacesLibrary.ProjectModel;
-using Newtonsoft.Json.Linq;
 
 namespace z3n
 {
@@ -208,7 +208,6 @@ namespace z3n
             _project.Lists["accs"].AddRange(allAccounts);
             _logger.Send($"final list [{string.Join("|", _project.Lists["accs"])}]");
         }
-
         public void SetDisplay(string webGl)
         {
             if (!string.IsNullOrEmpty(webGl))
@@ -257,5 +256,89 @@ namespace z3n
             }
 
         }
+
+        public string LoadSocials(string requiredSocial)
+        {
+            if (_instance.BrowserType != BrowserType.Chromium) return "noBrowser";
+            int exCnt = 0;
+            string[] socials = requiredSocial.Split(',');
+            Dictionary<string, Action> socialActions = new Dictionary<string, Action>
+                {
+                    { "Google", () => new Google(_project, _instance, true).Load() },
+                    { "Twitter", () => new X(_project, _instance, true).Xload() },
+                    { "Discord", () => new Discord(_project, _instance, true).DSload() },
+                    { "GitHub", () => new GitHub(_project, _instance, true).Load() }
+                };
+
+            foreach (var social in socials)
+            {
+                if (!socialActions.ContainsKey(social)) continue;
+
+                bool success = false;
+                for (int i = 0; i < 3; i++)
+                {
+                    try
+                    {
+                        socialActions[social]();
+                        success = true;
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        _instance.CloseAllTabs();
+                        exCnt++;
+                        if (exCnt >= 3) throw new Exception($"[{social}] !W:{ex.Message}");
+                    }
+                }
+                if (!success) throw new Exception($"!W: {social} load filed");
+            }
+            _logger.Send($"Socials loaded: [{requiredSocial}]");
+            
+            _instance.CloseExtraTabs(true);
+            return requiredSocial;
+        }
+        public string LoadWallets(string walletsToUse)
+        {
+            //run...
+            if (_instance.BrowserType != BrowserType.Chromium) return "noBrowser";
+            int exCnt = 0;
+            string key = !string.IsNullOrEmpty(_project.Var("accRnd")) ? new Rnd().Seed() : null;
+            _project.Var("refSeed", key);
+
+            string[] wallets = walletsToUse.Split(',');
+            Dictionary<string, Action> walletActions = new Dictionary<string, Action>
+            {
+                { "Backpack", () => _project.Var("addressSol", new BackpackWallet(_project, _instance, key: key, log: false).Launch()) },
+                { "Zerion", () => _project.Var("addressEvm", new ZerionWallet(_project, _instance, key: key, log: false).Launch()) },
+                { "Keplr", () => new KeplrWallet(_project, _instance, log: false).KeplrLaunch() }
+            };
+
+            for (int i = 0; i < 3; i++)
+            {
+                try
+                {
+                    new ChromeExt(_project, _instance).Switch(walletsToUse);
+                    foreach (var wallet in wallets)
+                    {
+                        if (walletActions.ContainsKey(wallet))
+                        {
+                            walletActions[wallet]();
+                        }
+                    }
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _instance.CloseAllTabs();
+                    _project.L0g($"!W {ex.Message}");
+                    exCnt++;
+                    if (exCnt > 3) throw;
+                }
+            }
+
+            _instance.CloseExtraTabs(true);
+            return walletsToUse;
+        }
+
     }
 }
