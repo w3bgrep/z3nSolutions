@@ -158,6 +158,7 @@ namespace z3n
                     }
 
                     string creds = freshAccs[0];
+                    if (creds == "") throw new Exception($"noFreshDataLeft {dataType}");
                     freshAccs.RemoveAt(0);
 
                     File.WriteAllLines(pathFresh, freshAccs);

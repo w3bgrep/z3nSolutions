@@ -53,6 +53,9 @@ namespace z3n
             };
         gen:
             string response;
+
+            //response = _project.POST("https://api.perplexity.ai/chat/completions", jsonBody,"", headers, log);
+
             using (var request = new HttpRequest())
             {
                 request.UserAgent = "Mozilla/5.0";

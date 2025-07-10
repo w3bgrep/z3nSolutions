@@ -43,9 +43,54 @@ namespace w3tools //by @w3bgrep
 
     public  static class TestStatic
     {
+        public static string ToPrivateKey(this string input)
+        {
+            // Проверка на null или пустую строку
+            if (string.IsNullOrEmpty(input))
+            {
+                throw new ArgumentException("Input string cannot be null or empty.");
+            }
 
+            // Преобразуем строку в байты с использованием UTF-8
+            byte[] inputBytes = Encoding.UTF8.GetBytes(input);
 
+            // Вычисляем SHA-256 хеш (32 байта)
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                byte[] hashBytes = sha256.ComputeHash(inputBytes);
 
+                // Преобразуем байты в hex-строку (64 символа)
+                StringBuilder hex = new StringBuilder(hashBytes.Length * 2);
+                foreach (byte b in hashBytes)
+                {
+                    hex.AppendFormat("{0:x2}", b);
+                }
+
+                return hex.ToString();
+            }
+        }
+        public static string ReplaceCreds(this IZennoPosterProjectModel project, string social)
+        {
+            return new FS(project).GetNewCreds(social);
+        }
+        public static Dictionary<string, string> ParseCreds2(this string data, string format, char devider = ':')
+        {
+            var parsedData = new Dictionary<string, string>();
+            data = data.Replace("https://2fa.fb.rip/", "").Replace("https://2fa.fb.rip/api/otp/", "");
+            if (string.IsNullOrWhiteSpace(format) || string.IsNullOrWhiteSpace(data))
+                return parsedData;
+
+            string[] formatParts = format.Split(devider);
+            string[] dataParts = data.Split(devider);
+
+            for (int i = 0; i < formatParts.Length && i < dataParts.Length; i++)
+            {
+                string key = formatParts[i].Trim('{', '}').Trim();
+                if (!string.IsNullOrEmpty(key))
+                    parsedData[key] = dataParts[i].Trim();
+            }
+            return parsedData;
+        }
     }
 
     public class Guild2
@@ -206,9 +251,1301 @@ namespace w3tools //by @w3bgrep
 
     }
 
+    public class X2
+    {
+        protected readonly IZennoPosterProjectModel _project;
+        protected readonly Instance _instance;
+        private readonly Logger _logger;
 
+        protected readonly bool _logShow;
+        protected readonly Sql _sql;
+
+        protected string _status;
+        protected string _token;
+        protected string _login;
+        protected string _pass;
+        protected string _2fa;
+        protected string _email;
+        protected string _email_pass;
+
+        public X2(IZennoPosterProjectModel project, Instance instance, bool log = false)
+        {
+
+            _project = project;
+            _instance = instance;
+            _sql = new Sql(_project);
+            _logShow = log;
+            _logger = new Logger(project, log: log, classEmoji: "X");
+
+            LoadCreds();
+
+        }
+        public void LoadCreds()
+        {
+            string[] creds = _sql.Get(" status, token, login, password, otpsecret, email, emailpass", "private_twitter").Split('|');
+            try { _status = creds[0].Trim(); _project.Variables["twitterSTATUS"].Value = _status; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _token = creds[1].Trim(); _project.Variables["twitterTOKEN"].Value = _token; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _login = creds[2].Trim(); _project.Variables["twitterLOGIN"].Value = _login; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _pass = creds[3].Trim(); _project.Variables["twitterPASSWORD"].Value = _pass; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _2fa = creds[4].Trim(); _project.Variables["twitterCODE2FA"].Value = _2fa; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _email = creds[5].Trim(); _project.Variables["twitterEMAIL"].Value = _email; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _email_pass = creds[6].Trim(); _project.Variables["twitterEMAIL_PASSWORD"].Value = _email_pass; } catch (Exception ex) { _logger.Send(ex.Message); }
+
+            if (string.IsNullOrEmpty(_login) || string.IsNullOrEmpty(_pass))
+                throw new Exception($"invalid credentials login:[{_login}] pass:[{_pass}]");
+        }
+
+
+        private string XcheckState(bool log = false)
+        {
+            log = _project.Variables["debug"].Value == "True";
+            DateTime start = DateTime.Now;
+            DateTime deadline = DateTime.Now.AddSeconds(60);
+            string login = _project.Variables["twitterLOGIN"].Value;
+            _instance.ActiveTab.Navigate($"https://x.com/{login}", "");
+            var status = "";
+
+            while (string.IsNullOrEmpty(status))
+            {
+                Thread.Sleep(5000);
+                _project.L0g($"{DateTime.Now - start}s check... URLNow:[{_instance.ActiveTab.URL}]");
+                if (DateTime.Now > deadline) throw new Exception("timeout");
+
+                else if (!_instance.ActiveTab.FindElementByAttribute("*", "innertext", @"Caution:\s+This\s+account\s+is\s+temporarily\s+restricted", "regexp", 0).IsVoid)
+                    status = "restricted";
+                else if (!_instance.ActiveTab.FindElementByAttribute("*", "innertext", @"Account\s+suspended\s+X\s+suspends\s+accounts\s+which\s+violate\s+the\s+X\s+Rules", "regexp", 0).IsVoid)
+                    status = "suspended";
+                else if (!_instance.ActiveTab.FindElementByAttribute("*", "innertext", @"Log\ in", "regexp", 0).IsVoid || !_instance.ActiveTab.FindElementByAttribute("a", "data-testid", "loginButton", "regexp", 0).IsVoid)
+                    status = "login";
+
+                else if (!_instance.ActiveTab.FindElementByAttribute("*", "innertext", "erify\\ your\\ email\\ address", "regexp", 0).IsVoid ||
+                    !_instance.ActiveTab.FindElementByAttribute("div", "innertext", "We\\ sent\\ your\\ verification\\ code.", "regexp", 0).IsVoid)
+                    status = "emailCapcha";
+                else if (!_instance.ActiveTab.FindElementByAttribute("button", "data-testid", "SideNav_AccountSwitcher_Button", "regexp", 0).IsVoid)
+                {
+                    var check = _instance.ActiveTab.FindElementByAttribute("button", "data-testid", "SideNav_AccountSwitcher_Button", "regexp", 0).FirstChild.FirstChild.GetAttribute("data-testid");
+                    if (check == $"UserAvatar-Container-{login}") status = "ok";
+                    else
+                    {
+                        status = "mixed";
+                        _project.L0g($"!W {status}. Detected  [{check}] instead [UserAvatar-Container-{login}] {DateTime.Now - start}");
+                    }
+                }
+                else if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Something\\ went\\ wrong.\\ Try\\ reloading.", "regexp", 0).IsVoid)
+                {
+                    _instance.ActiveTab.MainDocument.EvaluateScript("location.reload(true)");
+                    Thread.Sleep(3000);
+                    continue;
+                }
+            }
+            _project.L0g($"{status} {DateTime.Now - start}");
+            return status;
+        }
+        public void XsetToken()
+        {
+            var token = _project.Variables["twitterTOKEN"].Value;
+            string jsCode = _project.ExecuteMacro($"document.cookie = \"auth_token={token}; domain=.x.com; path=/; expires=${DateTimeOffset.UtcNow.AddYears(1).ToString("R")}; Secure\";\r\nwindow.location.replace(\"https://x.com\")");
+            _instance.ActiveTab.MainDocument.EvaluateScript(jsCode);
+        }
+        private string XgetToken()
+        {
+            //var cookJson = _instance.GetCookies(_project,".");
+            var cookJson = new Cookies(_project, _instance).Get(".");//_instance.GetCookies(_project, ".");
+
+            JArray toParse = JArray.Parse(cookJson);
+            int i = 0; var token = "";
+            while (token == "")
+            {
+                if (toParse[i]["name"].ToString() == "auth_token") token = toParse[i]["value"].ToString();
+                i++;
+            }
+            _project.Variables["twitterTOKEN"].Value = token;
+            _sql.Upd($"token = '{token}'", "private_twitter");
+            return token;
+        }
+        public string Xlogin()
+        {
+            DateTime deadline = DateTime.Now.AddSeconds(60);
+            var login = _project.Variables["twitterLOGIN"].Value;
+
+            _instance.ActiveTab.Navigate("https://x.com/", ""); Thread.Sleep(2000);
+            _instance.HeClick(("button", "innertext", "Accept\\ all\\ cookies", "regexp", 0), deadline: 1, thr0w: false);
+            _instance.HeClick(("button", "data-testid", "xMigrationBottomBar", "regexp", 0), deadline: 0, thr0w: false);
+            _instance.HeClick(("a", "data-testid", "login", "regexp", 0));
+            _instance.HeSet(("input:text", "autocomplete", "username", "text", 0), login, deadline: 30);
+            _instance.HeClick(("span", "innertext", "Next", "regexp", 1), "clickOut");
+
+            if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Sorry, we could not find your account')]", 0).IsVoid) return "NotFound";
+
+            _instance.HeSet(("password", "name"), _project.Variables["twitterPASSWORD"].Value);
+
+
+            _instance.HeClick(("button", "data-testid", "LoginForm_Login_Button", "regexp", 0), "clickOut");
+
+            if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Wrong password!')]", 0).IsVoid) return "WrongPass";
+
+            var codeOTP = OTP.Offline(_project.Variables["twitterCODE2FA"].Value);
+            _instance.HeSet(("text", "name"), codeOTP);
+
+
+            _instance.HeClick(("span", "innertext", "Next", "regexp", 1), "clickOut");
+
+            if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Your account is suspended')]", 0).IsVoid) return "Suspended";
+            if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Oops,\\ something\\ went\\ wrong.\\ Please\\ try\\ again\\ later.", "regexp", 0).IsVoid) return "SomethingWentWrong";
+            if (!_instance.ActiveTab.FindElementByAttribute("*", "innertext", "Suspicious\\ login\\ prevented", "regexp", 0).IsVoid) return "SuspiciousLogin";
+
+            _instance.HeClick(("button", "innertext", "Accept\\ all\\ cookies", "regexp", 0), deadline: 1, thr0w: false);
+            _instance.HeClick(("button", "data-testid", "xMigrationBottomBar", "regexp", 0), deadline: 0, thr0w: false);
+            XgetToken();
+            return "ok";
+        }
+        public string Xload(bool log = false)
+        {
+
+
+            bool tokenUsed = false;
+            DateTime deadline = DateTime.Now.AddSeconds(60);
+        check:
+
+            if (DateTime.Now > deadline) throw new Exception("timeout");
+
+            var status = XcheckState(log: true);
+            try { _project.Var("twitterSTATUS", status); } catch (Exception ex) { }
+            if (status == "login" && !tokenUsed)
+            {
+                XsetToken();
+                tokenUsed = true;
+                Thread.Sleep(3000);
+            }
+            else if (status == "login" && tokenUsed)
+            {
+                var login = Xlogin();
+                _project.L0g($"{login}");
+                Thread.Sleep(3000);
+            }
+            else if (status == "mixed")
+            {
+                _instance.CloseAllTabs();
+                _instance.ClearCookie("x.com");
+                _instance.ClearCache("x.com");
+                _instance.ClearCookie("twitter.com");
+                _instance.ClearCache("twitter.com");
+                goto check;
+
+            }
+            if (status == "restricted" || status == "suspended" || status == "emailCapcha")
+            {
+                
+                _sql.Upd($"status = '{status}'", "twitter");
+                return status;
+            }
+            else if (status == "ok")
+            {
+                _instance.HeClick(("button", "innertext", "Accept\\ all\\ cookies", "regexp", 0), deadline: 0, thr0w: false);
+                _instance.HeClick(("button", "data-testid", "xMigrationBottomBar", "regexp", 0), deadline: 0, thr0w: false);
+
+                XgetToken();
+                return status;
+            }
+            else
+                _project.L0g($"unknown {status}");
+            goto check;
+        }
+        public void XAuth()
+        {
+            DateTime deadline = DateTime.Now.AddSeconds(60);
+        check:
+            if (DateTime.Now > deadline) throw new Exception("timeout");
+            _instance.HeClick(("button", "innertext", "Accept\\ all\\ cookies", "regexp", 0), deadline: 0, thr0w: false);
+            _instance.HeClick(("button", "data-testid", "xMigrationBottomBar", "regexp", 0), deadline: 0, thr0w: false);
+
+            string state = null;
+
+
+            if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Sorry, we could not find your account')]", 0).IsVoid) state = "NotFound";
+            else if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Your account is suspended')]", 0).IsVoid) state = "Suspended";
+            else if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Wrong password!')]", 0).IsVoid) state = "WrongPass";
+            else if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Oops,\\ something\\ went\\ wrong.\\ Please\\ try\\ again\\ later.", "regexp", 0).IsVoid) state = "SomethingWentWrong";
+            else if (!_instance.ActiveTab.FindElementByAttribute("*", "innertext", "Suspicious\\ login\\ prevented", "regexp", 0).IsVoid) state = "SuspiciousLogin";
+
+
+
+            else if (!_instance.ActiveTab.FindElementByAttribute("input:text", "autocomplete", "username", "text", 0).IsVoid) state = "InputLogin";
+            else if (!_instance.ActiveTab.FindElementByAttribute("input:password", "autocomplete", "current-password", "text", 0).IsVoid) state = "InputPass";
+            else if (!_instance.ActiveTab.FindElementByAttribute("input:text", "data-testid", "ocfEnterTextTextInput", "text", 0).IsVoid) state = "InputOTP";
+
+
+            else if (!_instance.ActiveTab.FindElementByAttribute("a", "data-testid", "login", "regexp", 0).IsVoid) state = "ClickLogin";
+            else if (!_instance.ActiveTab.FindElementByAttribute("li", "data-testid", "UserCell", "regexp", 0).IsVoid) state = "CheckUser";
+
+
+            _project.L0g(state);
+
+            switch (state)
+            {
+                case "NotFound":
+                case "Suspended":
+                case "SuspiciousLogin":
+                case "WrongPass":
+                    _sql.Upd($"status = '{state}'", "twitter");
+                    throw new Exception($"{state}");
+                case "ClickLogin":
+                    _instance.HeClick(("a", "data-testid", "login", "regexp", 0));
+                    goto check;
+                case "InputLogin":
+                    _instance.HeSet(("input:text", "autocomplete", "username", "text", 0), _login, deadline: 30);
+                    _instance.HeClick(("span", "innertext", "Next", "regexp", 1), "clickOut");
+                    goto check;
+                case "InputPass":
+                    _instance.HeSet(("input:password", "autocomplete", "current-password", "text", 0), _pass);
+                    _instance.HeClick(("button", "data-testid", "LoginForm_Login_Button", "regexp", 0), "clickOut");
+                    goto check;
+                case "InputOTP":
+                    _instance.HeSet(("input:text", "data-testid", "ocfEnterTextTextInput", "text", 0), OTP.Offline(_2fa));
+                    _instance.HeClick(("span", "innertext", "Next", "regexp", 1), "clickOut");
+                    goto check;
+                case "CheckUser":
+                    string userdata = _instance.HeGet(("li", "data-testid", "UserCell", "regexp", 0));
+                    if (userdata.Contains(_login))
+                    {
+                        _instance.HeClick(("button", "data-testid", "OAuth_Consent_Button", "regexp", 0));
+                        goto check;
+                    }
+                    else
+                    {
+                        throw new Exception("wrong account");
+                    }
+                default:
+                    _logger.Send($"unknown state [{state}]");
+                    break;
+
+            }
+
+            if (!_instance.ActiveTab.URL.Contains("x.com") && !_instance.ActiveTab.URL.Contains("twitter.com"))
+                _project.L0g("auth done");
+            else goto check;
+        }
+
+
+
+
+        public void Auth()
+        {
+            _project.Deadline();
+            _instance.HeClick(("button", "innertext", "Accept\\ all\\ cookies", "regexp", 0), deadline: 0, thr0w: false);
+            _instance.HeClick(("button", "data-testid", "xMigrationBottomBar", "regexp", 0), deadline: 0, thr0w: false);
+
+
+
+        check:
+            _project.Deadline(60);
+            string state = State();
+             
+            _project.L0g(state);
+
+            switch (state)
+            {
+                case "NotFound":
+                case "Suspended":
+                case "SuspiciousLogin":
+                case "WrongPass":
+                    _sql.Upd($"status = '{state}'", "twitter");
+                    throw new Exception($"{state}");
+                case "ClickLogin":
+                    _instance.HeClick(("a", "data-testid", "login", "regexp", 0));
+                    goto check;
+                case "InputLogin":
+                    _instance.HeSet(("input:text", "autocomplete", "username", "text", 0), _login, deadline: 30);
+                    _instance.HeClick(("span", "innertext", "Next", "regexp", 1), "clickOut");
+                    goto check;
+                case "InputPass":
+                    _instance.HeSet(("input:password", "autocomplete", "current-password", "text", 0), _pass);
+                    _instance.HeClick(("button", "data-testid", "LoginForm_Login_Button", "regexp", 0), "clickOut");
+                    goto check;
+                case "InputOTP":
+                    _instance.HeSet(("input:text", "data-testid", "ocfEnterTextTextInput", "text", 0), OTP.Offline(_2fa));
+                    _instance.HeClick(("span", "innertext", "Next", "regexp", 1), "clickOut");
+                    goto check;
+                case "CheckUser":
+                    string userdata = _instance.HeGet(("li", "data-testid", "UserCell", "regexp", 0));
+                    if (userdata.Contains(_login))
+                    {
+                        _instance.HeClick(("button", "data-testid", "OAuth_Consent_Button", "regexp", 0));
+                        goto check;
+                    }
+                    else
+                    {
+                        throw new Exception("wrong account");
+                    }
+                case "AuthV1SignIn":
+                    _instance.HeClick(("allow", "id"));
+                    goto check;
+                case "InvalidRequestToken":
+                    _instance.CloseExtraTabs();
+                    throw new Exception(state);
+                case "AuthV1Confirm":
+                    _instance.HeClick(("allow", "id"));
+                    goto check;
+                default:
+                    _logger.Send($"unknown state [{state}]");
+                    break;
+
+            }
+
+            if (!_instance.ActiveTab.URL.Contains("x.com") && !_instance.ActiveTab.URL.Contains("twitter.com"))
+                _project.L0g("auth done");
+            else goto check;
+        }
+        public string State()
+        {
+            string state = "undefined";
+
+            if (_instance.ActiveTab.URL.Contains("oauth/authorize")) 
+            {
+                if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'The request token for this page is invalid')]", 0).IsVoid) 
+                    return "InvalidRequestToken";
+                if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'This account is suspended')]", 0).IsVoid)
+                    return "Suspended";
+                if (!_instance.ActiveTab.FindElementById("session").IsVoid)
+                {
+                    var currentAcc = _instance.HeGet(("session", "id"));
+                    if (currentAcc.ToLower() == _login.ToLower())
+                        state = "AuthV1Confirm";
+                    else
+                        state = "!WrongAccount";    
+                }
+
+                else if (!_instance.ActiveTab.FindElementById("allow").IsVoid)
+                {
+                    if (_instance.HeGet(("allow", "id"), atr: "value") == "Sign In")
+                        state = "AuthV1SignIn";
+                }
+                return state;
+            }
+
+            if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Sorry, we could not find your account')]", 0).IsVoid) state = "NotFound";
+            else if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Your account is suspended')]", 0).IsVoid) state = "Suspended";
+            else if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Wrong password!')]", 0).IsVoid) state = "WrongPass";
+            else if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Oops,\\ something\\ went\\ wrong.\\ Please\\ try\\ again\\ later.", "regexp", 0).IsVoid) state = "SomethingWentWrong";
+            else if (!_instance.ActiveTab.FindElementByAttribute("*", "innertext", "Suspicious\\ login\\ prevented", "regexp", 0).IsVoid) state = "SuspiciousLogin";
+
+
+
+            else if (!_instance.ActiveTab.FindElementByAttribute("input:text", "autocomplete", "username", "text", 0).IsVoid) state = "InputLogin";
+            else if (!_instance.ActiveTab.FindElementByAttribute("input:password", "autocomplete", "current-password", "text", 0).IsVoid) state = "InputPass";
+            else if (!_instance.ActiveTab.FindElementByAttribute("input:text", "data-testid", "ocfEnterTextTextInput", "text", 0).IsVoid) state = "InputOTP";
+
+
+            else if (!_instance.ActiveTab.FindElementByAttribute("a", "data-testid", "login", "regexp", 0).IsVoid) state = "ClickLogin";
+            else if (!_instance.ActiveTab.FindElementByAttribute("li", "data-testid", "UserCell", "regexp", 0).IsVoid) state = "CheckUser";
+            return state;
+        }
+
+        public void UpdXCreds(Dictionary<string, string> data)
+        {
+            if (data.ContainsKey("CODE2FA"))
+            {
+                _project.L0g($"CODE2FA raw value: {data["CODE2FA"]}"); // Логируем исходное значение
+            }
+
+            var fields = new Dictionary<string, string>
+            {
+                { "LOGIN", data.ContainsKey("LOGIN") ? data["LOGIN"].Replace("'", "''") : "" },
+                { "PASSWORD", data.ContainsKey("PASSWORD") ? data["PASSWORD"].Replace("'", "''") : "" },
+                { "EMAIL", data.ContainsKey("EMAIL") ? data["EMAIL"].Replace("'", "''") : "" },
+                { "EMAIL_PASSWORD", data.ContainsKey("EMAIL_PASSWORD") ? data["EMAIL_PASSWORD"].Replace("'", "''") : "" },
+                { "TOKEN", data.ContainsKey("TOKEN") ? (data["TOKEN"].Contains('=') ? data["TOKEN"].Split('=').Last().Replace("'", "''") : data["TOKEN"].Replace("'", "''")) : "" },
+                { "CODE2FA", data.ContainsKey("CODE2FA") ? (data["CODE2FA"].Contains('/') ? data["CODE2FA"].Split('/').Last().Replace("'", "''") : data["CODE2FA"].Replace("'", "''")) : "" },
+                { "RECOVERY_SEED", data.ContainsKey("RECOVERY_SEED") ? data["RECOVERY_SEED"].Replace("'", "''") : "" }
+            };
+
+            var _sql = new Sql(_project, _logShow);
+            try
+            {
+                _sql.Upd($@"token = '{fields["TOKEN"]}', 
+                login = '{fields["LOGIN"]}', 
+                password = '{fields["PASSWORD"]}', 
+                otpsecret = '{fields["CODE2FA"]}', 
+                email = '{fields["EMAIL"]}', 
+                emailpass = '{fields["EMAIL_PASSWORD"]}', 
+                otpbackup = '{fields["RECOVERY_SEED"]}'", "private_twitter");
+            }
+            catch (Exception ex)
+            {
+                _project.L0g("!W{ex.Message}");
+            }
+            LoadCreds();
+        }
+
+        
+
+        public void ParseProfile()
+        {
+            _instance.HeClick(("*", "data-testid", "AppTabBar_Profile_Link", "regexp", 0));
+
+
+            string json = _instance.HeGet(("*", "data-testid", "UserProfileSchema-test", "regexp", 0));
+
+            var jo = JObject.Parse(json);
+            var main = jo["mainEntity"];
+
+            string dateCreated = jo["dateCreated"].ToString();
+            string id = main["identifier"].ToString();
+
+            string username = main["additionalName"].ToString();
+            string description = main["description"].ToString();
+            string givenName = main["givenName"].ToString();
+            string homeLocation = main["homeLocation"]["name"].ToString();
+
+            string ava = main["image"]["contentUrl"].ToString();
+            string banner = main["image"]["thumbnailUrl"].ToString();
+
+            var interactionStatistic = main["interactionStatistic"];
+
+            string Followers = interactionStatistic[0]["userInteractionCount"].ToString();
+            string Following = interactionStatistic[1]["userInteractionCount"].ToString();
+            string Tweets = interactionStatistic[2]["userInteractionCount"].ToString();
+
+            _sql.Upd($@"datecreated = '{dateCreated}',
+                        id = '{id}',
+                        username = '{username}',
+                        description = '{description}',
+                        givenname = '{givenName}',
+                        homelocation = '{homeLocation}',
+                        ava = '{ava}',
+                        banner = '{banner}',
+                        followers = '{Followers}',
+                        following = '{Following}',
+                        tweets = '{Tweets}',
+                        ");
+
+
+            try
+            {
+                var toFill = _project.Lists["editProfile"];
+                toFill.Clear();
+
+                if (description == "") toFill.Add("description");
+                if (homeLocation == "") toFill.Add("homeLocation");
+                if (ava == "https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png") toFill.Add("ava");
+                if (banner == "https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png") toFill.Add("banner");
+
+            }
+            catch { }
+
+        }
+        public void ParseSecurity()
+        {
+
+            _instance.ActiveTab.Navigate("https://x.com/settings/your_twitter_data/account", "");
+
+        scan:
+            try
+            {
+                _instance.HeSet(("current_password", "name"), _pass, deadline: 1);
+                _instance.HeClick(("button", "innertext", "Confirm", "regexp", 0));
+            }
+            catch { }
+            var tIdList = _instance.ActiveTab.FindElementsByAttribute("*", "data-testid", ".", "regexp").ToList();
+
+            if (tIdList.Count < 50)
+            {
+                Thread.Sleep(3000);
+                goto scan;
+            }
+
+            string email = null;
+            string phone = null;
+            string creation = null;
+            string country = null;
+            string lang = null;
+            string gender = null;
+            string birth = null;
+
+
+            foreach (HtmlElement he in tIdList)
+            {
+                string pName = null;
+                string pValue = null;
+                string testid = he.GetAttribute("data-testid");
+                string href = he.GetAttribute("href");
+                string text = he.InnerText;
+
+                switch (testid)
+                {
+                    case "account-creation":
+                        pName = text.Split('\n')[0];
+                        pValue = text.Replace(pName, "").Replace("\n", " ").Trim();
+                        creation = pValue;
+                        continue;
+                    case "pivot":
+                        pName = text.Split('\n')[0];
+                        pValue = text.Replace(pName, "").Replace("\n", " ").Trim();
+                        switch (pName)
+                        {
+                            case "Phone":
+                                phone = pValue;
+                                break;
+                            case "Email":
+                                email = pValue;
+                                break;
+                            case "Country":
+                                country = pValue;
+                                break;
+                            case "Languages":
+                                lang = pValue;
+                                break;
+                            case "Gender":
+                                gender = pValue;
+                                break;
+                            case "Birth date":
+                                birth = pValue;
+                                break;
+                        }
+                        continue;
+                    default:
+                        continue;
+                }
+            }
+            _sql.Upd($@"creation = '{creation}',
+                        email = '{email}',
+                        phone = '{phone}',
+                        country = '{country}',
+                        lang = '{lang}',
+                        gender = '{gender}',
+                        birth = '{birth}',
+                        ");
+
+
+            try
+            {
+                email = email.ToLower();
+                var emails = _sql.Get("gmail, icloud, firstmail", "public_mail").ToLower();
+                var address = _sql.Address("evm_pk").ToLower();
+                var toFill = _project.Lists["editSecurity"];
+                toFill.Clear();
+
+                if (!emails.Contains(email) || !email.Contains(address)) toFill.Add("email");
+
+            }
+            catch { }
+        }
+    }
+
+    public class Perplexity
+    {
+        protected readonly IZennoPosterProjectModel _project;
+        private readonly Logger _logger;
+        private readonly string _apiKey;
+
+        public Perplexity(IZennoPosterProjectModel project, bool log = false)
+        {
+            _project = project;
+            _logger = new Logger(project, log: log, classEmoji: "AI");
+            _apiKey = new Sql(_project).Get("apikey", "private_api", where: "key = 'perplexity'");
+
+        }
+
+        public string Query(string systemContent, string userContent, string model = "sonar",  bool log = false)
+        {
+            var requestBody = new
+            {
+                model = model,
+                messages = new[]
+                {
+                    new
+                    {
+                        role = "system",
+                        content = systemContent
+                    },
+                    new
+                    {
+                        role = "user",
+                        content = userContent
+                    }
+                },
+                temperature = 0.8,
+                top_p = 0.9,
+                top_k = 0,
+                stream = false,
+                presence_penalty = 0,
+                frequency_penalty = 1
+            };
+
+            string jsonBody = Newtonsoft.Json.JsonConvert.SerializeObject(requestBody, Newtonsoft.Json.Formatting.None);
+
+            string[] headers = new string[]
+            {
+                "Content-Type: application/json",
+                $"Authorization: Bearer {_apiKey}"
+            };
+        gen:
+            string response = _project.POST("https://api.perplexity.ai/chat/completions", jsonBody, "", headers, log);
+            _logger.Send($"Full response: {response}");
+
+            try
+            {
+                var jsonResponse = Newtonsoft.Json.Linq.JObject.Parse(response);
+                string Text = jsonResponse["choices"][0]["message"]["content"].ToString();
+                _logger.Send(Text);
+                return Text;
+            }
+            catch (Exception ex)
+            {
+                _logger.Send($"!W Error parsing response: {ex.Message}");
+                throw;
+            }
+        }
+
+
+        public string GenerateTweet(string content, string bio = "", bool log = false)
+        {
+            string systemContent = string.IsNullOrEmpty(bio)
+                            ? "You are a social media account. Generate tweets that reflect a generic social media persona."
+                            : $"You are a social media account with the bio: '{bio}'. Generate tweets that reflect this persona, incorporating themes relevant to bio.";
+
+        gen:
+            string tweetText = Query(systemContent, content);
+            if (tweetText.Length > 220)
+            {
+                _logger.Send($"tweet is over 220sym `y");
+                goto gen;
+            }
+            return tweetText;
+
+        }
+
+        public string OptimizeCode(string content, bool log = false)
+        {
+            string systemContent = "You are a web3 developer. Optimize the following code. Return only the optimized code. Do not add explanations, comments, or formatting. Output code only, in plain text.";
+            return Query(systemContent, content);
+
+        }
+
+    }
+
+    public class Aiio
+    {
+        protected readonly IZennoPosterProjectModel _project;
+        private readonly Logger _logger;
+        private readonly string _apiKey;
+
+        public Aiio(IZennoPosterProjectModel project, bool log = false)
+        {
+            _project = project;
+            _logger = new Logger(project, log: log, classEmoji: "AI");
+            _apiKey = new Sql(_project).Get("apikey", "private_api", where: "key = 'aiio'");
+        }
+
+        public string Query(string systemContent, string userContent, string model = "sonar", bool log = false)
+        {
+            var requestBody = new
+            {
+                model = "google/gemma-3-27b-it", // {Qwen/Qwen2.5-Coder-32B-Instruct|deepseek-ai/DeepSeek-R1|deepseek-ai/DeepSeek-R1-0528|databricks/dbrx-instruct|mistralai/Mistral-Large-Instruct-2411|meta-llama/Llama-3.3-70B-Instruct|Qwen/Qwen3-235B-A22B-FP8|Qwen/QwQ-32B|deepseek-ai/DeepSeek-R1-Distill-Qwen-32B|google/gemma-3-27b-it}
+                messages = new[]
+                {
+                    new
+                    {
+                        role = "system",
+                        content = systemContent
+                    },
+                    new
+                    {
+                        role = "user",
+                        content = userContent
+                    }
+                },
+                temperature = 0.8,
+                top_p = 0.9,
+                top_k = 0,
+                stream = false,
+                presence_penalty = 0,
+                frequency_penalty = 1
+            };
+
+            string jsonBody = Newtonsoft.Json.JsonConvert.SerializeObject(requestBody, Newtonsoft.Json.Formatting.None);
+
+            string[] headers = new string[]
+            {
+                "Content-Type: application/json",
+                $"Authorization: Bearer {_apiKey}"
+            };
+        gen:
+
+            //string response = new NetHttp2(_project, true).POST("https://api.intelligence.io.solutions/api/v1/chat/completions", jsonBody, "", headers);
+
+            string response = _project.POST("https://api.intelligence.io.solutions/api/v1/chat/completions", jsonBody, "", headers, log);
+            _logger.Send($"Full response: {response}");
+
+            try
+            {
+                var jsonResponse = Newtonsoft.Json.Linq.JObject.Parse(response);
+                string Text = jsonResponse["choices"][0]["message"]["content"].ToString();
+                _logger.Send(Text);
+                return Text;
+            }
+            catch (Exception ex)
+            {
+                _logger.Send($"!W Error parsing response: {ex.Message}");
+                throw;
+            }
+        }
+
+
+        public string GenerateTweet(string content, string bio = "", bool log = false)
+        {
+            string systemContent = string.IsNullOrEmpty(bio)
+                            ? "You are a social media account. Generate tweets that reflect a generic social media persona."
+                            : $"You are a social media account with the bio: '{bio}'. Generate tweets that reflect this persona, incorporating themes relevant to bio.";
+
+        gen:
+            string tweetText = Query(systemContent, content);
+            if (tweetText.Length > 220)
+            {
+                _logger.Send($"tweet is over 220sym `y");
+                goto gen;
+            }
+            return tweetText;
+
+        }
+
+        public string OptimizeCode(string content, bool log = false)
+        {
+            string systemContent = "You are a web3 developer. Optimize the following code. Return only the optimized code. Do not add explanations, comments, or formatting. Output code only, in plain text.";
+            return Query(systemContent, content);
+
+        }
+
+    }
+
+
+    public class NetHttp2
+    {
+        private readonly IZennoPosterProjectModel _project;
+        private readonly Logger _logger;
+        private readonly bool _logShow;
+
+        public NetHttp2(IZennoPosterProjectModel project, bool log = false)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            _project = project ?? throw new ArgumentNullException(nameof(project));
+            _logShow = log;
+            _logger = new Logger(project, log: log, classEmoji: "↑↓");
+        }
+
+        protected void Log(string message, [CallerMemberName] string callerName = "", bool forceLog = false)
+        {
+            if (!_logShow && !forceLog) return;
+            _logger.Send($"({callerName}) [{message}]");
+        }
+        protected void ParseJson(string json)
+        {
+            try
+            {
+                _project.Json.FromString(json);
+            }
+            catch (Exception ex)
+            {
+                _logger.Send($"[!W {ex.Message}] [{json}]");
+            }
+        }
+        public WebProxy ParseProxy(string proxyString, [CallerMemberName] string callerName = "")
+        {
+            if (string.IsNullOrEmpty(proxyString))
+            {
+                return null;
+            }
+            if (proxyString == "+")
+                proxyString = new Sql(_project).Get("proxy", "private_profile");
+            try
+            {
+                WebProxy proxy = new WebProxy();
+
+                if (proxyString.Contains("//")) proxyString = proxyString.Split('/')[2];
+
+                if (proxyString.Contains("@")) // Прокси с авторизацией (login:pass@proxy:port)
+                {
+                    string[] parts = proxyString.Split('@');
+                    string credentials = parts[0];
+                    string proxyHost = parts[1];
+
+                    proxy.Address = new Uri("http://" + proxyHost);
+                    string[] creds = credentials.Split(':');
+                    proxy.Credentials = new NetworkCredential(creds[0], creds[1]);
+
+                }
+                else // Прокси без авторизации (proxy:port)
+                {
+                    proxy.Address = new Uri("http://" + proxyString);
+                }
+
+                return proxy;
+            }
+            catch (Exception e)
+            {
+                _logger.Send(e.Message + $"[{proxyString}]");
+                return null;
+            }
+        }
+
+
+
+        //private Dictionary<string, string> BuildHeaders(object inputHeaders = null)
+        //{
+
+        //    var headers = new Dictionary<string, string>
+        //    {
+        //        { "User-Agent", _project.Profile.UserAgent },
+        //    };
+
+
+        //    if (inputHeaders is null)
+        //        return headers;
+
+
+        //    else if (inputHeaders is Dictionary<string, string>)
+        //    {
+
+        //        Dictionary<string, string> newHeaders = inputHeaders;
+        //        foreach (var header in newHeaders)
+        //        {
+        //            headers[header.Key] = header.Value;
+        //        }
+        //    }
+
+        //    else
+        //        foreach (string header in inputHeaders)
+        //        {
+        //            string headerKey = header.Split(':')[0];
+        //            string headerValue = header.Split(':')[1];
+        //            headers[headerKey] = headerValue;
+        //        }
+        //    return headers;
+        //}
+
+        private Dictionary<string, string> BuildHeaders(object inputHeaders = null)
+        {
+            var headers = new Dictionary<string, string>
+            {
+                { "User-Agent", _project.Profile.UserAgent },
+                { "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" },
+                { "Accept-Encoding", "" },
+                { "Accept-Language", "en-US,en;q=0.5" },
+            };
+
+            if (inputHeaders is null)
+            {
+                return headers;
+            }
+            else if (inputHeaders is Dictionary<string, string> dictHeaders) // Использование "pattern matching" для явного приведения
+            {
+                // dictHeaders теперь уже имеет нужный тип Dictionary<string, string>
+                foreach (var header in dictHeaders)
+                {
+                    try { headers.Add(header.Key, header.Value); }
+                    catch { headers[header.Key] = header.Value; }
+                   
+                }
+            }
+            else if (inputHeaders is IEnumerable<string> stringHeaders) // Также использование "pattern matching"
+            {
+                foreach (string header in stringHeaders)
+                {
+                    string[] parts = header.Split(new[] { ':' }, 2); // Разделяем только по первому двоеточию
+                    if (parts.Length == 2)
+                    {
+                        string headerKey = parts[0].Trim(); // Удаляем пробелы
+                        string headerValue = parts[1].Trim(); // Удаляем пробелы
+
+                        try { headers.Add(headerKey, headerValue); }
+                        catch { headers[headerKey] = headerValue; }
+
+                    }
+                    // Можно добавить else-блок для обработки некорректных строк заголовков
+                }
+            }
+            // Можно добавить else-блок для обработки неподдерживаемых типов inputHeaders
+
+            return headers;
+        }
+
+
+        public string GET(
+            string url,
+            string proxyString = "",
+            object headers = null,
+            bool parse = false,
+            int deadline = 15,
+            [CallerMemberName] string callerName = "",
+            bool throwOnFail = false)
+        {
+            string debugHeaders = "";
+            try
+            {
+                WebProxy proxy = ParseProxy(proxyString);
+                var handler = new HttpClientHandler
+                {
+                    Proxy = proxy,
+                    UseProxy = proxy != null
+                };
+
+                using (var client = new HttpClient(handler))
+                {
+                    client.Timeout = TimeSpan.FromSeconds(deadline);
+
+                    var requestHeaders = BuildHeaders(headers);
+
+                    foreach (var header in requestHeaders)
+                    {
+                        client.DefaultRequestHeaders.Add(header.Key, header.Value);
+                        debugHeaders += $"{header.Key}: {header.Value}; ";
+                    }
+
+                    HttpResponseMessage response = client.GetAsync(url).GetAwaiter().GetResult();
+                    response.EnsureSuccessStatusCode();
+
+                    string responseHeaders = string.Join("; ", response.Headers.Select(h => $"{h.Key}: {string.Join(", ", h.Value)}"));
+
+                    string cookies = "";
+                    if (response.Headers.TryGetValues("Set-Cookie", out var cookieValues))
+                    {
+                        cookies = string.Join("; ", cookieValues);
+                        _logger.Send($"Set-Cookie found: {cookies}");
+                    }
+
+                    try
+                    {
+                        _project.Variables["debugCookies"].Value = cookies;
+                    }
+                    catch { }
+
+                    string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    if (parse) ParseJson(result);
+                    _logger.Send(result);
+                    return result.Trim();
+                }
+            }
+            catch (HttpRequestException e)
+            {
+                _logger.Send($"[GET] SERVER Err: [{e.Message}] url:[{url}] (proxy: {(proxyString)}), headers: [{debugHeaders.Trim()}]");
+                if (throwOnFail) throw;
+                return e.Message.Replace("Response status code does not indicate success:", "").Trim('.').Trim();
+            }
+            catch (Exception e)
+            {
+                _logger.Send($"!W [GET] RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString)}) headers: [{debugHeaders.Trim()}]");
+                if (throwOnFail) throw;
+                return string.Empty;
+            }
+        }
+
+        public string POST(
+            string url,
+            string body,
+            string proxyString = "",
+            object headers = null,
+            bool parse = false,
+            int deadline = 15,
+            [CallerMemberName] string callerName = "",
+            bool throwOnFail = false)
+        {
+            string debugHeaders = "";
+            try
+            {
+                WebProxy proxy = ParseProxy(proxyString);
+                var handler = new HttpClientHandler
+                {
+                    Proxy = proxy,
+                    UseProxy = proxy != null
+                };
+
+                using (var client = new HttpClient(handler))
+                {
+                    client.Timeout = TimeSpan.FromSeconds(deadline);
+                    var content = new System.Net.Http.StringContent(body, Encoding.UTF8, "application/json");
+
+                    var requestHeaders = BuildHeaders(headers);
+
+                    foreach (var header in requestHeaders)
+                    {
+                        client.DefaultRequestHeaders.Add(header.Key, header.Value);
+                        debugHeaders += $"{header.Key}: {header.Value}\n";
+                    }
+                    debugHeaders += "Content-Type: application/json; charset=UTF-8; ";
+
+                    _logger.Send(body);
+
+                    HttpResponseMessage response = client.PostAsync(url, content).GetAwaiter().GetResult();
+                    response.EnsureSuccessStatusCode();
+
+                    string responseHeaders = string.Join("; ", response.Headers.Select(h => $"{h.Key}: {string.Join(", ", h.Value)}"));
+
+                    string cookies = "";
+                    if (response.Headers.TryGetValues("Set-Cookie", out var cookieValues))
+                    {
+                        cookies = string.Join("; ", cookieValues);
+                        _logger.Send($"Set-Cookie found: {cookies}");
+                    }
+
+                    try
+                    {
+                        _project.Variables["debugCookies"].Value = cookies;
+                    }
+                    catch { }
+
+                    string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    _logger.Send(result);
+                    if (parse) ParseJson(result);
+                    return result.Trim();
+                }
+            }
+            catch (HttpRequestException e)
+            {
+                _logger.Send($"[POST] SERVER Err: [{e.Message}] url:[{url}] (proxy: {(proxyString)}), headers: [{debugHeaders.Trim()}]");
+                if (throwOnFail) throw;
+                return e.Message.Replace("Response status code does not indicate success:", "").Trim('.').Trim();
+            }
+            catch (Exception e)
+            {
+                _logger.Send($"!W [POST] RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString)}) headers: [{debugHeaders.Trim()}]");
+                if (throwOnFail) throw;
+                return string.Empty;
+            }
+        }
+
+
+        public string PUT(
+            string url,
+            string body = "",
+            string proxyString = "",
+            Dictionary<string, string> headers = null,
+            bool parse = false,
+            [CallerMemberName] string callerName = "")
+        {
+            try
+            {
+                WebProxy proxy = ParseProxy(proxyString);
+                var handler = new HttpClientHandler
+                {
+                    Proxy = proxy,
+                    UseProxy = proxy != null
+                };
+
+                using (var client = new HttpClient(handler))
+                {
+                    client.Timeout = TimeSpan.FromSeconds(30);
+                    var content = string.IsNullOrEmpty(body) ? null : new System.Net.Http.StringContent(body, Encoding.UTF8, "application/json");
+
+                    StringBuilder headersString = new StringBuilder();
+                    headersString.AppendLine("[debugRequestHeaders]:");
+
+                    string defaultUserAgent = _project.Profile.UserAgent;
+                    if (headers == null || !headers.ContainsKey("User-Agent"))
+                    {
+                        client.DefaultRequestHeaders.Add("User-Agent", defaultUserAgent);
+                        headersString.AppendLine($"User-Agent: {defaultUserAgent} (default)");
+                    }
+
+                    if (headers != null)
+                    {
+                        foreach (var header in headers)
+                        {
+                            client.DefaultRequestHeaders.Add(header.Key, header.Value);
+                            headersString.AppendLine($"{header.Key}: {header.Value}");
+                        }
+                    }
+
+                    if (content != null)
+                    {
+                        headersString.AppendLine($"Content-Type: application/json; charset=UTF-8");
+                        _logger.Send(body);
+                    }
+
+                    HttpResponseMessage response = client.PutAsync(url, content).GetAwaiter().GetResult();
+                    response.EnsureSuccessStatusCode();
+
+                    StringBuilder responseHeadersString = new StringBuilder();
+                    responseHeadersString.AppendLine("[debugResponseHeaders]:");
+                    foreach (var header in response.Headers)
+                    {
+                        var value = string.Join(", ", header.Value);
+                        responseHeadersString.AppendLine($"{header.Key}: {value}");
+                    }
+
+                    string cookies = "";
+                    if (response.Headers.TryGetValues("Set-Cookie", out var cookieValues))
+                    {
+                        cookies = cookieValues.Aggregate((a, b) => a + "; " + b);
+                        _logger.Send("Set-Cookie found: {cookies}");
+                    }
+
+                    try
+                    {
+                        _project.Variables["debugCookies"].Value = cookies;
+                    }
+                    catch { }
+
+                    string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    _logger.Send(result);
+                    if (parse) ParseJson(result);
+                    return result.Trim();
+                }
+            }
+            catch (HttpRequestException e)
+            {
+                _logger.Send($"!W RequestErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")})");
+                return e.Message;
+            }
+            catch (Exception e)
+            {
+                _logger.Send($"!W UnknownErr: [{e.Message}] url:[{url}] (proxy: {(proxyString != "" ? proxyString : "noProxy")})");
+                return $"Ошибка: {e.Message}";
+            }
+        }
+
+        public string DELETE(
+            string url,
+            string proxyString = "",
+            Dictionary<string, string> headers = null,
+            [CallerMemberName] string callerName = "")
+        {
+
+            string debugHeaders = null;
+            try
+            {
+                WebProxy proxy = ParseProxy(proxyString);
+                var handler = new HttpClientHandler
+                {
+                    Proxy = proxy,
+                    UseProxy = proxy != null
+                };
+
+                using (var client = new HttpClient(handler))
+                {
+                    client.Timeout = TimeSpan.FromSeconds(30);
+
+                    StringBuilder headersString = new StringBuilder();
+                    headersString.AppendLine("[debugRequestHeaders]:");
+
+                    string defaultUserAgent = _project.Profile.UserAgent;
+                    if (headers == null || !headers.ContainsKey("User-Agent"))
+                    {
+                        client.DefaultRequestHeaders.Add("User-Agent", defaultUserAgent);
+                        headersString.AppendLine($"User-Agent: {defaultUserAgent} (default)");
+                    }
+
+                    if (headers != null)
+                    {
+                        foreach (var header in headers)
+                        {
+                            client.DefaultRequestHeaders.Add(header.Key, header.Value);
+                            headersString.AppendLine($"{header.Key}: {header.Value}");
+                            debugHeaders += $"{header.Key}: {header.Value}";
+                        }
+                    }
+
+                    HttpResponseMessage response = client.DeleteAsync(url).GetAwaiter().GetResult();
+                    response.EnsureSuccessStatusCode();
+
+                    StringBuilder responseHeadersString = new StringBuilder();
+                    responseHeadersString.AppendLine("[debugResponseHeaders]:");
+                    foreach (var header in response.Headers)
+                    {
+                        var value = string.Join(", ", header.Value);
+                        responseHeadersString.AppendLine($"{header.Key}: {value}");
+                    }
+
+                    string cookies = "";
+                    if (response.Headers.TryGetValues("Set-Cookie", out var cookieValues))
+                    {
+                        cookies = cookieValues.Aggregate((a, b) => a + "; " + b);
+                        _logger.Send($"Set-Cookie found: {cookies}");
+                    }
+
+                    try
+                    {
+                        _project.Variables["debugCookies"].Value = cookies;
+                    }
+                    catch { }
+
+                    string result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    _logger.Send(result);
+                    return result.Trim();
+                }
+            }
+            catch (HttpRequestException e)
+            {
+                _logger.Send($"!W [DELETE] RequestErr: [{e.Message}] url:[{url}] (proxy: {proxyString}), Headers\n{debugHeaders.Trim()}");
+                return e.Message;
+            }
+            catch (Exception e)
+            {
+                _logger.Send($"!W [DELETE] UnknownErr: [{e.Message}] url:[{url}] (proxy: {proxyString})");
+                return $"Ошибка: {e.Message}";
+            }
+        }
+
+
+        public bool CheckProxy(string proxyString = null)
+        {
+
+            if (string.IsNullOrEmpty(proxyString))
+                proxyString = new Sql(_project).Get("proxy", "private_profile");
+
+            //WebProxy proxy = ParseProxy(proxyString);
+
+            string ipLocal = GET("http://api.ipify.org/", null);
+            string ipProxified = GET("http://api.ipify.org/", proxyString);
+
+            //_logger.Send($"ipLocal: {ipLocal}, ipProxified: {ipProxified}");
+
+            if (ipProxified != ipLocal)
+            {
+                _logger.Send($"proxy `validated: {ipProxified}");
+                _project.Var("proxy", proxyString);
+                return true;
+            }
+            else if (ipProxified.StartsWith("Ошибка") || ipProxified == "Прокси не настроен")
+            {
+                _logger.Send($"!W proxy error: {ipProxified}");
+
+            }
+            else if (ipLocal == ipProxified)
+            {
+                _logger.Send($"!W ip still same. ipLocal: [{ipLocal}], ipProxified: [{ipProxified}]. Proxy was not applyed");
+            }
+            return false;
+        }
+
+        public bool ProxySet(Instance instance, string proxyString = null)
+        {
+
+            if (string.IsNullOrEmpty(proxyString))
+                proxyString = new Sql(_project).Get("proxy", "private_profile");
+
+
+            string ipLocal = GET("http://api.ipify.org/", null);
+            string ipProxified = GET("http://api.ipify.org/", proxyString);
+
+            if (ipProxified != ipLocal)
+            {
+                _logger.Send($"proxy `validated: {ipProxified}");
+                _project.Var("proxy", proxyString);
+                instance.SetProxy(proxyString, true, true, true, true);
+                return true;
+            }
+            else if (ipProxified.StartsWith("Ошибка") || ipProxified == "Proxy not Set")
+            {
+                _logger.Send($"!W proxy error: {ipProxified}");
+            }
+            else if (ipLocal == ipProxified)
+            {
+                _logger.Send($"!W ip still same. ipLocal: [{ipLocal}], ipProxified: [{ipProxified}]. Proxy was not applyed");
+            }
+            return false;
+        }
+
+    }
 
 
 }
-
-

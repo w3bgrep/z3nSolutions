@@ -127,15 +127,15 @@ namespace z3n
             return prefixMatch && suffixMatch;
         }
 
-        public static Dictionary<string, string> ParseCreds(this string data, string format)
+        public static Dictionary<string, string> ParseCreds(this string data, string format, char devider = ':')
         {
             var parsedData = new Dictionary<string, string>();
 
             if (string.IsNullOrWhiteSpace(format) || string.IsNullOrWhiteSpace(data))
                 return parsedData;
 
-            string[] formatParts = format.Split(':');
-            string[] dataParts = data.Split(':');
+            string[] formatParts = format.Split(devider);
+            string[] dataParts = data.Split(devider);
 
             for (int i = 0; i < formatParts.Length && i < dataParts.Length; i++)
             {

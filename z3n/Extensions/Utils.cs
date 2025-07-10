@@ -133,6 +133,10 @@ namespace z3n
             project.NullVars();
         }
 
+        public static string ReplaceCreds(this IZennoPosterProjectModel project, string social)
+        {
+            return new  FS(project).GetNewCreds(social);   
+        }
     }
     public static class Vars
     {

@@ -18,6 +18,8 @@ namespace z3n
     {
         protected readonly IZennoPosterProjectModel _project;
         protected readonly Instance _instance;
+        private readonly Logger _logger;
+
         protected readonly bool _logShow;
         protected readonly Sql _sql;
 
@@ -36,8 +38,9 @@ namespace z3n
             _instance = instance;
             _sql = new Sql(_project);
             _logShow = log;
-            
-            LoadCreds();
+
+
+        LoadCreds();
 
         }
 
@@ -192,7 +195,7 @@ namespace z3n
             if (DateTime.Now > deadline) throw new Exception("timeout");
 
             var status = XcheckState(log: true);
-
+            try { _project.Var("twitterSTATUS", status); } catch (Exception ex) { }
             if (status == "login" && !tokenUsed)
             {
                 XsetToken();
@@ -333,7 +336,7 @@ namespace z3n
                 code2fa = '{fields["CODE2FA"]}', 
                 emaillogin = '{fields["EMAIL"]}', 
                 emailpass = '{fields["EMAIL_PASSWORD"]}', 
-                recovery2fa = '{fields["RECOVERY_SEED"]}'", "twitter");
+                recovery2fa = '{fields["RECOVERY_SEED"]}'", "private_twitter");
             }
             catch (Exception ex)
             {
