@@ -45,6 +45,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="CapMonsterCloud">
+      <HintPath>C:\Program Files\ZennoLab\RU\ZennoPoster Pro V7\7.8.6.0\Progs\CapMonsterCloud.dll</HintPath>
+    </Reference>
     <Reference Include="Global">
       <HintPath>C:\Program Files\ZennoLab\RU\ZennoPoster Pro V7\7.8.6.0\Progs\Global.dll</HintPath>
     </Reference>
@@ -79,7 +82,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Browser\Cookies.cs" />
-    <Compile Include="Browser\Capcha.cs" />
+    <Compile Include="Browser\Captcha.cs" />
     <Compile Include="Extensions\Utils.cs" />
     <Compile Include="Protocols\AI.cs" />
     <Compile Include="Protocols\ChainOperaAI.cs" />

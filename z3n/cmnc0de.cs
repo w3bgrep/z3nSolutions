@@ -43,6 +43,14 @@ namespace w3tools //by @w3bgrep
 
     public  static class TestStatic
     {
+        public static void ClearShit(this Instance instance, string domain)
+        {
+            instance.CloseAllTabs();
+            instance.ClearCache(domain);
+            instance.ClearCookie(domain);
+            Thread.Sleep(500);
+            instance.ActiveTab.Navigate("about:blank", "");
+        }
         public static string ToPrivateKey(this string input)
         {
             // Проверка на null или пустую строку
@@ -68,10 +76,6 @@ namespace w3tools //by @w3bgrep
 
                 return hex.ToString();
             }
-        }
-        public static string ReplaceCreds(this IZennoPosterProjectModel project, string social)
-        {
-            return new FS(project).GetNewCreds(social);
         }
         public static Dictionary<string, string> ParseCreds2(this string data, string format, char devider = ':')
         {
@@ -401,8 +405,6 @@ namespace w3tools //by @w3bgrep
         }
         public string Xload(bool log = false)
         {
-
-
             bool tokenUsed = false;
             DateTime deadline = DateTime.Now.AddSeconds(60);
         check:
@@ -528,7 +530,56 @@ namespace w3tools //by @w3bgrep
 
 
 
+        public string Load(bool log = false)
+        {
+            bool tokenUsed = false;
+            DateTime deadline = DateTime.Now.AddSeconds(60);
+        check:
 
+            if (DateTime.Now > deadline) throw new Exception("timeout");
+
+            var status = XcheckState(log: true);
+            try { _project.Var("twitterSTATUS", status); } catch (Exception ex) { }
+            if (status == "login" && !tokenUsed)
+            {
+                XsetToken();
+                tokenUsed = true;
+                Thread.Sleep(3000);
+            }
+            else if (status == "login" && tokenUsed)
+            {
+                var login = Xlogin();
+                _project.L0g($"{login}");
+                Thread.Sleep(3000);
+            }
+            else if (status == "mixed")
+            {
+                _instance.CloseAllTabs();
+                _instance.ClearCookie("x.com");
+                _instance.ClearCache("x.com");
+                _instance.ClearCookie("twitter.com");
+                _instance.ClearCache("twitter.com");
+                goto check;
+
+            }
+            if (status == "restricted" || status == "suspended" || status == "emailCapcha")
+            {
+
+                _sql.Upd($"status = '{status}'", "twitter");
+                return status;
+            }
+            else if (status == "ok")
+            {
+                _instance.HeClick(("button", "innertext", "Accept\\ all\\ cookies", "regexp", 0), deadline: 0, thr0w: false);
+                _instance.HeClick(("button", "data-testid", "xMigrationBottomBar", "regexp", 0), deadline: 0, thr0w: false);
+
+                XgetToken();
+                return status;
+            }
+            else
+                _project.L0g($"unknown {status}");
+            goto check;
+        }
         public void Auth()
         {
             _project.Deadline();
@@ -586,6 +637,10 @@ namespace w3tools //by @w3bgrep
                 case "AuthV1Confirm":
                     _instance.HeClick(("allow", "id"));
                     goto check;
+                case "!WrongAccount":
+                    _instance.ClearShit("x.com");
+                    _instance.ClearShit("twitter.com");
+                    throw new Exception(state);
                 default:
                     _logger.Send($"unknown state [{state}]");
                     break;
@@ -612,7 +667,11 @@ namespace w3tools //by @w3bgrep
                     if (currentAcc.ToLower() == _login.ToLower())
                         state = "AuthV1Confirm";
                     else
-                        state = "!WrongAccount";    
+                    {
+                        state = "!WrongAccount";
+                        _logger.Send($"{state}: detected:[{currentAcc}] expected:[{_login}]");
+                    }
+                         
                 }
 
                 else if (!_instance.ActiveTab.FindElementById("allow").IsVoid)
@@ -972,8 +1031,6 @@ namespace w3tools //by @w3bgrep
             };
         gen:
 
-            //string response = new NetHttp2(_project, true).POST("https://api.intelligence.io.solutions/api/v1/chat/completions", jsonBody, "", headers);
-
             string response = _project.POST("https://api.intelligence.io.solutions/api/v1/chat/completions", jsonBody, "", headers, log);
             _logger.Send($"Full response: {response}");
 
@@ -1017,6 +1074,9 @@ namespace w3tools //by @w3bgrep
         }
 
     }
+
+
+
 
 
     public class NetHttp2
@@ -1087,41 +1147,6 @@ namespace w3tools //by @w3bgrep
                 return null;
             }
         }
-
-
-
-        //private Dictionary<string, string> BuildHeaders(object inputHeaders = null)
-        //{
-
-        //    var headers = new Dictionary<string, string>
-        //    {
-        //        { "User-Agent", _project.Profile.UserAgent },
-        //    };
-
-
-        //    if (inputHeaders is null)
-        //        return headers;
-
-
-        //    else if (inputHeaders is Dictionary<string, string>)
-        //    {
-
-        //        Dictionary<string, string> newHeaders = inputHeaders;
-        //        foreach (var header in newHeaders)
-        //        {
-        //            headers[header.Key] = header.Value;
-        //        }
-        //    }
-
-        //    else
-        //        foreach (string header in inputHeaders)
-        //        {
-        //            string headerKey = header.Split(':')[0];
-        //            string headerValue = header.Split(':')[1];
-        //            headers[headerKey] = headerValue;
-        //        }
-        //    return headers;
-        //}
 
         private Dictionary<string, string> BuildHeaders(object inputHeaders = null)
         {
@@ -1547,5 +1572,391 @@ namespace w3tools //by @w3bgrep
 
     }
 
+    public class G2
+    {
+        protected readonly IZennoPosterProjectModel _project;
+        protected readonly Instance _instance;
+        private readonly Logger _logger;
+
+        protected readonly bool _logShow;
+        protected readonly Sql _sql;
+
+        protected string _status;
+        protected string _login;
+        protected string _pass;
+        protected string _2fa;
+        protected string _recoveryMail;
+        protected string _recoveryCodes;
+        protected string _cookies;
+        protected bool _cookRestored = false;
+
+        public G2(IZennoPosterProjectModel project, Instance instance, bool log = false)
+        {
+
+            _project = project;
+            _instance = instance;
+            _sql = new Sql(_project);
+            _logger = new Logger(project, log: log, classEmoji: "G");
+            DbCreds();
+
+        }
+        private void DbCreds()
+        {
+            string[] creds = _sql.Get("status, login, password, otpsecret, recoveryemail, otpbackup, cookies", "private_google").Split('|');
+            try { _status = creds[0]; _project.Variables["googleSTATUS"].Value = _status; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _login = creds[1]; _project.Variables["googleLOGIN"].Value = _login; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _pass = creds[2]; _project.Variables["googlePASSWORD"].Value = _pass; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _2fa = creds[3]; _project.Variables["google2FACODE"].Value = _2fa; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _recoveryMail = creds[4]; _project.Variables["googleSECURITY_MAIL"].Value = _recoveryMail; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _recoveryCodes = creds[5]; _project.Variables["googleBACKUP_CODES"].Value = _recoveryCodes; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _cookies = creds[6]; _project.Variables["googleCOOKIES"].Value = _cookies; } catch (Exception ex) { _logger.Send(ex.Message); }
+        }
+        public string Load(bool log = false, bool cookieBackup = true)
+        {
+            if (!_instance.ActiveTab.URL.Contains("google")) _instance.Go("https://myaccount.google.com/");
+            check:
+            Thread.Sleep(1000);
+            string state = State();
+
+            _project.Var("googleSTATUS", state);
+
+            _logger.Send(state);
+            switch (state)
+            {
+                case "ok":
+                    if (cookieBackup) SaveCookies();
+                    return state;
+
+                case "!WrongAcc":
+
+                    _instance.CloseAllTabs();
+                    _instance.ClearCookie("google.com");
+                    _instance.ClearCookie("google.com");
+                    throw new Exception(state);
+
+                case "inputLogin":
+                    _instance.HeSet(("identifierId", "id"), _login);
+                    _instance.HeClick(("button", "innertext", "Next", "regexp", 0));
+                    goto check;
+
+                case "inputPassword":
+                    _instance.HeSet(("Passwd", "name"), _pass, deadline: 5);
+                    _instance.HeClick(("button", "innertext", "Next", "regexp", 0));
+                    goto check;
+
+                case "inputOtp":
+                    _instance.HeSet(("totpPin", "id"), OTP.Offline(_2fa));
+                    _instance.HeClick(("button", "innertext", "Next", "regexp", 0));
+                    goto check;
+
+                case "addRecoveryPhone":
+                    _instance.HeClick(("button", "innertext", "Cancel", "regexp", 0));
+                    _instance.HeClick(("button", "innertext", "Skip", "regexp", 0),dadline:5, thr0w:false);
+                    goto check;
+
+                case "setHome":
+                    _instance.HeClick(("button", "innertext", "Skip", "regexp", 0));
+                    goto check;
+
+                case "signInAgain":
+                    _instance.ClearShit("google.com");
+                        Thread.Sleep(3000);
+                    _instance.Go("https://myaccount.google.com/");
+                    goto check;
+
+                case "CAPTCHA":
+
+                    throw new Exception("gCAPTCHA");
+                    try { _project.CapGuru(); } catch { }
+                    _instance.HeClick(("button", "innertext", "Next", "regexp", 0));
+                    goto check;
+                case "phoneVerify":
+                case "badBrowser":
+                    _sql.Upd($"status = '{state}'", "projects_google");
+                    _sql.Upd($"status = '{state}'", "private_google");
+
+                    throw new Exception(state);
+
+                default:
+                    return state;
+
+            }
+
+        }
+        public string State(bool log = false)
+        {
+        check:
+            var state = "";
+
+            if (!_instance.ActiveTab.FindElementByAttribute("a", "href", "https://accounts.google.com/SignOutOptions\\?", "regexp", 0).IsVoid)
+                state = "signedIn";
+
+            else if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Confirm you’re not a robot')]", 0).IsVoid)
+                state = "CAPTCHA";
+
+            else if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Enter\\ a\\ phone\\ number\\ to\\ get\\ a\\ text\\ message\\ with\\ a\\ verification\\ code.", "regexp", 0).IsVoid)
+                state = "PhoneVerify";
+
+            else if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Try\\ using\\ a\\ different\\ browser.", "regexp", 0).IsVoid)
+                state = "BadBrowser";
+
+            else if ((!_instance.ActiveTab.FindElementByAttribute("input:email", "fulltagname", "input:email", "text", 0).IsVoid) &&
+                    (_instance.ActiveTab.FindElementByAttribute("input:email", "fulltagname", "input:email", "text", 0).GetAttribute("value") == ""))
+                state = "inputLogin";
+
+            else if ((!_instance.ActiveTab.FindElementByAttribute("input:password", "fulltagname", "input:password", "text", 0).IsVoid) &&
+                    _instance.ActiveTab.FindElementByAttribute("input:password", "fulltagname", "input:password", "text", 0).GetAttribute("value") == "")
+                state = "inputPassword";
+
+            else if ((!_instance.ActiveTab.FindElementById("totpPin").IsVoid) &&
+                    _instance.ActiveTab.FindElementById("totpPin").GetAttribute("value") == "")
+                state = "inputOtp";
+
+            else if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Add a recovery phone')]", 0).IsVoid)
+                state = "addRecoveryPhone";
+
+            else if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Set a home address')]", 0).IsVoid)
+                state = "setHome";
+
+            else if(!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Your account has been disabled')]", 0).IsVoid)
+                state = "Disabled";
+
+            else if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Google needs to verify it’s you. Please sign in again to continue')]", 0).IsVoid)
+                state = "signInAgain";
+
+            else state = "undefined";
+
+           //_logger.Send(state);
+            
+            switch (state)
+            {
+                case "signedIn":
+                    var currentAcc = _instance.HeGet(("a", "href", "https://accounts.google.com/SignOutOptions\\?", "regexp", 0), atr: "aria-label").Split('\n')[1];
+                    if (currentAcc.ToLower().Contains(_login.ToLower()))
+                    {
+                        _logger.Send($"{currentAcc} is Correct. Login done");
+                        state = "ok";
+                    }
+
+                    else
+                    {
+                        _logger.Send($"!W {currentAcc} is InCorrect. MustBe {_login}");
+                        state = "!WrongAcc";
+                    }
+                    break;
+
+                case "undefined":
+                    _instance.HeClick(("a", "class", "h-c-header__cta-li-link\\ h-c-header__cta-li-link--primary\\ button-standard-mobile", "regexp", 1), deadline: 1, thr0w: false);
+                    goto check;
+
+                default:
+                    break;
+
+            }
+            _project.Var("googleSTATUS", state);
+            return state;
+        }
+        public string Auth(bool log = false)
+        {
+            try
+            {
+                var userContainer = _instance.HeGet(("div", "data-authuser", "0", "regexp", 0));
+                _logger.Send($"container:{userContainer} catched");
+                if (userContainer.IndexOf(_login, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    _logger.Send($"correct user found: {_login}");
+                    _instance.HeClick(("div", "data-authuser", "0", "regexp", 0), delay: 3);
+                    Thread.Sleep(5000);
+                    if (!_instance.ActiveTab.FindElementByAttribute("div", "data-authuser", "0", "regexp", 0).IsVoid)
+                    {
+                        while (true) _instance.HeClick(("div", "data-authuser", "0", "regexp", 0), "clickOut", deadline: 5, delay: 3);
+                    }
+                Continue:
+                    try
+                    {
+                        _instance.HeClick(("button", "innertext", "Continue", "regexp", 0), deadline: 5, delay: 1);
+                        return "SUCCESS with continue";
+                    }
+                    catch
+                    {
+                        try
+                        {
+                            _instance.HeSet(("totpPin", "id"), OTP.Offline(_2fa), deadline: 1);
+                            _instance.HeClick(("button", "innertext", "Next", "regexp", 0));
+                            goto Continue;
+                        }
+                        catch (Exception ex) { }
+                        return "SUCCESS. without confirmation";
+                    }
+                }
+                else
+                {
+                    _logger.Send($"!Wrong account [{userContainer}]. Expected: {_login}. Cleaning");
+                    _instance.CloseAllTabs();
+                    _instance.ClearCookie("google.com");
+                    _instance.ClearCookie("google.com");
+                    return "FAIL. Wrong account";
+                }
+            }
+            catch
+            {
+                return "FAIL. No loggined Users Found";
+            }
+        }
+        public void SaveCookies()
+        {
+            _instance.Go("youtube.com");
+            if (_instance.ActiveTab.IsBusy) _instance.ActiveTab.WaitDownloading();
+            //Thread.Sleep(5000);
+            _instance.Go("https://myaccount.google.com/");
+            string gCookies = new Cookies(_project, _instance).Get(".");
+            _sql.Upd($"status = 'ok', cookies = '{gCookies}'", "private_google");
+            _sql.Upd($"status = 'ok', cookies = '{gCookies}'", "projects_google");
+        }
+        public void ParseSecurity()
+        {
+            if (!_instance.ActiveTab.URL.Contains("https://myaccount.google.com/security"))
+                _instance.HeClick(("a", "href", "https://myaccount.google.com/security", "regexp", 1));
+
+            var status2fa = _instance.HeGet(("a", "aria-label", "2-Step Verification", "text", 0), "last").Split('\n');
+            var statusPassword = _instance.HeGet(("a", "aria-label", "Password", "text", 0), "last").Split('\n');
+            var statusSkipPassword = _instance.HeGet(("a", "aria-label", "Skip password when possible", "text", 0), "last").Split('\n');
+            var statusAuthenticator = _instance.HeGet(("a", "aria-label", "Authenticator", "text", 0), "last").Split('\n');
+            var statusRecoveryPhone = _instance.HeGet(("a", "aria-label", "Recovery phone", "text", 0), "last").Split('\n');
+            var statusRecoveryEmail = _instance.HeGet(("a", "aria-label", "Recovery email", "text", 0), "last").Split('\n');
+            var statusBackupCodes = _instance.HeGet(("a", "aria-label", "Backup codes", "text", 0), "last").Split('\n');
+
+            string todb = $@"{status2fa[0]} [{status2fa[1]}]
+	            {statusPassword[0]} [{statusPassword[1]}]
+	            {statusSkipPassword[0]} [{statusSkipPassword[1]}]   
+	            {statusAuthenticator[0]} [{statusAuthenticator[1]}]
+	            {statusRecoveryPhone[0]} [{statusRecoveryPhone[1]}]
+	            {statusRecoveryEmail[0]} [{statusRecoveryEmail[1]}]
+	            {statusBackupCodes[0]} [{statusBackupCodes[1]}]";
+
+
+            new Sql(_project, true).Upd($"security = '{todb}'", "_projects_google");
+
+        }
+
+    }
+
+    public class AI2
+    {
+        protected readonly IZennoPosterProjectModel _project;
+        private readonly Logger _logger;
+        private protected string _apiKey;
+        private protected string _url;
+        private protected string _model;
+
+        public AI2(IZennoPosterProjectModel project, string provider, string model, bool log = false)
+        {
+            _project = project;
+            _logger = new Logger(project, log: log, classEmoji: "AI");
+            _apiKey = new Sql(_project).Get("apikey", "private_api", where: $"key = '{provider}'");
+            SetProvider(provider);
+            _model = model;
+        }
+
+        private void SetProvider(string provider)
+        {
+            _apiKey = new Sql(_project).Get("apikey", "private_api", where: $"key = '{provider}'");
+
+            switch (provider)
+            {
+                case "perplexity":
+                    _url = "https://api.perplexity.ai/chat/completions";
+                    break;
+                case "aiio":
+                    _url = "https://api.intelligence.io.solutions/api/v1/chat/completions";
+                    break;
+                default:
+                    throw new Exception($"unknown provider {provider}");
+            }
+        }
+
+        public string Query(string systemContent, string userContent, bool log = false)
+        {
+            var requestBody = new
+            {
+                model = _model, // {Qwen/Qwen2.5-Coder-32B-Instruct|deepseek-ai/DeepSeek-R1|deepseek-ai/DeepSeek-R1-0528|databricks/dbrx-instruct|mistralai/Mistral-Large-Instruct-2411|meta-llama/Llama-3.3-70B-Instruct|Qwen/Qwen3-235B-A22B-FP8|Qwen/QwQ-32B|deepseek-ai/DeepSeek-R1-Distill-Qwen-32B|google/gemma-3-27b-it}
+                messages = new[]
+                {
+                    new
+                    {
+                        role = "system",
+                        content = systemContent
+                    },
+                    new
+                    {
+                        role = "user",
+                        content = userContent
+                    }
+                },
+                temperature = 0.8,
+                top_p = 0.9,
+                top_k = 0,
+                stream = false,
+                presence_penalty = 0,
+                frequency_penalty = 1
+            };
+
+            string jsonBody = Newtonsoft.Json.JsonConvert.SerializeObject(requestBody, Newtonsoft.Json.Formatting.None);
+
+            string[] headers = new string[]
+            {
+                "Content-Type: application/json",
+                $"Authorization: Bearer {_apiKey}"
+            };
+
+            string response = _project.POST(_url, jsonBody, "", headers, log);
+            _logger.Send($"Full response: {response}");
+
+            try
+            {
+                var jsonResponse = Newtonsoft.Json.Linq.JObject.Parse(response);
+                string Text = jsonResponse["choices"][0]["message"]["content"].ToString();
+                _logger.Send(Text);
+                return Text;
+            }
+            catch (Exception ex)
+            {
+                _logger.Send($"!W Error parsing response: {ex.Message}");
+                throw;
+            }
+        }
+
+        public string GenerateTweet(string content, string bio = "", bool log = false)
+        {
+            string systemContent = string.IsNullOrEmpty(bio)
+                            ? "You are a social media account. Generate tweets that reflect a generic social media persona."
+                            : $"You are a social media account with the bio: '{bio}'. Generate tweets that reflect this persona, incorporating themes relevant to bio.";
+
+        gen:
+            string tweetText = Query(systemContent, content);
+            if (tweetText.Length > 220)
+            {
+                _logger.Send($"tweet is over 220sym `y");
+                goto gen;
+            }
+            return tweetText;
+
+        }
+
+        public string OptimizeCode(string content, bool log = false)
+        {
+            string systemContent = "You are a web3 developer. Optimize the following code. Return only the optimized code. Do not add explanations, comments, or formatting. Output code only, in plain text.";
+            return Query(systemContent, content);
+
+        }
+
+        public string GoogleAppeal(bool log = false)
+        {
+            string content = "Generate short brief appeal messge (200 symbols) explaining reasons only for google support explainig situation, return only text of generated message";
+            string systemContent = "You are a bit stupid man - user, and sometimes you making mistakes in grammar. Also You are a man \"not realy in IT\". Your account was banned by google. You don't understand why it was happend. 100% you did not wanted to violate any rules even if it happened, but you suppose it was google antifraud mistake";
+            return Query(systemContent, content);
+
+        }
+    }
 
 }

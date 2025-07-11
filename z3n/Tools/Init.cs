@@ -140,7 +140,7 @@ namespace z3n
             if (_project.Var("skipBrowserScan") != "True")
             {
                 var bs = new BrowserScan(_project, _instance);
-                if (bs.GetScore().Contains("timezone")) bs.FixTime();
+                if (bs.GetScore().Contains("time")) bs.FixTime();
             }
 
         }
@@ -265,7 +265,7 @@ namespace z3n
             Dictionary<string, Action> socialActions = new Dictionary<string, Action>
                 {
                     { "Google", () => new Google(_project, _instance, true).Load() },
-                    { "Twitter", () => new X(_project, _instance, true).Xload() },
+                    { "Twitter", () => new X(_project, _instance, true).Load() },
                     { "Discord", () => new Discord(_project, _instance, true).DSload() },
                     { "GitHub", () => new GitHub(_project, _instance, true).Load() }
                 };

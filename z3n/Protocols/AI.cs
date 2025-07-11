@@ -12,28 +12,52 @@ namespace z3n
 {
     public class AI
     {
-        public static string OptimizeCode(IZennoPosterProjectModel project, string content, bool log = false)
-        {
-            var _project = project;
-            _project.Variables["api_response"].Value = "";
-            var _logger = new Logger(project, log);
+        protected readonly IZennoPosterProjectModel _project;
+        private readonly Logger _logger;
+        private protected string _apiKey;
+        private protected string _url;
 
+        public AI(IZennoPosterProjectModel project, string provider, bool log = false)
+        {
+            _project = project;
+            _logger = new Logger(project, log: log, classEmoji: "AI");
+            _apiKey = new Sql(_project).Get("apikey", "private_api", where: $"key = '{provider}'");
+            SetProvider(provider);
+        }
+
+        private void SetProvider(string provider)
+        {
+            _apiKey = new Sql(_project).Get("apikey", "private_api", where: $"key = '{provider}'");
+
+            switch (provider)
+            {
+                case "perplexity":
+                    _url = "https://api.perplexity.ai/chat/completions";
+                    break;
+                case "aiio":
+                    _url = "https://api.intelligence.io.solutions/api/v1/chat/completions";
+                    break;
+                default:
+                    throw new Exception($"unknown provider {provider}");
+            }  
+        }
+
+        public string Query(string systemContent, string userContent, string aiModel = "sonar", bool log = false)
+        {
             var requestBody = new
             {
-                model = "sonar",
+                model = aiModel, // {Qwen/Qwen2.5-Coder-32B-Instruct|deepseek-ai/DeepSeek-R1|deepseek-ai/DeepSeek-R1-0528|databricks/dbrx-instruct|mistralai/Mistral-Large-Instruct-2411|meta-llama/Llama-3.3-70B-Instruct|Qwen/Qwen3-235B-A22B-FP8|Qwen/QwQ-32B|deepseek-ai/DeepSeek-R1-Distill-Qwen-32B|google/gemma-3-27b-it}
                 messages = new[]
                 {
                     new
                     {
                         role = "system",
-                       content = "You are a web3 developer. Optimize the following code. Return only the optimized code. Do not add explanations, comments, or formatting. Output code only, in plain text."
-
-
+                        content = systemContent
                     },
                     new
                     {
                         role = "user",
-                        content = content
+                        content = userContent
                     }
                 },
                 temperature = 0.8,
@@ -49,42 +73,10 @@ namespace z3n
             string[] headers = new string[]
             {
                 "Content-Type: application/json",
-                $"Authorization: Bearer {_project.Variables["settingsApiPerplexity"].Value}"
+                $"Authorization: Bearer {_apiKey}"
             };
-        gen:
-            string response;
 
-            //response = _project.POST("https://api.perplexity.ai/chat/completions", jsonBody,"", headers, log);
-
-            using (var request = new HttpRequest())
-            {
-                request.UserAgent = "Mozilla/5.0";
-                request.IgnoreProtocolErrors = true;
-                request.ConnectTimeout = 30000;
-
-                foreach (var header in headers)
-                {
-                    var parts = header.Split(new[] { ": " }, 2, StringSplitOptions.None);
-                    if (parts.Length == 2)
-                    {
-                        request.AddHeader(parts[0], parts[1]);
-                    }
-                }
-
-                try
-                {
-                    HttpResponse httpResponse = request.Post("https://api.perplexity.ai/chat/completions", jsonBody, "application/json");
-                    response = httpResponse.ToString();
-                }
-                catch (HttpException ex)
-                {
-                    _logger.Send($"Ошибка HTTP-запроса: {ex.Message}, Status: {ex.Status}");
-                    throw;
-                }
-            }
-
-            _project.Variables["api_response"].Value = response;
-
+            string response = _project.POST(_url, jsonBody, "", headers, log);
             _logger.Send($"Full response: {response}");
 
             try
@@ -100,6 +92,39 @@ namespace z3n
                 throw;
             }
         }
+
+        public string GenerateTweet(string content, string bio = "", bool log = false)
+        {
+            string systemContent = string.IsNullOrEmpty(bio)
+                            ? "You are a social media account. Generate tweets that reflect a generic social media persona."
+                            : $"You are a social media account with the bio: '{bio}'. Generate tweets that reflect this persona, incorporating themes relevant to bio.";
+
+        gen:
+            string tweetText = Query(systemContent, content);
+            if (tweetText.Length > 220)
+            {
+                _logger.Send($"tweet is over 220sym `y");
+                goto gen;
+            }
+            return tweetText;
+
+        }
+
+        public string OptimizeCode(string content, bool log = false)
+        {
+            string systemContent = "You are a web3 developer. Optimize the following code. Return only the optimized code. Do not add explanations, comments, or formatting. Output code only, in plain text.";
+            return Query(systemContent, content);
+
+        }
+        
+        public string GoogleAppeal( bool log = false)
+        {
+            string content = "Generate short appeal messge for google support explainig situation, return only text of generated message";
+            string systemContent = "You are a bit stupid man - user, and sometimes you making mistakes in grammar. Also You are a man \"not realy in IT\". Your account was banned by google. You don't understand why it was happend. 100% you did not wanted to violate any rules even if it happened, but you suppose it was google antifraud mistake";
+            return Query(systemContent, content);
+
+        }
+
 
     }
 }

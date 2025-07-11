@@ -33,53 +33,31 @@ namespace z3n
 
         public X(IZennoPosterProjectModel project, Instance instance, bool log = false)
         {
-                      
+
             _project = project;
             _instance = instance;
             _sql = new Sql(_project);
             _logShow = log;
+            _logger = new Logger(project, log: log, classEmoji: "X");
 
-
-        LoadCreds();
+            LoadCreds();
 
         }
-
-        protected void Log(string tolog = "", [CallerMemberName] string callerName = "", bool log = false)
+        public void LoadCreds()
         {
-            if (!_logShow && !log) return;
-            var stackFrame = new System.Diagnostics.StackFrame(1);
-            var callingMethod = stackFrame.GetMethod();
-            if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
-            _project.L0g($"[ 💠  {callerName}] [{tolog}] ");
+            string[] creds = _sql.Get(" status, token, login, password, otpsecret, email, emailpass", "private_twitter").Split('|');
+            try { _status = creds[0].Trim(); _project.Variables["twitterSTATUS"].Value = _status; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _token = creds[1].Trim(); _project.Variables["twitterTOKEN"].Value = _token; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _login = creds[2].Trim(); _project.Variables["twitterLOGIN"].Value = _login; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _pass = creds[3].Trim(); _project.Variables["twitterPASSWORD"].Value = _pass; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _2fa = creds[4].Trim(); _project.Variables["twitterCODE2FA"].Value = _2fa; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _email = creds[5].Trim(); _project.Variables["twitterEMAIL"].Value = _email; } catch (Exception ex) { _logger.Send(ex.Message); }
+            try { _email_pass = creds[6].Trim(); _project.Variables["twitterEMAIL_PASSWORD"].Value = _email_pass; } catch (Exception ex) { _logger.Send(ex.Message); }
+
+            if (string.IsNullOrEmpty(_login) || string.IsNullOrEmpty(_pass))
+                throw new Exception($"invalid credentials login:[{_login}] pass:[{_pass}]");
         }
 
-        private string LoadCreds()
-        {
-            string[] xCreds = _sql.Get(" status, token, login, password, otpsecret, email, emailpass", "private_twitter").Split('|');
-            _status = xCreds[0];
-            _token  = xCreds[1];
-            _login = xCreds[2];
-            _pass = xCreds[3];
-            _2fa =  xCreds[4];
-            _email = xCreds[5];
-            _email_pass = xCreds[6];
-            try {
-                _project.Variables["twitterSTATUS"].Value = _status;
-                _project.Variables["twitterTOKEN"].Value = _token;
-                _project.Variables["twitterLOGIN"].Value = _login;
-                _project.Variables["twitterPASSWORD"].Value = _pass;
-                _project.Variables["twitterCODE2FA"].Value = _2fa;
-                _project.Variables["twitterEMAIL"].Value = _email;
-                _project.Variables["twitterEMAIL_PASSWORD"].Value = _email_pass;
-            }
-            catch (Exception ex)
-            {
-                _project.SendInfoToLog(ex.Message);
-            }
-
-            return _status;
-
-        }
 
         private string XcheckState(bool log = false)
         {
@@ -126,13 +104,64 @@ namespace z3n
             _project.L0g($"{status} {DateTime.Now - start}");
             return status;
         }
-        private void XsetToken()
+        public string Xload(bool log = false)
+        {
+            bool tokenUsed = false;
+            DateTime deadline = DateTime.Now.AddSeconds(60);
+        check:
+
+            if (DateTime.Now > deadline) throw new Exception("timeout");
+
+            var status = XcheckState(log: true);
+            try { _project.Var("twitterSTATUS", status); } catch (Exception ex) { }
+            if (status == "login" && !tokenUsed)
+            {
+                TokenSet();
+                tokenUsed = true;
+                Thread.Sleep(3000);
+            }
+            else if (status == "login" && tokenUsed)
+            {
+                var login = Login();
+                _project.L0g($"{login}");
+                Thread.Sleep(3000);
+            }
+            else if (status == "mixed")
+            {
+                _instance.CloseAllTabs();
+                _instance.ClearCookie("x.com");
+                _instance.ClearCache("x.com");
+                _instance.ClearCookie("twitter.com");
+                _instance.ClearCache("twitter.com");
+                goto check;
+
+            }
+            if (status == "restricted" || status == "suspended" || status == "emailCapcha")
+            {
+
+                _sql.Upd($"status = '{status}'", "twitter");
+                return status;
+            }
+            else if (status == "ok")
+            {
+                _instance.HeClick(("button", "innertext", "Accept\\ all\\ cookies", "regexp", 0), deadline: 0, thr0w: false);
+                _instance.HeClick(("button", "data-testid", "xMigrationBottomBar", "regexp", 0), deadline: 0, thr0w: false);
+
+                TokenGet();
+                return status;
+            }
+            else
+                _project.L0g($"unknown {status}");
+            goto check;
+        }
+
+        private void TokenSet()
         {
             var token = _project.Variables["twitterTOKEN"].Value;
             string jsCode = _project.ExecuteMacro($"document.cookie = \"auth_token={token}; domain=.x.com; path=/; expires=${DateTimeOffset.UtcNow.AddYears(1).ToString("R")}; Secure\";\r\nwindow.location.replace(\"https://x.com\")");
             _instance.ActiveTab.MainDocument.EvaluateScript(jsCode);
         }
-        private string XgetToken()
+        private string TokenGet()
         {
             //var cookJson = _instance.GetCookies(_project,".");
             var cookJson = new Cookies(_project, _instance).Get(".");//_instance.GetCookies(_project, ".");
@@ -148,7 +177,8 @@ namespace z3n
             _sql.Upd($"token = '{token}'", "private_twitter");
             return token;
         }
-        private string Xlogin()
+
+        private string Login()
         {
             DateTime deadline = DateTime.Now.AddSeconds(60);
             var login = _project.Variables["twitterLOGIN"].Value;
@@ -181,13 +211,11 @@ namespace z3n
 
             _instance.HeClick(("button", "innertext", "Accept\\ all\\ cookies", "regexp", 0), deadline: 1, thr0w: false);
             _instance.HeClick(("button", "data-testid", "xMigrationBottomBar", "regexp", 0), deadline: 0, thr0w: false);
-            XgetToken();
+            TokenGet();
             return "ok";
         }
-        public string Xload(bool log = false)
+        public string Load(bool log = false)
         {
-
-
             bool tokenUsed = false;
             DateTime deadline = DateTime.Now.AddSeconds(60);
         check:
@@ -198,13 +226,13 @@ namespace z3n
             try { _project.Var("twitterSTATUS", status); } catch (Exception ex) { }
             if (status == "login" && !tokenUsed)
             {
-                XsetToken();
+                TokenSet();
                 tokenUsed = true;
                 Thread.Sleep(3000);
             }
             else if (status == "login" && tokenUsed)
             {
-                var login = Xlogin();
+                var login = Login();
                 _project.L0g($"{login}");
                 Thread.Sleep(3000);
             }
@@ -220,6 +248,7 @@ namespace z3n
             }
             if (status == "restricted" || status == "suspended" || status == "emailCapcha")
             {
+
                 _sql.Upd($"status = '{status}'", "twitter");
                 return status;
             }
@@ -228,41 +257,22 @@ namespace z3n
                 _instance.HeClick(("button", "innertext", "Accept\\ all\\ cookies", "regexp", 0), deadline: 0, thr0w: false);
                 _instance.HeClick(("button", "data-testid", "xMigrationBottomBar", "regexp", 0), deadline: 0, thr0w: false);
 
-                XgetToken();
+                TokenGet();
                 return status;
             }
             else
                 _project.L0g($"unknown {status}");
             goto check;
         }
-
-        public void XAuth()
+        public void Auth()
         {
-            DateTime deadline = DateTime.Now.AddSeconds(60);
-        check:
-            if (DateTime.Now > deadline) throw new Exception("timeout");
+            _project.Deadline();
             _instance.HeClick(("button", "innertext", "Accept\\ all\\ cookies", "regexp", 0), deadline: 0, thr0w: false);
             _instance.HeClick(("button", "data-testid", "xMigrationBottomBar", "regexp", 0), deadline: 0, thr0w: false);
 
-            string state = null;
-
-
-            if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Sorry, we could not find your account')]", 0).IsVoid) state = "NotFound";
-            else if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Your account is suspended')]", 0).IsVoid) state = "Suspended";
-            else if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Wrong password!')]", 0).IsVoid) state = "WrongPass";
-            else if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Oops,\\ something\\ went\\ wrong.\\ Please\\ try\\ again\\ later.", "regexp", 0).IsVoid) state = "SomethingWentWrong";
-            else if (!_instance.ActiveTab.FindElementByAttribute("*", "innertext", "Suspicious\\ login\\ prevented", "regexp", 0).IsVoid) state = "SuspiciousLogin";
-
-
-
-            else if (!_instance.ActiveTab.FindElementByAttribute("input:text", "autocomplete", "username", "text", 0).IsVoid) state = "InputLogin";
-            else if (!_instance.ActiveTab.FindElementByAttribute("input:password", "autocomplete", "current-password", "text", 0).IsVoid) state = "InputPass";
-            else if (!_instance.ActiveTab.FindElementByAttribute("input:text", "data-testid", "ocfEnterTextTextInput", "text", 0).IsVoid) state = "InputOTP";
-
-
-            else if (!_instance.ActiveTab.FindElementByAttribute("a", "data-testid", "login", "regexp", 0).IsVoid) state = "ClickLogin";
-            else if (!_instance.ActiveTab.FindElementByAttribute("li", "data-testid", "UserCell", "regexp", 0).IsVoid) state = "CheckUser";
-
+        check:
+            _project.Deadline(60);
+            string state = State();
 
             _project.L0g(state);
 
@@ -300,8 +310,17 @@ namespace z3n
                     {
                         throw new Exception("wrong account");
                     }
+                case "AuthV1SignIn":
+                    _instance.HeClick(("allow", "id"));
+                    goto check;
+                case "InvalidRequestToken":
+                    _instance.CloseExtraTabs();
+                    throw new Exception(state);
+                case "AuthV1Confirm":
+                    _instance.HeClick(("allow", "id"));
+                    goto check;
                 default:
-                    _project.L0g($"unknown state [{state}]");
+                    _logger.Send($"unknown state [{state}]");
                     break;
 
             }
@@ -310,129 +329,88 @@ namespace z3n
                 _project.L0g("auth done");
             else goto check;
         }
+        public string State()
+        {
+            string state = "undefined";
+
+            if (_instance.ActiveTab.URL.Contains("oauth/authorize"))
+            {
+                if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'The request token for this page is invalid')]", 0).IsVoid)
+                    return "InvalidRequestToken";
+                if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'This account is suspended')]", 0).IsVoid)
+                    return "Suspended";
+                if (!_instance.ActiveTab.FindElementById("session").IsVoid)
+                {
+                    var currentAcc = _instance.HeGet(("session", "id"));
+                    if (currentAcc.ToLower() == _login.ToLower())
+                        state = "AuthV1Confirm";
+                    else
+                        state = "!WrongAccount";
+                }
+
+                else if (!_instance.ActiveTab.FindElementById("allow").IsVoid)
+                {
+                    if (_instance.HeGet(("allow", "id"), atr: "value") == "Sign In")
+                        state = "AuthV1SignIn";
+                }
+                return state;
+            }
+
+            if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Sorry, we could not find your account')]", 0).IsVoid) state = "NotFound";
+            else if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Your account is suspended')]", 0).IsVoid) state = "Suspended";
+            else if (!_instance.ActiveTab.FindElementByXPath("//*[contains(text(), 'Wrong password!')]", 0).IsVoid) state = "WrongPass";
+            else if (!_instance.ActiveTab.FindElementByAttribute("span", "innertext", "Oops,\\ something\\ went\\ wrong.\\ Please\\ try\\ again\\ later.", "regexp", 0).IsVoid) state = "SomethingWentWrong";
+            else if (!_instance.ActiveTab.FindElementByAttribute("*", "innertext", "Suspicious\\ login\\ prevented", "regexp", 0).IsVoid) state = "SuspiciousLogin";
+
+
+
+            else if (!_instance.ActiveTab.FindElementByAttribute("input:text", "autocomplete", "username", "text", 0).IsVoid) state = "InputLogin";
+            else if (!_instance.ActiveTab.FindElementByAttribute("input:password", "autocomplete", "current-password", "text", 0).IsVoid) state = "InputPass";
+            else if (!_instance.ActiveTab.FindElementByAttribute("input:text", "data-testid", "ocfEnterTextTextInput", "text", 0).IsVoid) state = "InputOTP";
+
+
+            else if (!_instance.ActiveTab.FindElementByAttribute("a", "data-testid", "login", "regexp", 0).IsVoid) state = "ClickLogin";
+            else if (!_instance.ActiveTab.FindElementByAttribute("li", "data-testid", "UserCell", "regexp", 0).IsVoid) state = "CheckUser";
+            return state;
+        }
 
         public void UpdXCreds(Dictionary<string, string> data)
         {
+            if (data.ContainsKey("CODE2FA"))
+            {
+                _project.L0g($"CODE2FA raw value: {data["CODE2FA"]}"); // Логируем исходное значение
+            }
+
             var fields = new Dictionary<string, string>
             {
                 { "LOGIN", data.ContainsKey("LOGIN") ? data["LOGIN"].Replace("'", "''") : "" },
                 { "PASSWORD", data.ContainsKey("PASSWORD") ? data["PASSWORD"].Replace("'", "''") : "" },
                 { "EMAIL", data.ContainsKey("EMAIL") ? data["EMAIL"].Replace("'", "''") : "" },
                 { "EMAIL_PASSWORD", data.ContainsKey("EMAIL_PASSWORD") ? data["EMAIL_PASSWORD"].Replace("'", "''") : "" },
-                //{ "TOKEN", data.ContainsKey("TOKEN") ? data["TOKEN"].Replace("'", "''") : "" },
-
                 { "TOKEN", data.ContainsKey("TOKEN") ? (data["TOKEN"].Contains('=') ? data["TOKEN"].Split('=').Last().Replace("'", "''") : data["TOKEN"].Replace("'", "''")) : "" },
-
                 { "CODE2FA", data.ContainsKey("CODE2FA") ? (data["CODE2FA"].Contains('/') ? data["CODE2FA"].Split('/').Last().Replace("'", "''") : data["CODE2FA"].Replace("'", "''")) : "" },
                 { "RECOVERY_SEED", data.ContainsKey("RECOVERY_SEED") ? data["RECOVERY_SEED"].Replace("'", "''") : "" }
             };
 
-            var _sql = new Sql(_project);
+            var _sql = new Sql(_project, _logShow);
             try
             {
                 _sql.Upd($@"token = '{fields["TOKEN"]}', 
                 login = '{fields["LOGIN"]}', 
                 password = '{fields["PASSWORD"]}', 
-                code2fa = '{fields["CODE2FA"]}', 
-                emaillogin = '{fields["EMAIL"]}', 
+                otpsecret = '{fields["CODE2FA"]}', 
+                email = '{fields["EMAIL"]}', 
                 emailpass = '{fields["EMAIL_PASSWORD"]}', 
-                recovery2fa = '{fields["RECOVERY_SEED"]}'", "private_twitter");
+                otpbackup = '{fields["RECOVERY_SEED"]}'", "private_twitter");
             }
             catch (Exception ex)
             {
                 _project.L0g("!W{ex.Message}");
             }
+            LoadCreds();
         }
 
-        public string GenerateTweet(string content, string bio = "", bool log = false)
-        {
-            _project.Variables["api_response"].Value = "";
 
-            var requestBody = new
-            {
-                model = "sonar",
-                messages = new[]
-                {
-                    new
-                    {
-                        role = "system",
-                        content = string.IsNullOrEmpty(bio)
-                            ? "You are a social media account. Generate tweets that reflect a generic social media persona."
-                            : $"You are a social media account with the bio: '{bio}'. Generate tweets that reflect this persona, incorporating themes relevant to bio."
-                    },
-                    new
-                    {
-                        role = "user",
-                        content = content
-                    }
-                },
-                temperature = 0.8,
-                top_p = 0.9,
-                top_k = 0,
-                stream = false,
-                presence_penalty = 0,
-                frequency_penalty = 1
-            };
-
-            string jsonBody = Newtonsoft.Json.JsonConvert.SerializeObject(requestBody, Newtonsoft.Json.Formatting.None);
-
-            string[] headers = new string[]
-            {
-                "Content-Type: application/json",
-                $"Authorization: Bearer {_project.Variables["settingsApiPerplexity"].Value}"
-            };
-            gen:
-            string response;
-            using (var request = new HttpRequest())
-            {
-                request.UserAgent = "Mozilla/5.0";
-                request.IgnoreProtocolErrors = true;
-                request.ConnectTimeout = 5000;
-
-                foreach (var header in headers)
-                {
-                    var parts = header.Split(new[] { ": " }, 2, StringSplitOptions.None);
-                    if (parts.Length == 2)
-                    {
-                        request.AddHeader(parts[0], parts[1]);
-                    }
-                }
-
-                try
-                {
-                    HttpResponse httpResponse = request.Post("https://api.perplexity.ai/chat/completions", jsonBody, "application/json");
-                    response = httpResponse.ToString();
-                }
-                catch (HttpException ex)
-                {
-                    Log($"Ошибка HTTP-запроса: {ex.Message}, Status: {ex.Status}");
-                    throw;
-                }
-            }
-            
-            _project.Variables["api_response"].Value = response;
-
-            Log($"Full response: {response}");
-
-            try
-            {
-                var jsonResponse = Newtonsoft.Json.Linq.JObject.Parse(response);
-                string tweetText = jsonResponse["choices"][0]["message"]["content"].ToString();
-                if (tweetText.Length > 220)
-                {
-                    Log($"tweet is over 220sym `y");
-                    goto gen;
-                }
-                
-                Log($"tweet: {tweetText}");
-                return tweetText; 
-            }
-            catch (Exception ex)
-            {
-                Log($"!W Error parsing response: {ex.Message}");
-                throw;
-            }
-        }
 
         public void ParseProfile()
         {
@@ -466,7 +444,7 @@ namespace z3n
                         username = '{username}',
                         description = '{description}',
                         givenname = '{givenName}',
-                        homeLocation = '{homeLocation}',
+                        homelocation = '{homeLocation}',
                         ava = '{ava}',
                         banner = '{banner}',
                         followers = '{Followers}',
@@ -475,7 +453,8 @@ namespace z3n
                         ");
 
 
-            try{
+            try
+            {
                 var toFill = _project.Lists["editProfile"];
                 toFill.Clear();
 
@@ -568,16 +547,17 @@ namespace z3n
                         lang = '{lang}',
                         gender = '{gender}',
                         birth = '{birth}',
-                        ","public_twitter");
+                        ");
 
 
             try
             {
-                var emails = _sql.Get("gmail, icloud, firstmail", "public_mail");
-                var address = _sql.Address("evm");
+                email = email.ToLower();
+                var emails = _sql.Get("gmail, icloud, firstmail", "public_mail").ToLower();
+                var address = _sql.Address("evm_pk").ToLower();
                 var toFill = _project.Lists["editSecurity"];
                 toFill.Clear();
-                
+
                 if (!emails.Contains(email) || !email.Contains(address)) toFill.Add("email");
 
             }

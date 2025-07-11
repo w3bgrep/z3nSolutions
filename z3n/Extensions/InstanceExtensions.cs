@@ -384,6 +384,14 @@ namespace z3n
 
 
 
+        public static void ClearShit(this Instance instance, string domain)
+        {
+            instance.CloseAllTabs();
+            instance.ClearCache(domain);
+            instance.ClearCookie(domain);
+            Thread.Sleep(500);
+            instance.ActiveTab.Navigate("about:blank", "");
+        }
 
 
 
