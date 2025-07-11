@@ -426,7 +426,7 @@ namespace z3n
             string id = main["identifier"].ToString();
 
             string username = main["additionalName"].ToString();
-            string description = main["description"].ToString();
+            string description = main["description"].ToString().Replace("'","");
             string givenName = main["givenName"].ToString();
             string homeLocation = main["homeLocation"]["name"].ToString();
 

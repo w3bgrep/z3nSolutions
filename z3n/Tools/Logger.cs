@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
@@ -58,6 +59,14 @@ namespace z3n
             {
                 string totalAge = _project.Age<string>();
                 if (!string.IsNullOrEmpty(totalAge)) formated += $" ⌛  [{totalAge}]";
+            }
+            catch { }
+
+            try
+            {
+                Process currentProcess = Process.GetCurrentProcess();
+                long memoryUsed = currentProcess.WorkingSet64 / 1024 / 1024;
+                formated += $" 🧠  [{memoryUsed} Mb]";
             }
             catch { }
 

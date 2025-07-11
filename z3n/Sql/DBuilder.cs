@@ -1177,5 +1177,21 @@ namespace z3n
             _instance.CanvasRenderMode = CanvasMode.Block;
             return result;
         }
+
+        public void Upd(Dictionary<string, string> toWrite, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, bool byKey = false)
+        {
+
+            int dicSize = toWrite.Count;
+            AddRange(_tableName, dicSize);
+
+            foreach (KeyValuePair<string, string> pair in toWrite)
+            {
+                string key = pair.Key;
+                string value = pair.Value;
+                new Sql(_project).Upd(value, tableName, last: last, acc: key);
+            }
+        }
+
+
     }
 }

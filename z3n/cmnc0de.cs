@@ -13,6 +13,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -43,14 +44,6 @@ namespace w3tools //by @w3bgrep
 
     public  static class TestStatic
     {
-        public static void ClearShit(this Instance instance, string domain)
-        {
-            instance.CloseAllTabs();
-            instance.ClearCache(domain);
-            instance.ClearCookie(domain);
-            Thread.Sleep(500);
-            instance.ActiveTab.Navigate("about:blank", "");
-        }
         public static string ToPrivateKey(this string input)
         {
             // Проверка на null или пустую строку
@@ -95,6 +88,65 @@ namespace w3tools //by @w3bgrep
             }
             return parsedData;
         }
+
+        public static void LogMemoryUsage(IZennoPosterProjectModel project)
+        {
+            Process currentProcess = Process.GetCurrentProcess();
+            long memoryUsed = currentProcess.WorkingSet64 / 1024 / 1024; // В мегабайтах
+            project.L0g($"Current memory usage: {memoryUsed} MB");
+        }
+
+        public static Dictionary<string, string> ParseByMask(this string input, string mask, IZennoPosterProjectModel project)
+        {
+            input = input?.Trim();
+            mask = mask?.Trim();
+
+            if (string.IsNullOrEmpty(input) || string.IsNullOrEmpty(mask))
+            {
+                project.L0g("Warning: Input string or mask is null or empty.");
+                return new Dictionary<string, string>();
+            }
+
+            var variableNames = new List<string>();
+            var regex = new Regex(@"\{([^{}]+)\}");
+            foreach (Match mtch in regex.Matches(mask))
+            {
+                variableNames.Add(mtch.Groups[1].Value);
+            }
+
+            if (variableNames.Count == 0)
+            {
+                project.L0g("Warning: No variables found in the mask.");
+                return new Dictionary<string, string>();
+            }
+
+            string pattern = Regex.Escape(mask);
+            foreach (var varName in variableNames)
+            {
+                string escapedVar = Regex.Escape("{" + varName + "}");
+                pattern = pattern.Replace(escapedVar, "(.*?)");
+            }
+            pattern += "$";
+
+            project.L0g($"Debug: Generated pattern: {pattern}");
+
+            var match = Regex.Match(input, pattern);
+            if (!match.Success)
+            {
+                project.L0g("!Warning: Input string does not match the mask format.");
+                return new Dictionary<string, string>();
+            }
+
+            var result = new Dictionary<string, string>();
+            for (int i = 0; i < variableNames.Count; i++)
+            {
+                result[variableNames[i]] = match.Groups[i + 1].Value;
+            }
+
+            return result;
+        }
+
+
     }
 
     public class Guild2
@@ -973,7 +1025,7 @@ namespace w3tools //by @w3bgrep
 
                 case "addRecoveryPhone":
                     _instance.HeClick(("button", "innertext", "Cancel", "regexp", 0));
-                    _instance.HeClick(("button", "innertext", "Skip", "regexp", 0),dadline:5, thr0w:false);
+                    _instance.HeClick(("button", "innertext", "Skip", "regexp", 0),deadline:5, thr0w:false);
                     goto check;
 
                 case "setHome":

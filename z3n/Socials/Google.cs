@@ -192,7 +192,7 @@ namespace z3n
             _project.Var("googleSTATUS", state);
             return state;
         }
-        public string Auth(bool log = false)
+        public string GAuth(bool log = false)
         {
             try
             {

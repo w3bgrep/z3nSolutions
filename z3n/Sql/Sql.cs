@@ -1,5 +1,6 @@
 ﻿
 //using Global.IE;
+using NBitcoin;
 using Nethereum.ABI.CompilationMetadata;
 using Nethereum.Contracts.QueryHandlers.MultiCall;
 using Nethereum.Signer;
@@ -214,22 +215,20 @@ namespace z3n
             try { _project.Var("lastQuery", query); } catch { }
             DbQ(query, log: log, throwOnEx: throwOnEx);
         }
-        public void Upd(Dictionary<string, string> toWrite, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, bool byKey = false)
+        public void Upd(Dictionary<string, string> toWrite, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, object acc = null)
         {
-            if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
-            TblName(tableName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-
-            int dicSize = toWrite.Count;
-            AddRange(_tableName, dicSize);
+            string toUpd = string.Empty;
 
             foreach (KeyValuePair<string, string> pair in toWrite)
             {
                 string key = pair.Key;
                 string value = pair.Value;
-                Upd(value,_tableName,last:last, acc: key);
+                toUpd += $"{pair.Key} = '{pair.Value}', ";
+                
             }
+            Upd(toUpd, tableName, log, throwOnEx, last, acc);
         }
+
         public void Upd(List<string> toWrite, string columnName, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, bool byKey = false)
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
