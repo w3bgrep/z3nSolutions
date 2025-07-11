@@ -20,7 +20,7 @@ namespace z3n
         public AI(IZennoPosterProjectModel project, string provider, bool log = false)
         {
             _project = project;
-            _logger = new Logger(project, log: log, classEmoji: "AI");
+            _logger = new Logger(project, log: log, classEmoji: "provider");
             _apiKey = new Sql(_project).Get("apikey", "private_api", where: $"key = '{provider}'");
             SetProvider(provider);
         }

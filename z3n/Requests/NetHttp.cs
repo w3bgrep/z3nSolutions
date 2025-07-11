@@ -113,6 +113,51 @@ namespace z3n
 
             return mergedHeaders;
         }
+        private Dictionary<string, string> BuildHeaders(object inputHeaders = null)
+        {
+            var headers = new Dictionary<string, string>
+            {
+                { "User-Agent", _project.Profile.UserAgent },
+                //{ "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" },
+                //{ "Accept-Encoding", "" },
+                //{ "Accept-Language", "en-US,en;q=0.5" },
+            };
+
+            if (inputHeaders is null)
+            {
+                return headers;
+            }
+            else if (inputHeaders is Dictionary<string, string> dictHeaders) // Использование "pattern matching" для явного приведения
+            {
+                // dictHeaders теперь уже имеет нужный тип Dictionary<string, string>
+                foreach (var header in dictHeaders)
+                {
+                    try { headers.Add(header.Key, header.Value); }
+                    catch { headers[header.Key] = header.Value; }
+
+                }
+            }
+            else if (inputHeaders is IEnumerable<string> stringHeaders) // Также использование "pattern matching"
+            {
+                foreach (string header in stringHeaders)
+                {
+                    string[] parts = header.Split(new[] { ':' }, 2); // Разделяем только по первому двоеточию
+                    if (parts.Length == 2)
+                    {
+                        string headerKey = parts[0].Trim(); // Удаляем пробелы
+                        string headerValue = parts[1].Trim(); // Удаляем пробелы
+
+                        try { headers.Add(headerKey, headerValue); }
+                        catch { headers[headerKey] = headerValue; }
+
+                    }
+                    // Можно добавить else-блок для обработки некорректных строк заголовков
+                }
+            }
+            // Можно добавить else-блок для обработки неподдерживаемых типов inputHeaders
+
+            return headers;
+        }
 
         public string GET(
             string url,
