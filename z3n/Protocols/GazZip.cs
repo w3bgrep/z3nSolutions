@@ -91,7 +91,7 @@ namespace z3n
                         _project.L0g($"CHOSEN: rpc:[{rpc}] native:[{native}]");
                         found = true; break;
                     }
-                    if (log) Log($"rpc:[{rpc}] native:[{native}] lower than [{required}]");
+                    if (log) _logger.Send($"rpc:[{rpc}] native:[{native}] lower than [{required}]");
                     Thread.Sleep(1000);
                 }
 
@@ -105,7 +105,7 @@ namespace z3n
             else
             {
                 var native = _read.NativeEVM<decimal>(rpc);
-                if (log) Log($"rpc:[{rpc}] native:[{native}]");
+                if (log) _logger.Send($"rpc:[{rpc}] native:[{native}]");
                 if (native < value + 0.0002m)
                 {
                     return $"fail: no balance over {value}ETH found on {rpc}";
@@ -131,7 +131,7 @@ namespace z3n
             }
             catch (Exception ex) { _project.SendWarningToLog($"{ex.Message}", true); throw; }
 
-            if (log) Log(txHash);
+            if (log) _logger.Send(txHash);
             _read.WaitTransaction(rpc, txHash);
             return txHash;
         }

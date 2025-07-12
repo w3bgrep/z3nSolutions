@@ -78,17 +78,17 @@ namespace z3n
                 }
                 catch (Exception ex)
                 {
-                    Log($"!W:{ex.Message}");
+                    _logger.Send($"!W:{ex.Message}");
                 }
 
             }
             catch (Exception ex)
             {
-                Log($"!W:{ex.Message}");
+                _logger.Send($"!W:{ex.Message}");
                 throw;
             }
 
-            Log($"[APPROVE] {contract} for spender {spender} with amount {amount}...");
+            _logger.Send($"[APPROVE] {contract} for spender {spender} with amount {amount}...");
             return txHash;
         }
         public string Wrap(string contract, decimal value, string rpc = "")
@@ -120,16 +120,16 @@ namespace z3n
                 }
                 catch (Exception ex)
                 {
-                    Log($"!W:{ex.Message}");
+                    _logger.Send($"!W:{ex.Message}");
                 }
             }
             catch (Exception ex)
             {
-                Log($"!W:{ex.Message}");
+                _logger.Send($"!W:{ex.Message}");
                 throw;
             }
 
-            Log($"[WRAP] {value} native to {contract}...");
+            _logger.Send($"[WRAP] {value} native to {contract}...");
             return txHash;
         }
         public string SendNative(string to, decimal amount, string rpc = "")

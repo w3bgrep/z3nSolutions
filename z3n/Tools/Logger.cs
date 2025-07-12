@@ -65,8 +65,9 @@ namespace z3n
             try
             {
                 Process currentProcess = Process.GetCurrentProcess();
-                long memoryUsed = currentProcess.WorkingSet64 / 1024 / 1024;
-                formated += $" 🧠  [{memoryUsed} Mb]";
+                long processMemory = currentProcess.WorkingSet64 / 1024 / 1024;
+                long managedMemory = GC.GetTotalMemory(true) / 1024 / 1024;
+                formated += $" 🧠  [{processMemory}Mb | {managedMemory}Mb]";
             }
             catch { }
 

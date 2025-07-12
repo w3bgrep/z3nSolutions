@@ -36,7 +36,7 @@ namespace z3n
 
             _project = project;
             _instance = instance;
-            _sql = new Sql(_project);
+            _sql = new Sql(_project, log);
             _logShow = log;
             _logger = new Logger(project, log: log, classEmoji: "X");
 
@@ -224,6 +224,7 @@ namespace z3n
 
             var status = XcheckState(log: true);
             try { _project.Var("twitterSTATUS", status); } catch (Exception ex) { }
+
             if (status == "login" && !tokenUsed)
             {
                 TokenSet();
@@ -246,10 +247,12 @@ namespace z3n
                 goto check;
 
             }
+
+            _sql.Upd($"status = '{status}'", "projects_twitter");
+            _sql.Upd($"status = '{status}'", "private_twitter");
             if (status == "restricted" || status == "suspended" || status == "emailCapcha")
             {
 
-                _sql.Upd($"status = '{status}'", "twitter");
                 return status;
             }
             else if (status == "ok")
@@ -261,7 +264,7 @@ namespace z3n
                 return status;
             }
             else
-                _project.L0g($"unknown {status}");
+                _logger.Send($"unknown {status}");
             goto check;
         }
         public void Auth()
@@ -409,50 +412,40 @@ namespace z3n
             }
             LoadCreds();
         }
-
-
-
         public void ParseProfile()
         {
             _instance.HeClick(("*", "data-testid", "AppTabBar_Profile_Link", "regexp", 0));
-
-
             string json = _instance.HeGet(("*", "data-testid", "UserProfileSchema-test", "regexp", 0));
 
             var jo = JObject.Parse(json);
-            var main = jo["mainEntity"];
+            var main = jo["mainEntity"] as JObject;
 
-            string dateCreated = jo["dateCreated"].ToString();
-            string id = main["identifier"].ToString();
+            string dateCreated = jo["dateCreated"]?.ToString() ?? "";
+            string id = main?["identifier"]?.ToString() ?? "";
+            string username = main?["additionalName"]?.ToString() ?? "";
+            string description = main?["description"]?.ToString() ?? "";
+            string givenName = main?["givenName"]?.ToString() ?? "";
+            string homeLocation = main?["homeLocation"]?["name"]?.ToString() ?? "";
+            string ava = main?["image"]?["contentUrl"]?.ToString() ?? "";
+            string banner = main?["image"]?["thumbnailUrl"]?.ToString() ?? "";
 
-            string username = main["additionalName"].ToString();
-            string description = main["description"].ToString().Replace("'","");
-            string givenName = main["givenName"].ToString();
-            string homeLocation = main["homeLocation"]["name"].ToString();
-
-            string ava = main["image"]["contentUrl"].ToString();
-            string banner = main["image"]["thumbnailUrl"].ToString();
-
-            var interactionStatistic = main["interactionStatistic"];
-
-            string Followers = interactionStatistic[0]["userInteractionCount"].ToString();
-            string Following = interactionStatistic[1]["userInteractionCount"].ToString();
-            string Tweets = interactionStatistic[2]["userInteractionCount"].ToString();
+            var interactionStatistic = main?["interactionStatistic"] as JArray;
+            string followers = interactionStatistic?[0]?["userInteractionCount"]?.ToString() ?? "";
+            string following = interactionStatistic?[1]?["userInteractionCount"]?.ToString() ?? "";
+            string tweets = interactionStatistic?[2]?["userInteractionCount"]?.ToString() ?? "";
 
             _sql.Upd($@"datecreated = '{dateCreated}',
-                        id = '{id}',
-                        username = '{username}',
-                        description = '{description}',
-                        givenname = '{givenName}',
-                        homelocation = '{homeLocation}',
-                        ava = '{ava}',
-                        banner = '{banner}',
-                        followers = '{Followers}',
-                        following = '{Following}',
-                        tweets = '{Tweets}',
-                        ");
-
-
+                id = '{id}',
+                username = '{username}',
+                description = '{description}',
+                givenname = '{givenName}',
+                homelocation = '{homeLocation}',
+                ava = '{ava}',
+                banner = '{banner}',
+                followers = '{followers}',
+                following = '{following}',
+                tweets = '{tweets}',
+                ");
             try
             {
                 var toFill = _project.Lists["editProfile"];

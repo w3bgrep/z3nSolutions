@@ -656,7 +656,7 @@ namespace z3n
                 return (T)Convert.ChangeType("0", typeof(T));
 
             int transactionCount = Convert.ToInt32(hexResultNonce.TrimStart('0', 'x'), 16);
-            if (log) Log($"{address} nonce now {transactionCount}");
+            if (log) _logger.Send($"{address} nonce now {transactionCount}");
             if (typeof(T) == typeof(string))
                 return (T)Convert.ChangeType(transactionCount.ToString(), typeof(T));
             return (T)Convert.ChangeType(transactionCount, typeof(T));
@@ -854,7 +854,7 @@ namespace z3n
             var json = JObject.Parse(response);
             string mist = json["result"]?["totalBalance"]?.ToString() ?? "0";
             decimal balance = decimal.Parse(mist) / 1000000m;
-            if (log) Log($"{address}: {balance} TOKEN ({coinType})");
+            if (log) _logger.Send($"{address}: {balance} TOKEN ({coinType})");
 
 
             if (typeof(T) == typeof(string)) return FloorDecimal<T>(balance, int.Parse(mist));
@@ -862,86 +862,7 @@ namespace z3n
 
         }
  
-   //     public T NativeAPT<T>(string rpc = null, string address = null, string proxy = null, bool log = false)
-   //     {
-   //         Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 
-   //         if (string.IsNullOrEmpty(address)) address = _sql.Address("apt");
-   //         if (string.IsNullOrEmpty(rpc))
-   //             rpc = "https://fullnode.mainnet.aptoslabs.com/v1";
-
-   //         string url = $"{rpc}/view";
-   //         string coinType = "0x1::aptos_coin::AptosCoin";
-   //         string requestBody = $@"{{
-			//	""function"": ""0x1::coin::balance"",
-			//	""type_arguments"": [""{coinType}""],
-			//	""arguments"": [""{address}""]
-			//}}";
-
-   //         string response;
-
-   //         using (var request = new HttpRequest())
-   //         {
-   //             request.UserAgent = "Mozilla/5.0";
-   //             request.IgnoreProtocolErrors = true;
-   //             request.ConnectTimeout = 5000;
-   //             request.AddHeader("Content-Type", "application/json");
-
-   //             // Настройка прокси, если указан
-   //             if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
-   //             if (!string.IsNullOrEmpty(proxy))
-   //             {
-   //                 string[] proxyArray = proxy.Split(':');
-   //                 string username = proxyArray[1];
-   //                 string password = proxyArray[2];
-   //                 string host = proxyArray[3];
-   //                 int port = int.Parse(proxyArray[4]);
-   //                 request.Proxy = new HttpProxyClient(host, port, username, password);
-   //             }
-
-   //             try
-   //             {
-   //                 HttpResponse httpResponse = request.Post(url, requestBody, "application/json");
-   //                 response = httpResponse.ToString();
-   //             }
-   //             catch (HttpException ex)
-   //             {
-   //                 _project.SendErrorToLog($"Err HTTpreq: {ex.Message}, Status: {ex.Status}");
-   //                 throw;
-   //             }
-   //         }
-
-   //         JArray json;
-   //         try
-   //         {
-   //             json = JArray.Parse(response);
-   //         }
-   //         catch (Exception ex)
-   //         {
-   //             _project.SendErrorToLog($"Failed to parse JSON response: {ex.Message}");
-   //             if (typeof(T) == typeof(string)) return (T)(object)"0";
-   //             return (T)(object)0m;
-   //         }
-
-   //         string octas = json[0]?.ToString() ?? "0";
-   //         decimal balance;
-   //         try
-   //         {
-   //             balance = decimal.Parse(octas) / 100000000m; // 8 decimals
-   //         }
-   //         catch (Exception ex)
-   //         {
-   //             _project.SendErrorToLog($"Failed to parse balance: {ex.Message}");
-   //             if (typeof(T) == typeof(string)) return (T)(object)"0";
-   //             return (T)(object)0m;
-   //         }
-
-   //         string balanceString = FloorDecimal<string>(balance, 8);
-   //         Log(address, balanceString, rpc, log: log);
-
-   //         if (typeof(T) == typeof(string)) return (T)(object)balanceString;
-   //         return (T)Convert.ChangeType(balance, typeof(T));
-   //     }
         public T TokenAPT<T>(string coinType, string address = null, string rpc = null, string proxy = null, bool log = false)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -984,7 +905,7 @@ namespace z3n
             var json = JObject.Parse(response);
             string octas = json["data"]?["coin"]?["value"]?.ToString() ?? "0";
             decimal balance = decimal.Parse(octas) / 1000000m; // Предполагаем 6 decimals, как для USDC
-            if (log) Log($"{address}: {balance} TOKEN ({coinType})");
+            if (log) _logger.Send($"{address}: {balance} TOKEN ({coinType})");
             if (typeof(T) == typeof(string)) return FloorDecimal<T>(balance, int.Parse(octas));
             return (T)Convert.ChangeType(balance, typeof(T));
         }
@@ -998,7 +919,7 @@ namespace z3n
                 }
                 catch
                 {
-                    Log("no Address provided");
+                    _logger.Send("no Address provided");
                     throw;
                 }
 
@@ -1118,7 +1039,7 @@ namespace z3n
                                 _project.Variables["txStatus"].Value = status == "1" ? "SUCCSESS" : "!W FAIL";
                                 bool res = status == "1" ? true : false;
                                 string result = $"{rpc} {hash} [{_project.Variables["txStatus"].Value}] gasUsed: {gasUsed}";
-                                Log($"[ TX state:  {result}");
+                                _logger.Send($"[ TX state:  {result}");
                                 return res;
                             }
                             catch
@@ -1177,7 +1098,7 @@ namespace z3n
                         Thread.Sleep(2000);
                         continue;
                     }
-                    Log($"[ TX state:  {logString}");
+                    _logger.Send($"[ TX state:  {logString}");
                     Thread.Sleep(3000);
                 }
             }

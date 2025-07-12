@@ -329,7 +329,7 @@ namespace w3tools //by @w3bgrep
 
             _project = project;
             _instance = instance;
-            _sql = new Sql(_project);
+            _sql = new Sql(_project, log);
             _logShow = log;
             _logger = new Logger(project, log: log, classEmoji: "X");
 
@@ -614,6 +614,8 @@ namespace w3tools //by @w3bgrep
                 goto check;
 
             }
+            _sql.Upd($"status = '{status}'", "projects_twitter");
+            _sql.Upd($"status = '{status}'", "private_twitter");
             if (status == "restricted" || status == "suspended" || status == "emailCapcha")
             {
 
@@ -793,44 +795,37 @@ namespace w3tools //by @w3bgrep
         public void ParseProfile()
         {
             _instance.HeClick(("*", "data-testid", "AppTabBar_Profile_Link", "regexp", 0));
-
-
             string json = _instance.HeGet(("*", "data-testid", "UserProfileSchema-test", "regexp", 0));
 
             var jo = JObject.Parse(json);
-            var main = jo["mainEntity"];
+            var main = jo["mainEntity"] as JObject;
 
-            string dateCreated = jo["dateCreated"].ToString();
-            string id = main["identifier"].ToString();
+            string dateCreated = jo["dateCreated"]?.ToString() ?? "";
+            string id = main?["identifier"]?.ToString() ?? "";
+            string username = main?["additionalName"]?.ToString() ?? "";
+            string description = main?["description"]?.ToString() ?? "";
+            string givenName = main?["givenName"]?.ToString() ?? "";
+            string homeLocation = main?["homeLocation"]?["name"]?.ToString() ?? "";
+            string ava = main?["image"]?["contentUrl"]?.ToString() ?? "";
+            string banner = main?["image"]?["thumbnailUrl"]?.ToString() ?? "";
 
-            string username = main["additionalName"].ToString();
-            string description = main["description"].ToString();
-            string givenName = main["givenName"].ToString();
-            string homeLocation = main["homeLocation"]["name"].ToString();
-
-            string ava = main["image"]["contentUrl"].ToString();
-            string banner = main["image"]["thumbnailUrl"].ToString();
-
-            var interactionStatistic = main["interactionStatistic"];
-
-            string Followers = interactionStatistic[0]["userInteractionCount"].ToString();
-            string Following = interactionStatistic[1]["userInteractionCount"].ToString();
-            string Tweets = interactionStatistic[2]["userInteractionCount"].ToString();
+            var interactionStatistic = main?["interactionStatistic"] as JArray;
+            string followers = interactionStatistic?[0]?["userInteractionCount"]?.ToString() ?? "";
+            string following = interactionStatistic?[1]?["userInteractionCount"]?.ToString() ?? "";
+            string tweets = interactionStatistic?[2]?["userInteractionCount"]?.ToString() ?? "";
 
             _sql.Upd($@"datecreated = '{dateCreated}',
-                        id = '{id}',
-                        username = '{username}',
-                        description = '{description}',
-                        givenname = '{givenName}',
-                        homelocation = '{homeLocation}',
-                        ava = '{ava}',
-                        banner = '{banner}',
-                        followers = '{Followers}',
-                        following = '{Following}',
-                        tweets = '{Tweets}',
-                        ");
-
-
+                id = '{id}',
+                username = '{username}',
+                description = '{description}',
+                givenname = '{givenName}',
+                homelocation = '{homeLocation}',
+                ava = '{ava}',
+                banner = '{banner}',
+                followers = '{followers}',
+                following = '{following}',
+                tweets = '{tweets}',
+                ");
             try
             {
                 var toFill = _project.Lists["editProfile"];
@@ -1223,37 +1218,43 @@ namespace w3tools //by @w3bgrep
         private protected string _url;
         private protected string _model;
 
-        public AI2(IZennoPosterProjectModel project, string provider, string model, bool log = false)
+        public AI2(IZennoPosterProjectModel project, string provider, string model = null, bool log = false)
         {
             _project = project;
             _logger = new Logger(project, log: log, classEmoji: "AI");
-            _apiKey = new Sql(_project).Get("apikey", "private_api", where: $"key = '{provider}'");
             SetProvider(provider);
             _model = model;
         }
 
         private void SetProvider(string provider)
         {
-            _apiKey = new Sql(_project).Get("apikey", "private_api", where: $"key = '{provider}'");
 
             switch (provider)
             {
                 case "perplexity":
                     _url = "https://api.perplexity.ai/chat/completions";
+                    _apiKey = new Sql(_project).Get("apikey", "private_api", where: $"key = '{provider}'");
                     break;
                 case "aiio":
                     _url = "https://api.intelligence.io.solutions/api/v1/chat/completions";
+                    _apiKey = new Sql(_project).Get("api", "projects_aiio");
+                    if (string.IsNullOrEmpty(_apiKey))
+                        throw new Exception($"aiio key not found for {_project.Var("acc0")}");
                     break;
                 default:
                     throw new Exception($"unknown provider {provider}");
             }
         }
 
-        public string Query(string systemContent, string userContent, bool log = false)
+        public string Query(string systemContent, string userContent, string aiModel = "rnd", bool log = false)
         {
+            if (_model != null) aiModel = _model;
+            if (aiModel == "rnd") aiModel = ZennoLab.Macros.TextProcessing.Spintax("{deepseek-ai/DeepSeek-R1-0528|meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8|Qwen/Qwen3-235B-A22B-FP8|meta-llama/Llama-3.2-90B-Vision-Instruct|Qwen/Qwen2.5-VL-32B-Instruct|google/gemma-3-27b-it|meta-llama/Llama-3.3-70B-Instruct|mistralai/Devstral-Small-2505|mistralai/Magistral-Small-2506|deepseek-ai/DeepSeek-R1-Distill-Llama-70B|netease-youdao/Confucius-o1-14B|nvidia/AceMath-7B-Instruct|deepseek-ai/DeepSeek-R1-Distill-Qwen-32B|mistralai/Mistral-Large-Instruct-2411|microsoft/phi-4|bespokelabs/Bespoke-Stratos-32B|THUDM/glm-4-9b-chat|CohereForAI/aya-expanse-32b|openbmb/MiniCPM3-4B|mistralai/Ministral-8B-Instruct-2410|ibm-granite/granite-3.1-8b-instruct}", false);
+            _logger.Send(aiModel);
+
             var requestBody = new
             {
-                model = _model, // {Qwen/Qwen2.5-Coder-32B-Instruct|deepseek-ai/DeepSeek-R1|deepseek-ai/DeepSeek-R1-0528|databricks/dbrx-instruct|mistralai/Mistral-Large-Instruct-2411|meta-llama/Llama-3.3-70B-Instruct|Qwen/Qwen3-235B-A22B-FP8|Qwen/QwQ-32B|deepseek-ai/DeepSeek-R1-Distill-Qwen-32B|google/gemma-3-27b-it}
+                model = aiModel, // {Qwen/Qwen2.5-Coder-32B-Instruct|deepseek-ai/DeepSeek-R1|deepseek-ai/DeepSeek-R1-0528|databricks/dbrx-instruct|mistralai/Mistral-Large-Instruct-2411|meta-llama/Llama-3.3-70B-Instruct|Qwen/Qwen3-235B-A22B-FP8|Qwen/QwQ-32B|deepseek-ai/DeepSeek-R1-Distill-Qwen-32B|google/gemma-3-27b-it}
                 messages = new[]
                 {
                     new
@@ -1320,7 +1321,7 @@ namespace w3tools //by @w3bgrep
         public string OptimizeCode(string content, bool log = false)
         {
             string systemContent = "You are a web3 developer. Optimize the following code. Return only the optimized code. Do not add explanations, comments, or formatting. Output code only, in plain text.";
-            return Query(systemContent, content);
+            return Query(systemContent, content, log:log);
 
         }
 
@@ -1332,5 +1333,59 @@ namespace w3tools //by @w3bgrep
 
         }
     }
+
+
+    public static class Db 
+    {
+        public static string DbR(this IZennoPosterProjectModel project, string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "acc0", string acc = null, string where = "")
+        {
+            return new Sql(project, log).Get(toGet, tableName, log, throwOnEx, key, acc, where);
+        }
+
+        public static void DbW(this IZennoPosterProjectModel project, string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, string key = "acc0", object acc = null, string where = "")
+        {
+            new Sql(project, log).Upd(toUpd, tableName, log, throwOnEx, last, key, acc, where);
+        }
+
+        public static void FilterAccList(IZennoPosterProjectModel project, HashSet<string> allAccounts, bool log = false)
+        {
+            var _project = project;
+            var _sql = new Sql(project, log);
+            var _logger = new Logger(project, log);
+
+            if (!string.IsNullOrEmpty(_project.Variables["requiredSocial"].Value))
+            {
+                string[] demanded = _project.Variables["requiredSocial"].Value.Split(',');
+                _logger.Send($"Filtering by socials: [{string.Join(", ", demanded)}]");
+
+                foreach (string social in demanded)
+                {
+                    string tableName = $"projects_{social.Trim().ToLower()}";
+                    var notOK = _sql.Get($"acc0", tableName, where: "status LIKE '%suspended%' OR status LIKE '%restricted%' OR status LIKE '%ban%' OR status LIKE '%CAPTCHA%' OR status LIKE '%applyed%' OR status LIKE '%Verify%'", log: log)
+                        .Split('\n')
+                        .Select(x => x.Trim())
+                        .Where(x => !string.IsNullOrEmpty(x));
+                    allAccounts.ExceptWith(notOK);
+                    _logger.Send($"After {social} filter: [{string.Join("|", allAccounts)}]");
+                }
+            }
+            _project.Lists["accs"].Clear();
+            _project.Lists["accs"].AddRange(allAccounts);
+            _logger.Send($"final list [{string.Join("|", _project.Lists["accs"])}]");
+
+        }
+        public static string Ref(this IZennoPosterProjectModel project, string refCode = null, bool log = false)
+        {
+            if (string.IsNullOrEmpty(refCode))
+                refCode = project.Variables["cfgRefCode"].Value;
+            if (string.IsNullOrEmpty(refCode))
+                refCode = new Sql(project, log).Get("refcode", where: "TRIM(refcode) != '' ORDER BY RANDOM() LIMIT 1");
+            return refCode;
+        }
+
+    }
+
+
+
 
 }

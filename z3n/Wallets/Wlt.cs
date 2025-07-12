@@ -114,6 +114,10 @@ namespace z3n
     }
 
 
+    public static class Wal
+    { }
+
+
 }
 
 

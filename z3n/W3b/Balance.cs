@@ -181,7 +181,7 @@ namespace z3n
                 return (T)Convert.ChangeType("0", typeof(T));
 
             int transactionCount = Convert.ToInt32(hexResultNonce.TrimStart('0', 'x'), 16);
-            if (log) Log($"{address} nonce now {transactionCount}");
+            if (log) _logger.Send($"{address} nonce now {transactionCount}");
             if (typeof(T) == typeof(string))
                 return (T)Convert.ChangeType(transactionCount.ToString(), typeof(T));
             return (T)Convert.ChangeType(transactionCount, typeof(T));
@@ -454,7 +454,7 @@ namespace z3n
             var json = JObject.Parse(response);
             string mist = json["result"]?["totalBalance"]?.ToString() ?? "0";
             decimal balance = decimal.Parse(mist) / 1000000m;
-            if (log) Log($"{address}: {balance} TOKEN ({coinType})");
+            if (log) _logger.Send($"{address}: {balance} TOKEN ({coinType})");
 
 
             if (typeof(T) == typeof(string)) return FloorDecimal<T>(balance, int.Parse(mist));
@@ -503,7 +503,7 @@ namespace z3n
             var json = JObject.Parse(response);
             string octas = json["data"]?["coin"]?["value"]?.ToString() ?? "0";
             decimal balance = decimal.Parse(octas) / 1000000m; // Предполагаем 6 decimals, как для USDC
-            if (log) Log($"{address}: {balance} TOKEN ({coinType})");
+            _logger.Send($"{address}: {balance} TOKEN ({coinType})");
             if (typeof(T) == typeof(string)) return FloorDecimal<T>(balance, int.Parse(octas));
             return (T)Convert.ChangeType(balance, typeof(T));
         }
@@ -527,7 +527,7 @@ namespace z3n
                 }
                 catch
                 {
-                    Log("no Address provided");
+                    _logger.Send("no Address provided");
                     throw;
                 }
 

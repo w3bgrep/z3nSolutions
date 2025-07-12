@@ -347,7 +347,7 @@ namespace z3n
                 }
                 catch
                 {
-                    Log("no Address provided");
+                    _logger.Send("no Address provided");
                     throw;
                 }
 

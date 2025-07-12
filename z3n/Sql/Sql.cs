@@ -57,6 +57,7 @@ namespace z3n
 
         public string TblName(string tableName, bool name = true)
         {
+            if (string.IsNullOrEmpty(tableName)) tableName = _project.Var("projectTable");
             string schemaName = "projects";
             if (_dbMode == "PostgreSQL")
             {
@@ -125,12 +126,13 @@ namespace z3n
             }
             else if (dbMode == "PostgreSQL")
             {
-                try { 
+                try
+                {
                     result = PostgresDB.DbQueryPostgre(_project, query, log, throwOnEx);
                 }
                 catch (Exception ex)
                 {
-                    Log($"!W Err:[{ex.Message}]. debug:\n{query}");
+                    _logger.Send($"!W Err:[{ex.Message}]. debug:\n{query}");
                     if (throwOnEx) throw;
                 }
             }
@@ -138,7 +140,7 @@ namespace z3n
             Log(query, result, log: log);
             return result;
         }
-        
+
         public void MkTable(Dictionary<string, string> tableStructure, string tableName = null, bool strictMode = false, bool insertData = false, string host = "localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "", string schemaName = "projects", bool log = false)
         {
             string dbMode = _project.Variables["DBmode"].Value;
@@ -159,8 +161,8 @@ namespace z3n
             else throw new Exception($"unknown DBmode: {dbMode}");
             return;
         }
- 
-        
+
+
         public void Write(Dictionary<string, string> toWrite, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true)
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
@@ -188,45 +190,63 @@ namespace z3n
 
         }
 
-        public void Upd(string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, object acc = null)
+        public void Upd(string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, string key = "acc0", object acc = null, string where = "")
         {
-            
-            int acc0 = 0;
-            if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
-            if (acc != null)
-            {
-                if (acc is int i) acc0 = i;
-                else if (acc is string s) int.TryParse(s, out acc0);
-            }
-            else int.TryParse(_project.Var("acc0"), out acc0);
+
+            //int acc0 = 0;
+            //if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
+            //if (acc != null)
+            //{
+            //    if (acc is int i) acc0 = i;
+            //    else if (acc is string s) int.TryParse(s, out acc0);
+            //}
+            //else int.TryParse(_project.Var("acc0"), out acc0);
 
 
             TblName(tableName);
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
             string[] keywords = { "blockchain", "browser", "cex_deps", "native", "profile", "settings" };
-            if (keywords.Any(keyword => tableName.Contains(keyword))) last = false;
-            
+            if (keywords.Any(keyword => _tableName.Contains(keyword))) last = false;
+
             toUpd = toUpd.Trim().TrimEnd(',');
             if (last) toUpd = toUpd + $", last = '{DateTime.UtcNow.ToString("MM-ddTHH:mm")}'";
 
-            toUpd = QuoteColumnNames(toUpd);
-            string query = $@"UPDATE {_tableName} SET {toUpd} WHERE acc0 = {acc0};";
-            try { _project.Var("lastQuery", query); } catch { }
-            DbQ(query, log: log, throwOnEx: throwOnEx);
+            toUpd = QuoteColumnNames(toUpd.Trim().TrimEnd(','));
+
+            if (string.IsNullOrEmpty(where))
+            {
+                if (acc is null)
+                    acc = _project.Variables["acc0"].Value;
+                if (key == "acc0")
+                {
+                    DbQ($@"UPDATE {_tableName} SET {toUpd} WHERE acc0 = {acc};", log: log, throwOnEx: throwOnEx);
+                    return;
+                }
+                else
+                {
+                    DbQ($@"UPDATE {_tableName} SET {toUpd} WHERE key = '{key}';", log: log, throwOnEx: throwOnEx);
+                    return;
+                }
+            }
+            else
+            {
+                DbQ($@"UPDATE {_tableName} SET {toUpd} WHERE {where};", log: log, throwOnEx: throwOnEx);
+                return;
+            }
+
         }
-        public void Upd(Dictionary<string, string> toWrite, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, object acc = null)
+        public void Upd(Dictionary<string, string> toWrite, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, string key = "acc0", object acc = null, string where = "")
         {
             string toUpd = string.Empty;
 
             foreach (KeyValuePair<string, string> pair in toWrite)
             {
-                string key = pair.Key;
-                string value = pair.Value;
+
                 toUpd += $"{pair.Key} = '{pair.Value}', ";
-                
+
             }
-            Upd(toUpd, tableName, log, throwOnEx, last, acc);
+            Upd(toUpd, tableName, log, throwOnEx, last, key, acc, where);
         }
 
         public void Upd(List<string> toWrite, string columnName, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, bool byKey = false)
@@ -247,8 +267,6 @@ namespace z3n
             }
         }
 
-
-
         public string Get(string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "acc0", string acc = null, string where = "")
         {
             toGet = QuoteColumnNames(toGet.Trim().TrimEnd(','));
@@ -257,16 +275,16 @@ namespace z3n
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
             if (string.IsNullOrEmpty(where))
-                {
-                if (string.IsNullOrEmpty(acc)) 
+            {
+                if (string.IsNullOrEmpty(acc))
                     acc = _project.Variables["acc0"].Value;
-                if (key == "acc0") 
+                if (key == "acc0")
                     return DbQ($@"SELECT {toGet} from {_tableName} WHERE acc0 = {acc};", log: log, throwOnEx: throwOnEx);
-                else 
+                else
                     return DbQ($@"SELECT {toGet} from {_tableName} WHERE key = '{key}';", log: log, throwOnEx: throwOnEx);
             }
             else
-                 return DbQ($@"SELECT {toGet} from {_tableName} WHERE {where};", log: log, throwOnEx: throwOnEx);
+                return DbQ($@"SELECT {toGet} from {_tableName} WHERE {where};", log: log, throwOnEx: throwOnEx);
         }
 
         public string GetRandom(string toGet, string tableName = null, bool log = false, bool acc = false, bool throwOnEx = false, int range = 0, bool single = true, bool invert = false)
@@ -288,20 +306,20 @@ namespace z3n
             if (single) query += " LIMIT 1;";
             if (invert) query = query.Replace("!=", "=");
 
-            return DbQ(query, log:log, throwOnEx: throwOnEx);
+            return DbQ(query, log: log, throwOnEx: throwOnEx);
         }
 
 
-        public string GetColumns(string tableName,  bool log = false)
+        public string GetColumns(string tableName, bool log = false)
         {
             TblName(tableName);
-            string Q; 
+            string Q;
             if (_pstgr) Q = $@"SELECT column_name FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}'";
             else Q = $@"SELECT name FROM pragma_table_info('{_tableName}')";
             return DbQ(Q, log: log).Replace("\n", ", ").Trim(',').Trim();
         }
 
-        public List<string> GetColumnList(string tableName,  bool log = false)
+        public List<string> GetColumnList(string tableName, bool log = false)
         {
             TblName(tableName);
             string Q;
@@ -318,7 +336,7 @@ namespace z3n
         }
 
 
-        
+
         public bool TblExist(string tblName)
         {
             TblName(tblName);
@@ -352,7 +370,7 @@ namespace z3n
             if (_dbMode == "PostgreSQL") _tableName = $"{_schemaName}.{_tableName}";
             return result;
         }
-        public  Dictionary<string, string> TblMapForProject( string[] staticColumns, string dynamicToDo = null, string defaultType = "TEXT DEFAULT ''")
+        public Dictionary<string, string> TblMapForProject(string[] staticColumns, string dynamicToDo = null, string defaultType = "TEXT DEFAULT ''")
         {
             if (string.IsNullOrEmpty(dynamicToDo)) dynamicToDo = _project.Variables["cfgToDo"].Value;
 
@@ -368,7 +386,7 @@ namespace z3n
                     tableStructure.Add(name, defaultType);
                 }
             }
-            if (!string.IsNullOrEmpty(dynamicToDo)) 
+            if (!string.IsNullOrEmpty(dynamicToDo))
             {
                 string[] toDoItems = (dynamicToDo ?? "").Split(',');
                 foreach (string taskId in toDoItems)
@@ -409,17 +427,17 @@ namespace z3n
         {
             TblName(tblName);
             var current = TblColumns(tblName);
-            
+
             TblName(tblName);
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
-            Log(string.Join(",", current));
+            _logger.Send(string.Join(",", current));
             foreach (var column in tableStructure)
             {
                 var keyWd = column.Key.Trim();
                 if (!current.Contains(keyWd))
                 {
-                    Log($"CLMNADD [{keyWd}] not in  [{string.Join(",", current)}] ");
+                    _logger.Send($"CLMNADD [{keyWd}] not in  [{string.Join(",", current)}] ");
                     DbQ($@"ALTER TABLE {_tableName} ADD COLUMN {keyWd} {column.Value};", log: _logShow);
                 }
             }
@@ -463,12 +481,12 @@ namespace z3n
             {
                 if (!tableStructure.ContainsKey(column))
                 {
-                    Log($"[{column}] not in tableStructure keys, dropping");
+                    _logger.Send($"[{column}] not in tableStructure keys, dropping");
                     string cascade = _pstgr ? " CASCADE" : "";
-                    DbQ($@"ALTER TABLE {_tableName} DROP COLUMN {column}{cascade};", log:_logShow);
+                    DbQ($@"ALTER TABLE {_tableName} DROP COLUMN {column}{cascade};", log: _logShow);
                 }
             }
-        }           
+        }
         public void AddRange(string tblName, int range = 0)
         {
             if (range == 0)
@@ -478,7 +496,7 @@ namespace z3n
                 }
                 catch
                 {
-                    Log("var  rangeEnd is empty or 0, fallback to 100");
+                    _logger.Send("var  rangeEnd is empty or 0, fallback to 100");
                     range = 100;
                 }
 
@@ -486,8 +504,8 @@ namespace z3n
 
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
             int current = int.Parse(DbQ($@"SELECT COALESCE(MAX(acc0), 0) FROM {_tableName};"));
-            Log(current.ToString());
-            Log(range.ToString());
+            _logger.Send(current.ToString());
+            _logger.Send(range.ToString());
             for (int currentAcc0 = current + 1; currentAcc0 <= range; currentAcc0++)
             {
                 DbQ($@"INSERT INTO {_tableName} (acc0) VALUES ({currentAcc0}) ON CONFLICT DO NOTHING;");
@@ -513,11 +531,11 @@ namespace z3n
             _project.Variables["accBIO"].Value = respData[1].Trim();
             return resp;
         }
-        public Dictionary<string,string> Settings(bool set = true)
+        public Dictionary<string, string> Settings(bool set = true)
         {
-            var dbConfig = new Dictionary<string,string>();
-            
-            TblName("private_settings");  
+            var dbConfig = new Dictionary<string, string>();
+
+            TblName("private_settings");
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
             var resp = DbQ($"SELECT key, value FROM {_tableName}");
             foreach (string varData in resp.Split('\n'))
@@ -526,10 +544,10 @@ namespace z3n
                 string varValue = varData.Split('|')[1].Trim();
                 dbConfig.Add(varName, varValue);
 
-                if (set) 
+                if (set)
                 {
                     try { _project.Var(varName, varValue); }
-                    catch (Exception e) { Log(e.Message); }
+                    catch (Exception e) { _logger.Send(e.Message); }
                 }
             }
             return dbConfig;
@@ -553,7 +571,7 @@ namespace z3n
         public string Ref(string refCode = null, bool log = false)
         {
             if (string.IsNullOrEmpty(refCode)) refCode = _project.Variables["cfgRefCode"].Value;
-            
+
             TblName(_project.Variables["projectTable"].Value);
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
@@ -570,13 +588,13 @@ namespace z3n
             var addrss = new Dictionary<string, string>();
 
             if (string.IsNullOrEmpty(chains)) chains = GetColumns("public_blockchain");
-            string[] tikers = chains.Replace(" ","").Split(',');
+            string[] tikers = chains.Replace(" ", "").Split(',');
             string[] addresses = Get(chains, "public_blockchain").Replace(" ", "").Split('|');
 
 
             for (int i = 0; i < tikers.Length; i++)
             {
-                var tiker = tikers[i].Trim(); 
+                var tiker = tikers[i].Trim();
                 var address = addresses[i].Trim();
                 addrss.Add(tiker, address);
             }
@@ -622,7 +640,7 @@ namespace z3n
             {
                 _project.Lists["accs"].Clear();
                 _project.Lists["accs"].Add(_project.Variables["acc0Forced"].Value);
-                Log($@"manual mode on with {_project.Variables["acc0Forced"].Value}");
+                _logger.Send($@"manual mode on with {_project.Variables["acc0Forced"].Value}");
                 return;
             }
 
@@ -641,38 +659,38 @@ namespace z3n
                 catch
                 {
 
-                    Log($"{query}");
+                    _logger.Send($"{query}");
                 }
             }
 
             if (allAccounts.Count == 0)
             {
                 _project.Variables["noAccsToDo"].Value = "True";
-                Log($"♻ noAccountsAvailable by queries [{string.Join(" | ", dbQueries)}]");
+                _logger.Send($"♻ noAccountsAvailable by queries [{string.Join(" | ", dbQueries)}]");
                 return;
             }
-            Log($"Initial availableAccounts: [{string.Join(", ", allAccounts)}]");
+            _logger.Send($"Initial availableAccounts: [{string.Join(", ", allAccounts)}]");
 
             if (!string.IsNullOrEmpty(_project.Variables["requiredSocial"].Value))
             {
                 string[] demanded = _project.Variables["requiredSocial"].Value.Split(',');
-                Log($"Filtering by socials: [{string.Join(", ", demanded)}]");
+                _logger.Send($"Filtering by socials: [{string.Join(", ", demanded)}]");
 
                 foreach (string social in demanded)
                 {
                     string tableName = TblName($"private_{social.Trim().ToLower()}");
-                    var notOK = Get($"acc0", _tableName, where: "status NOT LIKE '%ok%'", log:log)
+                    var notOK = Get($"acc0", _tableName, where: "status NOT LIKE '%ok%'", log: log)
 
                         .Split('\n')
                         .Select(x => x.Trim())
                         .Where(x => !string.IsNullOrEmpty(x));
                     allAccounts.ExceptWith(notOK);
-                    Log($"After {social} filter: [{string.Join("|", allAccounts)}]");
+                    _logger.Send($"After {social} filter: [{string.Join("|", allAccounts)}]");
                 }
             }
             _project.Lists["accs"].Clear();
             _project.Lists["accs"].AddRange(allAccounts);
-            Log($"final list [{string.Join("|", _project.Lists["accs"])}]");
+            _logger.Send($"final list [{string.Join("|", _project.Lists["accs"])}]");
         }
 
         public string Address(string chainType = "evm")
@@ -712,7 +730,7 @@ namespace z3n
                 default:
                     throw new Exception("unexpected input. Use (evm|sol|seed|pkFromSeed)");
             }
-            
+
             var resp = Get(chainType, _tableName);
             if (!string.IsNullOrEmpty(_project.Var("cfgPin")))
                 return SAFU.Decode(_project, resp);

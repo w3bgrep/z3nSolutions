@@ -94,7 +94,7 @@ namespace z3n
             }
             catch
             {
-                Log("acc0 is empty `y");
+                _logger.Send("acc0 is empty `y");
                 return "";
             }
         }
@@ -108,24 +108,15 @@ namespace z3n
 
             if (string.IsNullOrEmpty(key))
             {
-                Log("!W key is null or empty");
+                _logger.Send("!W key is null or empty");
                 throw new Exception("emptykey");
             }
-            ;
             return key;
 
         }
 
 
 
-        protected void Log(string tolog = "", [CallerMemberName] string callerName = "", bool log = false)
-        {
-            if (!_logShow && !log) return;
-            var stackFrame = new System.Diagnostics.StackFrame(1);
-            var callingMethod = stackFrame.GetMethod();
-            if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
-            _logger.Send($"({callerName}) [{tolog}] ");
-        }
         protected void Log(string address, string balance, string rpc, string contract = null, [CallerMemberName] string callerName = "", bool log = false)
         {
             if (!_logShow && !log) return;
@@ -222,7 +213,7 @@ namespace z3n
             }
             else
             {
-                Log($"!W rpc for [{chain}] not found in dictionary");
+                _logger.Send($"!W rpc for [{chain}] not found in dictionary");
                 throw new Exception($"noRpcProvided for {chain}");
             }
         }
@@ -236,7 +227,7 @@ namespace z3n
                 {
                     resultList.Add(url);
                 }
-                else Log($"!W rpc for [{chain}] not found in dictionary");
+                else _logger.Send($"!W rpc for [{chain}] not found in dictionary");
             }
             return resultList;
         }
