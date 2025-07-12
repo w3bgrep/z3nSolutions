@@ -65,7 +65,7 @@ namespace z3n
             _logger.Send($"Initial availableAccounts: [{string.Join(", ", allAccounts)}]");
             FilterAccList(project, allAccounts, log);
         }
-        public static void FilterAccList(IZennoPosterProjectModel project, HashSet<string> allAccounts, bool log = false)
+        private static void FilterAccList(IZennoPosterProjectModel project, HashSet<string> allAccounts, bool log = false)
         {
             var _project = project;
             var _sql = new Sql(project, log);

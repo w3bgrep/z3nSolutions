@@ -1154,6 +1154,7 @@ namespace z3n
 
         public List<string> ParseWebGl( string vendor, int qnt, bool before78 = false)
         {
+            if (_instance is null) throw new Exception("instance required but not provided. Probably MethosOverload mistake");
             var result = new List<string>();
             _instance.CanvasRenderMode = CanvasMode.Emulate;
             var alterBrowser = BrowserType.Firefox45;

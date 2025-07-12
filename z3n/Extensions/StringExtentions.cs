@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Numerics;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 
@@ -81,6 +83,29 @@ namespace z3n
             return key;
         }
 
+        public static string ToEvmPrivateKey(this string input)
+        {
+            if (string.IsNullOrEmpty(input))
+            {
+                throw new ArgumentException("Input string cannot be null or empty.");
+            }
+
+            byte[] inputBytes = Encoding.UTF8.GetBytes(input);
+
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                byte[] hashBytes = sha256.ComputeHash(inputBytes);
+
+                StringBuilder hex = new StringBuilder(hashBytes.Length * 2);
+                foreach (byte b in hashBytes)
+                {
+                    hex.AppendFormat("{0:x2}", b);
+                }
+
+                return hex.ToString();
+            }
+        }
+
         public static string[] TxToString(this string txJson)
         {
             dynamic txData = JsonConvert.DeserializeObject<System.Dynamic.ExpandoObject>(txJson);
@@ -144,6 +169,52 @@ namespace z3n
                     parsedData[key] = dataParts[i].Trim();
             }
             return parsedData;
+        }
+
+        public static Dictionary<string, string> ParseByMask(this string input, string mask)
+        {
+            input = input?.Trim();
+            mask = mask?.Trim();
+
+            if (string.IsNullOrEmpty(input) || string.IsNullOrEmpty(mask))
+            {
+                return new Dictionary<string, string>();
+            }
+
+            var variableNames = new List<string>();
+            var regex = new Regex(@"\{([^{}]+)\}");
+            foreach (Match mtch in regex.Matches(mask))
+            {
+                variableNames.Add(mtch.Groups[1].Value);
+            }
+
+            if (variableNames.Count == 0)
+            {
+                return new Dictionary<string, string>();
+            }
+
+            string pattern = Regex.Escape(mask);
+            foreach (var varName in variableNames)
+            {
+                string escapedVar = Regex.Escape("{" + varName + "}");
+                pattern = pattern.Replace(escapedVar, "(.*?)");
+            }
+            pattern += "$";
+
+
+            var match = Regex.Match(input, pattern);
+            if (!match.Success)
+            {
+                return new Dictionary<string, string>();
+            }
+
+            var result = new Dictionary<string, string>();
+            for (int i = 0; i < variableNames.Count; i++)
+            {
+                result[variableNames[i]] = match.Groups[i + 1].Value;
+            }
+
+            return result;
         }
 
         public static string StringToHex(this string value, string convert = "")
