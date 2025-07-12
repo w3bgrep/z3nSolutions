@@ -137,6 +137,12 @@ namespace z3n
         {
             return new  FS(project).GetNewCreds(social);   
         }
+        public static void WaitTx(this IZennoPosterProjectModel project, string rpc = null, string hash = null, int deadline = 60, string proxy = "", bool log = false)
+        {
+            new W3b(project, log: log).WaitTx(rpc, hash, deadline);
+            return;
+        }
+
     }
     public static class Vars
     {

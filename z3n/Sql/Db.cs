@@ -18,6 +18,7 @@ namespace z3n
 
         public static void DbUpd(this IZennoPosterProjectModel project, string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, string key = "acc0", object acc = null, string where = "")
         {
+            try { project.Var("lastQuery", toUpd); } catch (Exception Ex){ project.SendWarningToLog(Ex.Message, true); }
             new Sql(project, log).Upd(toUpd, tableName, log, throwOnEx, last, key, acc, where);
         }
 
@@ -98,7 +99,7 @@ namespace z3n
             if (string.IsNullOrEmpty(refCode)) 
                 refCode = project.Variables["cfgRefCode"].Value;
             if (string.IsNullOrEmpty(refCode))
-                refCode = new Sql(project, log).Get("refcode", where: "WHERE TRIM(refcode) != '' ORDER BY RANDOM() LIMIT 1;");
+                refCode = new Sql(project, log).Get("refcode", where: "TRIM(refcode) != '' ORDER BY RANDOM() LIMIT 1;");
             return refCode;
         }
     }

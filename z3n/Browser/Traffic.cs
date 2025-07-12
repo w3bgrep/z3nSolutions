@@ -79,26 +79,6 @@ namespace z3n
             if (data.Count == 0) goto get;
             return data;
         }
-        //public string GetHeader(string url, string headerToGet = "Authorization", bool trim = true, bool reload = false)
-        //{
-        //    Dictionary<string, string> data = Get(url, reload);
-        //    data.TryGetValue("RequestHeaders", out string headersString);
-
-        //    var headers = headersString.Split('\n');
-
-        //    foreach (string header in headers)
-        //    {
-        //        string headerName = header.Split(':')[0];
-        //        string headerValue = header.Split(':')[1];
-        //        data.Add(headerName, headerValue);
-        //    }
-
-        //    data.TryGetValue(headerToGet, out string Value);
-
-        //    if (trim) Value = Value.Replace("Bearer", "").Trim();
-        //    return Value;
-
-        //}
         public string GetHeader(string url, string headerToGet = "Authorization", bool reload = false)
         {
             Dictionary<string, string> data = Get(url, reload);
@@ -124,4 +104,21 @@ namespace z3n
             return value?.Trim() ?? string.Empty; // Возвращаем пустую строку, если значение не найдено
         }
     }
+
+    public static class Traf
+    {
+        public static string Trfk(this IZennoPosterProjectModel project, Instance instance, string url, string parametr = "ResponseBody", bool reload = false)
+        {
+            try
+            {
+                return new Traffic(project, instance).Get(url, parametr);
+            }
+            catch (Exception e)
+            {
+                project.SendWarningToLog(e.Message);
+                throw;
+            }
+        }
+    }
+
 }

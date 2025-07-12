@@ -1,4 +1,5 @@
-﻿using NBitcoin;
+﻿using Leaf.xNet;
+using NBitcoin;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -232,7 +233,7 @@ namespace z3n
             return resultList;
         }
 
-        
+ 
         
         public string SendLegacy(string chainRpc, string contractAddress, string encodedData, decimal value, string walletKey, int speedup = 1)
         {
@@ -356,6 +357,141 @@ namespace z3n
             }
         }
 
+        public bool WaitTx(string rpc = null, string hash = null, int deadline = 60, string proxy = "", bool log = false)
+        {
+            if (string.IsNullOrEmpty(hash)) hash = _project.Variables["blockchainHash"].Value;
+            if (string.IsNullOrEmpty(rpc)) rpc = _project.Variables["blockchainRPC"].Value;
 
+            string jsonReceipt = $@"{{""jsonrpc"":""2.0"",""method"":""eth_getTransactionReceipt"",""params"":[""{hash}""],""id"":1}}";
+            string jsonRaw = $@"{{""jsonrpc"":""2.0"",""method"":""eth_getTransactionByHash"",""params"":[""{hash}""],""id"":1}}";
+
+            string response;
+            using (var request = new HttpRequest())
+            {
+                request.UserAgent = "Mozilla/5.0";
+                request.IgnoreProtocolErrors = true;
+                request.ConnectTimeout = 5000;
+
+                if (proxy == "+") proxy = _project.Variables["proxyLeaf"].Value;
+                if (!string.IsNullOrEmpty(proxy))
+                {
+                    string[] proxyArray = proxy.Split(':');
+                    string username = proxyArray[1]; string password = proxyArray[2]; string host = proxyArray[3]; int port = int.Parse(proxyArray[4]);
+                    request.Proxy = new HttpProxyClient(host, port, username, password);
+                }
+
+                DateTime startTime = DateTime.Now;
+                TimeSpan timeout = TimeSpan.FromSeconds(deadline);
+
+
+                while (true)
+                {
+                    if (DateTime.Now - startTime > timeout)
+                        throw new Exception($"timeout {deadline}s");
+
+                    string logString = "";
+
+                    try
+                    {
+                        HttpResponse httpResponse = request.Post(rpc, jsonReceipt, "application/json");
+                        response = httpResponse.ToString();
+
+                        if (httpResponse.StatusCode != HttpStatusCode.OK)
+                        {
+                            _logger.Send($"Ошибка сервера (receipt): {httpResponse.StatusCode}");
+                            Thread.Sleep(2000);
+                            continue;
+                        }
+
+                        if (string.IsNullOrWhiteSpace(response) || response.Contains("\"result\":null"))
+                        {
+                            _project.Variables["txStatus"].Value = "noStatus";
+                        }
+                        else
+                        {
+                            _project.Json.FromString(response);
+                            try
+                            {
+                                string gasUsed = HexToDecimalString(_project.Json.result.gasUsed, "gwei");
+                                string gasPrice = HexToDecimalString(_project.Json.result.effectiveGasPrice, "gwei");
+                                string status = HexToDecimalString(_project.Json.result.status);
+
+                                _project.Variables["txStatus"].Value = status == "1" ? "SUCCSESS" : "!W FAIL";
+                                bool res = status == "1" ? true : false;
+                                string result = $"{rpc} {hash} [{_project.Variables["txStatus"].Value}] gasUsed: {gasUsed}";
+                                _logger.Send($"[ TX state:  {result}");
+                                return res;
+                            }
+                            catch
+                            {
+                                _project.Variables["txStatus"].Value = "noStatus";
+                            }
+                        }
+                    }
+                    catch (HttpException ex)
+                    {
+                        _project.SendErrorToLog($"Ошибка запроса (receipt): {ex.Message}");
+                        Thread.Sleep(2000);
+                        continue;
+                    }
+
+                    try
+                    {
+                        HttpResponse httpResponse = request.Post(rpc, jsonRaw, "application/json");
+                        response = httpResponse.ToString();
+
+                        if (httpResponse.StatusCode != HttpStatusCode.OK)
+                        {
+                            _project.SendErrorToLog($"Ошибка сервера (raw): {httpResponse.StatusCode}");
+                            Thread.Sleep(2000);
+                            continue;
+                        }
+
+                        if (string.IsNullOrWhiteSpace(response) || response.Contains("\"result\":null"))
+                        {
+                            _project.Variables["txStatus"].Value = "";
+                            logString = $"[{rpc} {hash}] not found";
+                        }
+                        else
+                        {
+                            _project.Json.FromString(response);
+                            try
+                            {
+                                string gas = HexToDecimalString(_project.Json.result.maxFeePerGas, "gwei");
+                                string gasPrice = HexToDecimalString(_project.Json.result.gasPrice, "gwei");
+                                string nonce = HexToDecimalString(_project.Json.result.nonce);
+                                string value = HexToDecimalString(_project.Json.result.value, "eth");
+                                _project.Variables["txStatus"].Value = "PENDING";
+
+                                logString = $"[{rpc} {hash}] pending  gasLimit:[{gas}] gasNow:[{gasPrice}] nonce:[{nonce}] value:[{value}]";
+                            }
+                            catch
+                            {
+                                _project.Variables["txStatus"].Value = "";
+                                logString = $"[{rpc} {hash}] not found";
+                            }
+                        }
+                    }
+                    catch (HttpException ex)
+                    {
+                        _project.SendErrorToLog($"Ошибка запроса (raw): {ex.Message}");
+                        Thread.Sleep(2000);
+                        continue;
+                    }
+                    _logger.Send($"[ TX state:  {logString}");
+                    Thread.Sleep(3000);
+                }
+            }
+        }
     }
+
+    public static class Tx
+    {
+        public static void WaitTx(this IZennoPosterProjectModel project, string rpc = null, string hash = null, int deadline = 60, string proxy = "", bool log = false)
+        {
+            new W3b(project, log: log).WaitTx(rpc, hash, deadline);
+            return ;
+        }
+    }
+
 }
