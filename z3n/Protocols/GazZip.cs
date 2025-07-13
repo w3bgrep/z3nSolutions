@@ -17,13 +17,13 @@ namespace z3n
         Sepolia,
         Soneum,
         BNB,
+        OpBNB,
         Gravity,
         Zero,
     }
 
     public class GazZip : W3b
     {
-
         private readonly W3bRead _read;
         public GazZip(IZennoPosterProjectModel project, string key = null, bool log = false)
         : base(project, log)
@@ -32,8 +32,6 @@ namespace z3n
             _adrEvm = _key.ToPubEvm();//_sql.Address("evm");
             _read = new W3bRead(project);
         }
-
-
         public string GzTarget(GZto destination, bool log = false)
         {
             // 0x010066 Sepolia | 0x01019e Soneum | 0x01000e BNB | 0x0100f0 Gravity | 0x010169 Zero
@@ -50,13 +48,13 @@ namespace z3n
                     return "0x0100f0";
                 case GZto.Zero:
                     return "0x010169";
-
+                case GZto.OpBNB:
+                    return "0x01003a";
                 default:
                     return "null";
             }
 
         }
-
         public string GZ(string chainTo, decimal value, string rpc = null, bool log = false)
 
         {
@@ -135,8 +133,5 @@ namespace z3n
             _read.WaitTransaction(rpc, txHash);
             return txHash;
         }
- 
-
-
     }
 }

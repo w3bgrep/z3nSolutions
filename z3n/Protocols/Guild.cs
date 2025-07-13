@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using System.Web;
 using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
-
+using Newtonsoft.Json;
 namespace z3n
 {
     public class Guild
@@ -36,18 +36,33 @@ namespace z3n
 
         }
 
-        public void ParseRoles(string tablename)
+        public void ParseRoles(string tablename, bool append = true)
         {
-
-            var done = new List<string>();
-            var undone = new List<string>();
 
             var roles = _instance.ActiveTab.FindElementsByAttribute("div", "id", "role-", "regexp").ToList();
             _sql.ClmnAdd(tablename, "guild_done");
             _sql.ClmnAdd(tablename, "guild_undone");
 
-            done = _sql.Get("guild_done", tablename).Split('\r').Select(s => s.Trim()).ToList();
-            undone = _sql.Get("guild_undone", tablename).Split('\r').Select(s => s.Trim()).ToList();
+            var doneData = new List<Dictionary<string, string>>();
+            var undoneData = new List<Dictionary<string, object>>();
+
+            string doneJson = "";
+            string undoneJson = "";
+
+            if (append)
+            {
+                 doneJson = _sql.Get("guild_done", tablename);
+                 undoneJson = _sql.Get("guild_undone", tablename);
+            }
+
+            if (!string.IsNullOrEmpty(doneJson))
+            {
+                doneData = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(doneJson) ?? new List<Dictionary<string, string>>();
+            }
+            if (!string.IsNullOrEmpty(undoneJson))
+            {
+                undoneData = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(undoneJson) ?? new List<Dictionary<string, object>>();
+            }
 
             foreach (HtmlElement role in roles)
             {
@@ -59,36 +74,60 @@ namespace z3n
 
                 if (state.Contains("No access") || state.Contains("Join Guild"))
                 {
-                    string undoneT = "";
                     var tasksHe = role.FindChildByAttribute("div", "class", "flex\\ flex-col\\ p-5\\ pt-0", "regexp", 0);
                     var tasks = tasksHe.FindChildrenByAttribute("div", "class", "w-full\\ transition-all\\ duration-200\\ translate-y-0\\ opacity-100", "regexp").ToList();
+                    var taskList = new List<string>();
+
                     foreach (HtmlElement task in tasks)
                     {
                         string taskText = task.InnerText.Split('\n')[0].Trim();
                         if (task.InnerHtml.Contains("M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z"))
                         {
                             _logger.Send($"[!Undone]: {taskText}");
-                            undoneT += taskText.Trim() + ", ";
+                            taskList.Add(taskText.Trim());
                         }
                     }
-                    undoneT = undoneT.Trim().Trim(',');
-                    undone.Add($"[{name}]: {undoneT}".Trim());
+                    var undoneEntry = new Dictionary<string, object>
+                    {
+                        ["name"] = name,
+                        ["tasks"] = taskList
+                    };
+                    if (!undoneData.Any(d => d["name"].ToString() == name))
+                    {
+                        undoneData.Add(undoneEntry);
+                    }
                 }
                 else if (state.Contains("You have access"))
                 {
-                    done.Add($"[{name}] ({total})".Trim());
+                    var doneEntry = new Dictionary<string, string>
+                    {
+                        ["name"] = name,
+                        ["total"] = total
+                    };
+                    if (!doneData.Any(d => d["name"] == name))
+                    {
+                        doneData.Add(doneEntry);
+                    }
                 }
                 else if (state.Contains("Reconnect"))
                 {
-                    undone.Add($"[{name}]: reconnect".Trim());
+                    var undoneEntry = new Dictionary<string, object>
+                    {
+                        ["name"] = name,
+                        ["reconnect"] = true
+                    };
+                    if (!undoneData.Any(d => d["name"].ToString() == name))
+                    {
+                        undoneData.Add(undoneEntry);
+                    }
                 }
-                done = done.Distinct().Select(s => s.Trim()).ToList();
-                undone = undone.Distinct().Select(s => s.Trim()).ToList();
-                string wDone = string.Join("\r", done).Trim().Replace("'", "");
-                string wUndone = string.Join("\r", undone).Trim().Replace("'", "");
-                _project.Var("guildUndone", wUndone);
-                _sql.Upd($"guild_done = '{wDone}', guild_undone = '{wUndone}'", tablename);
             }
+
+            string wDone = JsonConvert.SerializeObject(doneData, Formatting.Indented).Replace("'", "");
+            string wUndone = JsonConvert.SerializeObject(undoneData, Formatting.Indented).Replace("'", "");
+            _project.Var("guildDone", wDone);
+            _project.Var("guildUndone", wUndone);
+            _sql.Upd($"guild_done = '{wDone}', guild_undone = '{wUndone}'", tablename);
 
         }
 

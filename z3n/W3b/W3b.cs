@@ -485,13 +485,5 @@ namespace z3n
         }
     }
 
-    public static class Tx
-    {
-        public static void WaitTx(this IZennoPosterProjectModel project, string rpc = null, string hash = null, int deadline = 60, string proxy = "", bool log = false)
-        {
-            new W3b(project, log: log).WaitTx(rpc, hash, deadline);
-            return ;
-        }
-    }
 
 }
