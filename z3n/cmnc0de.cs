@@ -49,16 +49,6 @@ namespace w3tools //by @w3bgrep
             return new Traffic(project, instance).Get(url, parametr);
 
         }
-        public static void _SAFU(this IZennoPosterProjectModel project)
-        {
-            string tempFilePath = project.Path + "_SAFU.zp";
-            var mapVars = new List<Tuple<string, string>>();
-            mapVars.Add(new Tuple<string, string>("acc0", "acc0"));
-            mapVars.Add(new Tuple<string, string>("cfgPin", "cfgPin"));
-            mapVars.Add(new Tuple<string, string>("DBpstgrPass", "DBpstgrPass"));
-            try { project.ExecuteProject(tempFilePath, mapVars, true, true, true); }
-            catch (Exception ex) { project.SendWarningToLog(ex.Message); }
-            return;
-        }
+       
     }
 }
