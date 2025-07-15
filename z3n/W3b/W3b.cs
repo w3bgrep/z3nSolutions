@@ -485,5 +485,15 @@ namespace z3n
         }
     }
 
+    public static class Web3 
+    {
+        public static decimal EthPrice(this IZennoPosterProjectModel project)
+        {
+            return new OKXApi(project).OKXPrice<decimal>("ETH-USDT");
 
+        }
+    
+    
+    
+    }
 }

@@ -88,7 +88,7 @@ namespace z3n
                 Unlock(log: log);
             _logger.Send($"checking");
             var adr = ActiveAddress(log: log);
-            _logger.Send($"using [{adr}]");
+            _logger.Send($"Launched with [{adr}]", show:true);
             _instance.CloseExtraTabs();
             _instance.UseFullMouseEmulation = em;
             return adr;
