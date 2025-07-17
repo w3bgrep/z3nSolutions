@@ -363,3 +363,5 @@ MigrationBackup/
 FodyWeavers.xsd
 cmnc0de.cs
 .vscode/
+/z3n/Conf/AppRun.cs
+/z3n/Conf/AppReg.cs

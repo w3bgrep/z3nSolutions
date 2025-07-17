@@ -83,6 +83,8 @@
   <ItemGroup>
     <Compile Include="Browser\Cookies.cs" />
     <Compile Include="Browser\Captcha.cs" />
+    <Compile Include="Conf\AppReg.cs" />
+    <Compile Include="Conf\AppRun.cs" />
     <Compile Include="Extensions\Utils.cs" />
     <Compile Include="Protocols\AI.cs" />
     <Compile Include="Protocols\ChainOperaAI.cs" />

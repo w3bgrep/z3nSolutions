@@ -294,7 +294,7 @@ namespace z3n
             }
             _logger.Send($"Socials loaded: [{requiredSocial}]");
             
-            _instance.CloseExtraTabs(true);
+            _instance.CloseExtraTabs();
             return requiredSocial;
         }
         public string LoadWallets(string walletsToUse)
@@ -336,7 +336,7 @@ namespace z3n
                 }
             }
 
-            _instance.CloseExtraTabs(true);
+            _instance.CloseExtraTabs();
             return walletsToUse;
         }
 

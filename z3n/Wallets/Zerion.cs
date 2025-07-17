@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.ProjectModel;
+using static NBitcoin.Scripting.OutputDescriptor;
 
 namespace z3n
 {
@@ -479,7 +480,7 @@ namespace z3n
         {
             string activeWallet = _instance.HeGet(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\#/wallet-select", "regexp", 0));
             string total = _instance.HeGet(("div", "style", "display:\\ grid;\\ gap:\\ 0px;\\ grid-template-columns:\\ minmax\\(0px,\\ auto\\);\\ align-items:\\ start;", "regexp", 0)).Split('\n')[0];
-            _logger.Send($"wallet Now {activeWallet}  [{total}]");
+            _logger.Send($"wallet Now {activeWallet}  [{total}]", show: true);
             return activeWallet;
         }
 
