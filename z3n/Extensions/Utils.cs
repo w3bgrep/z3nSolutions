@@ -153,8 +153,6 @@ namespace z3n
             catch (Exception ex) { project.SendWarningToLog(ex.Message); }
             return;
         }
-    
-    
     }
     public static class Vars
     {
