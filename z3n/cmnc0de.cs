@@ -202,6 +202,31 @@ namespace w3tools //by @w3bgrep
             }
         }
 
+        public static decimal DSPrice(string contract = "So11111111111111111111111111111111111111112", string chain = "solana")
+        {
+            try
+            {
+                string result = new DexScreener().CoinInfo(contract, chain).GetAwaiter().GetResult();
+
+                var json = JArray.Parse(result);
+                JToken priceToken = json.FirstOrDefault()?["priceNative"];
+
+                if (priceToken == null)
+                {
+                    return 0m;
+                }
+
+                return priceToken.Value<decimal>();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message);
+            }
+        }
+
+
+
+
     }
 
     public class CoinGecco
@@ -231,9 +256,37 @@ namespace w3tools //by @w3bgrep
             }
         }
 
-
-
     }
+
+    public class DexScreener
+    {
+
+        public async Task<string> CoinInfo(string contract, string chain)
+        {
+            var client = new HttpClient();
+            var request = new HttpRequestMessage
+            {
+                Method = System.Net.Http.HttpMethod.Get,
+                RequestUri = new Uri($"https://api.dexscreener.com/tokens/v1/{chain}/{contract}"),
+                Headers =
+                {
+                    { "accept", "application/json" },
+                },
+            };
+
+            using (var response = await client.SendAsync(request))
+            {
+                response.EnsureSuccessStatusCode();
+                var body = await response.Content.ReadAsStringAsync();
+                return body;
+            }
+        }
+    }
+
+
+
+
+
 
 
 
