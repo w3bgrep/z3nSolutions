@@ -285,7 +285,7 @@ namespace z3n
             }
             catch
             {
-                _instance.HeSet(("input:password", "fulltagname", "input:password", "regexp", 0), _pass);
+                _instance.HeSet(("input:password", "fulltagname", "input:password", "regexp", 0), _pass, deadline:3);
                 _instance.HeClick(("button", "innertext", "Unlock", "regexp", 0));
                 _instance.HeClick(("div", "innertext", "Approve", "regexp", 0), "last");
                 _instance.CloseExtraTabs();

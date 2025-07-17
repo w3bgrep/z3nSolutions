@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Security.Cryptography;
@@ -343,5 +344,25 @@ namespace z3n
             else
                 throw new Exception($"Fmail: OTP not found in [{text}]");
         }
+
+        public static string CleanFilePath(this string text)
+        {
+
+            if (string.IsNullOrEmpty(text))
+                return text;
+
+            char[] invalidChars = Path.GetInvalidFileNameChars();
+
+            string cleaned = text;
+            foreach (char c in invalidChars)
+            {
+                cleaned = cleaned.Replace(c.ToString(), "");
+            }
+            return cleaned;
+
+        }
+    
+    
+    
     }
 }

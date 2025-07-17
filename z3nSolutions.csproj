@@ -83,12 +83,12 @@
   <ItemGroup>
     <Compile Include="Browser\Cookies.cs" />
     <Compile Include="Browser\Captcha.cs" />
+    <Compile Include="Conf\AppReg.cs" />
+    <Compile Include="Conf\AppRun.cs" />
     <Compile Include="Extensions\Utils.cs" />
     <Compile Include="Protocols\AI.cs" />
     <Compile Include="Protocols\ChainOperaAI.cs" />
-    <Compile Include="Protocols\CoinGecco.cs" />
     <Compile Include="Protocols\Guild.cs" />
-    <Compile Include="W3b\OnChain.cs" />
     <Compile Include="Socials\GitHub.cs" />
     <Compile Include="Sql\Db.cs" />
     <Compile Include="Tools\Accountant.cs" />
