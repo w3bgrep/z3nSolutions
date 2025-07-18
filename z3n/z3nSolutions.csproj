@@ -86,10 +86,8 @@
     <Compile Include="Extensions\Utils.cs" />
     <Compile Include="Protocols\AI.cs" />
     <Compile Include="Protocols\ChainOperaAI.cs" />
-    <Compile Include="Protocols\CoinGecco.cs" />
-    <Compile Include="Protocols\DexScreener.cs" />
     <Compile Include="Protocols\Guild.cs" />
-    <Compile Include="W3b\OnChain.cs" />
+    <Compile Include="W3b\W3bTools.cs" />
     <Compile Include="Socials\GitHub.cs" />
     <Compile Include="Sql\Db.cs" />
     <Compile Include="Tools\Accountant.cs" />

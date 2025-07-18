@@ -111,6 +111,7 @@ namespace w3tools //by @w3bgrep
             return new W3B().GetErc20Balance(tokenContract, rpc, address, tokenDecimal).GetAwaiter().GetResult();
         }
 
+       
         public async Task<decimal> GetSolanaBalance(string rpc, string address)
         {
             string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""getBalance"", ""params"": [""{address}""], ""id"": 1 }}";
@@ -141,6 +142,50 @@ namespace w3tools //by @w3bgrep
         {
             return new W3B().GetSolanaBalance(rpc, address).GetAwaiter().GetResult();
         }
+
+
+        public async Task<decimal> GetSplTokenBalance(string rpc, string walletAddress, string tokenMint)
+        {
+            string jsonBody =  $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""getTokenAccountsByOwner"", ""params"": [""{walletAddress}"", {{""mint"": ""{tokenMint}""}}, {{""encoding"": ""jsonParsed""}}], ""id"": 1 }}";
+
+            using (var client = new HttpClient())
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = System.Net.Http.HttpMethod.Post,
+                    RequestUri = new Uri(rpc),
+                    Content = new System.Net.Http.StringContent(jsonBody, Encoding.UTF8, "application/json")
+                };
+
+                using (var response = await client.SendAsync(request))
+                {
+                    response.EnsureSuccessStatusCode();
+                    var body = await response.Content.ReadAsStringAsync();
+                    var json = JObject.Parse(body);
+
+                    var accounts = json["result"]?["value"] as JArray;
+                    if (accounts == null || accounts.Count == 0)
+                        return 0m;
+
+                    var tokenData = accounts[0]?["account"]?["data"]?["parsed"]?["info"];
+                    if (tokenData == null)
+                        return 0m;
+
+                    string amount = tokenData["tokenAmount"]?["uiAmountString"]?.ToString();
+                    if (string.IsNullOrEmpty(amount))
+                        return 0m;
+
+                    return decimal.Parse(amount, CultureInfo.InvariantCulture);
+                }
+            }
+        }
+
+        public static decimal SPL( string tokenMint, string walletAddress, string rpc = "https://api.mainnet-beta.solana.com")
+        {
+            return new W3B().GetSplTokenBalance(rpc, walletAddress, tokenMint).GetAwaiter().GetResult();
+        }
+
+
 
         public async Task<decimal> SolFeeByTx(string transactionHash, string rpc = null, string tokenDecimal = "9")
         {
@@ -178,8 +223,73 @@ namespace w3tools //by @w3bgrep
         }
 
 
+        public async Task<decimal> GetErc721Balance(string tokenContract, string rpc, string address)
+        {
+            string data = "0x70a08231000000000000000000000000" + address.Replace("0x", "").ToLower();
+            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_call"", ""params"": [{{ ""to"": ""{tokenContract}"", ""data"": ""{data}"" }}, ""latest""], ""id"": 1 }}";
 
-        public static decimal Price(string CGid = "ethereum")
+            using (var client = new HttpClient())
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = System.Net.Http.HttpMethod.Post,
+                    RequestUri = new Uri(rpc),
+                    Content = new System.Net.Http.StringContent(jsonBody, Encoding.UTF8, "application/json")
+                };
+
+                using (var response = await client.SendAsync(request))
+                {
+                    response.EnsureSuccessStatusCode();
+                    var body = await response.Content.ReadAsStringAsync();
+
+                    var json = JObject.Parse(body);
+                    string hexBalance = json["result"]?.ToString().Replace("0x", "") ?? "0";
+                    BigInteger balanceRaw = BigInteger.Parse(hexBalance, NumberStyles.AllowHexSpecifier);
+                    return (decimal)balanceRaw;
+                }
+            }
+        }
+
+        public static decimal ERC721(string tokenContract, string rpc, string address)
+        {
+            return new W3B().GetErc721Balance(tokenContract, rpc, address).GetAwaiter().GetResult();
+        }
+
+
+        public async Task<decimal> GetErc1155Balance(string tokenContract, string tokenId, string rpc, string address)
+        {
+            string data = "0x00fdd58e" + address.Replace("0x", "").ToLower().PadLeft(64, '0') + BigInteger.Parse(tokenId).ToString("x").PadLeft(64, '0');
+            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_call"", ""params"": [{{ ""to"": ""{tokenContract}"", ""data"": ""{data}"" }}, ""latest""], ""id"": 1 }}";
+
+            using (var client = new HttpClient())
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = System.Net.Http.HttpMethod.Post,
+                    RequestUri = new Uri(rpc),
+                    Content = new System.Net.Http.StringContent(jsonBody, Encoding.UTF8, "application/json")
+                };
+
+                using (var response = await client.SendAsync(request))
+                {
+                    response.EnsureSuccessStatusCode();
+                    var body = await response.Content.ReadAsStringAsync();
+
+                    var json = JObject.Parse(body);
+                    string hexBalance = json["result"]?.ToString().Replace("0x", "") ?? "0";
+                    BigInteger balanceRaw = BigInteger.Parse(hexBalance, NumberStyles.AllowHexSpecifier);
+                    return (decimal)balanceRaw;
+                }
+            }
+        }
+
+        public static decimal ERC1155(string tokenContract, string tokenId, string rpc, string address)
+        {
+            return new W3B().GetErc1155Balance(tokenContract, tokenId, rpc, address).GetAwaiter().GetResult();
+        }
+
+
+        public static decimal CGPrice(string CGid = "ethereum")
         {
             try
             {
@@ -198,7 +308,12 @@ namespace w3tools //by @w3bgrep
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message);
+                var stackFrame = new System.Diagnostics.StackFrame(1);
+                var callingMethod = stackFrame.GetMethod();
+                string method = string.Empty;
+                if (callingMethod != null)
+                    method = $"{callingMethod.DeclaringType.Name}.{callerName}";
+                throw new Exception(ex.Message + $"\n{method}");
             }
         }
 
@@ -220,10 +335,14 @@ namespace w3tools //by @w3bgrep
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message);
+                var stackFrame = new System.Diagnostics.StackFrame(1);
+                var callingMethod = stackFrame.GetMethod();
+                string method = string.Empty;
+                if (callingMethod != null)
+                    method = $"{callingMethod.DeclaringType.Name}.{callerName}";
+                throw new Exception(ex.Message + $"\n{method}");
             }
         }
-
 
 
 
@@ -282,6 +401,34 @@ namespace w3tools //by @w3bgrep
             }
         }
     }
+
+    public class EvmTools
+    {
+
+        public async Task<string> CoinInfo(string contract, string chain)
+        {
+            var client = new HttpClient();
+            var request = new HttpRequestMessage
+            {
+                Method = System.Net.Http.HttpMethod.Get,
+                RequestUri = new Uri($"https://api.dexscreener.com/tokens/v1/{chain}/{contract}"),
+                Headers =
+                {
+                    { "accept", "application/json" },
+                },
+            };
+
+            using (var response = await client.SendAsync(request))
+            {
+                response.EnsureSuccessStatusCode();
+                var body = await response.Content.ReadAsStringAsync();
+                return body;
+            }
+        }
+    }
+
+
+
 
 
 
