@@ -134,5 +134,6 @@ namespace z3n
             try { _instance.UninstallExtension(ExtToRemove); } catch { }
         }
 
+
     }
 }

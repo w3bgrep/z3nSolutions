@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -10,6 +11,7 @@ using System.Threading.Tasks;
 using ZennoLab.CommandCenter;
 using ZennoLab.InterfacesLibrary.Enums.Log;
 using ZennoLab.InterfacesLibrary.ProjectModel;
+using Newtonsoft.Json.Linq;
 
 namespace z3n
 {
@@ -153,6 +155,33 @@ namespace z3n
             catch (Exception ex) { project.SendWarningToLog(ex.Message); }
             return;
         }
+
+        public static string GetExtVer(string securePrefsPath, string extId)
+        {
+            string json = File.ReadAllText(securePrefsPath);
+            JObject jObj = JObject.Parse(json);
+            JObject settings = (JObject)jObj["extensions"]?["settings"];
+
+            if (settings == null)
+            {
+                throw new Exception("Секция extensions.settings не найдена");
+            }
+
+            JObject extData = (JObject)settings[extId];
+            if (extData == null)
+            {
+                throw new Exception($"Расширение с ID {extId} не найдено");
+            }
+
+            string version = (string)extData["manifest"]?["version"];
+            if (string.IsNullOrEmpty(version))
+            {
+                throw new Exception($"Версия для расширения {extId} не найдена");
+            }
+            return version;
+        }
+
+
     }
     public static class Vars
     {

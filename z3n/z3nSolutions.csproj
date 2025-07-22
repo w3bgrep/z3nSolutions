@@ -87,6 +87,7 @@
     <Compile Include="Protocols\AI.cs" />
     <Compile Include="Protocols\ChainOperaAI.cs" />
     <Compile Include="Protocols\Guild.cs" />
+    <Compile Include="W3b\Rpc.cs" />
     <Compile Include="W3b\W3bTools.cs" />
     <Compile Include="Socials\GitHub.cs" />
     <Compile Include="Sql\Db.cs" />
@@ -149,6 +150,7 @@
     <Compile Include="Socials\X.cs" />
     <Compile Include="Wallets\ZB.cs" />
     <Compile Include="Wallets\Zerion.cs" />
+    <Compile Include="Wallets\ZerionWallet.cs" />
     <Compile Include="W3b\W3b.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
@@ -166,6 +168,9 @@
       <Version>9.0.7</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions">
+      <Version>9.0.7</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions">
       <Version>9.0.7</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies">
