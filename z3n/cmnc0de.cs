@@ -315,11 +315,178 @@ namespace w3tools //by @w3bgrep
         
         }
 
+        public void Connect(bool log = false)
+        {
 
+            string action = null;
+        getState:
+
+            try
+            {
+                action = _instance.HeGet(("button", "class", "_primary", "regexp", 0), "last");
+            }
+            catch (Exception ex)
+            {
+                _project.L0g($"No Wallet tab found. 0");
+                return;
+            }
+
+            _project.L0g(action);
+            _project.L0g(_instance.ActiveTab.URL);
+
+            switch (action)
+            {
+                case "Add":
+                    _project.L0g($"adding {_instance.HeGet(("input:url", "fulltagname", "input:url", "text", 0), atr: "value")}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0), "last");
+                    goto getState;
+                case "Close":
+                    _project.L0g($"added {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0), "last");
+                    goto getState;
+                case "Connect":
+                    _project.L0g($"connecting {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0), "last");
+                    goto getState;
+                case "Sign":
+                    _project.L0g($"sign {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0), "last");
+                    goto getState;
+                case "Sign In":
+                    _project.L0g($"sign {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0), "last");
+                    goto getState;
+
+                default:
+                    goto getState;
+
+            }
+
+
+        }
 
 
     }
 
+    public class CosmosAddressGenerator
+    {
+        public static string GenerateAddress(string mnemonic, string prefix = "cosmos")
+        {
+            Mnemonic mnemo = new Mnemonic(mnemonic, Wordlist.English);
+            byte[] seed = mnemo.DeriveSeed();
 
+            ExtKey masterKey = ExtKey.CreateFromSeed(seed);
+            NBitcoin.KeyPath path = new NBitcoin.KeyPath("m/44'/118'/0'/0/0");
+            ExtKey derivedKey = masterKey.Derive(path);
+            byte[] privateKey = derivedKey.PrivateKey.ToBytes();
+
+            byte[] publicKey = new PubKey(derivedKey.PrivateKey.PubKey.ToBytes()).ToBytes();
+
+            byte[] sha256Hash;
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                sha256Hash = sha256.ComputeHash(publicKey);
+            }
+            byte[] ripemd160Hash = Ripemd160(sha256Hash);
+
+            string address = EncodeBech32(prefix, ripemd160Hash);
+
+            return address;
+        }
+
+        private static byte[] Ripemd160(byte[] data)
+        {
+            using (var ripemd160 = new RIPEMD160Managed())
+            {
+                return ripemd160.ComputeHash(data);
+            }
+        }
+
+        private static string EncodeBech32(string prefix, byte[] data)
+        {
+            // Простая реализация Bech32 для Cosmos
+            const string charset = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+            byte[] dataWithHrp = ConvertBits(data, 8, 5, true); // Преобразование в 5-битный формат
+
+            // Расширение HRP для вычисления контрольной суммы (по спецификации Bech32)
+            byte[] hrpExpanded = CreateHrpExpanded(prefix);
+            byte[] values = hrpExpanded.Concat(dataWithHrp).Concat(new byte[6]).ToArray();
+            uint checksum = Bech32Polymod(values);
+            byte[] checksumBytes = new byte[6];
+            for (int i = 0; i < 6; i++)
+            {
+                checksumBytes[i] = (byte)((checksum >> (5 * (5 - i))) & 0x1f);
+            }
+
+            // Кодирование
+            string dataPart = new string(dataWithHrp.Select(b => charset[b]).ToArray());
+            string checksumPart = new string(checksumBytes.Select(b => charset[b]).ToArray());
+            return prefix + "1" + dataPart + checksumPart;
+        }
+
+        private static byte[] ConvertBits(byte[] data, int fromBits, int toBits, bool pad)
+        {
+            int acc = 0;
+            int bits = 0;
+            var result = new List<byte>();
+            int maxv = (1 << toBits) - 1;
+
+            foreach (byte value in data)
+            {
+                acc = (acc << fromBits) | value;
+                bits += fromBits;
+                while (bits >= toBits)
+                {
+                    bits -= toBits;
+                    result.Add((byte)((acc >> bits) & maxv));
+                }
+            }
+
+            if (pad)
+            {
+                if (bits > 0)
+                {
+                    result.Add((byte)((acc << (toBits - bits)) & maxv));
+                }
+            }
+            else if (bits >= fromBits || ((acc << (toBits - bits)) & maxv) != 0)
+            {
+                throw new InvalidOperationException("Invalid padding");
+            }
+
+            return result.ToArray();
+        }
+
+        private static byte[] CreateHrpExpanded(string hrp)
+        {
+
+            byte[] hrpBytes = Encoding.ASCII.GetBytes(hrp.ToLowerInvariant());
+            byte[] expanded = new byte[hrpBytes.Length * 2 + 1];
+            for (int i = 0; i < hrpBytes.Length; i++)
+            {
+                expanded[i] = (byte)(hrpBytes[i] >> 5);
+                expanded[i + hrpBytes.Length + 1] = (byte)(hrpBytes[i] & 0x1f); 
+            }
+            expanded[hrpBytes.Length] = 0;
+            return expanded;
+        }
+
+        private static uint Bech32Polymod(byte[] values)
+        {
+            uint[] GENERATOR = { 0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3 };
+            uint chk = 1;
+            foreach (byte v in values)
+            {
+                uint top = chk >> 25;
+                chk = (chk & 0x1ffffff) << 5 ^ v;
+                for (int i = 0; i < 5; i++)
+                {
+                    if ((top >> i & 1) != 0)
+                        chk ^= GENERATOR[i];
+                }
+            }
+            return chk ^ 1;
+        }
+    }
 
 }

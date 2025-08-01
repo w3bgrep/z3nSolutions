@@ -161,7 +161,7 @@ namespace z3n
 
             try
             {
-                action = _instance.HeGet(("button", "class", "_primary", "regexp", 0));
+                action = _instance.HeGet(("button", "class", "_primary", "regexp", 0),"last");
             }
             catch (Exception ex)
             {
@@ -176,23 +176,23 @@ namespace z3n
             {
                 case "Add":
                     _project.L0g($"adding {_instance.HeGet(("input:url", "fulltagname", "input:url", "text", 0), atr: "value")}");
-                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0), "last");
                     goto getState;
                 case "Close":
                     _project.L0g($"added {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
-                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0), "last");
                     goto getState;
                 case "Connect":
                     _project.L0g($"connecting {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
-                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0), "last");
                     goto getState;
                 case "Sign":
                     _project.L0g($"sign {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
-                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0), "last");
                     goto getState;
                 case "Sign In":
                     _project.L0g($"sign {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
-                    _instance.HeClick(("button", "class", "_primary", "regexp", 0));
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0), "last");
                     goto getState;
 
                 default:
