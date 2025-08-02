@@ -72,19 +72,13 @@ namespace z3n
 
                 if (method == "last")
                 {
-                    
-                    var parent = instance.ActiveTab.FindElementByAttribute(tag, attribute, pattern, mode, 0).ParentElement;
-                    if (!parent.IsVoid)
+
+                    var elements = instance.ActiveTab.FindElementsByAttribute(tag, attribute, pattern, mode).ToList();
+                    if (elements.Count != 0)
                     {
-                        var children = parent.GetChildren(false).ToList();
-                        var last = children[children.Count - 1];
+                        var last = elements[elements.Count - 1];
                         return last;
                     }
-
-
-
-
-
 
                     int index = 0;
                     while (true)

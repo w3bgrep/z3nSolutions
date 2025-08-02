@@ -307,6 +307,19 @@ namespace z3n
             return true;
         }
 
+        public static string Invite(this IZennoPosterProjectModel project, string invite = null, bool log = false)
+        {
+            if (string.IsNullOrEmpty(invite)) invite = project.Variables["cfgRefCode"].Value;
+            
+            string tableName = project.Variables["projectTable"].Value;
+            if (string.IsNullOrEmpty(invite)) invite =
+                    new Sql(project).Get("refcode", tableName, where: @"TRIM(refcode) != '' ORDER BY RANDOM() LIMIT 1;");                  
+            return invite;
+        }
+
+
+
+
         #region GlobalVars
 
         public static bool GlobalSet(this IZennoPosterProjectModel project, bool log = false , bool set = true, bool clean = false )

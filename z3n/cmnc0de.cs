@@ -134,6 +134,7 @@ namespace w3tools //by @w3bgrep
             return version;
         }
 
+
     }
     public class Zerion
     {
@@ -488,5 +489,85 @@ namespace w3tools //by @w3bgrep
             return chk ^ 1;
         }
     }
+
+
+    public class Traff
+    {
+        private readonly IZennoPosterProjectModel _project;
+        private readonly Instance _instance;
+        private readonly Logger _logger;
+
+
+        public Traff(IZennoPosterProjectModel project, Instance instance, bool log = false)
+        {
+            _project = project;
+            _instance = instance;
+            _logger = new Logger(project, log: log, classEmoji: "🌎");
+            _instance.UseTrafficMonitoring = true;
+        }
+
+
+
+        public string Get(string url, string parametr, bool reload = false, bool parse = false, int deadline = 15, int delay = 3)
+        {
+            var validParameters = new[] { "Method", "ResultCode", "Url", "ResponseContentType", "RequestHeaders", "RequestCookies", "RequestBody", "ResponseHeaders", "ResponseCookies", "ResponseBody" };
+            if (!validParameters.Contains(parametr))
+                throw new ArgumentException($"Invalid parameter: '{parametr}'. Valid parameters are: {string.Join(", ", validParameters)}");
+
+
+            _project.Deadline();
+            if (reload) _instance.ActiveTab.MainDocument.EvaluateScript("location.reload(true)");
+            if (_instance.ActiveTab.IsBusy) _instance.ActiveTab.WaitDownloading();
+            int i = 0;
+            Thread.Sleep(1000 * delay);
+
+            while (true)
+            {
+                _project.Deadline(deadline);
+                Thread.Sleep(1000);
+                var traffic = _instance.ActiveTab.GetTraffic();
+                var data = new Dictionary<string, string>();               
+                i++;
+                _logger.Send(i.ToString());
+
+                foreach (var t in traffic)
+                {
+                    if (!t.Url.Contains(url) || t.Method == "OPTIONS")
+                        continue;
+                    _logger.Send(t.Url);
+                    data.Add("Method", t.Method);
+                    _logger.Send(t.Method);
+                    data.Add("ResultCode", t.ResultCode.ToString());
+                    data.Add("Url", t.Url);
+                    data.Add("ResponseContentType", t.ResponseContentType);
+                    data.Add("RequestHeaders", t.RequestHeaders);
+                    _logger.Send(t.RequestHeaders);
+                    data.Add("RequestCookies", t.RequestCookies);
+                    data.Add("RequestBody", t.RequestBody);
+                    data.Add("ResponseHeaders", t.ResponseHeaders);
+                    data.Add("ResponseCookies", t.ResponseCookies);
+                    data.Add("ResponseBody", t.ResponseBody == null ? "" : Encoding.UTF8.GetString(t.ResponseBody, 0, t.ResponseBody.Length));
+
+                    if (data.TryGetValue(parametr, out var param))
+                    {
+                        _logger.Send($"[{parametr}] is [{param}]");
+                        if (!string.IsNullOrEmpty(param))
+                        {
+                            if (parse) _project.Json.FromString(param);
+                            return param;
+                        }
+                            
+                        break;
+                    }
+                    
+                }
+                _logger.Send($"[{url}] not found in traffic");
+            }
+        }
+
+
+    }
+
+
 
 }

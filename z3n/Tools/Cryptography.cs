@@ -97,8 +97,6 @@ namespace z3n
             return ByteArrayToHexString(hashedDataBytes);
         }
     }
-
-
     public static class Bech32
     {
         private static readonly string Bech32Charset = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";

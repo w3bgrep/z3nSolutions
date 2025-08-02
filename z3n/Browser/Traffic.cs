@@ -26,15 +26,64 @@ namespace z3n
         }
 
 
-        public string Get(string url, string parametr, bool reload = false)
+        public string Get(string url, string parametr, bool reload = false, bool parse = false, int deadline = 15, int delay = 3)
         {
-            string param;
-            Dictionary<string, string> data = Get(url, reload);
-            if (string.IsNullOrEmpty(parametr))
-                return string.Join("\n", data.Select(kvp => $"{kvp.Key}-{kvp.Value}"));
-            else data.TryGetValue(parametr, out param);
-            return param;
+            var validParameters = new[] { "Method", "ResultCode", "Url", "ResponseContentType", "RequestHeaders", "RequestCookies", "RequestBody", "ResponseHeaders", "ResponseCookies", "ResponseBody" };
+            if (!validParameters.Contains(parametr))
+                throw new ArgumentException($"Invalid parameter: '{parametr}'. Valid parameters are: {string.Join(", ", validParameters)}");
+
+
+            _project.Deadline();
+            if (reload) _instance.ActiveTab.MainDocument.EvaluateScript("location.reload(true)");
+            if (_instance.ActiveTab.IsBusy) _instance.ActiveTab.WaitDownloading();
+            int i = 0;
+            Thread.Sleep(1000 * delay);
+
+            while (true)
+            {
+                _project.Deadline(deadline);
+                Thread.Sleep(1000);
+                var traffic = _instance.ActiveTab.GetTraffic();
+                var data = new Dictionary<string, string>();
+                i++;
+                _logger.Send(i.ToString());
+
+                foreach (var t in traffic)
+                {
+                    if (!t.Url.Contains(url) || t.Method == "OPTIONS")
+                        continue;
+                    _logger.Send(t.Url);
+                    data.Add("Method", t.Method);
+                    _logger.Send(t.Method);
+                    data.Add("ResultCode", t.ResultCode.ToString());
+                    data.Add("Url", t.Url);
+                    data.Add("ResponseContentType", t.ResponseContentType);
+                    data.Add("RequestHeaders", t.RequestHeaders);
+                    _logger.Send(t.RequestHeaders);
+                    data.Add("RequestCookies", t.RequestCookies);
+                    data.Add("RequestBody", t.RequestBody);
+                    data.Add("ResponseHeaders", t.ResponseHeaders);
+                    data.Add("ResponseCookies", t.ResponseCookies);
+                    data.Add("ResponseBody", t.ResponseBody == null ? "" : Encoding.UTF8.GetString(t.ResponseBody, 0, t.ResponseBody.Length));
+
+                    if (data.TryGetValue(parametr, out var param))
+                    {
+                        _logger.Send($"[{parametr}] is [{param}]");
+                        if (!string.IsNullOrEmpty(param))
+                        {
+                            if (parse) _project.Json.FromString(param);
+                            return param;
+                        }
+
+                        break;
+                    }
+
+                }
+                _logger.Send($"[{url}] not found in traffic");
+            }
         }
+
+
         public Dictionary<string, string> Get(string url, bool reload = false,int deadline = 10)
         {
             _project.Deadline();
@@ -52,6 +101,9 @@ namespace z3n
                 if (t.Url.Contains(url))
                 {
                     var Method = t.Method;
+
+                    if (Method == "OPTIONS") continue;
+
                     var ResultCode = t.ResultCode.ToString();
                     var Url = t.Url;
                     var ResponseContentType = t.ResponseContentType;
@@ -62,7 +114,7 @@ namespace z3n
                     var ResponseCookies = t.ResponseCookies;
                     var ResponseBody = t.ResponseBody == null ? "" : Encoding.UTF8.GetString(t.ResponseBody, 0, t.ResponseBody.Length);
 
-                    if (Method == "OPTIONS") continue;
+
                     data.Add("Method", Method);
                     data.Add("ResultCode", ResultCode);
                     data.Add("Url", Url);
@@ -103,6 +155,60 @@ namespace z3n
             data.TryGetValue(headerToGet, out string value);
             return value?.Trim() ?? string.Empty; // Возвращаем пустую строку, если значение не найдено
         }
+
+        public string GetParam(string url, string parametr, bool reload = false, int deadline = 10)
+        {
+            _project.Deadline();
+            _instance.UseTrafficMonitoring = true;
+            if (reload) _instance.ActiveTab.MainDocument.EvaluateScript("location.reload(true)");
+
+            get:
+            _project.Deadline(deadline);
+            Thread.Sleep(1000);
+            var traffic = _instance.ActiveTab.GetTraffic();
+            var data = new Dictionary<string, string>();
+            string param;
+            foreach (var t in traffic)
+            {
+                if (t.Url.Contains(url))
+                {
+                    var Method = t.Method;
+
+                    if (Method == "OPTIONS") continue;
+
+                    var ResultCode = t.ResultCode.ToString();
+                    var Url = t.Url;
+                    var ResponseContentType = t.ResponseContentType;
+                    var RequestHeaders = t.RequestHeaders;
+                    var RequestCookies = t.RequestCookies;
+                    var RequestBody = t.RequestBody;
+                    var ResponseHeaders = t.ResponseHeaders;
+                    var ResponseCookies = t.ResponseCookies;
+                    var ResponseBody = t.ResponseBody == null ? "" : Encoding.UTF8.GetString(t.ResponseBody, 0, t.ResponseBody.Length);
+
+
+                    data.Add("Method", Method);
+                    data.Add("ResultCode", ResultCode);
+                    data.Add("Url", Url);
+                    data.Add("ResponseContentType", ResponseContentType);
+                    data.Add("RequestHeaders", RequestHeaders);
+                    data.Add("RequestCookies", RequestCookies);
+                    data.Add("RequestBody", RequestBody);
+                    data.Add("ResponseHeaders", ResponseHeaders);
+                    data.Add("ResponseCookies", ResponseCookies);
+                    data.Add("ResponseBody", ResponseBody);
+                    break;
+                }
+                if (data.Count == 0) continue;
+                else data.TryGetValue(parametr, out param);
+                if (string.IsNullOrEmpty(param)) continue;
+                else return param;
+            }
+            goto get;
+        }
+        //goto get;
+
+
     }
 
     public static class Traf
