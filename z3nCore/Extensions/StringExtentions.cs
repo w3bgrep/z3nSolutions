@@ -363,7 +363,7 @@ namespace z3nCore
 
         }
 
-        public static string ConvertUrl(this string url)
+        public static string ConvertUrl(this string url, bool oneline = false)
         {
             if (string.IsNullOrEmpty(url))
             {
@@ -410,7 +410,9 @@ namespace z3nCore
                 try
                 {
                     var json = JObject.Parse(chainParam);
-                    return JsonConvert.SerializeObject(json, Formatting.Indented);
+                    string jsonResult = JsonConvert.SerializeObject(json, oneline ? Formatting.None : Formatting.Indented);
+
+                    return oneline ? jsonResult.Replace('\n', ' ').Replace('\r', ' ') : jsonResult;
                 }
                 catch (JsonException)
                 {
@@ -421,10 +423,20 @@ namespace z3nCore
             StringBuilder result = new StringBuilder();
             foreach (string key in parameters.AllKeys)
             {
-                result.AppendLine($"{key}: {parameters[key]}");
+                if (oneline)
+                {
+                    result.Append($"{key}: {parameters[key]} | ");
+                }
+                else
+                {
+                    result.AppendLine($"{key}: {parameters[key]}");
+                }
             }
 
-            return result.Length > 0 ? result.ToString() : "Error: No valid parameters found";
+            string finalResult = result.ToString();
+
+            finalResult =  finalResult.Length > 0 ? finalResult : "Error: No valid parameters found";
+            return oneline ? finalResult.Replace('\n', ' ').Replace('\r', ' ') : finalResult;
         }
 
     }

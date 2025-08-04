@@ -172,7 +172,7 @@ namespace z3nCore
             }
 
             _logger.Send(action);
-            _logger.Send(_instance.ActiveTab.URL.ConvertUrl());
+            _logger.Send(_instance.ActiveTab.URL.ConvertUrl(true));
 
             switch (action)
             {

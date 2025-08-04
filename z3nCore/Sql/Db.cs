@@ -7,11 +7,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using ZennoLab.InterfacesLibrary.ProjectModel;
+using ZXing.QrCode.Internal;
 
 namespace z3nCore
 {
     public static class Db
     {
+        
+        
         public static string DbGet(this IZennoPosterProjectModel project, string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "acc0", string acc = null, string where = "")
         {
             return new Sql(project, log).Get(toGet, tableName, log, throwOnEx, key, acc, where);
@@ -23,6 +26,9 @@ namespace z3nCore
             try { project.Var("lastQuery", toUpd); } catch (Exception Ex){ project.SendWarningToLog(Ex.Message, true); }
             new Sql(project, log).Upd(toUpd, tableName, log, throwOnEx, last, key, acc, where);
         }
+
+
+
 
         public static void MakeAccList(this IZennoPosterProjectModel project, List<string> dbQueries, bool log = false)
         {
@@ -105,8 +111,40 @@ namespace z3nCore
             return refCode;
         }
 
+        public static string DbRawR(this IZennoPosterProjectModel project, string query, string sqLitePath = null, string pgHost = null, string pgPort = null, string pgDbName = null, string pgUser = null, string pgPass = null)
+        {
+            if (string.IsNullOrEmpty(sqLitePath)) sqLitePath = project.Var("DBsqltPath");
+            if (string.IsNullOrEmpty(pgHost)) pgHost = "localhost";
+            if (string.IsNullOrEmpty(pgPort)) pgPort = "5432";
+            if (string.IsNullOrEmpty(pgDbName)) pgDbName = "postgres";
+            if (string.IsNullOrEmpty(pgUser)) pgUser = "postgres";
+            if (string.IsNullOrEmpty(pgPass)) pgPass = project.Var("DBpstgrPass");
+            string dbMode = project.Var("DBmode"); 
 
 
+            if (dbMode == "PostgreSQL")
+                return new dSql($"Host={pgHost};Port={pgPort};Database={pgDbName};Username={pgUser};Password={pgPass};Pooling=true;Connection Idle Lifetime=10;").DbReadAsync(query).GetAwaiter().GetResult();
+            else
+                return new dSql(sqLitePath,null).DbReadAsync(query).GetAwaiter().GetResult();
+
+        }
+        public static int DbRawW(this IZennoPosterProjectModel project, string query, string sqLitePath = null, string pgHost = null, string pgPort = null, string pgDbName = null, string pgUser = null, string pgPass = null)
+        {
+            if (string.IsNullOrEmpty(sqLitePath)) sqLitePath = project.Var("DBsqltPath");
+            if (string.IsNullOrEmpty(pgHost)) pgHost = "localhost";
+            if (string.IsNullOrEmpty(pgPort)) pgPort = "5432";
+            if (string.IsNullOrEmpty(pgDbName)) pgDbName = "postgres";
+            if (string.IsNullOrEmpty(pgUser)) pgUser = "postgres";
+            if (string.IsNullOrEmpty(pgPass)) pgPass = project.Var("DBpstgrPass");
+            string dbMode = project.Var("DBmode");
+
+
+            if (dbMode == "PostgreSQL")
+                return new dSql($"Host={pgHost};Port={pgPort};Database={pgDbName};Username={pgUser};Password={pgPass};Pooling=true;Connection Idle Lifetime=10;").DbWriteAsync(query).GetAwaiter().GetResult();
+            else
+                return new dSql(sqLitePath, null).DbWriteAsync(query).GetAwaiter().GetResult();
+
+        }
 
     }
 }

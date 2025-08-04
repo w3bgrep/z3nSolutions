@@ -132,9 +132,9 @@ namespace z3nCore
             {
                 try
                 {
-                    result = PostgresDB.Raw(query, throwOnEx,dbPswd: _dbPass);
-
-                    //result = PostgresDB.DbQueryPostgre(_project, query, throwOnEx);
+                    //result = PostgresDB.Raw(query, throwOnEx,dbPswd: _dbPass);
+                   
+                    result = PostgresDB.DbQueryPostgre(_project, query, throwOnEx);
                 }
                 catch (Exception ex)
                 {

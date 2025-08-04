@@ -34,8 +34,8 @@ namespace z3nCore
             _connection.Open();
         }
         public dSql(string hostname, string port, string database, string user, string password)
-        {
-            _connection = new NpgsqlConnection($"Host={hostname};Port={port};Database={database};Username={user};Password={password};Pooling=true;");
+        {            
+            _connection = new NpgsqlConnection($"Host={hostname};Port={port};Database={database};Username={user};Password={password};Pooling=true;Connection Idle Lifetime=100;");
             _connection.Open();
         }
         public dSql(string connectionstring)

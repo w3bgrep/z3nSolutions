@@ -18,12 +18,14 @@ namespace z3nCore
         private string _key;
         private string _login;
         private string _pass;
+        private bool _log;
 
         public FirstMail(IZennoPosterProjectModel project, bool log = false)
         {
             _project = project;
             _logger = new Logger(project, log: log, classEmoji: "FirstMail");
             LoadKeys();
+            _log = log;
         }
 
         private void LoadKeys()
@@ -60,7 +62,7 @@ namespace z3nCore
                 $"X-API-KEY: {_key}"
             };
 
-            string result = _project.GET(url,"", headers);
+            string result = _project.GET(url,"", headers, log:_log);
             _project.Json.FromString(result);
             return result;
 
