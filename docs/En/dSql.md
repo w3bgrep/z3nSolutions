@@ -367,18 +367,3 @@ using (var db = new dSql("path/to/database.db", ""))
 
 ---
 
-## Limitations
-- **Logger Dependency**: The `_logger` field is not defined in the provided code, which may cause compilation errors unless implemented.
-- **Parameter Handling in Upd/Get**: The `Upd` and `Get` methods use `DynamicParameters`, but parameter values for `toUpd` must be handled externally, which can lead to SQL injection if not sanitized.
-- **Connection Type**: Only SQLite and PostgreSQL are supported. Other database types throw `NotSupportedException`.
-- **Table Name Requirement**: Methods requiring a table name will fail if neither `_tableName` nor `tableName` is provided.
-- **Synchronous Methods**: `DbRead` and `DbWrite` block the calling thread, which may impact performance in async contexts.
-
----
-
-## Recommendations
-- **Add Logger Implementation**: Define the `Logger` class or remove `_logger` references if logging is not required.
-- **Enhance Parameter Safety**: For `Upd` and `Get`, consider parsing `toUpd` to extract parameters and validate them to prevent SQL injection.
-- **Connection Pooling**: For PostgreSQL, pooling is enabled in the constructor, but consider exposing pooling options for SQLite or other databases.
-- **Error Handling**: Add more specific exception types for different error scenarios (e.g., connection failures vs. query errors).
-- **Documentation**: Add XML comments to the class and methods for better IDE support.
