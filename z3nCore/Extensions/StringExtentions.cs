@@ -11,8 +11,9 @@ using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
-using ZennoLab.InterfacesLibrary.ProjectModel;
-
+using System.Web.NBitcoin;
+using Newtonsoft.Json.Linq;
+using System.Collections.Specialized;
 namespace z3nCore
 {
     public static class StringExtensions
@@ -361,8 +362,70 @@ namespace z3nCore
             return cleaned;
 
         }
-    
-    
-    
+
+        public static string ConvertUrl(this string url)
+        {
+            if (string.IsNullOrEmpty(url))
+            {
+                return "Error: URL is empty or null";
+            }
+
+            string queryString = url.Contains("?") ? url.Substring(url.IndexOf('?') + 1) : string.Empty;
+            if (string.IsNullOrEmpty(queryString))
+            {
+                return "Error: No query parameters found in URL";
+            }
+
+            if (queryString.Contains("#"))
+            {
+                int hashIndex = queryString.IndexOf('#');
+                int nextQueryIndex = queryString.IndexOf('?', hashIndex);
+                if (nextQueryIndex != -1)
+                {
+                    queryString = queryString.Substring(nextQueryIndex + 1);
+                }
+                else
+                {
+                    queryString = queryString.Substring(0, hashIndex);
+                }
+            }
+
+            var parameters = new NameValueCollection();
+            string[] queryParts = queryString.Split('&');
+            foreach (string part in queryParts)
+            {
+                if (string.IsNullOrEmpty(part)) continue;
+                string[] keyValue = part.Split(new[] { '=' }, 2);
+                if (keyValue.Length == 2)
+                {
+                    string key = Uri.UnescapeDataString(keyValue[0]);
+                    string value = Uri.UnescapeDataString(keyValue[1]);
+                    parameters.Add(key, value);
+                }
+            }
+
+            string chainParam = parameters["addEthereumChainParameter"];
+            if (!string.IsNullOrEmpty(chainParam))
+            {
+                try
+                {
+                    var json = JObject.Parse(chainParam);
+                    return JsonConvert.SerializeObject(json, Formatting.Indented);
+                }
+                catch (JsonException)
+                {
+                    // if JSON incorrect
+                }
+            }
+
+            StringBuilder result = new StringBuilder();
+            foreach (string key in parameters.AllKeys)
+            {
+                result.AppendLine($"{key}: {parameters[key]}");
+            }
+
+            return result.Length > 0 ? result.ToString() : "Error: No valid parameters found";
+        }
+
     }
 }

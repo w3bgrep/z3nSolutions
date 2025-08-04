@@ -182,6 +182,29 @@ namespace z3nCore
         }
 
 
+        public static void RunZp(this IZennoPosterProjectModel project, List<string> vars = null)
+        {
+
+            string tempFilePath = project.Var("projectScript");
+            var mapVars = new List<Tuple<string, string>>();
+
+
+            if (vars != null)
+                foreach (var v in vars)
+                    try { mapVars.Add(new Tuple<string, string>(v, v)); }
+                    catch (Exception ex) { project.SendWarningToLog(ex.Message); }
+
+
+            try { project.ExecuteProject(tempFilePath, mapVars, true, true, true); }
+            catch (Exception ex) 
+            { 
+                project.SendWarningToLog(ex.Message, true);
+                throw ex;
+            }
+            
+            return;
+
+        }
     }
     public static class Vars
     {
@@ -206,6 +229,7 @@ namespace z3nCore
         }
         public static string Var(this IZennoPosterProjectModel project, string var, object value)
         {
+            if (value == null ) return string.Empty;
             try
             {
                 project.Variables[var].Value = value.ToString();

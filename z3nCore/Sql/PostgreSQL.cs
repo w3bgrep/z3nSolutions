@@ -14,6 +14,7 @@ namespace z3nCore
     {
 
         private NpgsqlConnection _conn;
+
         public void Dispose()
         {
             _conn?.Close();
@@ -33,29 +34,20 @@ namespace z3nCore
                 ? (parts[0], int.Parse(parts[1]))
                 : (input, defaultPort);
         }
-        public void open()
+        public void Open()
         {
             try
             {
-                if (_conn?.State == ConnectionState.Closed)
-                {
-                    _conn.Open();
-                }
+                _conn.Open();
             }
             catch (Exception ex)
             {
-                _conn?.Dispose(); 
+                _conn?.Dispose();
                 _conn = null;
                 throw new Exception($"DB connection failed: {ex.Message}");
             }
         }
-        public void close()
-        {
-            if (_conn.State == System.Data.ConnectionState.Open)
-            {
-                _conn.Close();
-            }
-        }
+
         private void EnsureConnection()
         {
             if (_conn.State != System.Data.ConnectionState.Open)
@@ -98,12 +90,41 @@ namespace z3nCore
                 }
             }
         }
- 
 
-        public static string DbQueryPostgre(IZennoPosterProjectModel project, string query, bool log = false, bool throwOnEx = false, string host = "localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "", [CallerMemberName] string callerName = "")
+        public static string Raw( string query, bool throwOnEx = false, string host = "localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "")
         {
+            if (string.IsNullOrEmpty(dbPswd)) throw new Exception("PostgreSQL password isNull");
+            var db = new PostgresDB(host, dbName, dbUser, dbPswd);
+            try
+            {
+                db.Open();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}");
+            }
+            try
+            {
+                var response = "";
+                if (query.Trim().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
+                    response = db.DbRead(query);
+                else
+                    response = db.DbWrite(query).ToString();
+                return response;
+            }
+            catch (Exception ex)
+            {  
+                return $"{ex.Message}\n[{query}]";
+            }
+            finally
+            {
+                db?.Dispose();
+            }
+        }
 
 
+        public static string DbQueryPostgre(IZennoPosterProjectModel project, string query, bool throwOnEx = false, string host = "localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "")
+        {
             if (string.IsNullOrEmpty(dbName)) dbName = project.Variables["DBpstgrName"].Value;
             if (string.IsNullOrEmpty(dbUser)) dbUser = project.Variables["DBpstgrUser"].Value;
 
@@ -116,7 +137,7 @@ namespace z3nCore
             var db = new PostgresDB(host, dbName, dbUser, dbPswd);
             try
             {
-                db.open();
+                db.Open();
             }
             catch (Exception ex)
             {
@@ -139,7 +160,6 @@ namespace z3nCore
             }
             finally
             {
-                db.close();
                 db?.Dispose();
             }
         }
@@ -159,7 +179,7 @@ namespace z3nCore
                 {
                     try
                     {
-                        db.open();
+                        db.Open();
                         CheckAndCreateTable(db, schemaName, tableName, tableStructure, project, log: log);
                         ManageColumns(db, schemaName, tableName, tableStructure, strictMode, project, log: log);
 
@@ -266,12 +286,7 @@ namespace z3nCore
                 }
             }
         }
-    
-    
-    
-    
-    
-    
+   
     
     }
 }

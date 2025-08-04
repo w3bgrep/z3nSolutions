@@ -90,6 +90,8 @@
     <Compile Include="Protocols\AI.cs" />
     <Compile Include="Protocols\ChainOperaAI.cs" />
     <Compile Include="Protocols\Guild.cs" />
+    <Compile Include="Sql\dSql.cs" />
+    <Compile Include="Sql\Postgres.cs" />
     <Compile Include="W3b\Rpc.cs" />
     <Compile Include="W3b\W3bTools.cs" />
     <Compile Include="Socials\GitHub.cs" />
@@ -157,6 +159,15 @@
     <Error Text="Environment variable ZennoPosterDllPath must be set to ZennoPoster installation folder, try to launch ProjectMaker or ZennoPoster" Condition="'$(ZennoPosterDllPath)' == ''" />
   </Target>
   <ItemGroup>
+    <PackageReference Include="Dapper">
+      <Version>2.1.66</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces">
+      <Version>9.0.7</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Data.Sqlite">
+      <Version>3.1.32</Version>
+    </PackageReference>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies">
       <IncludeAssets>build</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>

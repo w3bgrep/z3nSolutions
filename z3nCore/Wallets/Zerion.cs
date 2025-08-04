@@ -164,7 +164,55 @@ namespace z3nCore
                 goto import;
             }
         }
-    
-    
+        public void Connect(bool log = false)
+        {
+
+            string action = null;
+        getState:
+
+            try
+            {
+                action = _instance.HeGet(("button", "class", "_primary", "regexp", 0), "last");
+            }
+            catch (Exception ex)
+            {
+                _project.L0g($"No Wallet tab found. 0");
+                return;
+            }
+
+            _project.L0g(action);
+            _project.L0g(_instance.ActiveTab.URL);
+
+            switch (action)
+            {
+                case "Add":
+                    _project.L0g($"adding {_instance.HeGet(("input:url", "fulltagname", "input:url", "text", 0), atr: "value")}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0), "last");
+                    goto getState;
+                case "Close":
+                    _project.L0g($"added {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0), "last");
+                    goto getState;
+                case "Connect":
+                    _project.L0g($"connecting {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0), "last");
+                    goto getState;
+                case "Sign":
+                    _project.L0g($"sign {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0), "last");
+                    goto getState;
+                case "Sign In":
+                    _project.L0g($"sign {_instance.HeGet(("div", "class", "_uitext_", "regexp", 0))}");
+                    _instance.HeClick(("button", "class", "_primary", "regexp", 0), "last");
+                    goto getState;
+
+                default:
+                    goto getState;
+
+            }
+
+
+        }
+
     }
 }

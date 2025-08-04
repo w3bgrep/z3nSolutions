@@ -10,6 +10,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using ZennoLab.InterfacesLibrary.ProjectModel;
+using static NBitcoin.Scripting.OutputDescriptor;
+using System.Diagnostics;
 
 namespace z3nCore
 {
@@ -18,6 +20,7 @@ namespace z3nCore
         private readonly IZennoPosterProjectModel _project;
         protected readonly string _dbMode;
         private readonly bool _logShow;
+        private readonly string _dbPass;
 
         private readonly Logger _logger;
 
@@ -25,12 +28,13 @@ namespace z3nCore
         protected string _tableName = string.Empty;
         protected string _schemaName = string.Empty;
 
+
         public Sql(IZennoPosterProjectModel project, bool log = false)
         {
             _project = project;
             _pstgr = _project.Variables["DBmode"].Value == "PostgreSQL" ? true : false;
             _dbMode = _project.Variables["DBmode"].Value;
-
+            _dbPass = project.Variables["DBpstgrPass"].Value;
             if (_pstgr) _logger = new Logger(project, log: log, classEmoji: "🐘");
             else _logger = new Logger(project, log: log, classEmoji: "✒");
             _logShow = log;
@@ -112,7 +116,7 @@ namespace z3nCore
             string dbMode = _project.Variables["DBmode"].Value;
             string result = null;
 
-            if (dbMode == "SQLite")
+            if (_dbMode == "SQLite")
             {
                 try
                 {
@@ -124,11 +128,13 @@ namespace z3nCore
                     if (throwOnEx) throw;
                 }
             }
-            else if (dbMode == "PostgreSQL")
+            else if (_dbMode == "PostgreSQL")
             {
                 try
                 {
-                    result = PostgresDB.DbQueryPostgre(_project, query, log, throwOnEx);
+                    result = PostgresDB.Raw(query, throwOnEx,dbPswd: _dbPass);
+
+                    //result = PostgresDB.DbQueryPostgre(_project, query, throwOnEx);
                 }
                 catch (Exception ex)
                 {
@@ -136,29 +142,28 @@ namespace z3nCore
                     if (throwOnEx) throw;
                 }
             }
-            else throw new Exception($"unknown DBmode: {dbMode}");
+            else throw new Exception($"unknown DBmode: {_dbMode}");
             Log(query, result, log: log);
             return result;
         }
 
         public void MkTable(Dictionary<string, string> tableStructure, string tableName = null, bool strictMode = false, bool insertData = false, string host = "localhost:5432", string dbName = "postgres", string dbUser = "postgres", string dbPswd = "", string schemaName = "projects", bool log = false)
         {
-            string dbMode = _project.Variables["DBmode"].Value;
             if (string.IsNullOrEmpty(tableName))
             {
                 if (_project.Variables["makeTable"].Value != "True") return;
                 else tableName = $"{_project.Variables["projectName"].Value.ToLower()}";
-                if (dbMode != "PostgreSQL") tableName = $"_{tableName}";
+                if (_dbMode != "PostgreSQL") tableName = $"_{tableName}";
             }
-            if (dbMode == "SQLite")
+            if (_dbMode == "SQLite")
             {
                 SQLite.lSQLMakeTable(_project, tableStructure, tableName, strictMode);
             }
-            else if (dbMode == "PostgreSQL")
+            else if (_dbMode == "PostgreSQL")
             {
                 PostgresDB.MkTablePostgre(_project, tableStructure, tableName, strictMode, insertData, host, dbName, dbUser, dbPswd, schemaName, log: log);
             }
-            else throw new Exception($"unknown DBmode: {dbMode}");
+            else throw new Exception($"unknown DBmode: {_dbMode}");
             return;
         }
 
@@ -192,16 +197,6 @@ namespace z3nCore
 
         public void Upd(string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, string key = "acc0", object acc = null, string where = "")
         {
-
-            //int acc0 = 0;
-            //if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
-            //if (acc != null)
-            //{
-            //    if (acc is int i) acc0 = i;
-            //    else if (acc is string s) int.TryParse(s, out acc0);
-            //}
-            //else int.TryParse(_project.Var("acc0"), out acc0);
-
 
             TblName(tableName);
             if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
@@ -269,6 +264,11 @@ namespace z3nCore
 
         public string Get(string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "acc0", string acc = null, string where = "")
         {
+
+            if (string.IsNullOrWhiteSpace(toGet))
+                throw new ArgumentException("Column names cannot be null or empty", nameof(toGet));
+
+
             toGet = QuoteColumnNames(toGet.Trim().TrimEnd(','));
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
             TblName(tableName);
@@ -357,16 +357,14 @@ namespace z3nCore
         {
             var result = new List<string>();
             TblName(tblName);
-            if (_dbMode == "PostgreSQL")
-                result = DbQ($@"SELECT column_name FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}';", log: _logShow)
-                    .Split('\n')
-                    .Select(s => s.Trim())
-                    .ToList();
-            else
-                result = DbQ($"SELECT name FROM pragma_table_info('{_tableName}');", log: _logShow)
-                    .Split('\n')
-                    .Select(s => s.Trim())
-                    .ToList();
+            string query = _dbMode == "PostgreSQL"
+                ? $@"SELECT column_name FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}';"
+                : $"SELECT name FROM pragma_table_info('{_tableName}');";
+
+            result = DbQ(query, log: _logShow)
+                .Split('\n')
+                .Select(s => s.Trim())
+                .ToList();
             if (_dbMode == "PostgreSQL") _tableName = $"{_schemaName}.{_tableName}";
             return result;
         }

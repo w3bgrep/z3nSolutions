@@ -48,7 +48,7 @@ namespace z3nCore
                 return url;
             foreach (var key in _rpcs.Keys)
             {
-                if (string.Equals(key.Replace("_", ""), name.Replace("_", ""), StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(key.Replace("_", ""), name.Replace("_", "").Trim(), StringComparison.OrdinalIgnoreCase))
                     return _rpcs[key];
             }
             throw new ArgumentException($"No RpcUrl provided for '{name}'");

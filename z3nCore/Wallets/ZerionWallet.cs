@@ -76,7 +76,7 @@ namespace z3nCore
                 fileName = _fileName;
             if (string.IsNullOrEmpty(source))
                 source = "key";
-            string active = null;
+            //string active = null;
             var em = _instance.UseFullMouseEmulation;
             _instance.UseFullMouseEmulation = false;
 
@@ -98,17 +98,20 @@ namespace z3nCore
                     goto check;
                 case "overview":
                     //string current = GetActive();
-                    SwitchSource(source);
+                    //SwitchSource(source);
+                    
                     break;
                 default:
                     goto check;
             }
 
             try { TestnetMode(false); } catch { }
-            GetActive();
+            var address =  ActiveAddress();
+            //var address = GetActive();
             _instance.CloseExtraTabs();
             _instance.UseFullMouseEmulation = em;
-            return _expectedAddress;
+            _logger.Send($"launched with: {address}",show:true);
+            return address;
         }
 
 
@@ -141,7 +144,6 @@ namespace z3nCore
                 var button = _instance.HeGet(("button", "class", "_primary", "regexp", i), deadline: deadline);
                 if (_instance.GetHe(("button", "class", "_primary", "regexp", i)).Width == -1) 
                     { i++; goto scan; }
-                //if (button.Width == -1) { i++; goto scan; }
                 _logger.Send(button);
                 _instance.HeClick(("button", "class", "_primary", "regexp", i));
                 return true;
@@ -165,12 +167,12 @@ namespace z3nCore
             }
             catch (Exception ex)
             {
-                _project.L0g($"No Wallet tab found. 0");
+                _logger.Send($"No Wallet tab found. 0");
                 return;
             }
 
-            _project.L0g(action);
-            _project.L0g(_instance.ActiveTab.URL);
+            _logger.Send(action);
+            _logger.Send(_instance.ActiveTab.URL.ConvertUrl());
 
             switch (action)
             {
@@ -476,7 +478,7 @@ namespace z3nCore
         private string GetActive()
         {
             string activeWallet = _instance.HeGet(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html\\#/wallet-select", "regexp", 0));
-            string total = _instance.HeGet(("div", "style", "display:\\ grid;\\ gap:\\ 0px;\\ grid-template-columns:\\ minmax\\(0px,\\ auto\\);\\ align-items:\\ start;", "regexp", 0)).Split('\n')[0];
+            string total = _instance.HeGet(("div", "style", "display:\\ grid;\\ gap:\\ 0px;\\ grid-template-columns:\\ minmax\\(0px,\\ auto\\);\\ align-items:\\ start;", "regexp", 0)).Split('\n')[0];          
             _logger.Send($"wallet Now {activeWallet}  [{total}]");
             return activeWallet;
         }
@@ -524,6 +526,13 @@ namespace z3nCore
             catch { }
         }
 
+        public string ActiveAddress()
+        {
+            var address = _instance.HeGet(("a", "href", "chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html#/receive\\?address=", "regexp", 0), atr: "href")
+                .Replace("chrome-extension://klghhnkeealcohjjanjjdaeeggmfmlpl/popup.8e8f209b.html#/receive?address=", "");
+            _logger.Send($"active address: {address}");
+            return address;
+        }
     }
 
 }
