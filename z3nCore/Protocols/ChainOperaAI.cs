@@ -74,7 +74,8 @@ namespace z3nCore
 
 
             string headersString = data["RequestHeaders"].Trim();//RequestCookies
-            _project.L0g(headersString);
+            _logger.Send(headersString);
+            //_project.L0g(headersString);
 
             string headerToGet = "authorization";
             var headers = headersString.Split('\n');

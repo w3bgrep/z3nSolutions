@@ -143,8 +143,7 @@ namespace z3nCore
             }
 
             return string.Join("\r\n", result);
-        }
-
+        }  
         public string DbRead(string sql, string separator = "|")
         {
             return DbReadAsync(sql, separator).GetAwaiter().GetResult();
@@ -202,7 +201,6 @@ namespace z3nCore
                 throw new Exception($"SQL Error: {ex.Message} | Query: [{sql}]");
             }
         }
-
         public int DbWrite(string sql, params IDbDataParameter[] parameters)
         {
             return DbWriteAsync(sql, parameters).GetAwaiter().GetResult();
@@ -223,7 +221,6 @@ namespace z3nCore
                 throw new NotSupportedException("Unsupported connection type");
             }
         }
-
         public IDbDataParameter[] CreateParameters(params (string name, object value)[] parameters)
         {
             var result = new IDbDataParameter[parameters.Length];
