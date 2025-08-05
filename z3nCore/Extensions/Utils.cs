@@ -107,7 +107,10 @@ namespace z3nCore
 
         public static void Clean(this IZennoPosterProjectModel project, Instance instance)
         {
-            if (instance.BrowserType.ToString() == "Chromium")
+            bool releaseResouses = true;
+            try { releaseResouses = project.Var("forceReleaseResouses") == "True"; } catch { }
+            
+            if (instance.BrowserType.ToString() == "Chromium" && releaseResouses)
             {
                 try { instance.Launch(ZennoLab.InterfacesLibrary.Enums.Browser.BrowserType.Firefox45, false); } catch { }
                 try { instance.ClearCookie(); instance.ClearCache(); } catch { }
