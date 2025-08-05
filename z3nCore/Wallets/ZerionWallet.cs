@@ -270,6 +270,13 @@ namespace z3nCore
             {
                 _logger.Send(ex.Message);
             }
+            if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Incorrect\\ password", "regexp", 0).IsVoid)
+            {
+                
+                _instance.UninstallExtension("klghhnkeealcohjjanjjdaeeggmfmlpl");
+                throw new Exception("Incorrect password");
+
+            }
         }
 
         public void SwitchSource(string addressToUse = "key")
