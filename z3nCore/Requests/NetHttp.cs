@@ -86,18 +86,7 @@ namespace z3nCore
             var defaultHeaders = new Dictionary<string, string>
             {
                 { "User-Agent", _project.Profile.UserAgent }, // Already present
-                //{ "Accept", "application/json" },
-                //{ "Accept-Encoding", "" },
-                //{ "Accept-Language", _project.Profile.AcceptLanguage },
-                //{ "Priority", "u=1, i" },
-                //{ "Content-Type", "application/json; charset=UTF-8" }, // For GET; POST overrides via StringContent
-                //{ "Sec-Ch-Ua", "\"Chromium\";v=\"136\", \"Google Chrome\";v=\"136\", \"Not.A/Brand\";v=\"99\"" },
-                //{ "Sec-Ch-Ua-Mobile", "?0" },
-                //{ "Sec-Ch-Ua-Platform", "\"Windows\"" },
-                //{ "Sec-Fetch-Dest", "empty" },
-                //{ "Sec-Fetch-Mode", "cors" },
-                //{ "Sec-Fetch-Site", "cross-site" },
-                //{ "Sec-Fetch-Storage-Access", "active" }
+
             };
 
             if (inputHeaders == null || inputHeaders.Count == 0)
@@ -118,18 +107,15 @@ namespace z3nCore
             var headers = new Dictionary<string, string>
             {
                 { "User-Agent", _project.Profile.UserAgent },
-                //{ "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" },
-                //{ "Accept-Encoding", "" },
-                //{ "Accept-Language", "en-US,en;q=0.5" },
+
             };
 
             if (inputHeaders is null)
             {
                 return headers;
             }
-            else if (inputHeaders is Dictionary<string, string> dictHeaders) // Использование "pattern matching" для явного приведения
+            else if (inputHeaders is Dictionary<string, string> dictHeaders) 
             {
-                // dictHeaders теперь уже имеет нужный тип Dictionary<string, string>
                 foreach (var header in dictHeaders)
                 {
                     try { headers.Add(header.Key, header.Value); }
@@ -137,15 +123,15 @@ namespace z3nCore
 
                 }
             }
-            else if (inputHeaders is IEnumerable<string> stringHeaders) // Также использование "pattern matching"
+            else if (inputHeaders is IEnumerable<string> stringHeaders) 
             {
                 foreach (string header in stringHeaders)
                 {
-                    string[] parts = header.Split(new[] { ':' }, 2); // Разделяем только по первому двоеточию
+                    string[] parts = header.Split(new[] { ':' }, 2); 
                     if (parts.Length == 2)
                     {
-                        string headerKey = parts[0].Trim(); // Удаляем пробелы
-                        string headerValue = parts[1].Trim(); // Удаляем пробелы
+                        string headerKey = parts[0].Trim(); 
+                        string headerValue = parts[1].Trim(); 
 
                         try { headers.Add(headerKey, headerValue); }
                         catch { headers[headerKey] = headerValue; }
@@ -516,6 +502,12 @@ namespace z3nCore
             string ipLocal = GET("http://api.ipify.org/", null);
             string ipProxified = GET("http://api.ipify.org/", proxyString);
 
+            if (string.IsNullOrEmpty(ipProxified) || !System.Net.IPAddress.TryParse(ipProxified, out _))
+            {
+                _logger.Send($"!W proxy error: Invalid or empty IP [{ipProxified}]");
+                return false;
+            }
+
             if (ipProxified != ipLocal)
             {
                 _logger.Send($"proxy `validated: {ipProxified}");
@@ -533,7 +525,5 @@ namespace z3nCore
             }
             return false;
         }
-
     }
-
 }
