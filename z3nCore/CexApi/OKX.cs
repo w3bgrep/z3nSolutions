@@ -12,7 +12,7 @@ using Newtonsoft.Json;
 
 namespace z3nCore
 {
-    public class OKXApi
+    public class OKX
     {
         private readonly IZennoPosterProjectModel _project;
         private readonly string[] _apiKeys;
@@ -22,7 +22,7 @@ namespace z3nCore
         private readonly string _apiKey;
         private readonly string _secretKey;
         private readonly string _passphrase;
-        public OKXApi(IZennoPosterProjectModel project, bool log = false)
+        public OKX(IZennoPosterProjectModel project, bool log = false)
         {
             _project = project;
             _sql = new Sql(_project);
@@ -44,6 +44,7 @@ namespace z3nCore
         {
             string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : null) + "settings";
             _sql.DbQ($"SELECT value FROM {table} WHERE var = 'okx_apikey';");
+
             var key = _sql.DbQ($"SELECT value FROM {table} WHERE var = 'okx_apikey';");
             var secret = _sql.DbQ($"SELECT value FROM {table} WHERE var = 'okx_secret';");
             var passphrase = _sql.DbQ($"SELECT value FROM {table} WHERE var = 'okx_passphrase';");
@@ -52,7 +53,7 @@ namespace z3nCore
         }
         private string MapNetwork(string chain, bool log)
         {
-            CexLog("Mapping network: " + chain, log:log);
+            CexLog("Mapping network: " + chain, log: log);
             //if (log) Loggers.l0g(_project, "Mapping network: " + chain);
             chain = chain.ToLower();
             switch (chain)

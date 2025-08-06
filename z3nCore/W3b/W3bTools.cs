@@ -1,4 +1,5 @@
 ﻿using Nethereum.Hex.HexTypes;
+using Nethereum.Model;
 using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Web3;
 using Newtonsoft.Json.Linq;
@@ -7,6 +8,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -17,292 +19,10 @@ namespace z3nCore
 {
 
 
+
+
     public class EvmTools
     {
-        public async Task<decimal> GetEvmBalance(string rpc, string address)
-        {
-            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_getBalance"", ""params"": [""{address}"", ""latest""], ""id"": 1 }}";
-
-            using (var client = new HttpClient())
-            {
-                var request = new HttpRequestMessage
-                {
-                    Method = System.Net.Http.HttpMethod.Post,
-                    RequestUri = new Uri(rpc),
-                    Content = new System.Net.Http.StringContent(jsonBody, Encoding.UTF8, "application/json")
-                };
-
-                using (var response = await client.SendAsync(request))
-                {
-                    response.EnsureSuccessStatusCode();
-                    var body = await response.Content.ReadAsStringAsync();
-
-                    var json = JObject.Parse(body);
-                    string hexBalance = json["result"]?.ToString().Replace("0x", "") ?? "0";
-                    BigInteger balanceWei = BigInteger.Parse(hexBalance, NumberStyles.AllowHexSpecifier);
-                    decimal balance = (decimal)balanceWei / 1000000000000000000m;
-                    return balance;
-                }
-            }
-        }
-
-        public async Task<decimal> GetErc20Balance(string tokenContract, string rpc, string address, string tokenDecimal = "18")
-        {
-            string data = "0x70a08231000000000000000000000000" + address.Replace("0x", "");
-            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_call"", ""params"": [{{ ""to"": ""{tokenContract}"", ""data"": ""{data}"" }}, ""latest""], ""id"": 1 }}";
-
-            using (var client = new HttpClient())
-            {
-                var request = new HttpRequestMessage
-                {
-                    Method = System.Net.Http.HttpMethod.Post,
-                    RequestUri = new Uri(rpc),
-                    Content = new System.Net.Http.StringContent(jsonBody, Encoding.UTF8, "application/json")
-                };
-
-                using (var response = await client.SendAsync(request))
-                {
-                    response.EnsureSuccessStatusCode();
-                    var body = await response.Content.ReadAsStringAsync();
-
-                    var json = JObject.Parse(body);
-                    string hexBalance = json["result"]?.ToString().Replace("0x", "") ?? "0";
-                    BigInteger balanceRaw = BigInteger.Parse(hexBalance, NumberStyles.AllowHexSpecifier);
-                    decimal decimals = (decimal)Math.Pow(10, double.Parse(tokenDecimal, CultureInfo.InvariantCulture));
-                    decimal balance = (decimal)balanceRaw / decimals;
-                    return balance;
-                }
-            }
-        }
-
-        public async Task<decimal> GetErc721Balance(string tokenContract, string rpc, string address)
-        {
-            string data = "0x70a08231000000000000000000000000" + address.Replace("0x", "").ToLower();
-            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_call"", ""params"": [{{ ""to"": ""{tokenContract}"", ""data"": ""{data}"" }}, ""latest""], ""id"": 1 }}";
-
-            using (var client = new HttpClient())
-            {
-                var request = new HttpRequestMessage
-                {
-                    Method = System.Net.Http.HttpMethod.Post,
-                    RequestUri = new Uri(rpc),
-                    Content = new System.Net.Http.StringContent(jsonBody, Encoding.UTF8, "application/json")
-                };
-
-                using (var response = await client.SendAsync(request))
-                {
-                    response.EnsureSuccessStatusCode();
-                    var body = await response.Content.ReadAsStringAsync();
-
-                    var json = JObject.Parse(body);
-                    string hexBalance = json["result"]?.ToString().Replace("0x", "") ?? "0";
-                    BigInteger balanceRaw = BigInteger.Parse(hexBalance, NumberStyles.AllowHexSpecifier);
-                    return (decimal)balanceRaw;
-                }
-            }
-        }
-
-        public async Task<decimal> GetErc1155Balance(string tokenContract, string tokenId, string rpc, string address)
-        {
-            string data = "0x00fdd58e" + address.Replace("0x", "").ToLower().PadLeft(64, '0') + BigInteger.Parse(tokenId).ToString("x").PadLeft(64, '0');
-            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_call"", ""params"": [{{ ""to"": ""{tokenContract}"", ""data"": ""{data}"" }}, ""latest""], ""id"": 1 }}";
-
-            using (var client = new HttpClient())
-            {
-                var request = new HttpRequestMessage
-                {
-                    Method = System.Net.Http.HttpMethod.Post,
-                    RequestUri = new Uri(rpc),
-                    Content = new System.Net.Http.StringContent(jsonBody, Encoding.UTF8, "application/json")
-                };
-
-                using (var response = await client.SendAsync(request))
-                {
-                    response.EnsureSuccessStatusCode();
-                    var body = await response.Content.ReadAsStringAsync();
-
-                    var json = JObject.Parse(body);
-                    string hexBalance = json["result"]?.ToString().Replace("0x", "") ?? "0";
-                    BigInteger balanceRaw = BigInteger.Parse(hexBalance, NumberStyles.AllowHexSpecifier);
-                    return (decimal)balanceRaw;
-                }
-            }
-        }
-
-        public async Task<int> GetNonce(string rpc, string address, string proxy = "", bool log = false)
-        {
-            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_getTransactionCount"", ""params"": [""{address}"", ""latest""], ""id"": 1 }}";
-
-            HttpClient client;
-            if (!string.IsNullOrEmpty(proxy))
-            {
-                var proxyArray = proxy.Split(':');
-                var webProxy = new System.Net.WebProxy($"http://{proxyArray[2]}:{proxyArray[3]}")
-                {
-                    Credentials = new System.Net.NetworkCredential(proxyArray[0], proxyArray[1])
-                };
-                var handler = new HttpClientHandler { Proxy = webProxy, UseProxy = true };
-                client = new HttpClient(handler);
-            }
-            else
-            {
-                client = new HttpClient();
-            }
-
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0");
-            client.Timeout = TimeSpan.FromSeconds(5);
-
-            using (client)
-            {
-                var request = new HttpRequestMessage
-                {
-                    Method = HttpMethod.Post,
-                    RequestUri = new Uri(rpc),
-                    Content = new StringContent(jsonBody, Encoding.UTF8, "application/json")
-                };
-
-                try
-                {
-                    using (var response = await client.SendAsync(request))
-                    {
-                        response.EnsureSuccessStatusCode();
-                        var body = await response.Content.ReadAsStringAsync();
-                        var json = JObject.Parse(body);
-                        string hexResult = json["result"]?.ToString()?.Replace("0x", "") ?? "0";
-                        int transactionCount = hexResult == "0" ? 0 : Convert.ToInt32(hexResult, 16);
-                        if (log) Console.WriteLine($"{address} nonce now {transactionCount}");
-                        return transactionCount;
-                    }
-                }
-                catch (HttpRequestException ex)
-                {
-                    if (log) Console.WriteLine($"Request error: {ex.Message}");
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    if (log) Console.WriteLine($"Failed to parse response: {ex.Message}");
-                    return 0;
-                }
-            }
-        }
-
-        public async Task<int> GetChainId(string rpc, string proxy = "", bool log = false)
-        {
-            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_chainId"", ""params"": [], ""id"": 1 }}";
-
-            HttpClient client;
-            if (!string.IsNullOrEmpty(proxy))
-            {
-                var proxyArray = proxy.Split(':');
-                var webProxy = new System.Net.WebProxy($"http://{proxyArray[2]}:{proxyArray[3]}")
-                {
-                    Credentials = new System.Net.NetworkCredential(proxyArray[0], proxyArray[1])
-                };
-                var handler = new HttpClientHandler { Proxy = webProxy, UseProxy = true };
-                client = new HttpClient(handler);
-            }
-            else
-            {
-                client = new HttpClient();
-            }
-
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0");
-            client.Timeout = TimeSpan.FromSeconds(5);
-
-            using (client)
-            {
-                var request = new HttpRequestMessage
-                {
-                    Method = HttpMethod.Post,
-                    RequestUri = new Uri(rpc),
-                    Content = new StringContent(jsonBody, Encoding.UTF8, "application/json")
-                };
-
-                try
-                {
-                    using (var response = await client.SendAsync(request))
-                    {
-                        response.EnsureSuccessStatusCode();
-                        var body = await response.Content.ReadAsStringAsync();
-                        var json = JObject.Parse(body);
-                        string hexResult = json["result"]?.ToString() ?? "0x0";
-                        int chainId = hexResult == "0x0" ? 0 : Convert.ToInt32(hexResult.Replace("0x", ""), 16);
-                        if (log) Console.WriteLine($"ChainId: {chainId} by {rpc}");
-                        return chainId;
-                    }
-                }
-                catch (HttpRequestException ex)
-                {
-                    if (log) Console.WriteLine($"Request error: {ex.Message}");
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    if (log) Console.WriteLine($"Failed to parse response: {ex.Message}");
-                    return 0;
-                }
-            }
-        }
-
-        public async Task<decimal> GetGasPrice(string rpc, string proxy = "", bool log = false)
-        {
-            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_gasPrice"", ""params"": [], ""id"": 1 }}";
-
-            HttpClient client;
-            if (!string.IsNullOrEmpty(proxy))
-            {
-                var proxyArray = proxy.Split(':');
-                var webProxy = new System.Net.WebProxy($"http://{proxyArray[2]}:{proxyArray[3]}")
-                {
-                    Credentials = new System.Net.NetworkCredential(proxyArray[0], proxyArray[1])
-                };
-                var handler = new HttpClientHandler { Proxy = webProxy, UseProxy = true };
-                client = new HttpClient(handler);
-            }
-            else
-            {
-                client = new HttpClient();
-            }
-
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0");
-            client.Timeout = TimeSpan.FromSeconds(5);
-
-            using (client)
-            {
-                var request = new HttpRequestMessage
-                {
-                    Method = HttpMethod.Post,
-                    RequestUri = new Uri(rpc),
-                    Content = new StringContent(jsonBody, Encoding.UTF8, "application/json")
-                };
-
-                try
-                {
-                    using (var response = await client.SendAsync(request))
-                    {
-                        response.EnsureSuccessStatusCode();
-                        var body = await response.Content.ReadAsStringAsync();
-                        var json = JObject.Parse(body);
-                        string hexResult = json["result"]?.ToString()?.Replace("0x", "") ?? "0";
-                        BigInteger gasWei = BigInteger.Parse(hexResult, NumberStyles.AllowHexSpecifier);
-                        decimal gasGwei = (decimal)gasWei / 1000000000m;
-                        if (log) Console.WriteLine($"GasPrice: {gasGwei} Gwei by {rpc}");
-                        return gasGwei;
-                    }
-                }
-                catch (HttpRequestException ex)
-                {
-                    if (log) Console.WriteLine($"Request error: {ex.Message}");
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    if (log) Console.WriteLine($"Failed to parse response: {ex.Message}");
-                    return 0;
-                }
-            }
-        }
         
         public async Task<bool> WaitTxExtended(string rpc, string hash, int deadline = 60, string proxy = "", bool log = false)
         {
@@ -423,7 +143,6 @@ namespace z3nCore
                 }
             }
         }
-
         public async Task<bool> WaitTx(string rpc, string hash, int deadline = 60, string proxy = "", bool log = false)
         {
             string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_getTransactionReceipt"", ""params"": [""{hash}""], ""id"": 1 }}";
@@ -500,8 +219,276 @@ namespace z3nCore
                 }
             }
         }
+        //new
+        public async Task<string> Native(string rpc, string address)
+        {
+            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_getBalance"", ""params"": [""{address}"", ""latest""], ""id"": 1 }}";
 
-        
+            using (var client = new HttpClient())
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = System.Net.Http.HttpMethod.Post,
+                    RequestUri = new Uri(rpc),
+                    Content = new System.Net.Http.StringContent(jsonBody, Encoding.UTF8, "application/json")
+                };
+
+                using (var response = await client.SendAsync(request))
+                {
+                    response.EnsureSuccessStatusCode();
+                    var body = await response.Content.ReadAsStringAsync();
+
+                    var json = JObject.Parse(body);
+                    string hexBalance = json["result"]?.ToString().Replace("0x", "") ?? "0";
+                    return hexBalance;
+
+                }
+            }
+        }
+        public async Task<string> Erc20(string tokenContract, string rpc, string address)
+        {
+            string data = "0x70a08231000000000000000000000000" + address.Replace("0x", "");
+            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_call"", ""params"": [{{ ""to"": ""{tokenContract}"", ""data"": ""{data}"" }}, ""latest""], ""id"": 1 }}";
+
+            using (var client = new HttpClient())
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = System.Net.Http.HttpMethod.Post,
+                    RequestUri = new Uri(rpc),
+                    Content = new System.Net.Http.StringContent(jsonBody, Encoding.UTF8, "application/json")
+                };
+
+                using (var response = await client.SendAsync(request))
+                {
+                    response.EnsureSuccessStatusCode();
+                    var body = await response.Content.ReadAsStringAsync();
+
+                    var json = JObject.Parse(body);
+                    string hexBalance = json["result"]?.ToString().Replace("0x", "") ?? "0";
+                    return hexBalance;
+
+                }
+            }
+        }
+        public async Task<string> Erc721(string tokenContract, string rpc, string address)
+        {
+            string data = "0x70a08231000000000000000000000000" + address.Replace("0x", "").ToLower();
+            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_call"", ""params"": [{{ ""to"": ""{tokenContract}"", ""data"": ""{data}"" }}, ""latest""], ""id"": 1 }}";
+
+            using (var client = new HttpClient())
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = System.Net.Http.HttpMethod.Post,
+                    RequestUri = new Uri(rpc),
+                    Content = new System.Net.Http.StringContent(jsonBody, Encoding.UTF8, "application/json")
+                };
+                using (var response = await client.SendAsync(request))
+                {
+                    response.EnsureSuccessStatusCode();
+                    var body = await response.Content.ReadAsStringAsync();
+
+                    var json = JObject.Parse(body);
+                    string hexBalance = json["result"]?.ToString().Replace("0x", "") ?? "0";
+                    return hexBalance;
+                }
+            }
+        }
+        public async Task<string> Erc1155(string tokenContract, string tokenId, string rpc, string address)
+        {
+            string data = "0x00fdd58e" + address.Replace("0x", "").ToLower().PadLeft(64, '0') + BigInteger.Parse(tokenId).ToString("x").PadLeft(64, '0');
+            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_call"", ""params"": [{{ ""to"": ""{tokenContract}"", ""data"": ""{data}"" }}, ""latest""], ""id"": 1 }}";
+
+            using (var client = new HttpClient())
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = System.Net.Http.HttpMethod.Post,
+                    RequestUri = new Uri(rpc),
+                    Content = new System.Net.Http.StringContent(jsonBody, Encoding.UTF8, "application/json")
+                };
+
+                using (var response = await client.SendAsync(request))
+                {
+                    response.EnsureSuccessStatusCode();
+                    var body = await response.Content.ReadAsStringAsync();
+
+                    var json = JObject.Parse(body);
+                    string hexBalance = json["result"]?.ToString().Replace("0x", "") ?? "0";
+                    return hexBalance;
+
+                }
+            }
+        }
+
+        public async Task<string> Nonce(string rpc, string address, string proxy = "", bool log = false)
+        {
+            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_getTransactionCount"", ""params"": [""{address}"", ""latest""], ""id"": 1 }}";
+
+            HttpClient client;
+            if (!string.IsNullOrEmpty(proxy))
+            {
+                var proxyArray = proxy.Split(':');
+                var webProxy = new System.Net.WebProxy($"http://{proxyArray[2]}:{proxyArray[3]}")
+                {
+                    Credentials = new System.Net.NetworkCredential(proxyArray[0], proxyArray[1])
+                };
+                var handler = new HttpClientHandler { Proxy = webProxy, UseProxy = true };
+                client = new HttpClient(handler);
+            }
+            else
+            {
+                client = new HttpClient();
+            }
+
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0");
+            client.Timeout = TimeSpan.FromSeconds(5);
+
+            using (client)
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Post,
+                    RequestUri = new Uri(rpc),
+                    Content = new StringContent(jsonBody, Encoding.UTF8, "application/json")
+                };
+
+                try
+                {
+                    using (var response = await client.SendAsync(request))
+                    {
+                        response.EnsureSuccessStatusCode();
+                        var body = await response.Content.ReadAsStringAsync();
+                        var json = JObject.Parse(body);
+                        string hexResult = json["result"]?.ToString()?.Replace("0x", "") ?? "0";
+                        return hexResult;
+
+                    }
+                }
+                catch (HttpRequestException ex)
+                {
+                    if (log) Console.WriteLine($"Request error: {ex.Message}");
+                    throw ex;
+                }
+                catch (Exception ex)
+                {
+                    if (log) Console.WriteLine($"Failed to parse response: {ex.Message}");
+                    throw ex;
+                }
+            }
+        }
+        public async Task<string> ChainId(string rpc, string proxy = "", bool log = false)
+        {
+            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_chainId"", ""params"": [], ""id"": 1 }}";
+
+            HttpClient client;
+            if (!string.IsNullOrEmpty(proxy))
+            {
+                var proxyArray = proxy.Split(':');
+                var webProxy = new System.Net.WebProxy($"http://{proxyArray[2]}:{proxyArray[3]}")
+                {
+                    Credentials = new System.Net.NetworkCredential(proxyArray[0], proxyArray[1])
+                };
+                var handler = new HttpClientHandler { Proxy = webProxy, UseProxy = true };
+                client = new HttpClient(handler);
+            }
+            else
+            {
+                client = new HttpClient();
+            }
+
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0");
+            client.Timeout = TimeSpan.FromSeconds(5);
+
+            using (client)
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Post,
+                    RequestUri = new Uri(rpc),
+                    Content = new StringContent(jsonBody, Encoding.UTF8, "application/json")
+                };
+
+                try
+                {
+                    using (var response = await client.SendAsync(request))
+                    {
+                        response.EnsureSuccessStatusCode();
+                        var body = await response.Content.ReadAsStringAsync();
+                        var json = JObject.Parse(body);
+                        return json["result"]?.ToString() ?? "0x0";
+                    }
+                }
+                catch (HttpRequestException ex)
+                {
+                    if (log) Console.WriteLine($"Request error: {ex.Message}");
+                    throw ex;
+                }
+                catch (Exception ex)
+                {
+                    if (log) Console.WriteLine($"Failed to parse response: {ex.Message}");
+                    throw ex;
+                }
+            }
+        }
+        public async Task<string> GasPrice(string rpc, string proxy = "", bool log = false)
+        {
+            string jsonBody = $@"{{ ""jsonrpc"": ""2.0"", ""method"": ""eth_gasPrice"", ""params"": [], ""id"": 1 }}";
+
+            HttpClient client;
+            if (!string.IsNullOrEmpty(proxy))
+            {
+                var proxyArray = proxy.Split(':');
+                var webProxy = new System.Net.WebProxy($"http://{proxyArray[2]}:{proxyArray[3]}")
+                {
+                    Credentials = new System.Net.NetworkCredential(proxyArray[0], proxyArray[1])
+                };
+                var handler = new HttpClientHandler { Proxy = webProxy, UseProxy = true };
+                client = new HttpClient(handler);
+            }
+            else
+            {
+                client = new HttpClient();
+            }
+
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0");
+            client.Timeout = TimeSpan.FromSeconds(5);
+
+            using (client)
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Post,
+                    RequestUri = new Uri(rpc),
+                    Content = new StringContent(jsonBody, Encoding.UTF8, "application/json")
+                };
+
+                try
+                {
+                    using (var response = await client.SendAsync(request))
+                    {
+                        response.EnsureSuccessStatusCode();
+                        var body = await response.Content.ReadAsStringAsync();
+                        var json = JObject.Parse(body);
+                        return json["result"]?.ToString()?.Replace("0x", "") ?? "0";
+   
+                    }
+                }
+                catch (HttpRequestException ex)
+                {
+                    if (log) Console.WriteLine($"Request error: {ex.Message}");
+                    throw ex;
+                }
+                catch (Exception ex)
+                {
+                    if (log) Console.WriteLine($"Failed to parse response: {ex.Message}");
+                    throw ex;
+                }
+            }
+        }
+
+
     }
 
 
@@ -852,25 +839,102 @@ namespace z3nCore
     {
 
         private readonly string _apiKey = "CG-TJ3DRjP93bTSCto6LiPbMgaV";
+        private void AddHeaders(HttpRequestHeaders headers, string apiKey)
+        {
+            headers.Add("accept", "application/json");
+            headers.Add("x-cg-pro-api-key", apiKey);
+        }
+        private static string IdByTiker(string tiker)
+        {
+            switch (tiker)
+            {
+                case "ETH":
+                    return "ethereum";
+                case "BNB":
+                    return "binancecoin";
+                case "SOL":
+                    return "solana";
+                default:
+                    throw new Exception($"unknown tiker {tiker}");
+            }
+        }
         public async Task<string> CoinInfo(string CGid = "ethereum")
         {
             var client = new HttpClient();
             var request = new HttpRequestMessage
             {
                 Method = System.Net.Http.HttpMethod.Get,
-                RequestUri = new Uri($"https://api.coingecko.com/api/v3/coins/{CGid}"),
-                Headers =
-                {
-                    { "accept", "application/json" },
-                    { "x-cg-demo-api-key", _apiKey },
-                },
+                RequestUri = new Uri($"https://api.coingecko.com/api/v3/coins/{CGid}")
             };
+            AddHeaders(request.Headers, _apiKey); 
 
             using (var response = await client.SendAsync(request))
             {
                 response.EnsureSuccessStatusCode();
                 var body = await response.Content.ReadAsStringAsync();
                 return body;
+            }
+        }
+        public async Task<string> TokenByAddress(string CGid = "ethereum")
+        {
+            var client = new HttpClient();
+            var request = new HttpRequestMessage
+            {
+                Method = HttpMethod.Get,
+                RequestUri = new Uri("https://pro-api.coingecko.com/api/v3/onchain/simple/networks/network/token_price/addresses")
+            };
+            AddHeaders(request.Headers, _apiKey); 
+
+            using (var response = await client.SendAsync(request))
+            {
+                response.EnsureSuccessStatusCode();
+                var body = await response.Content.ReadAsStringAsync();
+                Console.WriteLine(body);
+                return body;
+            }
+        }
+        public static decimal PriceByTiker(string tiker, [CallerMemberName] string callerName = "")
+        {
+            try
+            {
+                string CGid = IdByTiker(tiker);
+                return PriceById(CGid, callerName);
+            }
+            catch (Exception ex)
+            {
+                var stackFrame = new System.Diagnostics.StackFrame(1);
+                var callingMethod = stackFrame.GetMethod();
+                string method = string.Empty;
+                if (callingMethod != null)
+                    method = $"{callingMethod.DeclaringType.Name}.{callerName}";
+                throw new Exception(ex.Message + $"\n{method}");
+            }
+        }
+        public static decimal PriceById(string CGid = "ethereum", [CallerMemberName] string callerName = "")
+        {
+            try
+            {
+                string result = new CoinGecco().CoinInfo(CGid).GetAwaiter().GetResult();
+
+                var json = JObject.Parse(result);
+                JToken usdPriceToken = json["market_data"]?["current_price"]?["usd"];
+
+                if (usdPriceToken == null)
+                {
+                    return 0m;
+                }
+
+                decimal usdPrice = usdPriceToken.Value<decimal>();
+                return usdPrice;
+            }
+            catch (Exception ex)
+            {
+                var stackFrame = new System.Diagnostics.StackFrame(1);
+                var callingMethod = stackFrame.GetMethod();
+                string method = string.Empty;
+                if (callingMethod != null)
+                    method = $"{callingMethod.DeclaringType.Name}.{callerName}";
+                throw new Exception(ex.Message + $"\n{method}");
             }
         }
 
@@ -960,23 +1024,51 @@ namespace z3nCore
     public static class W3bTools 
     
     {
-
         public static decimal EvmNative(string rpc, string address)
         {
-            return new EvmTools().GetEvmBalance(rpc, address).GetAwaiter().GetResult();
+            string nativeHex = new EvmTools().Native(rpc, address).GetAwaiter().GetResult();
+            return nativeHex.ToDecimal();
         }
+        public static decimal EvmNative(this IZennoPosterProjectModel project, string rpc, string address, bool log = false)
+        {
+            return new W3bLegacy(project).NativeEvm(rpc, address, log:log);
+        }
+        
+        
         public static decimal ERC20(string tokenContract, string rpc, string address, string tokenDecimal = "18")
         {
-            return new EvmTools().GetErc20Balance(tokenContract, rpc, address, tokenDecimal).GetAwaiter().GetResult();
+            string balanceHex = new EvmTools().Erc20(tokenContract, rpc, address).GetAwaiter().GetResult();
+            return balanceHex.ToDecimal();
         }
         public static decimal ERC721(string tokenContract, string rpc, string address)
         {
-            return new EvmTools().GetErc721Balance(tokenContract, rpc, address).GetAwaiter().GetResult();
+            string balanceHex = new EvmTools().Erc721(tokenContract, rpc, address).GetAwaiter().GetResult();
+            return balanceHex.ToDecimal();
         }
         public static decimal ERC1155(string tokenContract, string tokenId, string rpc, string address)
         {
-            return new EvmTools().GetErc1155Balance(tokenContract, tokenId, rpc, address).GetAwaiter().GetResult();
+            string balanceHex = new EvmTools().Erc1155(tokenContract,  tokenId, rpc, address).GetAwaiter().GetResult();
+            return balanceHex.ToDecimal();
         }
+        public static decimal GasPrice(string rpc)
+        {
+            string balanceHex = new EvmTools().GasPrice(rpc).GetAwaiter().GetResult();
+            return balanceHex.ToDecimal(10);
+        }
+
+        public static int Nonce(string rpc, string address)
+        {
+            string nonceHex = new EvmTools().Nonce(rpc, address).GetAwaiter().GetResult();
+            int transactionCount = nonceHex == "0" ? 0 : Convert.ToInt32(nonceHex, 16);
+            return transactionCount;
+        }
+        public static int ChainId(string rpc)
+        {
+            string idHex = new EvmTools().ChainId(rpc).GetAwaiter().GetResult();
+            int id = idHex == "0" ? 0 : Convert.ToInt32(idHex, 16);
+            return id;
+        }
+
 
         public static decimal SolNative(string address, string rpc = "https://api.mainnet-beta.solana.com")
         {
@@ -1051,12 +1143,42 @@ namespace z3nCore
             return new OKXApi(project).OKXPrice<decimal>($"{tiker}-USDT");
 
         }
-
-        public static decimal UsdToToken(this decimal usdAmount, string tiker)
+        public static decimal UsdToToken(this IZennoPosterProjectModel project, decimal usdAmount, string tiker, string apiProvider = "KuCoin")
         {
-            var price = KuCoin.KuPrice(tiker);
+            decimal price;
+            switch (apiProvider)
+            {
+                case "KuCoin":
+                    price = KuCoin.KuPrice(tiker);
+                    break;
+                case "OKX":
+                    price = project.OKXPrice(tiker);
+                    break;
+                case "CoinGecco":
+                    price = CoinGecco.PriceByTiker(tiker);
+                    break;
+                default:
+                    throw new ArgumentException($"unknown method {apiProvider}");
+            }
             return usdAmount / price;
         }
+
+        private static decimal ToDecimal(this BigInteger balanceWei, int decimals = 18)
+        {
+            BigInteger divisor = BigInteger.Pow(10, decimals);
+            BigInteger integerPart = balanceWei / divisor;
+            BigInteger fractionalPart = balanceWei % divisor;
+
+            decimal result = (decimal)integerPart + ((decimal)fractionalPart / (decimal)divisor);
+            return result;
+        }
+        private static decimal ToDecimal(this string balanceHex, int decimals = 18)
+        {
+            BigInteger number = BigInteger.Parse("0" + balanceHex, NumberStyles.AllowHexSpecifier);
+            return ToDecimal(number, decimals);
+        }
+
+
     }
 
 }

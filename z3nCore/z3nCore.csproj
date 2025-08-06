@@ -86,6 +86,7 @@
   <ItemGroup>
     <Compile Include="Browser\Cookies.cs" />
     <Compile Include="Browser\Captcha.cs" />
+    <Compile Include="CexApi\OKX.cs" />
     <Compile Include="Extensions\Utils.cs" />
     <Compile Include="Properties\VersionInfo.cs" />
     <Compile Include="Protocols\AI.cs" />
@@ -95,6 +96,7 @@
     <Compile Include="Sql\Postgres.cs" />
     <Compile Include="Tools\Debug.cs" />
     <Compile Include="W3b\Rpc.cs" />
+    <Compile Include="W3b\W3bLegacy.cs" />
     <Compile Include="W3b\W3bTools.cs" />
     <Compile Include="Socials\GitHub.cs" />
     <Compile Include="Sql\Db.cs" />
