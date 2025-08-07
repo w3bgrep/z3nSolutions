@@ -24,7 +24,7 @@ namespace z3nCore
         public string Approve(string contract, string spender, string amount, string rpc)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            string key = new Sql(_project).Key("evm");
+            string key = _project.DbKey("evm");
 
             string abi = @"[{""inputs"":[{""name"":""spender"",""type"":""address""},{""name"":""amount"",""type"":""uint256""}],""name"":""approve"",""outputs"":[{""name"":"""",""type"":""bool""}],""stateMutability"":""nonpayable"",""type"":""function""}]";
 
@@ -85,7 +85,7 @@ namespace z3nCore
         public string Wrap(string contract, decimal value, string rpc )
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            string key = new Sql(_project).Key("evm");
+            string key = _project.DbKey("evm");
 
             string abi = @"[{""inputs"":[],""name"":""deposit"",""outputs"":[],""stateMutability"":""payable"",""type"":""function""}]";
 
@@ -121,7 +121,7 @@ namespace z3nCore
         public string SendNative(string to, decimal amount, string rpc)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            string key = new Sql(_project).Key("evm");
+            string key = _project.DbKey("evm");
             string txHash = null;
             string encoded = "";
             try
@@ -148,7 +148,7 @@ namespace z3nCore
         public string SendERC20(string contract, string to, decimal amount, string rpc)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-            string key = new Sql(_project).Key("evm");
+            string key = _project.DbKey("evm");
             string txHash = null;
 
             try
@@ -184,7 +184,7 @@ namespace z3nCore
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 
             string txHash = null;
-            string key = new Sql(_project).Key("evm");
+            string key = _project.DbKey("evm");
             try
             {
                 string abi = @"[{""inputs"":[{""name"":""from"",""type"":""address""},{""name"":""to"",""type"":""address""},{""name"":""tokenId"",""type"":""uint256""}],""name"":""safeTransferFrom"",""outputs"":[],""stateMutability"":""nonpayable"",""type"":""function""}]";

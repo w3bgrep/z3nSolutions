@@ -44,10 +44,10 @@ namespace z3nCore
             switch (key)
             {
                 case "key":
-                    key = new Sql(_project).Key("sol");
+                    key = _project.DbKey("sol");
                     break;
                 case "seed":
-                    key = new Sql(_project).Key("seed");
+                    key = _project.DbKey("seed");
                     break;
                 default:
                     return key;
@@ -406,8 +406,8 @@ namespace z3nCore
         {
             string _urlAdd = "chrome-extension://aflkmfhebedbjioipglgcbcmnbpgliof/options.html?add-user-account=true";
             string key;
-            if (type == "Ethereum") key = new Sql(_project).Key("evm");
-            else key = new Sql(_project).Key("sol");
+            if (type == "Ethereum") key = _project.DbKey("evm");
+            else key = _project.DbKey("sol");
             _instance.Go(_urlAdd, true);
 
         check:

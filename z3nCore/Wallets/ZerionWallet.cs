@@ -57,10 +57,10 @@ namespace z3nCore
             switch (key)
             {
                 case "key":
-                    key = new Sql(_project).Key("evm");
+                    key = _project.DbKey("evm");
                     break;
                 case "seed":
-                    key = new Sql(_project).Key("seed");
+                    key = _project.DbKey("seed");
                     break;
                 default:
                     return key;
@@ -287,8 +287,8 @@ namespace z3nCore
 
             _project.Deadline();
 
-            if (addressToUse == "key") addressToUse = new Sql(_project).Key("evm").ToPubEvm();
-            else if (addressToUse == "seed") addressToUse = new Sql(_project).Key("seed").ToPubEvm();
+            if (addressToUse == "key") addressToUse = _project.DbKey("evm").ToPubEvm();
+            else if (addressToUse == "seed") addressToUse = _project.DbKey("seed").ToPubEvm();
             else throw new Exception("supports \"key\" | \"seed\" only");
             _expectedAddress = addressToUse;
 

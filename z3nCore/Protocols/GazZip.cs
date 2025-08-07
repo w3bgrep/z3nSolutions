@@ -65,7 +65,7 @@ namespace z3nCore
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             Random rnd = new Random();
             
-            string key = new Sql(_project).Key("evm");
+            string key = _project.DbKey("evm");
             var accountAddress = key.ToPubEvm(); 
 
             if (string.IsNullOrEmpty(rpc))

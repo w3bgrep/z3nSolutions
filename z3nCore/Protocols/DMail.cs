@@ -162,7 +162,7 @@ namespace z3nCore
         private string KeyCheck(string key = null)
         {
             if (string.IsNullOrEmpty(key))
-                key = _sql.Key("evm");
+                key = _project.DbKey("evm");
             if (string.IsNullOrEmpty(key))
                 throw new Exception("emptykey");
             return key;

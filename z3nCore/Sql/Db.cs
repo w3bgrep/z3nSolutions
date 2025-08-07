@@ -142,6 +142,30 @@ namespace z3nCore
             try { project.SqlW($"ALTER TABLE {dest} RENAME COLUMN key to id;"); } catch { }
         }
 
+        public static string DbKey(this IZennoPosterProjectModel project, string chainType = "evm")
+        {
+            chainType = chainType.ToLower().Trim();
+            switch (chainType)
+            {
+                case "evm":
+                    chainType = "secp256k1";
+                    break;
+                case "sol":
+                    chainType = "base58";
+                    break;
+                case "seed":
+                    chainType = "bip39";
+                    break;
+                default:
+                    throw new Exception("unexpected input. Use (evm|sol|seed|pkFromSeed)");
+            }
+
+            var resp = project.SqlGet(chainType, "_wallets");
+            if (!string.IsNullOrEmpty(project.Var("cfgPin")))
+                return SAFU.Decode(project, resp);
+            else return resp;
+
+        }
 
         public static string SqlGet(this IZennoPosterProjectModel project, string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "id", object id = null, string where = "")
         {
@@ -158,6 +182,8 @@ namespace z3nCore
             string query;
             if (string.IsNullOrEmpty(where))
             {
+                if (string.IsNullOrEmpty(id.ToString())) 
+                    throw new ArgumentException("variable \"acc0\" is null or empty", nameof(id));
                 query = $"SELECT {toGet} from {tableName} WHERE {key} = {id}";
             }
             else
@@ -186,6 +212,8 @@ namespace z3nCore
             string query;
             if (string.IsNullOrEmpty(where))
             {
+                if (string.IsNullOrEmpty(id.ToString()))
+                    throw new ArgumentException("variable \"acc0\" is null or empty", nameof(id));
                 query = $"UPDATE {tableName} SET {toUpd} WHERE {key} = {id}";
             }
             else
@@ -222,7 +250,7 @@ namespace z3nCore
             }
             catch (Exception ex)
             {
-                project.SendWarningToLog(ex.Message, true);
+                project.SendWarningToLog(ex.Message + $"\n [{query}]");
                 if (throwOnEx) throw ex;
                 return string.Empty;
             }
@@ -248,7 +276,7 @@ namespace z3nCore
             }
             catch (Exception ex)
             {
-                project.SendWarningToLog(ex.Message, true);
+                project.SendWarningToLog(ex.Message + $"\n [{query}]");
                 if (throwOnEx) throw ex;
                 return 0;
             }

@@ -82,11 +82,11 @@ namespace z3nCore
             switch (KeyType)
             {
                 case KeyT.secp256k1: 
-                    return _sql.Key("evm");
+                    return _project.DbKey("evm");
                 case KeyT.base58:
-                    return _sql.Key("sol");
+                    return _project.DbKey("sol");
                 case KeyT.bip39:
-                    return _sql.Key("seed");
+                    return _project.DbKey("seed");
                 default:
                     throw new Exception("unsupportedType");
             }
@@ -98,11 +98,11 @@ namespace z3nCore
             switch (KeyType)
             {
                 case "evm":
-                    return _sql.Key("evm");
+                    return _project.DbKey("evm");
                 case "sol":
-                    return _sql.Key("sol");
+                    return _project.DbKey("sol");
                 case "seed":
-                    return _sql.Key("seed");
+                    return _project.DbKey("seed");
                 default:
                     throw new Exception("unsupportedType");
             }

@@ -34,11 +34,11 @@ namespace z3nCore
             {
                 case "key":
                     _logger.Send("using key from db");
-                    key = new Sql(_project).Key("evm");
+                    key = _project.DbKey("evm");
                     break;
                 case "seed":
                     _logger.Send("using seed from db");
-                    key = new Sql(_project).Key("seed");
+                    key = _project.DbKey("seed");
                     break;
                 default:
                     _logger.Send("using provided key");
