@@ -1,7 +1,9 @@
 ﻿using Dapper;
 using Nethereum.Contracts.QueryHandlers.MultiCall;
 using Nethereum.Contracts.Standards.ENS.ETHRegistrarController.ContractDefinition;
+using OtpNet;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -132,11 +134,75 @@ namespace z3nCore
                 refCode = new Sql(project, log).Get("refcode", where: "TRIM(refcode) != '' ORDER BY RANDOM() LIMIT 1;");
             return refCode;
         }
-        
-       
-        
-        public static string SqlR(this IZennoPosterProjectModel project, string query, string sqLitePath = null, string pgHost = null, string pgPort = null, string pgDbName = null, string pgUser = null, string pgPass = null, bool throwOnEx = false)
+        public static void MigrateTable(this IZennoPosterProjectModel project, string source, string dest)
         {
+            project.SendInfoToLog($"{source} -> {dest}", true);
+            project.SqlTableCopy(source, dest);
+            try { project.SqlW($"ALTER TABLE {dest} RENAME COLUMN acc0 to id;"); } catch { }
+            try { project.SqlW($"ALTER TABLE {dest} RENAME COLUMN key to id;"); } catch { }
+        }
+
+
+        public static string SqlGet(this IZennoPosterProjectModel project, string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "id", object id = null, string where = "")
+        {
+
+            if (string.IsNullOrWhiteSpace(toGet))
+                throw new ArgumentException("Column names cannot be null or empty", nameof(toGet));
+
+            toGet = Quote(toGet.Trim().TrimEnd(','));
+            if (string.IsNullOrEmpty(tableName)) 
+                tableName = project.Variables["projectTable"].Value;
+            
+            if (id is null) id = project.Variables["acc0"].Value;
+
+            string query;
+            if (string.IsNullOrEmpty(where))
+            {
+                query = $"SELECT {toGet} from {tableName} WHERE {key} = {id}";
+            }
+            else
+            {
+                query = $@"SELECT {toGet} from {tableName} WHERE {where};";
+            }
+
+            return project.SqlR(query, log: log, throwOnEx: throwOnEx);
+        }
+        public static string SqlUpd(this IZennoPosterProjectModel project, string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, string key = "id", object id = null, string where = "")
+        {          
+            var parameters = new DynamicParameters();
+            if (string.IsNullOrEmpty(tableName)) tableName = project.Var("projectTable");
+            if (string.IsNullOrEmpty(tableName)) throw new Exception("TableName is null");
+
+            toUpd = Quote(toUpd, true);
+            tableName = Quote(tableName);
+
+            if (last)
+            {
+                toUpd += ", last = @lastTime";
+                parameters.Add("lastTime", DateTime.UtcNow.ToString("MM-ddTHH:mm"));
+            }
+            if (id is null) id = project.Variables["acc0"].Value;
+            
+            string query;
+            if (string.IsNullOrEmpty(where))
+            {
+                query = $"UPDATE {tableName} SET {toUpd} WHERE {key} = {id}";
+            }
+            else
+            {
+                query = $"UPDATE {tableName} SET {toUpd} WHERE {where}";
+            }
+            return project.SqlW(query).ToString();
+        }
+
+    }
+
+    public static class DbCore
+    {
+        public static string SqlR(this IZennoPosterProjectModel project, string query, bool log = false, string sqLitePath = null, string pgHost = null, string pgPort = null, string pgDbName = null, string pgUser = null, string pgPass = null, bool throwOnEx = false)
+        {
+            var _logger = new Logger(project);
+            
             if (string.IsNullOrEmpty(sqLitePath)) sqLitePath = project.Var("DBsqltPath");
             if (string.IsNullOrEmpty(pgHost)) pgHost = "localhost";
             if (string.IsNullOrEmpty(pgPort)) pgPort = "5432";
@@ -187,33 +253,6 @@ namespace z3nCore
                 return 0;
             }
         }
-        public static void SqlUpd(this IZennoPosterProjectModel project, string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, string key = "acc0", object acc = null, string where = "")
-        {          
-            var parameters = new DynamicParameters();
-            if (string.IsNullOrEmpty(tableName)) tableName = project.Var("projectTable");
-            if (string.IsNullOrEmpty(tableName)) throw new Exception("TableName is null");
-
-            toUpd = Quote(toUpd, true);
-            tableName = Quote(tableName);
-
-            if (last)
-            {
-                toUpd += ", last = @lastTime";
-                parameters.Add("lastTime", DateTime.UtcNow.ToString("MM-ddTHH:mm"));
-            }
-            if (acc is null) acc = project.Variables["acc0"].Value;
-            
-            string query;
-            if (string.IsNullOrEmpty(where))
-            {
-                query = $"UPDATE {tableName} SET {toUpd} WHERE {key} = {acc}";
-            }
-            else
-            {
-                query = $"UPDATE {tableName} SET {toUpd} WHERE {where}";
-            }
-            project.SqlW(query);
-        }
         public static int SqlTableCopy(this IZennoPosterProjectModel project, string sourceTable, string destinationTable, string sqLitePath = null, string pgHost = null, string pgPort = null, string pgDbName = null, string pgUser = null, string pgPass = null, bool throwOnEx = false)
         {
             if (string.IsNullOrEmpty(sourceTable)) throw new ArgumentNullException(nameof(sourceTable));
@@ -242,7 +281,6 @@ namespace z3nCore
                 }
             }
         }
-
 
     }
 }

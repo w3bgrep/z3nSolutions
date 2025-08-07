@@ -734,7 +734,6 @@ namespace z3nCore
                 return SAFU.Decode(_project, resp);
             else return resp;
 
-
         }
 
         public string[] columnsDefault = {
