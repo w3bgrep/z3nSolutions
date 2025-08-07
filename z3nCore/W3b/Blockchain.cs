@@ -4,6 +4,7 @@ using Nethereum.ABI.ABIDeserialisation;
 using Nethereum.ABI.Decoders;
 using Nethereum.Hex.HexConvertors.Extensions;
 using Nethereum.Hex.HexTypes;
+using Nethereum.JsonRpc.Client;
 using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Web3;
 using Nethereum.Web3.Accounts;
@@ -66,13 +67,11 @@ namespace z3nCore
             var function = contract.GetFunction(functionName);
             var result = await function.CallAsync<object>(parameters);
 
-            // Добавляем проверку на тип результата для структуры
             if (result is Tuple<BigInteger, BigInteger, BigInteger, BigInteger> structResult)
             {
                 return $"0x{structResult.Item1.ToString("X")},{structResult.Item2.ToString("X")},{structResult.Item3.ToString("X")},{structResult.Item4.ToString("X")}";
             }
 
-            // Оставляем существующие проверки
             if (result is BigInteger bigIntResult) return "0x" + bigIntResult.ToString("X");
             else if (result is bool boolResult) return boolResult.ToString().ToLower();
             else if (result is string stringResult) return stringResult;
@@ -117,6 +116,105 @@ namespace z3nCore
             return hash;
         }
 
+        public async Task<string> SendTransaction(string addressTo, HexBigInteger amount, string data, BigInteger gasLimit, BigInteger gasPrice)
+        {
+            var account = new Account(walletKey, chainId);
+            var web3 = new Web3(account, jsonRpc);
+            web3.TransactionManager.UseLegacyAsDefault = true;
+            var transaction = new TransactionInput();
+            transaction.From = account.Address;
+            transaction.To = addressTo;
+            transaction.Value = amount;
+            transaction.Data = data;
+            transaction.Gas = new HexBigInteger(gasLimit);
+            transaction.GasPrice = new HexBigInteger(gasPrice);
+            var hash = await web3.TransactionManager.SendTransactionAsync(transaction);
+            return hash;
+        }
+
+        public async Task<string> SendTransactionEIP1559(string addressTo, HexBigInteger amount, string data, BigInteger gasLimit, BigInteger maxFeePerGas, BigInteger maxPriorityFeePerGas)
+        {
+            var account = new Account(walletKey, chainId);
+            var web3 = new Web3(account, jsonRpc);
+            var transaction = new TransactionInput
+            {
+                From = account.Address,
+                To = addressTo,
+                Value = amount,
+                Data = data,
+                Gas = new HexBigInteger(gasLimit),
+                MaxFeePerGas = new HexBigInteger(maxFeePerGas),
+                MaxPriorityFeePerGas = new HexBigInteger(maxPriorityFeePerGas),
+                Type = new HexBigInteger(2) // EIP-1559 транзакция
+            };
+
+            var hash = await web3.TransactionManager.SendTransactionAsync(transaction);
+            return hash;
+        }
+
+
+        public async Task<(BigInteger GasLimit, BigInteger GasPrice, BigInteger MaxFeePerGas, BigInteger PriorityFee)> EstimateGasAsync(string contractAddress, string encodedData, string value, int txType, int speedup, Web3 web3, string fromAddress)
+        {
+            BigInteger gasLimit = 0;
+            BigInteger gasPrice = 0;
+            BigInteger maxFeePerGas = 0;
+            BigInteger priorityFee = 0;
+
+            try
+            {
+                var gasPriceTask = web3.Eth.GasPrice.SendRequestAsync();
+                await gasPriceTask;
+                BigInteger baseGasPrice = gasPriceTask.Result.Value / 100 + gasPriceTask.Result.Value;
+                if (txType == 0)
+                {
+                    gasPrice = baseGasPrice / 100 * speedup + gasPriceTask.Result.Value;
+                }
+                else
+                {
+                    priorityFee = baseGasPrice / 100 * speedup + gasPriceTask.Result.Value;
+                    maxFeePerGas = baseGasPrice / 100 * speedup + gasPriceTask.Result.Value;
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to estimate gas price: {ex.Message}, InnerException: {ex.InnerException?.Message}", ex);
+            }
+
+            try
+            {
+                var transactionInput = new TransactionInput
+                {
+                    To = contractAddress,
+                    From = fromAddress,
+                    Data = encodedData,
+                    Value = new HexBigInteger(value),
+                    GasPrice = txType == 0 ? new HexBigInteger(gasPrice) : null,
+                    MaxPriorityFeePerGas = txType == 2 ? new HexBigInteger(priorityFee) : null,
+                    MaxFeePerGas = txType == 2 ? new HexBigInteger(maxFeePerGas) : null,
+                    Type = txType == 2 ? new HexBigInteger(2) : null
+                };
+
+                var gasEstimateTask = web3.Eth.Transactions.EstimateGas.SendRequestAsync(transactionInput);
+                await gasEstimateTask;
+                var gasEstimate = gasEstimateTask.Result;
+                gasLimit = gasEstimate.Value + (gasEstimate.Value / 2);
+            }
+            catch (AggregateException ae)
+            {
+                if (ae.InnerException is RpcResponseException rpcEx)
+                {
+                    var error = $"Code: {rpcEx.RpcError.Code}, Message: {rpcEx.RpcError.Message}, Data: {rpcEx.RpcError.Data}";
+                    throw new Exception($"RPC error during gas estimation: {error}, InnerException: {ae.InnerException?.Message}", ae);
+                }
+                throw new Exception($"Gas estimation failed: {ae.Message}, InnerException: {ae.InnerException?.Message}", ae);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Gas estimation failed: {ex.Message}, InnerException: {ex.InnerException?.Message}", ex);
+            }
+
+            return (gasLimit, gasPrice, maxFeePerGas, priorityFee);
+        }
 
         //btc
         public static string GenerateMnemonic(string wordList = "English", int wordCount = 12)

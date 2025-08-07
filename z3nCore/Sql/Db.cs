@@ -1,4 +1,5 @@
-﻿using Nethereum.Contracts.QueryHandlers.MultiCall;
+﻿using Dapper;
+using Nethereum.Contracts.QueryHandlers.MultiCall;
 using Nethereum.Contracts.Standards.ENS.ETHRegistrarController.ContractDefinition;
 using System;
 using System.Collections.Generic;
@@ -6,6 +7,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
+using System.Windows.Forms;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using ZXing.QrCode.Internal;
 
@@ -13,23 +16,43 @@ namespace z3nCore
 {
     public static class Db
     {
-        
-        
+        private static string Quote(string name, bool isColumnList = false)
+        {
+            if (isColumnList)
+            {
+                name = name.Trim().TrimEnd(',');
+                var parts = name.Split(',').Select(p => p.Trim()).ToList();
+                var result = new List<string>();
+
+                foreach (var part in parts)
+                {
+                    int equalsIndex = part.IndexOf('=');
+                    if (equalsIndex > 0)
+                    {
+                        string columnName = part.Substring(0, equalsIndex).Trim();
+                        string valuePart = part.Substring(equalsIndex).Trim();
+                        result.Add($"\"{columnName}\" {valuePart}");
+                    }
+                    else
+                    {
+                        result.Add($"\"{part}\"");
+                    }
+                }
+                return string.Join(", ", result);
+            }
+            return $"\"{name.Replace("\"", "\"\"")}\"";
+        }
+
         public static string DbGet(this IZennoPosterProjectModel project, string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "acc0", string acc = null, string where = "")
         {
             return new Sql(project, log).Get(toGet, tableName, log, throwOnEx, key, acc, where);
         }
-
         public static void DbUpd(this IZennoPosterProjectModel project, string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, string key = "acc0", object acc = null, string where = "")
         {
             if (toUpd.Contains("relax")) log = true;
             try { project.Var("lastQuery", toUpd); } catch (Exception Ex){ project.SendWarningToLog(Ex.Message, true); }
             new Sql(project, log).Upd(toUpd, tableName, log, throwOnEx, last, key, acc, where);
         }
-
-
-
-
         public static void MakeAccList(this IZennoPosterProjectModel project, List<string> dbQueries, bool log = false)
         {
 
@@ -101,7 +124,6 @@ namespace z3nCore
             _logger.Send($"final list [{string.Join("|", _project.Lists["accs"])}]");
 
         }
-
         public static string Ref(this IZennoPosterProjectModel project, string refCode = null, bool log = false)
         {
             if (string.IsNullOrEmpty(refCode)) 
@@ -110,25 +132,10 @@ namespace z3nCore
                 refCode = new Sql(project, log).Get("refcode", where: "TRIM(refcode) != '' ORDER BY RANDOM() LIMIT 1;");
             return refCode;
         }
-
-        public static string DbRawR(this IZennoPosterProjectModel project, string query, string sqLitePath = null, string pgHost = null, string pgPort = null, string pgDbName = null, string pgUser = null, string pgPass = null)
-        {
-            if (string.IsNullOrEmpty(sqLitePath)) sqLitePath = project.Var("DBsqltPath");
-            if (string.IsNullOrEmpty(pgHost)) pgHost = "localhost";
-            if (string.IsNullOrEmpty(pgPort)) pgPort = "5432";
-            if (string.IsNullOrEmpty(pgDbName)) pgDbName = "postgres";
-            if (string.IsNullOrEmpty(pgUser)) pgUser = "postgres";
-            if (string.IsNullOrEmpty(pgPass)) pgPass = project.Var("DBpstgrPass");
-            string dbMode = project.Var("DBmode"); 
-
-
-            if (dbMode == "PostgreSQL")
-                return new dSql($"Host={pgHost};Port={pgPort};Database={pgDbName};Username={pgUser};Password={pgPass};Pooling=true;Connection Idle Lifetime=10;").DbReadAsync(query).GetAwaiter().GetResult();
-            else
-                return new dSql(sqLitePath,null).DbReadAsync(query).GetAwaiter().GetResult();
-
-        }
-        public static int DbRawW(this IZennoPosterProjectModel project, string query, string sqLitePath = null, string pgHost = null, string pgPort = null, string pgDbName = null, string pgUser = null, string pgPass = null)
+        
+       
+        
+        public static string SqlR(this IZennoPosterProjectModel project, string query, string sqLitePath = null, string pgHost = null, string pgPort = null, string pgDbName = null, string pgUser = null, string pgPass = null, bool throwOnEx = false)
         {
             if (string.IsNullOrEmpty(sqLitePath)) sqLitePath = project.Var("DBsqltPath");
             if (string.IsNullOrEmpty(pgHost)) pgHost = "localhost";
@@ -138,13 +145,104 @@ namespace z3nCore
             if (string.IsNullOrEmpty(pgPass)) pgPass = project.Var("DBpstgrPass");
             string dbMode = project.Var("DBmode");
 
-
-            if (dbMode == "PostgreSQL")
-                return new dSql($"Host={pgHost};Port={pgPort};Database={pgDbName};Username={pgUser};Password={pgPass};Pooling=true;Connection Idle Lifetime=10;").DbWriteAsync(query).GetAwaiter().GetResult();
-            else
-                return new dSql(sqLitePath, null).DbWriteAsync(query).GetAwaiter().GetResult();
-
+            try
+            {
+                using (var db = dbMode == "PostgreSQL"
+                    ? new dSql($"Host={pgHost};Port={pgPort};Database={pgDbName};Username={pgUser};Password={pgPass};Pooling=true;Connection Idle Lifetime=10;")
+                    : new dSql(sqLitePath, null))
+                {
+                    return db.DbReadAsync(query).GetAwaiter().GetResult();
+                }
+            }
+            catch (Exception ex)
+            {
+                project.SendWarningToLog(ex.Message, true);
+                if (throwOnEx) throw ex;
+                return string.Empty;
+            }
         }
+        public static int SqlW(this IZennoPosterProjectModel project, string query, string sqLitePath = null, string pgHost = null, string pgPort = null, string pgDbName = null, string pgUser = null, string pgPass = null, bool throwOnEx = false)
+        {
+            if (string.IsNullOrEmpty(sqLitePath)) sqLitePath = project.Var("DBsqltPath");
+            if (string.IsNullOrEmpty(pgHost)) pgHost = "localhost";
+            if (string.IsNullOrEmpty(pgPort)) pgPort = "5432";
+            if (string.IsNullOrEmpty(pgDbName)) pgDbName = "postgres";
+            if (string.IsNullOrEmpty(pgUser)) pgUser = "postgres";
+            if (string.IsNullOrEmpty(pgPass)) pgPass = project.Var("DBpstgrPass");
+            string dbMode = project.Var("DBmode");
+
+            try
+            {
+                using (var db = dbMode == "PostgreSQL"
+                    ? new dSql($"Host={pgHost};Port={pgPort};Database={pgDbName};Username={pgUser};Password={pgPass};Pooling=true;Connection Idle Lifetime=10;")
+                    : new dSql(sqLitePath, null))
+                {
+                    return db.DbWriteAsync(query).GetAwaiter().GetResult();
+                }
+            }
+            catch (Exception ex)
+            {
+                project.SendWarningToLog(ex.Message, true);
+                if (throwOnEx) throw ex;
+                return 0;
+            }
+        }
+        public static void SqlUpd(this IZennoPosterProjectModel project, string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, string key = "acc0", object acc = null, string where = "")
+        {          
+            var parameters = new DynamicParameters();
+            if (string.IsNullOrEmpty(tableName)) tableName = project.Var("projectTable");
+            if (string.IsNullOrEmpty(tableName)) throw new Exception("TableName is null");
+
+            toUpd = Quote(toUpd, true);
+            tableName = Quote(tableName);
+
+            if (last)
+            {
+                toUpd += ", last = @lastTime";
+                parameters.Add("lastTime", DateTime.UtcNow.ToString("MM-ddTHH:mm"));
+            }
+            if (acc is null) acc = project.Variables["acc0"].Value;
+            
+            string query;
+            if (string.IsNullOrEmpty(where))
+            {
+                query = $"UPDATE {tableName} SET {toUpd} WHERE {key} = {acc}";
+            }
+            else
+            {
+                query = $"UPDATE {tableName} SET {toUpd} WHERE {where}";
+            }
+            project.SqlW(query);
+        }
+        public static int SqlTableCopy(this IZennoPosterProjectModel project, string sourceTable, string destinationTable, string sqLitePath = null, string pgHost = null, string pgPort = null, string pgDbName = null, string pgUser = null, string pgPass = null, bool throwOnEx = false)
+        {
+            if (string.IsNullOrEmpty(sourceTable)) throw new ArgumentNullException(nameof(sourceTable));
+            if (string.IsNullOrEmpty(destinationTable)) throw new ArgumentNullException(nameof(destinationTable));
+            if (string.IsNullOrEmpty(sqLitePath)) sqLitePath = project.Var("DBsqltPath");
+            if (string.IsNullOrEmpty(pgHost)) pgHost = "localhost";
+            if (string.IsNullOrEmpty(pgPort)) pgPort = "5432";
+            if (string.IsNullOrEmpty(pgDbName)) pgDbName = "postgres";
+            if (string.IsNullOrEmpty(pgUser)) pgUser = "postgres";
+            if (string.IsNullOrEmpty(pgPass)) pgPass = project.Var("DBpstgrPass");
+            string dbMode = project.Var("DBmode");
+
+            using (var db = dbMode == "PostgreSQL"
+                ? new dSql($"Host={pgHost};Port={pgPort};Database={pgDbName};Username={pgUser};Password={pgPass};Pooling=true;Connection Idle Lifetime=10;")
+                : new dSql(sqLitePath, null))
+            {
+                try
+                {
+                    return db.CopyTableAsync(sourceTable, destinationTable).GetAwaiter().GetResult();
+                }
+                catch (Exception ex)
+                {
+                    project.SendWarningToLog(ex.Message, true);
+                    if (throwOnEx) throw;
+                    return 0;
+                }
+            }
+        }
+
 
     }
 }

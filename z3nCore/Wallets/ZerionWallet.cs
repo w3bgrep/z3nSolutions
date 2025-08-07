@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -135,17 +136,19 @@ namespace z3nCore
         }
         public bool Sign(bool log = false,int deadline = 10)
         {
-            parseURL();
+            //parseURL();
+
             try
             {
                 int i = 0;
             scan:
-
-                var button = _instance.HeGet(("button", "class", "_primary", "regexp", i), deadline: deadline);
-                if (_instance.GetHe(("button", "class", "_primary", "regexp", i)).Width == -1) 
-                    { i++; goto scan; }
-                _logger.Send(button);
-                _instance.HeClick(("button", "class", "_primary", "regexp", i));
+                //_logger.Send(TxFromUrl(_instance.ActiveTab.URL));
+                parseURL();
+                //var button = _instance.HeGet(("button", "innertext", "Confirm", "regexp", 0), deadline: deadline);
+                //if (_instance.GetHe(("button", "class", "_primary", "regexp", i)).Width == -1) 
+                //   { i++; goto scan; }
+                //_logger.Send(button);
+                _instance.HeClick(("button", "innertext", "Confirm", "regexp", 0));
                 return true;
             }
             catch (Exception ex)
@@ -540,6 +543,45 @@ namespace z3nCore
             _logger.Send($"active address: {address}");
             return address;
         }
+
+
+        public static string TxFromUrl(string url)
+        {
+            if (string.IsNullOrEmpty(url))
+                throw new ArgumentException("URL is null or empty");
+
+            try
+            {
+                var uri = new Uri(url);
+                var query = uri.Fragment.Contains("?") ? uri.Fragment.Split('?')[1] : uri.Query.TrimStart('?');
+
+                string transactionJson = null;
+                var pairs = query.Split('&');
+                foreach (var pair in pairs)
+                {
+                    if (pair.StartsWith("transaction="))
+                    {
+                        transactionJson = Uri.UnescapeDataString(pair.Substring("transaction=".Length));
+                        break;
+                    }
+                }
+
+                if (string.IsNullOrEmpty(transactionJson))
+                    throw new ArgumentException("Transaction data not found in URL");
+
+                var temp = JsonConvert.DeserializeObject<Dictionary<string, string>>(transactionJson);
+                if (temp == null || !temp.ContainsKey("to") || !temp.ContainsKey("from"))
+                    throw new ArgumentException("Invalid transaction data");
+
+                return transactionJson;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to parse transaction from URL: {ex.Message}, InnerException: {ex.InnerException?.Message}", ex);
+            }
+        }
+
+
     }
 
 }

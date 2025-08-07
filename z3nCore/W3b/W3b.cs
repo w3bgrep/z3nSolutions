@@ -1,6 +1,7 @@
 ﻿
 using Nethereum.Hex.HexTypes;
 using Nethereum.RPC.Eth.DTOs;
+using Nethereum.Signer;
 using Nethereum.Web3;
 using System;
 using System.Collections.Generic;
@@ -9,6 +10,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using ZennoLab.InterfacesLibrary.ProjectModel;
+using Newtonsoft.Json;
 
 namespace z3nCore
 {
@@ -144,6 +146,138 @@ namespace z3nCore
             }
         }
 
+        public string TxFromHex(string chainRpc, string contractAddress, string encodedData, string value, string walletKey, int txType = 2, int speedup = 1)
+        {
+            if (string.IsNullOrEmpty(chainRpc))
+                throw new ArgumentException("Chain RPC is null or empty");
+
+            if (string.IsNullOrEmpty(walletKey))
+                throw new ArgumentException("Wallet key is null or empty");
+
+            var web3 = new Web3(chainRpc);
+            int chainId;
+            try
+            {
+                var chainIdTask = web3.Eth.ChainId.SendRequestAsync();
+                chainIdTask.Wait();
+                chainId = (int)chainIdTask.Result.Value;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to get chain ID: {ex.Message}, InnerException: {ex.InnerException?.Message}", ex);
+            }
+
+            string fromAddress;
+            try
+            {
+                var ethECKey = new EthECKey(walletKey);
+                fromAddress = ethECKey.GetPublicAddress();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to initialize EthECKey: length={walletKey.Length}, startsWith={walletKey.Substring(0, Math.Min(6, walletKey.Length))}..., Message={ex.Message}, InnerException={ex.InnerException?.Message}", ex);
+            }
+            HexBigInteger HexValue = new HexBigInteger(value);
+
+            var gasParamsTask = new Blockchain(walletKey, chainId, chainRpc).EstimateGasAsync(contractAddress, encodedData, value, txType, speedup, web3, fromAddress);
+            gasParamsTask.Wait();
+            var (gasLimit, gasPrice, maxFeePerGas, priorityFee) = gasParamsTask.Result;
+
+            try
+            {
+                var blockchain = new Blockchain(walletKey, chainId, chainRpc);
+                string hash = txType == 0
+                    ? blockchain.SendTransaction(contractAddress, HexValue, encodedData, gasLimit, gasPrice).Result
+                    : blockchain.SendTransactionEIP1559(contractAddress, HexValue, encodedData, gasLimit, maxFeePerGas, priorityFee).Result;
+                return hash;
+            }
+            catch (AggregateException ae)
+            {
+                throw new Exception($"Transaction send failed: {ae.Message}, InnerException: {ae.InnerException?.Message}", ae);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Transaction send failed: {ex.Message}, InnerException: {ex.InnerException?.Message}", ex);
+            }
+        }
+
+        public string Tx(string chainRpc, string contractAddress, string encodedData, string hexValue, string walletKey, int txType = 2, int speedup = 1)
+        {
+            if (string.IsNullOrEmpty(chainRpc))
+                throw new ArgumentException("Chain RPC is null or empty");
+
+            if (string.IsNullOrEmpty(walletKey))
+                throw new ArgumentException("Wallet key is null or empty");
+
+            var web3 = new Web3(chainRpc);
+            int chainId;
+            try
+            {
+                var chainIdTask = web3.Eth.ChainId.SendRequestAsync();
+                chainIdTask.Wait();
+                chainId = (int)chainIdTask.Result.Value;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to get chain ID: {ex.Message}, InnerException: {ex.InnerException?.Message}", ex);
+            }
+
+            string fromAddress;
+            try
+            {
+                var ethECKey = new EthECKey(walletKey);
+                fromAddress = ethECKey.GetPublicAddress();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to initialize EthECKey: length={walletKey.Length}, startsWith={walletKey.Substring(0, Math.Min(6, walletKey.Length))}..., Message={ex.Message}, InnerException={ex.InnerException?.Message}", ex);
+            }
+            HexBigInteger HexValue = new HexBigInteger(hexValue);
+
+            var gasParamsTask = new Blockchain(walletKey, chainId, chainRpc).EstimateGasAsync(contractAddress, encodedData, hexValue, txType, speedup, web3, fromAddress);
+            gasParamsTask.Wait();
+            var (gasLimit, gasPrice, maxFeePerGas, priorityFee) = gasParamsTask.Result;
+
+            try
+            {
+                var blockchain = new Blockchain(walletKey, chainId, chainRpc);
+                string hash = txType == 0
+                    ? blockchain.SendTransaction(contractAddress, HexValue, encodedData, gasLimit, gasPrice).Result
+                    : blockchain.SendTransactionEIP1559(contractAddress, HexValue, encodedData, gasLimit, maxFeePerGas, priorityFee).Result;
+                return hash;
+            }
+            catch (AggregateException ae)
+            {
+                throw new Exception($"Transaction send failed: {ae.Message}, InnerException: {ae.InnerException?.Message}", ae);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Transaction send failed: {ex.Message}, InnerException: {ex.InnerException?.Message}", ex);
+            }
+        }
+        public string Tx(string chainRpc, string transactionData, string walletKey, int txType = 2, int speedup = 1)
+        {
+            if (string.IsNullOrEmpty(chainRpc))
+                throw new ArgumentException("Chain RPC is null or empty");
+
+            if (string.IsNullOrEmpty(walletKey))
+                throw new ArgumentException("Wallet key is null or empty");
+
+            var transaction = JsonConvert.DeserializeObject<Dictionary<string, string>>(transactionData);
+            if (transaction == null || !transaction.ContainsKey("to") || !transaction.ContainsKey("from"))
+                throw new ArgumentException("Invalid transaction data");
+
+            string contractAddress = transaction["to"];
+            string hexValue = transaction.ContainsKey("value") ? transaction["value"] : "0x0";
+
+
+            string encodedData = transaction.ContainsKey("data") ? transaction["data"] : null;
+
+
+            return Tx(chainRpc, contractAddress, encodedData, hexValue, walletKey, txType, speedup);
+        }
+    
+    
     }
 
 

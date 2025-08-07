@@ -16,12 +16,13 @@ namespace z3nCore
         private readonly IZennoPosterProjectModel _project;
         private readonly Instance _instance;
         private readonly Logger _logger;
-
+        private readonly bool _showLog;
 
         public Traffic(IZennoPosterProjectModel project, Instance instance, bool log = false)
         {
             _project = project;
             _instance = instance;
+            _showLog = log;
             _logger = new Logger(project, log: log, classEmoji: "🌎");
             _instance.UseTrafficMonitoring = true;
         }
@@ -139,27 +140,15 @@ namespace z3nCore
         }
         public string GetHeader(string url, string headerToGet = "Authorization", bool reload = false)
         {
-            Dictionary<string, string> data = Get(url, reload);
-            data.TryGetValue("RequestHeaders", out string headersString);
-
-            if (string.IsNullOrEmpty(headersString))
-                return string.Empty;
-
-            var headers = headersString.Split('\n');
-
-            foreach (string header in headers)
+            var Headers = new Traffic(_project, _instance, _showLog).Get(url, "RequestHeaders");
+            var headers = new Dictionary<string, string>();
+            foreach (string header in Headers.Split('\n'))
             {
-                var parts = header.Split(':');
-                if (parts.Length >= 2) // Проверка на корректный формат заголовка
-                {
-                    string headerName = parts[0].Trim();
-                    string headerValue = parts[1].Trim();
-                    data[headerName] = headerValue; // Обновление или добавление значения
-                }
+                var key = header.Trim().Split(':')[0].ToLower();
+                var value = header.Trim().Split(':')[1];
+                headers.Add(key, value);
             }
-
-            data.TryGetValue(headerToGet, out string value);
-            return value?.Trim() ?? string.Empty; // Возвращаем пустую строку, если значение не найдено
+            return headers[headerToGet.ToLower()];
         }
 
         public string GetParam(string url, string parametr, bool reload = false, int deadline = 10)
@@ -212,7 +201,7 @@ namespace z3nCore
             }
             goto get;
         }
-        //goto get;
+
 
 
     }

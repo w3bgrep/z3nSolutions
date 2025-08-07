@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Linq;
 
 using System.Threading.Tasks;
+using ZennoLab.InterfacesLibrary.ProjectModel;
 
 namespace z3nCore
 {
@@ -34,7 +35,7 @@ namespace z3nCore
             _connection.Open();
         }
         public dSql(string hostname, string port, string database, string user, string password)
-        {            
+        {
             _connection = new NpgsqlConnection($"Host={hostname};Port={port};Database={database};Username={user};Password={password};Pooling=true;Connection Idle Lifetime=100;");
             _connection.Open();
         }
@@ -52,7 +53,7 @@ namespace z3nCore
                 _connection.Open();
             }
         }
-        
+
 
 
         public DatabaseType ConnectionType
@@ -104,6 +105,31 @@ namespace z3nCore
             }
         }
 
+        public IDbDataParameter CreateParameter(string name, object value)
+        {
+            if (_connection is SqliteConnection)
+            {
+                return new SqliteParameter(name, value ?? DBNull.Value);
+            }
+            else if (_connection is NpgsqlConnection)
+            {
+                return new NpgsqlParameter(name, value ?? DBNull.Value);
+            }
+            else
+            {
+                throw new NotSupportedException("Unsupported connection type");
+            }
+        }
+        public IDbDataParameter[] CreateParameters(params (string name, object value)[] parameters)
+        {
+            var result = new IDbDataParameter[parameters.Length];
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                result[i] = CreateParameter(parameters[i].name, parameters[i].value);
+            }
+            return result;
+        }
+
         public async Task<string> DbReadAsync(string sql, string separator = "|")
         {
             EnsureConnection();
@@ -143,7 +169,7 @@ namespace z3nCore
             }
 
             return string.Join("\r\n", result);
-        }  
+        }
         public string DbRead(string sql, string separator = "|")
         {
             return DbReadAsync(sql, separator).GetAwaiter().GetResult();
@@ -198,7 +224,7 @@ namespace z3nCore
 
                 Debug.WriteLine($"Error: {ex.Message}");
                 Debug.WriteLine($"Executed query: {formattedQuery}");
-                throw new Exception($"SQL Error: {ex.Message} | Query: [{sql}]");
+                throw new Exception($"{ex.Message} : [{sql}]");
             }
         }
         public int DbWrite(string sql, params IDbDataParameter[] parameters)
@@ -206,32 +232,162 @@ namespace z3nCore
             return DbWriteAsync(sql, parameters).GetAwaiter().GetResult();
         }
 
-        public IDbDataParameter CreateParameter(string name, object value)
+
+        public async Task<int> CopyTableAsync(string sourceTable, string destinationTable)
         {
-            if (_connection is SqliteConnection)
+            if (string.IsNullOrEmpty(sourceTable)) throw new ArgumentNullException(nameof(sourceTable));
+            if (string.IsNullOrEmpty(destinationTable)) throw new ArgumentNullException(nameof(destinationTable));
+
+            string sourceTableName = sourceTable;
+            string destinationTableName = destinationTable;
+            string sourceSchema = "public";
+            string destinationSchema = "public";
+
+            if (ConnectionType == DatabaseType.PostgreSQL)
             {
-                return new SqliteParameter(name, value ?? DBNull.Value);
+                if (sourceTable.Contains("."))
+                {
+                    var parts = sourceTable.Split('.');
+                    if (parts.Length != 2) throw new ArgumentException("Invalid source table format. Expected 'schema.table'.");
+                    sourceSchema = parts[0];
+                    sourceTableName = parts[1];
+                }
+                if (destinationTable.Contains("."))
+                {
+                    var parts = destinationTable.Split('.');
+                    if (parts.Length != 2) throw new ArgumentException("Invalid destination table format. Expected 'schema.table'.");
+                    destinationSchema = parts[0];
+                    destinationTableName = parts[1];
+                }
             }
-            else if (_connection is NpgsqlConnection)
+            else if (sourceTable.Contains(".") || destinationTable.Contains("."))
             {
-                return new NpgsqlParameter(name, value ?? DBNull.Value);
+                throw new ArgumentException("Schemas are not supported in SQLite.");
+            }
+
+            sourceTableName = QuoteName(sourceTableName);
+            destinationTableName = QuoteName(destinationTableName);
+            sourceSchema = QuoteName(sourceSchema);
+            destinationSchema = QuoteName(destinationSchema);
+
+            string fullSourceTable = ConnectionType == DatabaseType.PostgreSQL ? $"{sourceSchema}.{sourceTableName}" : sourceTableName;
+            string fullDestinationTable = ConnectionType == DatabaseType.PostgreSQL ? $"{destinationSchema}.{destinationTableName}" : destinationTableName;
+
+            string createTableQuery;
+            string primaryKeyConstraint = "";
+            if (ConnectionType == DatabaseType.PostgreSQL)
+            {
+                string schemaQuery = $@"
+                    SELECT column_name, data_type, is_nullable, column_default
+                    FROM information_schema.columns
+                    WHERE table_name = '{sourceTableName.Replace("\"", "")}' AND table_schema = '{sourceSchema.Replace("\"", "")}';";
+                //string columnsDef = await DbReadAsync(schemaQuery);
+                string columnsDef = null;
+                try
+                {
+                    columnsDef = await DbReadAsync(schemaQuery);
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"{ex.Message} : [{schemaQuery}]");
+                }
+
+
+                if (string.IsNullOrEmpty(columnsDef))
+                    throw new Exception($"Source table {fullSourceTable} does not exist");
+
+                var columns = columnsDef.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(row => row.Split('|'))
+                    .Select(parts => $"\"{parts[0]}\" {parts[1]} {(parts[2] == "NO" ? "NOT NULL" : "")} {(parts[3] != "" ? $"DEFAULT {parts[3]}" : "")}")
+                    .ToList();
+
+                //string pkQuery = $@"
+                //    SELECT pg_constraint.conname, pg_get_constraintdef(pg_constraint.oid)
+                //    FROM pg_constraint
+                //    JOIN pg_class ON pg_constraint.conrelid = pg_class.oid
+                //    WHERE pg_class.relname = '{sourceTableName.Replace("\"", "")}' AND pg_constraint.contype = 'p' AND pg_namespace.nspname = '{sourceSchema.Replace("\"", "")}'
+                //    JOIN pg_namespace ON pg_class.relnamespace = pg_namespace.oid;";
+                string pkQuery = $@"
+                    SELECT pg_constraint.conname, pg_get_constraintdef(pg_constraint.oid)
+                    FROM pg_constraint
+                    JOIN pg_class ON pg_constraint.conrelid = pg_class.oid
+                    JOIN pg_namespace ON pg_class.relnamespace = pg_namespace.oid
+                    WHERE pg_class.relname = '{sourceTableName.Replace("\"", "")}' AND pg_constraint.contype = 'p' AND pg_namespace.nspname = '{sourceSchema.Replace("\"", "")}';";
+
+                string pkResult = null;
+                try
+                {
+                    pkResult = await DbReadAsync(pkQuery);
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"{ex.Message} : [{pkQuery}]");
+                }
+                if (!string.IsNullOrEmpty(pkResult))
+                {
+                    var pkParts = pkResult.Split('|');
+                    primaryKeyConstraint = $", CONSTRAINT \"{destinationTableName.Replace("\"", "")}_pkey\" {pkParts[1]}";
+                    //primaryKeyConstraint = $", CONSTRAINT \"{pkParts[0]}\" {pkParts[1]}";
+                }
+
+                createTableQuery = $"CREATE TABLE {fullDestinationTable} ({string.Join(", ", columns)}{primaryKeyConstraint});";
             }
             else
             {
-                throw new NotSupportedException("Unsupported connection type");
+                string schemaQuery = $"PRAGMA table_info({sourceTableName});";
+                string columnsDef = null;
+                try
+                {
+                    columnsDef = await DbReadAsync(schemaQuery);
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"{ex.Message} : [{schemaQuery}]");
+                }
+                if (string.IsNullOrEmpty(columnsDef))
+                    throw new Exception($"Source table {sourceTableName} does not exist");
+
+                var columns = columnsDef.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(row => row.Split('|'))
+                    .Select(parts => $"\"{parts[1]}\" {parts[2]} {(parts[3] == "1" ? "NOT NULL" : "")} {(parts[4] != "" ? $"DEFAULT {parts[4]}" : "")}")
+                    .ToList();
+
+                string pkQuery = $"PRAGMA table_info({sourceTableName});";
+                string pkResult = await DbReadAsync(pkQuery);
+                var pkColumns = pkResult.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(row => row.Split('|'))
+                    .Where(parts => parts[5] == "1")
+                    .Select(parts => $"\"{parts[1]}\"")
+                    .ToList();
+                if (pkColumns.Any())
+                {
+                    primaryKeyConstraint = $", PRIMARY KEY ({string.Join(", ", pkColumns)})";
+                }
+
+                createTableQuery = $"CREATE TABLE {destinationTableName} ({string.Join(", ", columns)}{primaryKeyConstraint});";
             }
-        }
-        public IDbDataParameter[] CreateParameters(params (string name, object value)[] parameters)
-        {
-            var result = new IDbDataParameter[parameters.Length];
-            for (int i = 0; i < parameters.Length; i++)
+
+            try
             {
-                result[i] = CreateParameter(parameters[i].name, parameters[i].value);
+                await DbWriteAsync(createTableQuery);
             }
-            return result;
+            catch (Exception ex) 
+            {
+                throw new Exception($"{ex.Message} : [{createTableQuery}]");
+            }
+
+            string copyQuery = $"INSERT INTO {fullDestinationTable} SELECT * FROM {fullSourceTable};";
+            try
+            {
+                int rowsAffected = await DbWriteAsync(copyQuery);
+                return rowsAffected;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message} : [{copyQuery}]");
+            }
+            
         }
-
-
 
         public async Task<int> Upd(string toUpd, object id, string tableName = null, string where = null, bool last = false)
         {
@@ -253,7 +409,6 @@ namespace z3nCore
             if (string.IsNullOrEmpty(where))
             {
                 query = $"UPDATE {tableName} SET {toUpd} WHERE id = {id}";
-
             }
             else
             {
@@ -272,10 +427,7 @@ namespace z3nCore
                     var value = parameters.Get<dynamic>(param)?.ToString() ?? "NULL";
                     formattedQuery = formattedQuery.Replace($"@{param}", $"'{value}'");
                 }
-
-                Debug.WriteLine($"Error: {ex.Message}");
-                Debug.WriteLine($"Executed query: {formattedQuery}");
-                throw;
+                throw new Exception ($"{ex.Message} : [{formattedQuery}]");
             }
         }
         public async Task Upd(List<string> toWrite, string tableName = null, string where = null, bool last = false)
@@ -365,8 +517,8 @@ namespace z3nCore
             return $"\"{name.Replace("\"", "\"\"")}\"";
         }
 
-
-
     }
-    
+
+
+
 }
