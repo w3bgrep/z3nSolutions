@@ -219,16 +219,17 @@ namespace z3nCore
             if (string.IsNullOrWhiteSpace(refCode))
             {
                 refCode = new Sql(_project).DbQ(@"SELECT referralCode
-                FROM projects.zerion
+                FROM __zerion
                 WHERE referralCode != '_' 
                 AND TRIM(referralCode) != ''
                 ORDER BY RANDOM()
                 LIMIT 1;");
             }
-            if (string.IsNullOrWhiteSpace(refCode)) refCode = "JZA87YJDS";
+            if (string.IsNullOrWhiteSpace(refCode)) refCode = "";
 
             _logger.Send(keyType);
-            var inputRef = true;
+            var inputRef = false;
+            if (!string.IsNullOrEmpty(refCode)) inputRef = true;
 
             _logger.Send(keyType);
             if (keyType == "keyEvm")
