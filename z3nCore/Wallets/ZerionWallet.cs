@@ -137,25 +137,31 @@ namespace z3nCore
         public bool Sign(bool log = false,int deadline = 10)
         {
             //parseURL();
-
+            _project.Deadline();
+        scan:
+            _project.Deadline(deadline);
             try
-            {
-                int i = 0;
-            scan:
-                //_logger.Send(TxFromUrl(_instance.ActiveTab.URL));
+            {               
                 parseURL();
-                //var button = _instance.HeGet(("button", "innertext", "Confirm", "regexp", 0), deadline: deadline);
-                //if (_instance.GetHe(("button", "class", "_primary", "regexp", i)).Width == -1) 
-                //   { i++; goto scan; }
-                //_logger.Send(button);
-                _instance.HeClick(("button", "innertext", "Confirm", "regexp", 0));
-                return true;
+                try
+                {
+                    _instance.HeClick(("button", "innertext", "Confirm", "regexp", 0), deadline:1);
+                    return true;
+                }
+                catch { }
+                try
+                {
+                    _instance.HeClick(("button", "innertext", "Sign", "regexp", 0), deadline: 1);
+                    return true;
+                }
+                catch { }
             }
             catch (Exception ex)
             {
                 _logger.Send($"!W {ex.Message}");
                 throw;
             }
+            goto scan;
         }
 
         public void Connect(bool log = false)

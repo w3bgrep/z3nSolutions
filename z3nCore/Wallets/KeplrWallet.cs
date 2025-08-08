@@ -10,36 +10,25 @@ using ZennoLab.InterfacesLibrary.ProjectModel;
 
 namespace z3nCore
 {
-    public class KeplrWallet : Wlt
+    public class KeplrWallet 
     {
+        private readonly IZennoPosterProjectModel _project;
+        private readonly Instance _instance;
+        private readonly Logger _logger;
+
         protected readonly string _extId;
         protected readonly string _fileName;
 
         public KeplrWallet(IZennoPosterProjectModel project, Instance instance, bool log = false, string key = null, string seed = null)
-            : base(project, instance, log)
+            
         {
+            _project = project;
+            _instance  = instance;
             _extId = "dmkamcknogkgcdfhhbddcghachkejeap";
             _fileName = "Keplr0.12.223.crx";
-            _key = KeyCheck(key);
-            _seed = SeedCheck(seed);
+            _logger = new Logger(project, log: log, classEmoji: "𝐊");
         }
 
-        private string KeyCheck(string key)
-        {
-            if (string.IsNullOrEmpty(key))
-                key = Decrypt(KeyT.secp256k1);
-            if (string.IsNullOrEmpty(key))
-                throw new Exception("emptykey");
-            return key;
-        }
-        private string SeedCheck(string seed)
-        {
-            if (string.IsNullOrEmpty(seed))
-                seed = Decrypt(KeyT.bip39);
-            if (string.IsNullOrEmpty(seed))
-                throw new Exception("emptykey");
-            return seed;
-        }
 
         public void KeplrClick(HtmlElement he)
         {
@@ -51,7 +40,7 @@ namespace z3nCore
         {
             if (string.IsNullOrEmpty(fileName)) fileName = _fileName;
 
-            Log($"Starting Keplr wallet setup with source {source}", log: log);
+            _logger.Send($"Starting Keplr wallet setup with source {source}");
 
             while (true)
             {
@@ -59,7 +48,8 @@ namespace z3nCore
                 switch (state)
                 {
                     case "install":
-                        Install(_extId, fileName, log);
+                        new ChromeExt(_project, _instance).Install(_extId, fileName, log);
+                        //Install(_extId, fileName, log);
                         continue;
                     case "import":
                         KeplrImportSeed(log);
@@ -69,10 +59,10 @@ namespace z3nCore
                         continue;
                     case "setSourse":
                         KeplrSetSource(source, log);
-                        Log($"Keplr wallet set to source {source}", log: log);
+                        _logger.Send($"Keplr wallet set to source {source}");
                         return $"Keplr set from {source}";
                     default:
-                        Log($"Unknown Keplr state: {state}", log: log);
+                        _logger.Send($"Unknown Keplr state: {state}");
                         throw new Exception("Unknown Keplr wallet state");
                 }
             }
@@ -84,8 +74,8 @@ namespace z3nCore
             var em = _instance.UseFullMouseEmulation;
             _instance.UseFullMouseEmulation = false;
 
-            Log($"Launching Rabby wallet with file {fileName}", log: log);
-            if (Install(_extId, fileName, log))
+            _logger.Send($"Launching Rabby wallet with file {fileName}");
+            if (new ChromeExt(_project, _instance).Install(_extId, fileName, log))
             {
                 KeplrImportSeed(log: log);
                 KeplrImportPkey(log: log);
@@ -100,7 +90,7 @@ namespace z3nCore
         }
         public string KeplrApprove(bool log = false)
         {
-            Log("Approving Keplr transaction", log: log);
+            _logger.Send("Approving Keplr transaction");
             var deadline = DateTime.Now.AddSeconds(20);
 
             try
@@ -111,14 +101,14 @@ namespace z3nCore
                 }
                 if (DateTime.Now >= deadline)
                 {
-                    Log("Timeout waiting for Keplr tab", log: log);
+                    _logger.Send("Timeout waiting for Keplr tab");
                     throw new Exception("No Keplr tab detected");
                 }
 
                 _instance.UseFullMouseEmulation = false;
             approve:
                 _instance.HeClick(("button", "innertext", "Approve", "regexp", 0));
-                Log("Approve button clicked", log: log);
+                _logger.Send("Approve button clicked");
 
                 while (_instance.ActiveTab.URL.Contains(_extId) && DateTime.Now < deadline)
                 {
@@ -127,16 +117,16 @@ namespace z3nCore
                 }
                 if (DateTime.Now >= deadline)
                 {
-                    Log("Keplr tab stuck", log: log);
+                    _logger.Send("Keplr tab stuck");
                     throw new Exception("Keplr tab stuck");
                 }
 
-                Log("Keplr transaction approved, tab closed", log: log);
+                _logger.Send("Keplr transaction approved, tab closed");
                 return "done";
             }
             catch (Exception ex)
             {
-                Log($"Failed to approve Keplr transaction: {ex.Message}", log: log);
+                _logger.Send($"Failed to approve Keplr transaction: {ex.Message}");
                 throw;
             }
             finally
@@ -146,7 +136,7 @@ namespace z3nCore
         }
         private string KeplrCheck(bool log = false)
         {
-            Log("Checking Keplr wallet state", log: log);
+            _logger.Send("Checking Keplr wallet state");
             _instance.CloseExtraTabs();
             _instance.ActiveTab.Navigate($"chrome-extension://{_extId}/popup.html#/", "");
 
@@ -156,35 +146,35 @@ namespace z3nCore
             {
                 if (!_instance.ActiveTab.FindElementByAttribute("div", "class", "error-code", "regexp", 0).IsVoid)
                 {
-                    Log("Keplr extension not installed", log: log);
+                    _logger.Send("Keplr extension not installed");
                     return "install";
                 }
                 else if (!_instance.ActiveTab.FindElementByAttribute("button", "innertext", "Import\\ an\\ existing\\ wallet", "regexp", 0).IsVoid)
                 {
-                    Log("Keplr wallet requires import", log: log);
+                    _logger.Send("Keplr wallet requires import");
                     return "import";
                 }
                 else if (!_instance.ActiveTab.FindElementByAttribute("input:password", "tagname", "input", "regexp", 0).IsVoid)
                 {
-                    Log("Keplr wallet requires unlocking", log: log);
+                    _logger.Send("Keplr wallet requires unlocking");
                     return "inputPass";
                 }
                 else if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Copy\\ Address", "regexp", 0).IsVoid)
                 {
-                    Log("Keplr wallet is set, ready to select source", log: log);
+                    _logger.Send("Keplr wallet is set, ready to select source");
                     return "setSourse";
                 }
                 Thread.Sleep(1000);
             }
 
-            Log("Timeout checking Keplr state", log: log);
+            _logger.Send("Timeout checking Keplr state");
             throw new Exception("Cannot check Keplr wallet state");
         }
         public void KeplrImportSeed(bool log = false)
         {
-            Log("Importing Keplr wallet with seed phrase", log: log);
-            var password = _pass;
-            var seedPhrase = _seed;
+            _logger.Send("Importing Keplr wallet with seed phrase");
+            var password = SAFU.HWPass(_project);
+            var seedPhrase = _project.DbKey("seed");
 
 
             try { _instance.HeGet(("button", "innertext", "Import\\ an\\ existing\\ wallet", "regexp", 0)); }
@@ -221,19 +211,20 @@ namespace z3nCore
                 }
 
                 _instance.CloseExtraTabs();
-                Log("Successfully imported Keplr wallet with seed", log: log);
+                _logger.Send("Successfully imported Keplr wallet with seed");
             }
             catch (Exception ex)
             {
-                Log($"Failed to import Keplr wallet with seed: {ex.Message}", log: log);
+                _logger.Send($"Failed to import Keplr wallet with seed: {ex.Message}");
                 throw;
             }
         }
         public void KeplrImportPkey(bool temp = false, bool log = false)
         {
-            Log($"Importing Keplr wallet with private key (temp: {temp})", log: log);
-            var password = _pass;
-            var key = temp ? new Key().ToHex() : _seed;
+            _logger.Send($"Importing Keplr wallet with private key (temp: {temp})");
+            var password = SAFU.HWPass(_project);
+
+            var key = temp ? new Key().ToHex() : _project.DbKey("seed");
             var walletName = temp ? "temp" : "pkey";
 
             try { _instance.HeGet(("button", "innertext", "Import\\ an\\ existing\\ wallet", "regexp", 0), deadline: 3); }
@@ -263,17 +254,17 @@ namespace z3nCore
                 }
 
                 _instance.CloseExtraTabs();
-                Log($"Successfully imported Keplr wallet with private key (name: {walletName})", log: log);
+                _logger.Send($"Successfully imported Keplr wallet with private key (name: {walletName})");
             }
             catch (Exception ex)
             {
-                Log($"Failed to import Keplr wallet with private key: {ex.Message}", log: log);
+                _logger.Send($"Failed to import Keplr wallet with private key: {ex.Message}");
                 throw;
             }
         }
         public void KeplrSetSource(string source, bool log = false)
         {
-            Log($"Setting Keplr wallet source to {source}", log: log);
+            _logger.Send($"Setting Keplr wallet source to {source}");
 
             while (true)
             {
@@ -285,24 +276,24 @@ namespace z3nCore
                 if (imported.Contains("seed") && imported.Contains("pkey"))
                 {
                     KeplrClick(_instance.GetHe(("div", "innertext", source, "regexp", 0), "last"));
-                    Log($"Source set to {source}", log: log);
+                    _logger.Send($"Source set to {source}");
                     return;
                 }
 
-                Log("Not all wallets imported, adding new wallet", log: log);
+                _logger.Send("Not all wallets imported, adding new wallet");
                 KeplrClick(_instance.GetHe(("button", "innertext", "Add\\ Wallet", "regexp", 0)));
                 KeplrImportPkey(log: log);
             }
         }
         public void KeplrUnlock(bool log = false)
         {
-            Log("Unlocking Keplr wallet", log: log);
-            var password = _pass;
+            _logger.Send("Unlocking Keplr wallet"   );
+            var password = SAFU.HWPass(_project);
 
         unlock:
             if (!_instance.ActiveTab.FindElementByAttribute("div", "innertext", "Copy\\ Address", "regexp", 0).IsVoid)
             {
-                Log("Keplr wallet is set, ready to select source", log: log);
+                _logger.Send("Keplr wallet is set, ready to select source");
                 return;
             }
             try
@@ -328,15 +319,15 @@ namespace z3nCore
                 {
                     _instance.CloseAllTabs();
                     _instance.UninstallExtension(_extId);
-                    Log("Invalid password provided", log: log);
+                    _logger.Send("Invalid password provided");
                     throw new Exception("Wrong password for Keplr");
                 }
 
-                Log("Wallet unlocked successfully", log: log);
+                _logger.Send("Wallet unlocked successfully");
             }
             catch (Exception ex)
             {
-                Log($"Failed to unlock Keplr wallet: {ex.Message}", log: log);
+                _logger.Send($"Failed to unlock Keplr wallet: {ex.Message}");
                 //throw;
                 _instance.CloseAllTabs();
                 goto unlock;
@@ -346,7 +337,7 @@ namespace z3nCore
 
         public string KeplrPrune(bool keepTemp = false, bool log = false)
         {
-            Log("Pruning Keplr wallets", log: log);
+            _logger.Send("Pruning Keplr wallets");
             //_instance.UseFullMouseEmulation = true;
             var imported = "";
             int i = 0;
@@ -385,17 +376,17 @@ namespace z3nCore
 
                     KeplrClick(dotBtn);
                     KeplrClick(_instance.GetHe(("div", "innertext", "Delete\\ Wallet", "regexp", 0), "last"));
-                    _instance.HeSet(("password", "name"), _pass);
+                    _instance.HeSet(("password", "name"), SAFU.HWPass(_project));
                     KeplrClick(_instance.GetHe(("button", "type", "submit", "regexp", 0)));
                     i++;
                 }
 
-                Log($"Pruned wallets, remaining: {imported}", log: log);
+                _logger.Send($"Pruned wallets, remaining: {imported}");
                 return imported;
             }
             catch (Exception ex)
             {
-                Log($"Failed to prune Keplr wallets: {ex.Message}", log: log);
+                _logger.Send($"Failed to prune Keplr wallets: {ex.Message}");
                 throw;
             }
         }
