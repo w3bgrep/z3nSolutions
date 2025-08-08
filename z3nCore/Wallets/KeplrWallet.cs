@@ -26,7 +26,7 @@ namespace z3nCore
             _instance  = instance;
             _extId = "dmkamcknogkgcdfhhbddcghachkejeap";
             _fileName = "Keplr0.12.223.crx";
-            _logger = new Logger(project, log: log, classEmoji: "𝐊");
+            _logger = new Logger(project, log: log, classEmoji: "K3PLR");
         }
 
 
