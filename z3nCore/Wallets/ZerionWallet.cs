@@ -81,6 +81,7 @@ namespace z3nCore
             var em = _instance.UseFullMouseEmulation;
             _instance.UseFullMouseEmulation = false;
 
+            new ChromeExt(_project, _instance, log: log).Switch(_extId);
             new ChromeExt(_project, _instance).Install(_extId, fileName, log);
 
         check:

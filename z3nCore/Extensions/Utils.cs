@@ -184,21 +184,69 @@ namespace z3nCore
             return version;
         }
 
+        public static void OldCode(this IZennoPosterProjectModel project, string someName = "undefined")
+        {
+            try
+            {
+                if (project == null) return;
 
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine($"! using obsolete code. Switch to new call \"{someName}\" ASAP \n");
+
+                try
+                {
+                    var trace = new System.Diagnostics.StackTrace(1, true); // пропускаем сам метод
+
+                    for (int i = 0; i < trace.FrameCount; i++)
+                    {
+                        var f = trace.GetFrame(i);
+                        var m = f?.GetMethod();
+                        if (m == null || m.DeclaringType == null) continue;
+
+                        var typeName = m.DeclaringType.FullName;
+                        if (string.IsNullOrEmpty(typeName)) continue;
+
+                        // фильтрация системных и зенно-методов
+                        if (typeName.StartsWith("System.") || typeName.StartsWith("ZennoLab.")) continue;
+
+                        sb.AppendLine($"{typeName}.{m.Name}");
+                    }
+
+                    project.SendToLog(sb.ToString(), LogType.Warning, true, LogColor.Default);
+                }
+                catch (Exception ex)
+                {
+                    try
+                    {
+                        project.SendToLog($"!E WarnObsolete logging failed: {ex.Message}", LogType.Error, true, LogColor.Red);
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+        }
         public static void RunZp(this IZennoPosterProjectModel project, List<string> vars = null)
         {
 
             string tempFilePath = project.Var("projectScript");
             var mapVars = new List<Tuple<string, string>>();
 
-
             if (vars != null)
                 foreach (var v in vars)
-                    try { mapVars.Add(new Tuple<string, string>(v, v)); }
-                    catch (Exception ex) { project.SendWarningToLog(ex.Message); }
+                    try 
+                    {
+                        mapVars.Add(new Tuple<string, string>(v, v)); 
+                    }
+                    catch (Exception ex)
+                    {
+                        project.SendWarningToLog(ex.Message, true);
+                        throw ex;
+                    }
 
-
-            try { project.ExecuteProject(tempFilePath, mapVars, true, true, true); }
+            try 
+            { 
+                project.ExecuteProject(tempFilePath, mapVars, true, true, true); 
+            }
             catch (Exception ex) 
             { 
                 project.SendWarningToLog(ex.Message, true);

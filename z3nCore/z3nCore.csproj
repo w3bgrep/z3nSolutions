@@ -126,7 +126,6 @@
     <Compile Include="Socials\Telegram.cs" />
     <Compile Include="Protocols\Unlock.cs" />
     <Compile Include="Socials\TikTok.cs" />
-    <Compile Include="Wallets\Manager.cs" />
     <Compile Include="Wallets\KeplrWallet.cs" />
     <Compile Include="Wallets\Rabby.cs" />
     <Compile Include="Wallets\Backpack.cs" />
@@ -155,7 +154,6 @@
     <Compile Include="Extensions\ProjectExtensions.cs" />
     <Compile Include="Wallets\Wlt.cs" />
     <Compile Include="Socials\X.cs" />
-    <Compile Include="Wallets\ZB.cs" />
     <Compile Include="Wallets\Zerion.cs" />
     <Compile Include="Wallets\ZerionWallet.cs" />
     <Compile Include="W3b\W3b.cs" />

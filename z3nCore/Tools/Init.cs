@@ -312,14 +312,14 @@ namespace z3nCore
             {
                 { "Backpack", () => _project.Var("addressSol", new BackpackWallet(_project, _instance, key: key, log: false).Launch()) },
                 { "Zerion", () => _project.Var("addressEvm", new ZerionWallet(_project, _instance, key: key, log: false).Launch()) },
-                { "Keplr", () => new KeplrWallet(_project, _instance, log: false).KeplrLaunch() }
+                { "Keplr", () => new KeplrWallet(_project, _instance, log: false).Launch() }
             };
 
             for (int i = 0; i < 3; i++)
             {
                 try
                 {
-                    new ChromeExt(_project, _instance).Switch(walletsToUse);
+                   // new ChromeExt(_project, _instance).Switch(walletsToUse);
                     foreach (var wallet in wallets)
                     {
                         if (walletActions.ContainsKey(wallet))
