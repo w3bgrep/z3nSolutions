@@ -224,7 +224,7 @@ namespace z3nCore
             _logger.Send($"Importing Keplr wallet with private key (temp: {temp})");
             var password = SAFU.HWPass(_project);
 
-            var key = temp ? new Key().ToHex() : _project.DbKey("seed");
+            var key = temp ? new Key().ToHex() : _project.DbKey("evm");
             var walletName = temp ? "temp" : "pkey";
 
             try { _instance.HeGet(("button", "innertext", "Import\\ an\\ existing\\ wallet", "regexp", 0), deadline: 3); }
