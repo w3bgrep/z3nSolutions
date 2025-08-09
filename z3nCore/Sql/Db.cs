@@ -77,7 +77,8 @@ namespace z3nCore
             {
                 try
                 {
-                    var accsByQuery = _sql.DbQ(query).Trim();
+                    //var accsByQuery = _sql.DbQ(query).Trim();
+                    var accsByQuery = _project.SqlR(query).Trim();
                     if (!string.IsNullOrWhiteSpace(accsByQuery))
                     {
                         var accounts = accsByQuery.Split('\n').Select(x => x.Trim().TrimStart(','));
@@ -134,6 +135,45 @@ namespace z3nCore
                 refCode = new Sql(project, log).Get("refcode", where: "TRIM(refcode) != '' ORDER BY RANDOM() LIMIT 1;");
             return refCode;
         }
+
+
+
+
+
+
+        public static List<string> MkToDoQueries(this IZennoPosterProjectModel project, string toDo = null, string defaultRange = null, string defaultDoFail = null)
+        {
+
+            string tableName = project.Var("projectTable");
+            if (string.IsNullOrEmpty(tableName)) throw new Exception("TableName is null");
+
+
+            var nowIso = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+
+            if (string.IsNullOrEmpty(toDo)) 
+                toDo = project.Variables["cfgToDo"].Value;
+
+            string[] toDoItems = (toDo ?? "").Split(',');
+
+            var allQueries = new List<string>();
+
+            foreach (string taskId in toDoItems)
+            {
+                string trimmedTaskId = taskId.Trim();
+                if (!string.IsNullOrWhiteSpace(trimmedTaskId))
+                {
+                    string range = defaultRange ?? project.Variables["range"].Value;
+                    string doFail = defaultDoFail ?? project.Variables["doFail"].Value;
+                    string failCondition = (doFail != "True" ? "AND status NOT LIKE '%fail%'" : "");
+                    string query = $@"SELECT id FROM {tableName} WHERE id in ({range}) {failCondition} AND status NOT LIKE '%skip%' AND ({trimmedTaskId} < '{nowIso}' OR {trimmedTaskId} = '')";
+                    allQueries.Add(query);
+                }
+            }
+
+            return allQueries;
+        }
+
+
         public static void MigrateTable(this IZennoPosterProjectModel project, string source, string dest)
         {
             project.SendInfoToLog($"{source} -> {dest}", true);
@@ -166,7 +206,6 @@ namespace z3nCore
             else return resp;
 
         }
-
         public static string SqlGet(this IZennoPosterProjectModel project, string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "id", object id = null, string where = "")
         {
 

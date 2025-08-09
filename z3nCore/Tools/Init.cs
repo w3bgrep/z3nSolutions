@@ -319,7 +319,6 @@ namespace z3nCore
             {
                 try
                 {
-                   // new ChromeExt(_project, _instance).Switch(walletsToUse);
                     foreach (var wallet in wallets)
                     {
                         if (walletActions.ContainsKey(wallet))
