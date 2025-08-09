@@ -47,7 +47,7 @@ namespace z3nCore
 
         private string LoadCreds()
         {
-            string[] xCreds = _sql.Get(" status, token, login, password, otpsecret, email, emailpass", "private_tiktok").Split('|');
+            string[] xCreds = _project.SqlGet(" status, token, login, password, otpsecret, email, emailpass", "_tiktok").Split('|');
             _status = xCreds[0];
             _token = xCreds[1];
             _login = xCreds[2];

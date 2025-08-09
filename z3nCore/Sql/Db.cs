@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
 using System.Windows.Forms;
@@ -45,15 +46,16 @@ namespace z3nCore
             return $"\"{name.Replace("\"", "\"\"")}\"";
         }
 
-        public static string DbGet(this IZennoPosterProjectModel project, string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "acc0", string acc = null, string where = "")
+        public static string DbGet(this IZennoPosterProjectModel project, string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "id", string acc = null, string where = "")
         {
-            return new Sql(project, log).Get(toGet, tableName, log, throwOnEx, key, acc, where);
+            return project.SqlGet(toGet, tableName, log, throwOnEx, key, acc, where);
         }
-        public static void DbUpd(this IZennoPosterProjectModel project, string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, string key = "acc0", object acc = null, string where = "")
+        public static void DbUpd(this IZennoPosterProjectModel project, string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, string key = "id", object acc = null, string where = "")
         {
             if (toUpd.Contains("relax")) log = true;
             try { project.Var("lastQuery", toUpd); } catch (Exception Ex){ project.SendWarningToLog(Ex.Message, true); }
             new Sql(project, log).Upd(toUpd, tableName, log, throwOnEx, last, key, acc, where);
+
         }
         public static void MakeAccList(this IZennoPosterProjectModel project, List<string> dbQueries, bool log = false)
         {
@@ -78,7 +80,7 @@ namespace z3nCore
                 try
                 {
                     //var accsByQuery = _sql.DbQ(query).Trim();
-                    var accsByQuery = _project.SqlR(query).Trim();
+                    var accsByQuery = _project.DbQ(query).Trim();
                     if (!string.IsNullOrWhiteSpace(accsByQuery))
                     {
                         var accounts = accsByQuery.Split('\n').Select(x => x.Trim().TrimStart(','));
@@ -114,7 +116,7 @@ namespace z3nCore
                 foreach (string social in demanded)
                 {
                     string tableName = $"projects_{social.Trim().ToLower()}";
-                    var notOK = _sql.Get($"acc0", tableName, where: "status LIKE '%suspended%' OR status LIKE '%restricted%' OR status LIKE '%ban%' OR status LIKE '%CAPTCHA%' OR status LIKE '%applyed%' OR status LIKE '%Verify%'", log: log)
+                    var notOK = _project.SqlGet($"id", tableName, where: "status LIKE '%suspended%' OR status LIKE '%restricted%' OR status LIKE '%ban%' OR status LIKE '%CAPTCHA%' OR status LIKE '%applyed%' OR status LIKE '%Verify%'", log: log)
                         .Split('\n')
                         .Select(x => x.Trim())
                         .Where(x => !string.IsNullOrEmpty(x));
@@ -132,7 +134,7 @@ namespace z3nCore
             if (string.IsNullOrEmpty(refCode)) 
                 refCode = project.Variables["cfgRefCode"].Value;
             if (string.IsNullOrEmpty(refCode))
-                refCode = new Sql(project, log).Get("refcode", where: "TRIM(refcode) != '' ORDER BY RANDOM() LIMIT 1;");
+                refCode = project.SqlGet("refcode", where: "TRIM(refcode) != '' ORDER BY RANDOM() LIMIT 1;");
             return refCode;
         }
 
@@ -178,8 +180,8 @@ namespace z3nCore
         {
             project.SendInfoToLog($"{source} -> {dest}", true);
             project.SqlTableCopy(source, dest);
-            try { project.SqlW($"ALTER TABLE {dest} RENAME COLUMN acc0 to id;"); } catch { }
-            try { project.SqlW($"ALTER TABLE {dest} RENAME COLUMN key to id;"); } catch { }
+            try { project.DbQ($"ALTER TABLE {dest} RENAME COLUMN acc0 to id;"); } catch { }
+            try { project.DbQ($"ALTER TABLE {dest} RENAME COLUMN key to id;"); } catch { }
         }
 
         public static string DbKey(this IZennoPosterProjectModel project, string chainType = "evm")
@@ -230,7 +232,7 @@ namespace z3nCore
                 query = $@"SELECT {toGet} from {tableName} WHERE {where};";
             }
 
-            return project.SqlR(query, log: log, throwOnEx: throwOnEx);
+            return project.DbQ(query, log: log, throwOnEx: throwOnEx);
         }
         public static string SqlUpd(this IZennoPosterProjectModel project, string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, string key = "id", object id = null, string where = "")
         {          
@@ -259,67 +261,13 @@ namespace z3nCore
             {
                 query = $"UPDATE {tableName} SET {toUpd} WHERE {where}";
             }
-            return project.SqlW(query).ToString();
+            return project.DbQ(query);
         }
 
     }
 
     public static class DbCore
     {
-        public static string SqlR(this IZennoPosterProjectModel project, string query, bool log = false, string sqLitePath = null, string pgHost = null, string pgPort = null, string pgDbName = null, string pgUser = null, string pgPass = null, bool throwOnEx = false)
-        {
-            var _logger = new Logger(project);
-            
-            if (string.IsNullOrEmpty(sqLitePath)) sqLitePath = project.Var("DBsqltPath");
-            if (string.IsNullOrEmpty(pgHost)) pgHost = "localhost";
-            if (string.IsNullOrEmpty(pgPort)) pgPort = "5432";
-            if (string.IsNullOrEmpty(pgDbName)) pgDbName = "postgres";
-            if (string.IsNullOrEmpty(pgUser)) pgUser = "postgres";
-            if (string.IsNullOrEmpty(pgPass)) pgPass = project.Var("DBpstgrPass");
-            string dbMode = project.Var("DBmode");
-
-            try
-            {
-                using (var db = dbMode == "PostgreSQL"
-                    ? new dSql($"Host={pgHost};Port={pgPort};Database={pgDbName};Username={pgUser};Password={pgPass};Pooling=true;Connection Idle Lifetime=10;")
-                    : new dSql(sqLitePath, null))
-                {
-                    return db.DbReadAsync(query).GetAwaiter().GetResult();
-                }
-            }
-            catch (Exception ex)
-            {
-                project.SendWarningToLog(ex.Message + $"\n [{query}]");
-                if (throwOnEx) throw ex;
-                return string.Empty;
-            }
-        }
-        public static int SqlW(this IZennoPosterProjectModel project, string query, string sqLitePath = null, string pgHost = null, string pgPort = null, string pgDbName = null, string pgUser = null, string pgPass = null, bool throwOnEx = false)
-        {
-            if (string.IsNullOrEmpty(sqLitePath)) sqLitePath = project.Var("DBsqltPath");
-            if (string.IsNullOrEmpty(pgHost)) pgHost = "localhost";
-            if (string.IsNullOrEmpty(pgPort)) pgPort = "5432";
-            if (string.IsNullOrEmpty(pgDbName)) pgDbName = "postgres";
-            if (string.IsNullOrEmpty(pgUser)) pgUser = "postgres";
-            if (string.IsNullOrEmpty(pgPass)) pgPass = project.Var("DBpstgrPass");
-            string dbMode = project.Var("DBmode");
-
-            try
-            {
-                using (var db = dbMode == "PostgreSQL"
-                    ? new dSql($"Host={pgHost};Port={pgPort};Database={pgDbName};Username={pgUser};Password={pgPass};Pooling=true;Connection Idle Lifetime=10;")
-                    : new dSql(sqLitePath, null))
-                {
-                    return db.DbWriteAsync(query).GetAwaiter().GetResult();
-                }
-            }
-            catch (Exception ex)
-            {
-                project.SendWarningToLog(ex.Message + $"\n [{query}]");
-                if (throwOnEx) throw ex;
-                return 0;
-            }
-        }
         public static int SqlTableCopy(this IZennoPosterProjectModel project, string sourceTable, string destinationTable, string sqLitePath = null, string pgHost = null, string pgPort = null, string pgDbName = null, string pgUser = null, string pgPass = null, bool throwOnEx = false)
         {
             if (string.IsNullOrEmpty(sourceTable)) throw new ArgumentNullException(nameof(sourceTable));
@@ -347,6 +295,45 @@ namespace z3nCore
                     return 0;
                 }
             }
+        }
+        public static string DbQ(this IZennoPosterProjectModel project, string query, bool log = false, string sqLitePath = null, string pgHost = null, string pgPort = null, string pgDbName = null, string pgUser = null, string pgPass = null, bool throwOnEx = false)
+        {
+            string dbMode = project.Var("DBmode");
+
+            if (string.IsNullOrEmpty(sqLitePath)) sqLitePath = project.Var("DBsqltPath");
+            if (string.IsNullOrEmpty(pgHost)) pgHost = "localhost";
+            if (string.IsNullOrEmpty(pgPort)) pgPort = "5432";
+            if (string.IsNullOrEmpty(pgDbName)) pgDbName = "postgres";
+            if (string.IsNullOrEmpty(pgUser)) pgUser = "postgres";
+            if (string.IsNullOrEmpty(pgPass)) pgPass = project.Var("DBpstgrPass");
+
+            //_logger.Send(query);
+            string result = string.Empty;
+            try
+            {
+                using (var db = dbMode == "PostgreSQL"
+                    ? new dSql($"Host={pgHost};Port={pgPort};Database={pgDbName};Username={pgUser};Password={pgPass};Pooling=true;Connection Idle Lifetime=10;")
+                    : new dSql(sqLitePath, null))
+                    
+                {
+                    if (Regex.IsMatch(query.TrimStart(), @"^\s*SELECT\b", RegexOptions.IgnoreCase))
+                        result = db.DbReadAsync(query).GetAwaiter().GetResult();
+                    else
+                        result = db.DbWriteAsync(query).GetAwaiter().GetResult().ToString();
+                }
+            }
+            catch (Exception ex)
+            {
+                project.SendWarningToLog(ex.Message + $"\n [{query}]");
+                if (throwOnEx) throw ex.Throw();
+                return string.Empty;
+            }
+ 
+            var _logger = new Logger(project, log: log, classEmoji: dbMode == "PostgreSQL" ? "🐘" : "SQLite");
+            _logger.Send(query + "\n" + result);
+
+            return result;
+
         }
 
     }

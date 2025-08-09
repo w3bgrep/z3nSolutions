@@ -51,8 +51,8 @@ namespace z3nCore
 
             if (append)
             {
-                 doneJson = _sql.Get("guild_done", tablename);
-                 undoneJson = _sql.Get("guild_undone", tablename);
+                 doneJson = _project.SqlGet("guild_done", tablename);
+                 undoneJson = _project.SqlGet("guild_undone", tablename);
             }
 
             if (!string.IsNullOrEmpty(doneJson))

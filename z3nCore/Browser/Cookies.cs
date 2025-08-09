@@ -73,11 +73,11 @@ namespace z3nCore
             switch (cookieSourse) 
             {
                 case "dbMain":
-                    cookieSourse = new Sql(_project).Get("cookies", "private_profile");
+                    cookieSourse = _project.SqlGet("cookies", "_instance");
                     break;
 
                 case "dbProject":
-                    cookieSourse = new Sql(_project).Get("cookies");
+                    cookieSourse = _project.SqlGet("cookies");
                     break;
 
                 case "fromFile":
@@ -106,7 +106,7 @@ namespace z3nCore
                     return;
                 case "all":
                     cookies = Get().Replace("'", "''").Trim();
-                    new Sql(_project).Upd($"cookies= '{cookies}'", "private_profile");
+                    new Sql(_project).Upd($"cookies= '{cookies}'", "_instance");
                     if (!string.IsNullOrEmpty(jsonPath)) 
                         lock (LockObject) { File.WriteAllText(jsonPath, cookies); }
                     return;

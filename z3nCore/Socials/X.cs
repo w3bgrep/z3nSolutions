@@ -41,7 +41,7 @@ namespace z3nCore
         }
         public void LoadCreds()
         {
-            string[] creds = _sql.Get(" status, token, login, password, otpsecret, email, emailpass", "private_twitter").Split('|');
+            string[] creds = _project.SqlGet(" status, token, login, password, otpsecret, email, emailpass", "_twitter").Split('|');
             try { _status = creds[0].Trim(); _project.Variables["twitterSTATUS"].Value = _status; } catch (Exception ex) { _logger.Send(ex.Message); }
             try { _token = creds[1].Trim(); _project.Variables["twitterTOKEN"].Value = _token; } catch (Exception ex) { _logger.Send(ex.Message); }
             try { _login = creds[2].Trim(); _project.Variables["twitterLOGIN"].Value = _login; } catch (Exception ex) { _logger.Send(ex.Message); }
@@ -542,7 +542,7 @@ namespace z3nCore
             try
             {
                 email = email.ToLower();
-                var emails = _sql.Get("gmail, icloud, firstmail", "public_mail").ToLower();
+                var emails = _project.SqlGet("gmail, icloud, firstmail", "_mail").ToLower();
                 var address = _sql.Address("evm_pk").ToLower();
                 var toFill = _project.Lists["editSecurity"];
                 toFill.Clear();

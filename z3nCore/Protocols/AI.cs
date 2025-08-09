@@ -29,11 +29,11 @@ namespace z3nCore
             {
                 case "perplexity":
                     _url = "https://api.perplexity.ai/chat/completions";
-                    _apiKey = new Sql(_project).Get("apikey", "private_api", where: $"key = '{provider}'");
+                    _apiKey = _project.SqlGet("apikey", "_api", where: $"key = '{provider}'");
                     break;
                 case "aiio":
                     _url = "https://api.intelligence.io.solutions/api/v1/chat/completions";
-                    _apiKey = new Sql(_project).Get("api", "projects_aiio");
+                    _apiKey = _project.SqlGet("api", "__aiio");
                     if (string.IsNullOrEmpty(_apiKey))
                         throw new Exception($"aiio key not found for {_project.Var("acc0")}");
                     break;

@@ -388,7 +388,7 @@ namespace z3nCore
             
             string tableName = project.Variables["projectTable"].Value;
             if (string.IsNullOrEmpty(invite)) invite =
-                    new Sql(project).Get("refcode", tableName, where: @"TRIM(refcode) != '' ORDER BY RANDOM() LIMIT 1;");                  
+                    project.SqlGet("refcode", tableName, where: @"TRIM(refcode) != '' ORDER BY RANDOM() LIMIT 1;");                  
             return invite;
         }
 

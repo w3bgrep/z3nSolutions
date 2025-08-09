@@ -65,7 +65,7 @@ namespace z3nCore
                 default:
                     return key;
             }
-            if (string.IsNullOrEmpty(key)) throw new Exception("keyIsEmpy");
+            if (string.IsNullOrEmpty(key)) throw new Exception("keyIsEmpy").Throw();
 
             _expectedAddress = key.ToPubEvm();
             return key;

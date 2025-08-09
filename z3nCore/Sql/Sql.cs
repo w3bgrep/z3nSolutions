@@ -195,11 +195,8 @@ namespace z3nCore
 
         }
 
-        public void Upd(string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, string key = "acc0", object acc = null, string where = "")
+        public void Upd(string toUpd, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, string key = "id", object acc = null, string where = "")
         {
-
-            TblName(tableName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
             string[] keywords = { "blockchain", "browser", "cex_deps", "native", "profile", "settings" };
             if (keywords.Any(keyword => _tableName.Contains(keyword))) last = false;
@@ -213,25 +210,25 @@ namespace z3nCore
             {
                 if (acc is null)
                     acc = _project.Variables["acc0"].Value;
-                if (key == "acc0")
+                if (key == "id")
                 {
-                    DbQ($@"UPDATE {_tableName} SET {toUpd} WHERE acc0 = {acc};", log: log, throwOnEx: throwOnEx);
+                    DbQ($@"UPDATE {tableName} SET {toUpd} WHERE id = {acc};", log: log, throwOnEx: throwOnEx);
                     return;
                 }
                 else
                 {
-                    DbQ($@"UPDATE {_tableName} SET {toUpd} WHERE key = '{key}';", log: log, throwOnEx: throwOnEx);
+                    DbQ($@"UPDATE {tableName} SET {toUpd} WHERE key = '{key}';", log: log, throwOnEx: throwOnEx);
                     return;
                 }
             }
             else
             {
-                DbQ($@"UPDATE {_tableName} SET {toUpd} WHERE {where};", log: log, throwOnEx: throwOnEx);
+                DbQ($@"UPDATE {tableName} SET {toUpd} WHERE {where};", log: log, throwOnEx: throwOnEx);
                 return;
             }
 
         }
-        public void Upd(Dictionary<string, string> toWrite, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, string key = "acc0", object acc = null, string where = "")
+        public void Upd(Dictionary<string, string> toWrite, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, string key = "id", object acc = null, string where = "")
         {
             string toUpd = string.Empty;
 
@@ -262,7 +259,7 @@ namespace z3nCore
             }
         }
 
-        public string Get(string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "acc0", string acc = null, string where = "")
+        public string Get(string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "id", string acc = null, string where = "")
         {
 
             if (string.IsNullOrWhiteSpace(toGet))
@@ -278,8 +275,8 @@ namespace z3nCore
             {
                 if (string.IsNullOrEmpty(acc))
                     acc = _project.Variables["acc0"].Value;
-                if (key == "acc0")
-                    return DbQ($@"SELECT {toGet} from {_tableName} WHERE acc0 = {acc};", log: log, throwOnEx: throwOnEx);
+                if (key == "id")
+                    return DbQ($@"SELECT {toGet} from {_tableName} WHERE id = {acc};", log: log, throwOnEx: throwOnEx);
                 else
                     return DbQ($@"SELECT {toGet} from {_tableName} WHERE key = '{key}';", log: log, throwOnEx: throwOnEx);
             }
@@ -514,9 +511,8 @@ namespace z3nCore
 
         public string Proxy()
         {
-            TblName("private_profile");
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-            var resp = Get("proxy", _tableName);
+
+            var resp = _project.SqlGet("proxy", "_instance");
             _project.Variables["proxy"].Value = resp;
             return resp;
         }
@@ -585,9 +581,9 @@ namespace z3nCore
         {
             var addrss = new Dictionary<string, string>();
 
-            if (string.IsNullOrEmpty(chains)) chains = GetColumns("public_blockchain");
+            if (string.IsNullOrEmpty(chains)) chains = GetColumns("_addresses");
             string[] tikers = chains.Replace(" ", "").Split(',');
-            string[] addresses = Get(chains, "public_blockchain").Replace(" ", "").Split('|');
+            string[] addresses = _project.SqlGet(chains, "_addresses").Replace(" ", "").Split('|');
 
 
             for (int i = 0; i < tikers.Length; i++)
@@ -677,7 +673,7 @@ namespace z3nCore
                 foreach (string social in demanded)
                 {
                     string tableName = TblName($"private_{social.Trim().ToLower()}");
-                    var notOK = Get($"acc0", _tableName, where: "status NOT LIKE '%ok%'", log: log)
+                    var notOK = _project.SqlGet($"id", _tableName, where: "status NOT LIKE '%ok%'", log: log)
 
                         .Split('\n')
                         .Select(x => x.Trim())
@@ -695,9 +691,7 @@ namespace z3nCore
         {
             chainType = chainType.ToLower().Trim();
 
-            TblName("public_blockchain");
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-            var resp = Get(chainType, _tableName);
+            var resp = _project.SqlGet(chainType, "_addresses");
 
             try
             {
@@ -710,9 +704,6 @@ namespace z3nCore
         }
         public string Key(string chainType = "evm")
         {
-            chainType = chainType.ToLower().Trim();
-            TblName("private_blockchain");
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
             switch (chainType)
             {
@@ -729,7 +720,7 @@ namespace z3nCore
                     throw new Exception("unexpected input. Use (evm|sol|seed|pkFromSeed)");
             }
 
-            var resp = Get(chainType, _tableName);
+            var resp = _project.SqlGet(chainType, "_wallets");
             if (!string.IsNullOrEmpty(_project.Var("cfgPin")))
                 return SAFU.Decode(_project, resp);
             else return resp;

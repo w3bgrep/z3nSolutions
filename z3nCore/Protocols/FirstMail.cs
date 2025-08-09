@@ -30,7 +30,7 @@ namespace z3nCore
 
         private void LoadKeys()
         {
-            var creds = new Sql(_project).Get("apikey, apisecret, passphrase", "private_api", where: "key = 'firstmail'").Split('|');
+            var creds = _project.SqlGet("apikey, apisecret, passphrase", "_api", where: "key = 'firstmail'").Split('|');
 
             _key = creds[0];
             _login = creds[1];

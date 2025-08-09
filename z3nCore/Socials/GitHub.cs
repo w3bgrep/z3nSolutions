@@ -36,7 +36,7 @@ namespace z3nCore
         }
         public void LoadCreds()
         {
-            string[] creds = _sql.Get("status, login, password,  otpsecret, email, cookies", "private_github").Split('|');
+            string[] creds = _project.SqlGet("status, login, password,  otpsecret, email, cookies", "_github").Split('|');
             try { _status = creds[0].Trim(); _project.Variables["github_status"].Value = _status; } catch (Exception ex) { _logger.Send(ex.Message); }
             try { _login = creds[1].Trim(); _project.Variables["github_login"].Value = _login; } catch (Exception ex) { _logger.Send(ex.Message); }
             try { _pass = creds[2].Trim(); _project.Variables["github_pass"].Value = _pass; } catch (Exception ex) { _logger.Send(ex.Message); }

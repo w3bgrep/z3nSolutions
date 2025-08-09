@@ -64,13 +64,22 @@ namespace z3nCore
 
     public static class ExceptionExtensions
     {
-        public static string Throw(this Exception ex,
+        public static string Throw(this Exception ex, IZennoPosterProjectModel project,
             [CallerMemberName] string caller = null, bool throwEx = true)
         {
             var tracedEx = new TracedException(ex, caller);
-            if (throwEx) throw tracedEx;
+            project.SendWarningToLog(tracedEx.Message);
+            if (throwEx) 
+                throw tracedEx;
             else 
                 return tracedEx.Message;
+        }
+
+        public static Exception Throw(this Exception ex,
+            [CallerMemberName] string caller = null)
+        {
+            var tracedEx = new TracedException(ex, caller);
+            throw tracedEx;            
         }
     }
 

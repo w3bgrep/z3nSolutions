@@ -62,7 +62,7 @@ namespace z3nCore
             string[] vars = { "cfgAccRange", };
             CheckVariables(vars);
 
-            _project.Variables["projectTable"].Value = "projects_" + projectName;
+            _project.Variables["projectTable"].Value = "__" + projectName;
 
             _project.Range();
             SAFU.Initialize(_project);
@@ -105,7 +105,7 @@ namespace z3nCore
             _project.Variables["instancePort"].Value = _instance.Port.ToString();
             _logger.Send($"init browser in port: {_instance.Port}");
 
-            string webGlData = _sql.Get("webgl", "private_profile");
+            string webGlData = _project.SqlGet("webgl", "_instance");
             SetDisplay(webGlData);
 
             bool goodProxy = new NetHttp(_project, true).ProxySet(_instance);
@@ -119,7 +119,7 @@ namespace z3nCore
             else
                 try
                 {
-                    cookies = _sql.Get("cookies", "private_profile");
+                    cookies = _project.SqlGet("cookies", "_instance");
                     _instance.SetCookie(cookies);
                 }
                 catch (Exception Ex)
@@ -196,7 +196,7 @@ namespace z3nCore
                     {
                         string tableName = $"private_{social.Trim().ToLower()}";
 
-                        var notOK = _sql.Get("acc0", tableName, where: "status NOT LIKE '%ok%'")//DbQ($"SELECT acc0 FROM {_tableName} WHERE status NOT LIKE '%ok%'", log)
+                        var notOK = _project.SqlGet("id", tableName, where: "status NOT LIKE '%ok%'")//DbQ($"SELECT acc0 FROM {_tableName} WHERE status NOT LIKE '%ok%'", log)
                             .Split('\n')
                             .Select(x => x.Trim())
                             .Where(x => !string.IsNullOrEmpty(x));

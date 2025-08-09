@@ -38,7 +38,7 @@ namespace z3nCore
         }
         private void DbCreds()
         {
-            string[] creds = _sql.Get("status, login, password, otpsecret, recoveryemail, otpbackup, cookies", "private_google").Split('|');
+            string[] creds = _project.SqlGet("status, login, password, otpsecret, recoveryemail, otpbackup, cookies", "_google").Split('|');
             try { _status = creds[0]; _project.Variables["googleSTATUS"].Value = _status; } catch (Exception ex) { _logger.Send(ex.Message); }
             try { _login = creds[1]; _project.Variables["googleLOGIN"].Value = _login; } catch (Exception ex) { _logger.Send(ex.Message); }
             try { _pass = creds[2]; _project.Variables["googlePASSWORD"].Value = _pass; } catch (Exception ex) { _logger.Send(ex.Message); }

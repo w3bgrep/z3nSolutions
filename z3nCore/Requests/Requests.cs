@@ -132,7 +132,7 @@ namespace z3nCore
                     proxyString = projectProxy;
                 else
                 {
-                    proxyString = new Sql(project).Get("proxy", "private_profile");
+                    proxyString = project.SqlGet("proxy", "_instance");
                     logger?.Send($"Proxy retrieved from SQL: [{proxyString}]");
                 }
             }

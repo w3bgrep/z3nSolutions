@@ -99,7 +99,7 @@ namespace z3nCore
         {
 
 
-            var resp = new Sql(_project).Get("status, token, login, password, otpsecret", "private_discord");
+            var resp = _project.SqlGet("status, token, login, password, otpsecret", "_discord");
 
             string[] discordData = resp.Split('|');
             _project.Variables["discordSTATUS"].Value = discordData[0].Trim();

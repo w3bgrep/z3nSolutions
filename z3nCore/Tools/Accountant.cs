@@ -126,7 +126,7 @@ namespace z3nCore
 
         private void LoadData(System.Windows.Forms.DataGridView grid, List<string> columns, string tableName, int pageSize, ref int offset, int totalRows, System.Windows.Forms.Button prevButton, System.Windows.Forms.Button nextButton)
         {
-            string result = new Sql(_project).Get($"{string.Join(",", columns)}", tableName, where: $"acc0 <= '{_project.Var("rangeEnd")}' ORDER BY acc0");
+            string result = _project.SqlGet($"{string.Join(",", columns)}", tableName, where: $"id <= '{_project.Var("rangeEnd")}' ORDER BY id");
 
             if (string.IsNullOrEmpty(result))
             {

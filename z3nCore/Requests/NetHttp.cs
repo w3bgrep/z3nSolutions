@@ -50,7 +50,7 @@ namespace z3nCore
                 return null;
             }
             if (proxyString == "+")
-                proxyString = new Sql(_project).Get("proxy", "private_profile");
+                proxyString = _project.SqlGet("proxy", "_instance");
             try
             {
                 WebProxy proxy = new WebProxy();
@@ -465,7 +465,7 @@ namespace z3nCore
         {
 
             if (string.IsNullOrEmpty(proxyString))
-                proxyString = new Sql(_project).Get("proxy", "private_profile");
+                proxyString = _project.SqlGet("proxy", "_instance");
 
             //WebProxy proxy = ParseProxy(proxyString);
 
@@ -496,7 +496,7 @@ namespace z3nCore
         {
 
             if (string.IsNullOrEmpty(proxyString))
-                proxyString = new Sql(_project).Get("proxy", "private_profile");
+                proxyString = _project.SqlGet("proxy", "_instance");
 
 
             string ipLocal = GET("http://api.ipify.org/", null);
