@@ -26,7 +26,7 @@ namespace z3nCore
 
         protected bool _pstgr = false;
         protected string _tableName = string.Empty;
-        protected string _schemaName = string.Empty;
+        protected string _schemaName = "public";
 
 
         public Sql(IZennoPosterProjectModel project, bool log = false)
@@ -59,35 +59,35 @@ namespace z3nCore
             //_project.L0g(toLog);
         }
 
-        public string TblName(string tableName, bool name = true)
-        {
-            if (string.IsNullOrEmpty(tableName)) tableName = _project.Var("projectTable");
-            string schemaName = "projects";
-            if (_dbMode == "PostgreSQL")
-            {
-                if (tableName.Contains("."))
-                {
-                    schemaName = tableName.Split('.')[0];
-                    tableName = tableName.Split('.')[1];
-                }
-                else if (tableName.Contains("_"))
-                {
-                    schemaName = tableName.Split('_')[0];
-                    tableName = tableName.Split('_')[1];
-                }
+        //public string TblName(string tableName, bool name = true)
+        //{
+        //    if (string.IsNullOrEmpty(tableName)) tableName = _project.Var("projectTable");
+        //    string schemaName = "projects";
+        //    if (_dbMode == "PostgreSQL")
+        //    {
+        //        if (tableName.Contains("."))
+        //        {
+        //            schemaName = tableName.Split('.')[0];
+        //            tableName = tableName.Split('.')[1];
+        //        }
+        //        else if (tableName.Contains("_"))
+        //        {
+        //            schemaName = tableName.Split('_')[0];
+        //            tableName = tableName.Split('_')[1];
+        //        }
 
-            }
-            else if (_dbMode == "SQLite")
-            {
-                if (tableName.Contains(".")) tableName = tableName.Replace(".", "_");
-            }
+        //    }
+        //    else if (_dbMode == "SQLite")
+        //    {
+        //        if (tableName.Contains(".")) tableName = tableName.Replace(".", "_");
+        //    }
 
-            _tableName = tableName;
-            _schemaName = schemaName;
+        //    _tableName = tableName;
+        //    _schemaName = schemaName;
 
-            if (name) return tableName;
-            else return schemaName;
-        }
+        //    if (name) return tableName;
+        //    else return schemaName;
+        //}
         private string QuoteColumnNames(string updateString)
         {
             var parts = updateString.Split(',').Select(p => p.Trim()).ToList();
@@ -172,13 +172,11 @@ namespace z3nCore
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
 
-            TblName(tableName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
             foreach (KeyValuePair<string, string> pair in toWrite)
             {
                 string key = pair.Key.Replace("'", "''");
                 string value = pair.Value.Replace("'", "''");
-                string query = $@"INSERT INTO {_tableName} (key, value) VALUES ('{key}', '{value}')
+                string query = $@"INSERT INTO {tableName} (key, value) VALUES ('{key}', '{value}')
 	                  ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;";
                 DbQ(query, log: log);
             }
@@ -186,12 +184,9 @@ namespace z3nCore
         }
         public void UpdTxt(string toUpd, string tableName, string key, bool log = false, bool throwOnEx = false)
         {
-            TblName(tableName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-
             toUpd = toUpd.Trim().TrimEnd(',');
-            DbQ($@"INSERT INTO {_tableName} (key) VALUES ('{key}') ON CONFLICT DO NOTHING;");
-            DbQ($@"UPDATE {_tableName} SET {toUpd} WHERE key = '{key}';", log: log, throwOnEx: throwOnEx);
+            DbQ($@"INSERT INTO {tableName} (key) VALUES ('{key}') ON CONFLICT DO NOTHING;");
+            DbQ($@"UPDATE {tableName} SET {toUpd} WHERE key = '{key}';", log: log, throwOnEx: throwOnEx);
 
         }
 
@@ -244,17 +239,16 @@ namespace z3nCore
         public void Upd(List<string> toWrite, string columnName, string tableName = null, bool log = false, bool throwOnEx = false, bool last = true, bool byKey = false)
         {
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
-            TblName(tableName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+
 
             int dicSize = toWrite.Count;
-            AddRange(_tableName, dicSize);
+            AddRange(tableName, dicSize);
 
             int key = 1;
             foreach (string valToWrite in toWrite)
             {
 
-                Upd($"{columnName} = '{valToWrite.Replace("'", "''")}'", _tableName, last: last, acc: key);
+                Upd($"{columnName} = '{valToWrite.Replace("'", "''")}'", tableName, last: last, acc: key);
                 key++;
             }
         }
@@ -268,36 +262,34 @@ namespace z3nCore
 
             toGet = QuoteColumnNames(toGet.Trim().TrimEnd(','));
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
-            TblName(tableName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+
 
             if (string.IsNullOrEmpty(where))
             {
                 if (string.IsNullOrEmpty(acc))
                     acc = _project.Variables["acc0"].Value;
                 if (key == "id")
-                    return DbQ($@"SELECT {toGet} from {_tableName} WHERE id = {acc};", log: log, throwOnEx: throwOnEx);
+                    return DbQ($@"SELECT {toGet} from {tableName} WHERE id = {acc};", log: log, throwOnEx: throwOnEx);
                 else
-                    return DbQ($@"SELECT {toGet} from {_tableName} WHERE key = '{key}';", log: log, throwOnEx: throwOnEx);
+                    return DbQ($@"SELECT {toGet} from {tableName} WHERE key = '{key}';", log: log, throwOnEx: throwOnEx);
             }
             else
-                return DbQ($@"SELECT {toGet} from {_tableName} WHERE {where};", log: log, throwOnEx: throwOnEx);
+                return DbQ($@"SELECT {toGet} from {tableName} WHERE {where};", log: log, throwOnEx: throwOnEx);
         }
 
         public string GetRandom(string toGet, string tableName = null, bool log = false, bool acc = false, bool throwOnEx = false, int range = 0, bool single = true, bool invert = false)
         {
             if (range == 0) range = _project.Range();
             if (string.IsNullOrEmpty(tableName)) tableName = _project.Variables["projectTable"].Value;
-            TblName(tableName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+
             string acc0 = string.Empty;
-            if (acc) acc0 = "acc0, ";
+            if (acc) acc0 = "id, ";
 
             string query = $@"
                 SELECT {acc0}{toGet.Trim().TrimEnd(',')} 
-                from {_tableName} 
+                from {tableName} 
                 WHERE TRIM({toGet}) != ''
-	            AND acc0 < {range}
+	            AND id < {range}
                 ORDER BY RANDOM()";
 
             if (single) query += " LIMIT 1;";
@@ -309,19 +301,18 @@ namespace z3nCore
 
         public string GetColumns(string tableName, bool log = false)
         {
-            TblName(tableName);
             string Q;
-            if (_pstgr) Q = $@"SELECT column_name FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}'";
-            else Q = $@"SELECT name FROM pragma_table_info('{_tableName}')";
+            if (_pstgr) Q = $@"SELECT column_name FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{tableName}'";
+            else Q = $@"SELECT name FROM pragma_table_info('{tableName}')";
             return DbQ(Q, log: log).Replace("\n", ", ").Trim(',').Trim();
         }
 
         public List<string> GetColumnList(string tableName, bool log = false)
         {
-            TblName(tableName);
+
             string Q;
-            if (_pstgr) Q = $@"SELECT column_name FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}'";
-            else Q = $@"SELECT name FROM pragma_table_info('{_tableName}')";
+            if (_pstgr) Q = $@"SELECT column_name FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{tableName}'";
+            else Q = $@"SELECT name FROM pragma_table_info('{tableName}')";
 
             return DbQ(Q, log: log).Split('\n').ToList();
         }
@@ -335,34 +326,33 @@ namespace z3nCore
 
 
         public bool TblExist(string tblName)
-        {
-            TblName(tblName);
+        {         
             string resp = null;
-            if (_pstgr) resp = DbQ($"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}';");
-            else resp = DbQ($"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='{_tableName}';");
+            if (_pstgr) resp = DbQ($"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '{tblName}';");
+            else resp = DbQ($"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='{tblName}';");
             if (resp == "0" || resp == string.Empty) return false;
             else return true;
         }
+        
+        
         public void TblAdd(string tblName, Dictionary<string, string> tableStructure)
         {
-            TblName(tblName);
+
             if (TblExist(tblName)) return;
-            if (_pstgr) DbQ($@" CREATE TABLE {_schemaName}.{_tableName} ( {string.Join(", ", tableStructure.Select(kvp => $"\"{kvp.Key}\" {kvp.Value.Replace("AUTOINCREMENT", "SERIAL")}"))} );");
-            else DbQ($"CREATE TABLE {_tableName} (" + string.Join(", ", tableStructure.Select(kvp => $"{kvp.Key} {kvp.Value}")) + ");");
+            if (_pstgr) DbQ($@" CREATE TABLE {_schemaName}.{tblName} ( {string.Join(", ", tableStructure.Select(kvp => $"\"{kvp.Key}\" {kvp.Value.Replace("AUTOINCREMENT", "SERIAL")}"))} );");
+            else DbQ($"CREATE TABLE {tblName} (" + string.Join(", ", tableStructure.Select(kvp => $"{kvp.Key} {kvp.Value}")) + ");");
         }
         public List<string> TblColumns(string tblName)
         {
             var result = new List<string>();
-            TblName(tblName);
             string query = _dbMode == "PostgreSQL"
-                ? $@"SELECT column_name FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}';"
-                : $"SELECT name FROM pragma_table_info('{_tableName}');";
+                ? $@"SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '{tblName}';"
+                : $"SELECT name FROM pragma_table_info('{tblName}');";
 
             result = DbQ(query, log: _logShow)
                 .Split('\n')
                 .Select(s => s.Trim())
                 .ToList();
-            if (_dbMode == "PostgreSQL") _tableName = $"{_schemaName}.{_tableName}";
             return result;
         }
         public Dictionary<string, string> TblMapForProject(string[] staticColumns, string dynamicToDo = null, string defaultType = "TEXT DEFAULT ''")
@@ -372,7 +362,7 @@ namespace z3nCore
 
             var tableStructure = new Dictionary<string, string>
             {
-                { "acc0", "INTEGER PRIMARY KEY" }
+                { "id", "INTEGER PRIMARY KEY" }
             };
             foreach (string name in staticColumns)
             {
@@ -396,36 +386,34 @@ namespace z3nCore
             return tableStructure;
         }
 
+
+
         public bool ClmnExist(string tblName, string clmnName)
         {
-            TblName(tblName);
+            
             string resp = null;
             if (_pstgr)
                 resp = DbQ($@"SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{_tableName}' AND lower(column_name) = lower('{clmnName}');", log: _logShow)?.Trim();
             else
-                resp = DbQ($"SELECT COUNT(*) FROM pragma_table_info('{_tableName}') WHERE name='{clmnName}';", log: _logShow);
+                resp = DbQ($"SELECT COUNT(*) FROM pragma_table_info('{tblName}') WHERE name='{clmnName}';", log: _logShow);
             if (resp == "0" || resp == string.Empty) return false;
             else return true;
 
         }
         public void ClmnAdd(string tblName, string clmnName, string defaultValue = "TEXT DEFAULT ''")
         {
-            TblName(tblName);
+            
             var current = TblColumns(tblName);
             if (!current.Contains(clmnName))
             {
                 clmnName = QuoteColumnNames(clmnName);
-                DbQ($@"ALTER TABLE {_tableName} ADD COLUMN {clmnName} {defaultValue};", log: _logShow);
+                DbQ($@"ALTER TABLE {tblName} ADD COLUMN {clmnName} {defaultValue};", log: _logShow);
             }
         }
         public void ClmnAdd(string tblName, Dictionary<string, string> tableStructure)
         {
-            TblName(tblName);
+
             var current = TblColumns(tblName);
-
-            TblName(tblName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-
             _logger.Send(string.Join(",", current));
             foreach (var column in tableStructure)
             {
@@ -433,42 +421,37 @@ namespace z3nCore
                 if (!current.Contains(keyWd))
                 {
                     _logger.Send($"CLMNADD [{keyWd}] not in  [{string.Join(",", current)}] ");
-                    DbQ($@"ALTER TABLE {_tableName} ADD COLUMN {keyWd} {column.Value};", log: _logShow);
+                    DbQ($@"ALTER TABLE {tblName} ADD COLUMN {keyWd} {column.Value};", log: _logShow);
                 }
             }
         }
         public void ClmnDrop(string tblName, string clmnName)
         {
-            TblName(tblName);
             var current = TblColumns(tblName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
             if (current.Contains(clmnName))
             {
                 string cascade = (_pstgr) ? " CASCADE" : null;
-                DbQ($@"ALTER TABLE {_tableName} DROP COLUMN {clmnName}{cascade};", log: _logShow);
+                DbQ($@"ALTER TABLE {tblName} DROP COLUMN {clmnName}{cascade};", log: _logShow);
             }
         }
         public void ClmnDrop(string tblName, Dictionary<string, string> tableStructure)
         {
-            TblName(tblName);
+
             var current = TblColumns(tblName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
             foreach (var column in tableStructure)
             {
                 if (!current.Contains(column.Key))
                 {
                     string cascade = _dbMode == "PostgreSQL" ? " CASCADE" : null;
-                    DbQ($@"ALTER TABLE {_tableName} DROP COLUMN {column.Key}{cascade};", log: _logShow);
+                    DbQ($@"ALTER TABLE {tblName} DROP COLUMN {column.Key}{cascade};", log: _logShow);
                 }
             }
         }
         public void ClmnPrune(string tblName, Dictionary<string, string> tableStructure)
         {
 
-            TblName(tblName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
 
             var current = TblColumns(tblName);
 
@@ -478,7 +461,7 @@ namespace z3nCore
                 {
                     _logger.Send($"[{column}] not in tableStructure keys, dropping");
                     string cascade = _pstgr ? " CASCADE" : "";
-                    DbQ($@"ALTER TABLE {_tableName} DROP COLUMN {column}{cascade};", log: _logShow);
+                    DbQ($@"ALTER TABLE {tblName} DROP COLUMN {column}{cascade};", log: _logShow);
                 }
             }
         }
@@ -495,15 +478,13 @@ namespace z3nCore
                     range = 100;
                 }
 
-            TblName(tblName);
 
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-            int current = int.Parse(DbQ($@"SELECT COALESCE(MAX(acc0), 0) FROM {_tableName};"));
+            int current = int.Parse(DbQ($@"SELECT COALESCE(MAX(acc0), 0) FROM {tblName};"));
             _logger.Send(current.ToString());
             _logger.Send(range.ToString());
             for (int currentAcc0 = current + 1; currentAcc0 <= range; currentAcc0++)
             {
-                DbQ($@"INSERT INTO {_tableName} (acc0) VALUES ({currentAcc0}) ON CONFLICT DO NOTHING;");
+                DbQ($@"INSERT INTO {tblName} (acc0) VALUES ({currentAcc0}) ON CONFLICT DO NOTHING;");
             }
 
         }
@@ -518,8 +499,7 @@ namespace z3nCore
         }
         public string Bio()
         {
-            TblName("public_profile"); if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-            var resp = DbQ($@"SELECT nickname, bio FROM {_tableName} WHERE acc0 = {_project.Variables["acc0"].Value};");
+            var resp = DbQ($@"SELECT nickname, bio FROM _profile WHERE id = {_project.Variables["acc0"].Value};");
             string[] respData = resp.Split('|');
             _project.Variables["accNICKNAME"].Value = respData[0].Trim();
             _project.Variables["accBIO"].Value = respData[1].Trim();
@@ -529,9 +509,8 @@ namespace z3nCore
         {
             var dbConfig = new Dictionary<string, string>();
 
-            TblName("private_settings");
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-            var resp = DbQ($"SELECT key, value FROM {_tableName}");
+
+            var resp = DbQ($"SELECT key, value FROM _settings");
             foreach (string varData in resp.Split('\n'))
             {
                 string varName = varData.Split('|')[0];
@@ -547,29 +526,12 @@ namespace z3nCore
             return dbConfig;
 
         }
-        public string Email(string tableName = "google", string schemaName = "accounts")
-        {
-            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"{schemaName}." : "") + tableName;
-            var emailMode = _project.Variables["cfgMail"].Value;
-            var resp = DbQ($@"SELECT login, icloud FROM {table} WHERE acc0 = {_project.Variables["acc0"].Value};");
-
-            string[] emailData = resp.Split('|');
-            _project.Variables["emailGOOGLE"].Value = emailData[0].Trim();
-            _project.Variables["emailICLOUD"].Value = emailData[1].Trim();
-
-            if (emailMode == "Google") resp = emailData[0].Trim();
-            if (emailMode == "Icloud") resp = emailData[1].Trim();
-            return resp;
-        }
 
         public string Ref(string refCode = null, bool log = false)
         {
             if (string.IsNullOrEmpty(refCode)) refCode = _project.Variables["cfgRefCode"].Value;
 
-            TblName(_project.Variables["projectTable"].Value);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-
-            if (string.IsNullOrEmpty(refCode) || refCode == "_") refCode = DbQ($@"SELECT refcode FROM {_tableName}
+            if (string.IsNullOrEmpty(refCode) || refCode == "_") refCode = DbQ($@"SELECT refcode FROM {_project.Variables["projectTable"].Value}
 			WHERE refcode != '_' 
 			AND TRIM(refcode) != ''
 			ORDER BY RANDOM()
@@ -599,9 +561,6 @@ namespace z3nCore
         public List<string> MkToDoQueries(string toDo = null, string defaultRange = null, string defaultDoFail = null)
         {
             string tableName = _project.Variables["projectTable"].Value;
-            TblName(tableName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-
 
             var nowIso = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
 
@@ -620,7 +579,7 @@ namespace z3nCore
                     string range = defaultRange ?? _project.Variables["range"].Value;
                     string doFail = defaultDoFail ?? _project.Variables["doFail"].Value;
                     string failCondition = (doFail != "True" ? "AND status NOT LIKE '%fail%'" : "");
-                    string query = $@"SELECT acc0 FROM {_tableName} WHERE acc0 in ({range}) {failCondition} AND status NOT LIKE '%skip%' 
+                    string query = $@"SELECT id FROM {tableName} WHERE id in ({range}) {failCondition} AND status NOT LIKE '%skip%' 
                 AND ({trimmedTaskId} < '{nowIso}' OR {trimmedTaskId} = '_')";
                     allQueries.Add(query);
                 }
@@ -672,7 +631,7 @@ namespace z3nCore
 
                 foreach (string social in demanded)
                 {
-                    string tableName = TblName($"private_{social.Trim().ToLower()}");
+                    string tableName = ($"_{social.Trim().ToLower()}");
                     var notOK = _project.SqlGet($"id", _tableName, where: "status NOT LIKE '%ok%'", log: log)
 
                         .Split('\n')
