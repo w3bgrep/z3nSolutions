@@ -144,7 +144,25 @@ namespace z3nCore
             return refCode;
         }
 
+        public static void DbSettings(this IZennoPosterProjectModel project, bool set = true, bool log = false)
+        {
+            var dbConfig = new Dictionary<string, string>();
+            var resp = project.DbQ($"SELECT id, value FROM _settings", log);
+            foreach (string varData in resp.Split('\n'))
+            {
+                string varName = varData.Split('|')[0];
+                string varValue = varData.Split('|')[1].Trim();
+                dbConfig.Add(varName, varValue);
 
+                if (set)
+                {
+                    try { project.Var(varName, varValue); }
+                    catch (Exception e) { e.Throw(project, throwEx: false); }
+                }
+            }
+            //return dbConfig;
+
+        }
 
 
 
@@ -273,7 +291,7 @@ namespace z3nCore
         }
 
         //Tables
-        public static void TblAdd(this IZennoPosterProjectModel project, string tblName, Dictionary<string, string> tableStructure, bool log = false)
+        public static void TblAdd(this IZennoPosterProjectModel project,  Dictionary<string, string> tableStructure, string tblName, bool log = false)
         {
             
             if (project.TblExist(tblName)) return;
@@ -321,13 +339,28 @@ namespace z3nCore
                 .ToList();
             return result;
         }
-        public static Dictionary<string, string> TblForProject(this IZennoPosterProjectModel project,  string defaultType = "TEXT DEFAULT ''")
+        public static Dictionary<string, string> TblForProject(this IZennoPosterProjectModel project, string[] projectColumns= null,  string defaultType = "TEXT DEFAULT ''")
         {
             string cfgToDo = project.Variables["cfgToDo"].Value;
             var tableStructure = new Dictionary<string, string>
             {
-                { "id", "INTEGER PRIMARY KEY" }
+                { "id", "INTEGER PRIMARY KEY" },
+                { "status", defaultType },
+                { "last", defaultType }
             };
+
+            if (projectColumns != null)
+            {
+                foreach (string column in projectColumns)
+                {
+                    string trimmed = column.Trim();
+                    if (!string.IsNullOrEmpty(trimmed) && !tableStructure.ContainsKey(trimmed))
+                    {
+                        tableStructure.Add(trimmed, defaultType);
+                    }
+                }
+
+            }
 
             if (!string.IsNullOrEmpty(cfgToDo))
             {
@@ -343,7 +376,15 @@ namespace z3nCore
             }
             return tableStructure;
         }
+        public static void TblPrepareDefault(this IZennoPosterProjectModel project, bool log = false)
+        {
+            var tableStructure = project.TblForProject();
+            var tblName = project.Var("projectTable");
 
+            project.TblAdd(tableStructure, tblName, log: log);
+            project.ClmnAdd(tableStructure, tblName, log: log);
+            project.AddRange(tblName,log:log);
+        }
         //Columns
         public static bool ClmnExist(this IZennoPosterProjectModel project, string clmnName, string tblName, bool log = false)
         {
