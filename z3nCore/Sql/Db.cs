@@ -61,7 +61,6 @@ namespace z3nCore
             if (toUpd.Contains("relax")) log = true;
             try { project.Var("lastQuery", toUpd); } catch (Exception Ex){ project.SendWarningToLog(Ex.Message, true); }
             project.SqlUpd(toUpd, tableName, log, throwOnEx, last, key, acc, where);
-  //new Sql(project, log).Upd(toUpd, tableName, log, throwOnEx, last, key, acc, where);
 
         }
         public static void MakeAccList(this IZennoPosterProjectModel project, List<string> dbQueries, bool log = false)
@@ -322,27 +321,21 @@ namespace z3nCore
                 .ToList();
             return result;
         }
-        public static Dictionary<string, string> TblForProject(this IZennoPosterProjectModel project, string[] staticColumns, string tblName, bool log = false, string dynamicToDo = null, string defaultType = "TEXT DEFAULT ''")
+        public static Dictionary<string, string> TblForProject(this IZennoPosterProjectModel project,  string defaultType = "TEXT DEFAULT ''")
         {
-            if (string.IsNullOrEmpty(dynamicToDo)) dynamicToDo = project.Variables["cfgToDo"].Value;
+            string cfgToDo = project.Variables["cfgToDo"].Value;
             var tableStructure = new Dictionary<string, string>
             {
                 { "id", "INTEGER PRIMARY KEY" }
             };
-            foreach (string name in staticColumns)
+
+            if (!string.IsNullOrEmpty(cfgToDo))
             {
-                if (!tableStructure.ContainsKey(name))
-                {
-                    tableStructure.Add(name, defaultType);
-                }
-            }
-            if (!string.IsNullOrEmpty(dynamicToDo))
-            {
-                string[] toDoItems = (dynamicToDo ?? "").Split(',');
+                string[] toDoItems = (cfgToDo ?? "").Split(',');
                 foreach (string taskId in toDoItems)
                 {
                     string trimmedTaskId = taskId.Trim();
-                    if (!string.IsNullOrWhiteSpace(trimmedTaskId) && !tableStructure.ContainsKey(trimmedTaskId))
+                    if (!string.IsNullOrEmpty(trimmedTaskId) && !tableStructure.ContainsKey(trimmedTaskId))
                     {
                         tableStructure.Add(trimmedTaskId, defaultType);
                     }
