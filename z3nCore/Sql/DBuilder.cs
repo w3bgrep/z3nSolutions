@@ -176,8 +176,7 @@ namespace z3nCore
        
         private string ImportData(string tableName, string[] availableFields, Dictionary<string, string> columnMapping, string formTitle = "title", string message = "Select format (one field per box):", int startFrom = 1)
         {
-            TblName(tableName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+            _tableName = tableName;
             int lineCount = 0;
 
             var formFont = new System.Drawing.Font("Iosevka", 10);
@@ -367,8 +366,8 @@ namespace z3nCore
         public string ImportKeys(string keyType, int startFrom = 1)
         {
 
-            TblName("private_blockchain");
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+            
+            _tableName = $"_wallets";
             //int rangeEnd = _rangeEnd + 1;
             var acc0 = _project.Variables["acc0"];
             acc0.Value = startFrom.ToString();
@@ -490,9 +489,7 @@ namespace z3nCore
         }
         public string ImportAddresses(int startFrom = 1)
         {
-            string tablename = "public_blockchain";
-            TblName(tablename);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+            var tablename = "_addresses";
             //int rangeEnd = _rangeEnd;
             var acc0 = _project.Variables["acc0"];
             acc0.Value = startFrom.ToString();
@@ -610,9 +607,7 @@ namespace z3nCore
         }
         public string ImportDepositAddresses(int startFrom = 1)
         {
-            string tablename = "public_deposits";
-            TblName(tablename);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
+            _tableName = $"_deposits";
 
             _project.L0g($"{_tableName} `b");
             //int rangeEnd = _rangeEnd;
@@ -956,105 +951,7 @@ namespace z3nCore
             }
 
         }
-        public void CopyTable(string sourceTable, string targetTable)
-        {
-            // Обрабатываем имена таблиц
-            string sourceTableName = TblName(sourceTable); // Чистое имя таблицы источника
-            string sourceSchema = _schemaName; // Схема источника
-            string targetTableName = TblName(targetTable); // Чистое имя целевой таблицы
-            string targetSchema = _schemaName; // Схема цели
-
-            // Формируем полные имена таблиц для PostgreSQL
-            string sourceFullName = _pstgr ? $"{sourceSchema}.{sourceTableName}" : sourceTableName;
-            string targetFullName = _pstgr ? $"{targetSchema}.{targetTableName}" : targetTableName;
-
-            if (_pstgr)
-            {
-                // PostgreSQL: Проверяем существование исходной таблицы
-                string existQuery = $"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '{sourceSchema}' AND table_name = '{sourceTableName}';";
-                string existResult = DbQ(existQuery);
-                if (existResult == "0" || string.IsNullOrEmpty(existResult))
-                {
-                    _project.SendWarningToLog($"Source table {sourceFullName} not found");
-                    return;
-                }
-
-                // Удаляем целевую таблицу, если существует
-                DbQ($"DROP TABLE IF EXISTS {targetFullName};");
-
-                // Создаём новую таблицу с той же структурой
-                DbQ($"CREATE TABLE {targetFullName} (LIKE {sourceFullName} INCLUDING ALL);");
-
-                // Копируем данные
-                DbQ($"INSERT INTO {targetFullName} SELECT * FROM {sourceFullName};");
-
-                _project.SendInfoToLog($"Table {sourceFullName} successfully copied to {targetFullName}");
-            }
-            else
-            {
-                string existQuery = $"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='{sourceTableName}';";
-                string existResult = DbQ(existQuery);
-                if (existResult == "0" || string.IsNullOrEmpty(existResult))
-                {
-                    _project.SendWarningToLog($"Source table {sourceTableName} not found");
-                    return;
-                }
-
-                string createTableSQL = DbQ($"SELECT sql FROM sqlite_master WHERE type='table' AND name='{sourceTableName}';");
-                if (string.IsNullOrEmpty(createTableSQL))
-                {
-                    _project.SendWarningToLog($"Failed to retrieve schema for table {sourceTableName}");
-                    return;
-                }
-
-                string newTableSQL = createTableSQL.Replace(sourceTableName, targetTableName);
-
-                DbQ($"DROP TABLE IF EXISTS {targetTableName};");
-
-                DbQ(newTableSQL);
-
-                DbQ($"INSERT INTO {targetTableName} SELECT * FROM {sourceTableName};");
-
-                _project.SendInfoToLog($"Table {sourceTableName} successfully copied to {targetTableName}");
-            }
-        }
-        public void RenameColumns(string tblName, Dictionary<string, string> renameMap)
-        {
-            Log($"{_tableName} {tblName} {_pstgr}`b");
-            TblName(tblName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-            Log($"{_tableName} {tblName}  {_pstgr} `lb");
-            var currentColumns = TblColumns(tblName);
-            if (_pstgr) _tableName = $"{_schemaName}.{_tableName}";
-            Log($"{_tableName} `g");
-            foreach (var pair in renameMap)
-            {
-                string oldName = pair.Key;
-                string newName = pair.Value;
-
-
-                if (!currentColumns.Contains(oldName))
-                {
-                    _project.SendWarningToLog($"Column [{oldName}] not found in table {_tableName}");
-                    continue;
-                }
-
-                // Проверяем, отличается ли новое имя от старого
-                if (oldName == newName)
-                {
-                    _project.SendInfoToLog($"Column [{oldName}] already has the target name, skipping");
-                    continue;
-                }
-
-                // Формируем запрос для переименования
-                string query = _pstgr
-                    ? $"ALTER TABLE {_tableName} RENAME COLUMN {oldName} TO {newName};"
-                    : $"ALTER TABLE {_tableName} RENAME COLUMN {oldName} TO {newName};";
-
-                DbQ(query, true);
-                _project.SendInfoToLog($"Renamed column [{oldName}] to [{newName}] in table {_tableName}");
-            }
-        }
+       
         public void ImportDB(schema? schemaValue = null)
         {
             if (_project.Var("cfgBuildDB") != "True") return;

@@ -1,6 +1,7 @@
 ﻿using Dapper;
 using Nethereum.Contracts.QueryHandlers.MultiCall;
 using Nethereum.Contracts.Standards.ENS.ETHRegistrarController.ContractDefinition;
+using Nethereum.Model;
 using OtpNet;
 using System;
 using System.Collections;
@@ -14,11 +15,16 @@ using System.Web;
 using System.Windows.Forms;
 using ZennoLab.InterfacesLibrary.ProjectModel;
 using ZXing.QrCode.Internal;
+using static ZennoLab.CommandCenter.ZennoPoster;
 
 namespace z3nCore
 {
     public static class Db
     {
+        private static string _schemaName = "public";
+
+        
+
         private static string Quote(string name, bool isColumnList = false)
         {
             if (isColumnList)
@@ -54,7 +60,8 @@ namespace z3nCore
         {
             if (toUpd.Contains("relax")) log = true;
             try { project.Var("lastQuery", toUpd); } catch (Exception Ex){ project.SendWarningToLog(Ex.Message, true); }
-            new Sql(project, log).Upd(toUpd, tableName, log, throwOnEx, last, key, acc, where);
+            project.SqlUpd(toUpd, tableName, log, throwOnEx, last, key, acc, where);
+  //new Sql(project, log).Upd(toUpd, tableName, log, throwOnEx, last, key, acc, where);
 
         }
         public static void MakeAccList(this IZennoPosterProjectModel project, List<string> dbQueries, bool log = false)
@@ -184,6 +191,7 @@ namespace z3nCore
             try { project.DbQ($"ALTER TABLE {dest} RENAME COLUMN key to id;"); } catch { }
         }
 
+
         public static string DbKey(this IZennoPosterProjectModel project, string chainType = "evm")
         {
             chainType = chainType.ToLower().Trim();
@@ -239,16 +247,17 @@ namespace z3nCore
             var parameters = new DynamicParameters();
             if (string.IsNullOrEmpty(tableName)) tableName = project.Var("projectTable");
             if (string.IsNullOrEmpty(tableName)) throw new Exception("TableName is null");
-
+            
             toUpd = Quote(toUpd, true);
             tableName = Quote(tableName);
 
             if (last)
-            {
-                toUpd += ", last = @lastTime";
-                parameters.Add("lastTime", DateTime.UtcNow.ToString("MM-ddTHH:mm"));
+            { 
+                if (last) toUpd = toUpd + $", last = '{DateTime.UtcNow.ToString("MM-ddTHH:mm")}'";
             }
-            if (id is null) id = project.Variables["acc0"].Value;
+
+            if (id is null)
+                id = project.Variables["acc0"].Value;
             
             string query;
             if (string.IsNullOrEmpty(where))
@@ -263,6 +272,281 @@ namespace z3nCore
             }
             return project.DbQ(query);
         }
+
+        //Tables
+        public static void TblAdd(this IZennoPosterProjectModel project, string tblName, Dictionary<string, string> tableStructure, bool log = false)
+        {
+            
+            if (project.TblExist(tblName)) return;
+
+
+            bool _pstgr = project.Var("DBmode") == "PostgreSQL";
+
+            string query;
+            if (_pstgr)
+                query = ($@" CREATE TABLE {_schemaName}.{tblName} ( {string.Join(", ", tableStructure.Select(kvp => $"\"{kvp.Key}\" {kvp.Value.Replace("AUTOINCREMENT", "SERIAL")}"))} );");
+            else
+                query = ($"CREATE TABLE {tblName} (" + string.Join(", ", tableStructure.Select(kvp => $"{kvp.Key} {kvp.Value}")) + ");");
+            
+            project.DbQ(query,log);
+
+        }
+        public static bool TblExist(this IZennoPosterProjectModel project, string tblName, bool log = false)
+        {
+            
+            bool _pstgr = project.Var("DBmode") == "PostgreSQL";
+            string query;
+
+            if (_pstgr) 
+                query = ($"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '{tblName}';");
+            else 
+                query = ($"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='{tblName}';");
+
+            string resp = project.DbQ(query, log);
+
+            if (resp == "0" || resp == string.Empty) return false;
+            else return true;
+        }
+
+        public static List<string> TblColumns(this IZennoPosterProjectModel project, string tblName, bool log = false)
+        {
+            var result = new List<string>();
+
+            string query = project.Var("DBmode") == "PostgreSQL"
+                ? $@"SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '{tblName}';"
+                : $"SELECT name FROM pragma_table_info('{tblName}');";
+
+            result = project.DbQ(query, log: log)
+                .Split('\n')
+                .Select(s => s.Trim())
+                .ToList();
+            return result;
+        }
+        public static Dictionary<string, string> TblForProject(this IZennoPosterProjectModel project, string[] staticColumns, string tblName, bool log = false, string dynamicToDo = null, string defaultType = "TEXT DEFAULT ''")
+        {
+            if (string.IsNullOrEmpty(dynamicToDo)) dynamicToDo = project.Variables["cfgToDo"].Value;
+            var tableStructure = new Dictionary<string, string>
+            {
+                { "id", "INTEGER PRIMARY KEY" }
+            };
+            foreach (string name in staticColumns)
+            {
+                if (!tableStructure.ContainsKey(name))
+                {
+                    tableStructure.Add(name, defaultType);
+                }
+            }
+            if (!string.IsNullOrEmpty(dynamicToDo))
+            {
+                string[] toDoItems = (dynamicToDo ?? "").Split(',');
+                foreach (string taskId in toDoItems)
+                {
+                    string trimmedTaskId = taskId.Trim();
+                    if (!string.IsNullOrWhiteSpace(trimmedTaskId) && !tableStructure.ContainsKey(trimmedTaskId))
+                    {
+                        tableStructure.Add(trimmedTaskId, defaultType);
+                    }
+                }
+            }
+            return tableStructure;
+        }
+
+        //Columns
+        public static bool ClmnExist(this IZennoPosterProjectModel project, string clmnName, string tblName, bool log = false)
+        {
+
+            bool _pstgr = project.Var("DBmode") == "PostgreSQL";
+            string query;
+
+            if (_pstgr)
+                query = $@"SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{tblName}' AND lower(column_name) = lower('{clmnName}');";
+            else
+                query = $"SELECT COUNT(*) FROM pragma_table_info('{tblName}') WHERE name='{clmnName}';";
+
+            string resp = project.DbQ(query, log);
+
+            if (resp == "0" || resp == string.Empty) return false;
+            else return true;
+
+        }
+
+        public static void ClmnAdd(this IZennoPosterProjectModel project, string clmnName, string tblName,  bool log = false, string defaultValue = "TEXT DEFAULT ''")
+        {
+
+            var current = project.TblColumns(tblName, log: log);
+            if (!current.Contains(clmnName))
+            {
+                clmnName = Quote(clmnName);
+                project.DbQ($@"ALTER TABLE {tblName} ADD COLUMN {clmnName} {defaultValue};", log: log);
+            }
+        }
+        public static void ClmnAdd(this IZennoPosterProjectModel project, string[] columns, string tblName,  bool log = false, string defaultValue = "TEXT DEFAULT ''")
+        {
+            foreach (var column in columns)
+                project.ClmnAdd(column, tblName, log:log);
+
+        }
+        public static void ClmnAdd(this IZennoPosterProjectModel project, Dictionary<string, string> tableStructure, string tblName,  bool log = false)
+        {
+
+            var current = project.TblColumns(tblName,log:log);
+            foreach (var column in tableStructure)
+            {
+                var keyWd = column.Key.Trim();
+                if (!current.Contains(keyWd))
+                {
+                    keyWd =Quote(keyWd);
+                    project.DbQ($@"ALTER TABLE {tblName} ADD COLUMN {keyWd} {column.Value};", log: log);
+                }
+            }
+        }
+      
+        public static void ClmnDrop(this IZennoPosterProjectModel project, string clmnName, string tblName,  bool log = false)
+        {
+            var current = project.TblColumns(tblName, log: log);
+            bool _pstgr = project.Var("DBmode") == "PostgreSQL";
+
+            if (current.Contains(clmnName))
+            {
+                clmnName = Quote(clmnName);
+                string cascade = (_pstgr) ? " CASCADE" : null;
+                project.DbQ($@"ALTER TABLE {tblName} DROP COLUMN {clmnName}{cascade};", log: log);
+            }
+        }
+        public static void ClmnDrop(this IZennoPosterProjectModel project, Dictionary<string, string> tableStructure, string tblName,  bool log = false)
+        {
+            var current = project.TblColumns(tblName, log: log);
+            foreach (var column in tableStructure)
+            {
+                if (!current.Contains(column.Key))
+                {
+                    string clmnName = Quote(column.Key);
+                    string cascade = project.Var("DBmode") == "PostgreSQL" ? " CASCADE" : null;
+                    project.DbQ($@"ALTER TABLE {tblName} DROP COLUMN {clmnName}{cascade};", log:  log);
+                }
+            }
+        }
+ 
+        public static void ClmnPrune(this IZennoPosterProjectModel project, Dictionary<string, string> tableStructure, string tblName,  bool log = false)
+        {
+            var current = project.TblColumns(tblName, log: log);
+            foreach (var column in current)
+            {
+                if (!tableStructure.ContainsKey(column))
+                {
+                    project.ClmnDrop(tblName,column, log: log);
+                }
+            }
+        }
+
+        //Range
+        public static void AddRange(this IZennoPosterProjectModel project, string tblName, int range = 0, bool log = false)
+        {
+            if (range == 0)
+                try
+                {
+                    range = int.Parse(project.Variables["rangeEnd"].Value);
+                }
+                catch
+                {
+                    project.SendWarningToLog("var  rangeEnd is empty or 0, used default \"10\"", true);                  
+                    range = 10;
+                }
+
+            int current = int.Parse(project.DbQ($@"SELECT COALESCE(MAX(id), 0) FROM {tblName};"));
+
+            for (int currentAcc0 = current + 1; currentAcc0 <= range; currentAcc0++)
+            {
+                project.DbQ($@"INSERT INTO {tblName} (id) VALUES ({currentAcc0}) ON CONFLICT DO NOTHING;", log:log);
+            }
+
+        }
+        public static List<string> ToDoQueries(this IZennoPosterProjectModel project, string toDo = null, string defaultRange = null, string defaultDoFail = null)
+        {
+            string tableName = project.Variables["projectTable"].Value;
+
+            var nowIso = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+
+            if (string.IsNullOrEmpty(toDo)) toDo = project.Variables["cfgToDo"].Value;
+
+            string[] toDoItems = (toDo ?? "").Split(',');
+
+            var allQueries = new List<string>();
+
+            foreach (string taskId in toDoItems)
+            {
+                string trimmedTaskId = taskId.Trim();
+                if (!string.IsNullOrWhiteSpace(trimmedTaskId))
+                {
+                    string range = defaultRange ?? project.Variables["range"].Value;
+                    string doFail = defaultDoFail ?? project.Variables["doFail"].Value;
+                    string failCondition = (doFail != "True" ? "AND status NOT LIKE '%fail%'" : "");
+                    string query = $@"SELECT id FROM {tableName} WHERE id in ({range}) {failCondition} AND status NOT LIKE '%skip%' AND ({trimmedTaskId} < '{nowIso}' OR {trimmedTaskId} = '_')";
+                    allQueries.Add(query);
+                }
+            }
+
+            return allQueries;
+        }
+        public static void FilterAccList(this IZennoPosterProjectModel project, List<string> dbQueries, bool log = false)
+        {
+            if (!string.IsNullOrEmpty(project.Variables["acc0Forced"].Value))
+            {
+                project.Lists["accs"].Clear();
+                project.Lists["accs"].Add(project.Variables["acc0Forced"].Value);
+                project.L0g($@"manual mode on with {project.Variables["acc0Forced"].Value}", show:log);
+                return;
+            }
+
+            var allAccounts = new HashSet<string>();
+            foreach (var query in dbQueries)
+            {
+                try
+                {
+                    var accsByQuery = project.DbQ(query).Trim();
+                    if (!string.IsNullOrWhiteSpace(accsByQuery))
+                    {
+                        var accounts = accsByQuery.Split('\n').Select(x => x.Trim().TrimStart(','));
+                        allAccounts.UnionWith(accounts);
+                    }
+                }
+                catch
+                {
+                    project.L0g(query, show: log);
+                }
+            }
+
+            if (allAccounts.Count == 0)
+            {
+                project.Variables["noAccsToDo"].Value = "True";
+                project.L0g($"♻ noAccountsAvailable by queries [{string.Join(" | ", dbQueries)}]");
+                return;
+            }
+            project.L0g($"Initial availableAccounts: [{string.Join(", ", allAccounts)}]", show: log);
+
+            if (!string.IsNullOrEmpty(project.Variables["requiredSocial"].Value))
+            {
+                string[] demanded = project.Variables["requiredSocial"].Value.Split(',');
+                project.L0g($"Filtering by socials: [{string.Join(", ", demanded)}]", show: log);
+
+                foreach (string social in demanded)
+                {
+                    string tableName = ($"_{social.Trim().ToLower()}");
+                    var notOK = project.SqlGet($"id", tableName, where: "status NOT LIKE '%ok%'", log: log)
+
+                        .Split('\n')
+                        .Select(x => x.Trim())
+                        .Where(x => !string.IsNullOrEmpty(x));
+                    allAccounts.ExceptWith(notOK);
+                    project.L0g($"After {social} filter: [{string.Join("|", allAccounts)}]", show: log);
+                }
+            }
+            project.Lists["accs"].Clear();
+            project.Lists["accs"].AddRange(allAccounts);
+            project.L0g($"final list [{string.Join("|", project.Lists["accs"])}]", show: log);
+        }
+
+
 
     }
 

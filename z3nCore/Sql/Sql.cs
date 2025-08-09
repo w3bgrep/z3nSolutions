@@ -479,12 +479,12 @@ namespace z3nCore
                 }
 
 
-            int current = int.Parse(DbQ($@"SELECT COALESCE(MAX(acc0), 0) FROM {tblName};"));
+            int current = int.Parse(DbQ($@"SELECT COALESCE(MAX(id), 0) FROM {tblName};"));
             _logger.Send(current.ToString());
             _logger.Send(range.ToString());
             for (int currentAcc0 = current + 1; currentAcc0 <= range; currentAcc0++)
             {
-                DbQ($@"INSERT INTO {tblName} (acc0) VALUES ({currentAcc0}) ON CONFLICT DO NOTHING;");
+                DbQ($@"INSERT INTO {tblName} (id) VALUES ({currentAcc0}) ON CONFLICT DO NOTHING;");
             }
 
         }
