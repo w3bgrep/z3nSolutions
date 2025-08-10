@@ -194,7 +194,7 @@ namespace z3nCore
         }
         private void LoadKeys()
         {
-            var creds = _project.SqlGet("apikey, apisecret, proxy", "_api", where: "key = 'binance'").Split('|');
+            var creds = _project.SqlGet("apikey, apisecret, proxy", "_api", where: "id = 'binance'").Split('|');
 
 
             _apiKey = creds[0];

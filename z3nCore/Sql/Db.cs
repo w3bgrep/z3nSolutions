@@ -1,21 +1,9 @@
 ﻿using Dapper;
-using Nethereum.Contracts.QueryHandlers.MultiCall;
-using Nethereum.Contracts.Standards.ENS.ETHRegistrarController.ContractDefinition;
-using Nethereum.Model;
-using OtpNet;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Web;
-using System.Windows.Forms;
 using ZennoLab.InterfacesLibrary.ProjectModel;
-using ZXing.QrCode.Internal;
-using static ZennoLab.CommandCenter.ZennoPoster;
 
 namespace z3nCore
 {
@@ -23,34 +11,36 @@ namespace z3nCore
     {
         private static string _schemaName = "public";
 
-        
-
-        private static string Quote(string name, bool isColumnList = false)
+        private static string UnQuote( string name)
         {
-            if (isColumnList)
-            {
-                name = name.Trim().TrimEnd(',');
-                var parts = name.Split(',').Select(p => p.Trim()).ToList();
-                var result = new List<string>();
-
-                foreach (var part in parts)
-                {
-                    int equalsIndex = part.IndexOf('=');
-                    if (equalsIndex > 0)
-                    {
-                        string columnName = part.Substring(0, equalsIndex).Trim();
-                        string valuePart = part.Substring(equalsIndex).Trim();
-                        result.Add($"\"{columnName}\" {valuePart}");
-                    }
-                    else
-                    {
-                        result.Add($"\"{part}\"");
-                    }
-                }
-                return string.Join(", ", result);
-            }
+            return name.Replace("\"","");
+        }
+        private static string Quote(string name)
+        {
             return $"\"{name.Replace("\"", "\"\"")}\"";
         }
+        private static string QuoteColumns(this string updateString)
+        {
+            var parts = updateString.Split(',').Select(p => p.Trim()).ToList();
+            var result = new List<string>();
+
+            foreach (var part in parts)
+            {
+                int equalsIndex = part.IndexOf('=');
+                if (equalsIndex > 0)
+                {
+                    string columnName = part.Substring(0, equalsIndex).Trim();
+                    string valuePart = part.Substring(equalsIndex).Trim();
+                    result.Add($"\"{columnName}\" {valuePart}");
+                }
+                else
+                {
+                    result.Add(part);
+                }
+            }
+            return string.Join(", ", result);
+        }
+
 
         public static string DbGet(this IZennoPosterProjectModel project, string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "id", string acc = null, string where = "")
         {
@@ -147,7 +137,8 @@ namespace z3nCore
         public static void DbSettings(this IZennoPosterProjectModel project, bool set = true, bool log = false)
         {
             var dbConfig = new Dictionary<string, string>();
-            var resp = project.DbQ($"SELECT id, value FROM _settings", log);
+            var resp = project.DbQ($"SELECT {Quote("id")}, {Quote("value")} FROM {Quote("_settings")}", log);
+            //var resp = project.DbQ($"SELECT id, value FROM _settings", log);
             foreach (string varData in resp.Split('\n'))
             {
                 string varName = varData.Split('|')[0];
@@ -163,8 +154,6 @@ namespace z3nCore
             //return dbConfig;
 
         }
-
-
 
 
         public static List<string> MkToDoQueries(this IZennoPosterProjectModel project, string toDo = null, string defaultRange = null, string defaultDoFail = null)
@@ -191,7 +180,8 @@ namespace z3nCore
                     string range = defaultRange ?? project.Variables["range"].Value;
                     string doFail = defaultDoFail ?? project.Variables["doFail"].Value;
                     string failCondition = (doFail != "True" ? "AND status NOT LIKE '%fail%'" : "");
-                    string query = $@"SELECT id FROM {tableName} WHERE id in ({range}) {failCondition} AND status NOT LIKE '%skip%' AND ({trimmedTaskId} < '{nowIso}' OR {trimmedTaskId} = '')";
+                    string query = $@"SELECT {Quote("id")} FROM {Quote(tableName)} WHERE {Quote("id")} in ({range}) {failCondition} AND {Quote("status")} NOT LIKE '%skip%' AND ({Quote(trimmedTaskId)} < '{nowIso}' OR {Quote(trimmedTaskId)} = '')";
+                    //string query = $@"SELECT id FROM {tableName} WHERE id in ({range}) {failCondition} AND status NOT LIKE '%skip%' AND ({trimmedTaskId} < '{nowIso}' OR {trimmedTaskId} = '')";
                     allQueries.Add(query);
                 }
             }
@@ -204,8 +194,8 @@ namespace z3nCore
         {
             project.SendInfoToLog($"{source} -> {dest}", true);
             project.SqlTableCopy(source, dest);
-            try { project.DbQ($"ALTER TABLE {dest} RENAME COLUMN acc0 to id;"); } catch { }
-            try { project.DbQ($"ALTER TABLE {dest} RENAME COLUMN key to id;"); } catch { }
+            try { project.DbQ($"ALTER TABLE {Quote(dest)} RENAME COLUMN {Quote("acc0")} to {Quote("id")}"); } catch { }
+            try { project.DbQ($"ALTER TABLE {Quote(dest)} RENAME COLUMN {Quote("key")} to {Quote("id")}"); } catch { }
         }
 
 
@@ -239,7 +229,7 @@ namespace z3nCore
             if (string.IsNullOrWhiteSpace(toGet))
                 throw new ArgumentException("Column names cannot be null or empty", nameof(toGet));
 
-            toGet = Quote(toGet.Trim().TrimEnd(','));
+            toGet = QuoteColumns(toGet.Trim().TrimEnd(','));
             if (string.IsNullOrEmpty(tableName)) 
                 tableName = project.Variables["projectTable"].Value;
             
@@ -250,11 +240,11 @@ namespace z3nCore
             {
                 if (string.IsNullOrEmpty(id.ToString())) 
                     throw new ArgumentException("variable \"acc0\" is null or empty", nameof(id));
-                query = $"SELECT {toGet} from {tableName} WHERE {key} = {id}";
+                query = $"SELECT {toGet} from {Quote(tableName)} WHERE {Quote(key)} = {id}";
             }
             else
             {
-                query = $@"SELECT {toGet} from {tableName} WHERE {where};";
+                query = $@"SELECT {toGet} from {Quote(tableName)} WHERE {where};";
             }
 
             return project.DbQ(query, log: log, throwOnEx: throwOnEx);
@@ -265,7 +255,7 @@ namespace z3nCore
             if (string.IsNullOrEmpty(tableName)) tableName = project.Var("projectTable");
             if (string.IsNullOrEmpty(tableName)) throw new Exception("TableName is null");
             
-            toUpd = Quote(toUpd, true);
+            toUpd = QuoteColumns(toUpd);
             tableName = Quote(tableName);
 
             if (last)
@@ -281,7 +271,7 @@ namespace z3nCore
             {
                 if (string.IsNullOrEmpty(id.ToString()))
                     throw new ArgumentException("variable \"acc0\" is null or empty", nameof(id));
-                query = $"UPDATE {tableName} SET {toUpd} WHERE {key} = {id}";
+                query = $"UPDATE {tableName} SET {toUpd} WHERE {Quote(key)} = {id}";
             }
             else
             {
@@ -294,23 +284,23 @@ namespace z3nCore
         public static void TblAdd(this IZennoPosterProjectModel project,  Dictionary<string, string> tableStructure, string tblName, bool log = false)
         {
             
-            if (project.TblExist(tblName)) return;
+            if (project.TblExist(tblName, log:log)) return;
 
+            tblName = Quote(tblName);
 
             bool _pstgr = project.Var("DBmode") == "PostgreSQL";
 
             string query;
             if (_pstgr)
-                query = ($@" CREATE TABLE {_schemaName}.{tblName} ( {string.Join(", ", tableStructure.Select(kvp => $"\"{kvp.Key}\" {kvp.Value.Replace("AUTOINCREMENT", "SERIAL")}"))} );");
+                query = ($@" CREATE TABLE {tblName} ( {string.Join(", ", tableStructure.Select(kvp => $"\"{kvp.Key}\" {kvp.Value.Replace("AUTOINCREMENT", "SERIAL")}"))} );");
             else
-                query = ($"CREATE TABLE {tblName} (" + string.Join(", ", tableStructure.Select(kvp => $"{kvp.Key} {kvp.Value}")) + ");");
-            
-            project.DbQ(query,log);
+                query = ($"CREATE TABLE {tblName} (" + string.Join(", ", tableStructure.Select(kvp => $"{Quote(kvp.Key)} {kvp.Value}")) + ");");
+            project.DbQ(query, log: log);
 
         }
         public static bool TblExist(this IZennoPosterProjectModel project, string tblName, bool log = false)
         {
-            
+            tblName = UnQuote(tblName);
             bool _pstgr = project.Var("DBmode") == "PostgreSQL";
             string query;
 
@@ -328,10 +318,9 @@ namespace z3nCore
         public static List<string> TblColumns(this IZennoPosterProjectModel project, string tblName, bool log = false)
         {
             var result = new List<string>();
-
             string query = project.Var("DBmode") == "PostgreSQL"
-                ? $@"SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '{tblName}';"
-                : $"SELECT name FROM pragma_table_info('{tblName}');";
+                ? $@"SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '{UnQuote(tblName)}';"
+                : $"SELECT name FROM pragma_table_info('{UnQuote(tblName)}');";
 
             result = project.DbQ(query, log: log)
                 .Split('\n')
@@ -393,10 +382,9 @@ namespace z3nCore
             string query;
 
             if (_pstgr)
-                query = $@"SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{tblName}' AND lower(column_name) = lower('{clmnName}');";
+                query = $@"SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = '{_schemaName}' AND table_name = '{UnQuote(tblName)}' AND lower(column_name) = lower('{UnQuote(clmnName)}');";
             else
-                query = $"SELECT COUNT(*) FROM pragma_table_info('{tblName}') WHERE name='{clmnName}';";
-
+                query = $"SELECT COUNT(*) FROM pragma_table_info('{UnQuote(tblName)}') WHERE name='{UnQuote(clmnName)}';";
             string resp = project.DbQ(query, log);
 
             if (resp == "0" || resp == string.Empty) return false;
@@ -411,7 +399,7 @@ namespace z3nCore
             if (!current.Contains(clmnName))
             {
                 clmnName = Quote(clmnName);
-                project.DbQ($@"ALTER TABLE {tblName} ADD COLUMN {clmnName} {defaultValue};", log: log);
+                project.DbQ($@"ALTER TABLE {Quote(tblName)} ADD COLUMN {clmnName} {defaultValue};", log: log);
             }
         }
         public static void ClmnAdd(this IZennoPosterProjectModel project, string[] columns, string tblName,  bool log = false, string defaultValue = "TEXT DEFAULT ''")
@@ -430,7 +418,7 @@ namespace z3nCore
                 if (!current.Contains(keyWd))
                 {
                     keyWd =Quote(keyWd);
-                    project.DbQ($@"ALTER TABLE {tblName} ADD COLUMN {keyWd} {column.Value};", log: log);
+                    project.DbQ($@"ALTER TABLE {Quote(tblName)} ADD COLUMN {keyWd} {column.Value};", log: log);
                 }
             }
         }
@@ -444,7 +432,7 @@ namespace z3nCore
             {
                 clmnName = Quote(clmnName);
                 string cascade = (_pstgr) ? " CASCADE" : null;
-                project.DbQ($@"ALTER TABLE {tblName} DROP COLUMN {clmnName}{cascade};", log: log);
+                project.DbQ($@"ALTER TABLE {Quote(tblName)} DROP COLUMN {clmnName}{cascade};", log: log);
             }
         }
         public static void ClmnDrop(this IZennoPosterProjectModel project, Dictionary<string, string> tableStructure, string tblName,  bool log = false)
@@ -456,7 +444,7 @@ namespace z3nCore
                 {
                     string clmnName = Quote(column.Key);
                     string cascade = project.Var("DBmode") == "PostgreSQL" ? " CASCADE" : null;
-                    project.DbQ($@"ALTER TABLE {tblName} DROP COLUMN {clmnName}{cascade};", log:  log);
+                    project.DbQ($@"ALTER TABLE {Quote(tblName)} DROP COLUMN {clmnName}{cascade};", log: log);
                 }
             }
         }
@@ -476,6 +464,7 @@ namespace z3nCore
         //Range
         public static void AddRange(this IZennoPosterProjectModel project, string tblName, int range = 0, bool log = false)
         {
+            tblName = Quote(tblName);
             if (range == 0)
                 try
                 {
@@ -487,11 +476,11 @@ namespace z3nCore
                     range = 10;
                 }
 
-            int current = int.Parse(project.DbQ($@"SELECT COALESCE(MAX(id), 0) FROM {tblName};"));
-
+            int current = int.Parse(project.DbQ($@"SELECT COALESCE(MAX({Quote("id")}), 0) FROM {tblName};"));
+            
             for (int currentAcc0 = current + 1; currentAcc0 <= range; currentAcc0++)
             {
-                project.DbQ($@"INSERT INTO {tblName} (id) VALUES ({currentAcc0}) ON CONFLICT DO NOTHING;", log:log);
+                project.DbQ($@"INSERT INTO {tblName} ({Quote("id")}) VALUES ({currentAcc0}) ON CONFLICT DO NOTHING;", log: log);
             }
 
         }
@@ -515,7 +504,7 @@ namespace z3nCore
                     string range = defaultRange ?? project.Variables["range"].Value;
                     string doFail = defaultDoFail ?? project.Variables["doFail"].Value;
                     string failCondition = (doFail != "True" ? "AND status NOT LIKE '%fail%'" : "");
-                    string query = $@"SELECT id FROM {tableName} WHERE id in ({range}) {failCondition} AND status NOT LIKE '%skip%' AND ({trimmedTaskId} < '{nowIso}' OR {trimmedTaskId} = '_')";
+                    string query = $@"SELECT {Quote("id")} FROM {Quote(tableName)} WHERE {Quote("id")} in ({range}) {failCondition} AND {Quote("status")} NOT LIKE '%skip%' AND ({Quote(trimmedTaskId)} < '{nowIso}' OR {Quote(trimmedTaskId)} = '')";
                     allQueries.Add(query);
                 }
             }

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Security.Policy;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -30,35 +32,69 @@ namespace z3nCore
 
         private void LoadKeys()
         {
-            var creds = _project.SqlGet("apikey, apisecret, passphrase", "_api", where: "key = 'firstmail'").Split('|');
+            var creds = _project.SqlGet("apikey, apisecret, passphrase", "_api", where: "id = 'firstmail'").Split('|');
 
             _key = creds[0];
-            _login = creds[1];
-            _pass = creds[2];
+            _login = Uri.EscapeDataString(creds[1]);
+            _pass = Uri.EscapeDataString(creds[2]);
 
         }
+        public async Task<string> Request(string url)
+        {
+            var client = new HttpClient();
+            var request = new HttpRequestMessage
+            {
+                Method = HttpMethod.Delete,
+                RequestUri = new Uri(url),
+                Headers =
+                    {
+                        { "accept", "application/json" },
+                        { "X-API-KEY", _key },
+                    },
+            };
+            using (var response = await client.SendAsync(request))
+            {
+                response.EnsureSuccessStatusCode();
+                var body = await response.Content.ReadAsStringAsync();
+                return body;
+            }
+        }
+        public string Delete(string email, bool seen = false)
+        {
+            string url = $"https://api.firstmail.ltd/v1/mail/delete?username={_login} &password= {_pass}";
+            string additional = seen ? "seen=true" : null;
+            url += additional;
+            string result = Request(url).GetAwaiter().GetResult();
+            _project.Json.FromString(result);
+            return result;
+        }
+        public string GetOne(string email)
+        {
+            string url = $"https://api.firstmail.ltd/v1/mail/one?username={_login}&password={_pass}";
+            string result = Request(url).GetAwaiter().GetResult();
+            _project.Json.FromString(result);
+            return result;
+        }
+        public string GetAll(string email)
+        {
+            string url = $"https://api.firstmail.ltd/v1/get/messages?username={_login} &password= {_pass}";
+            string result = Request(url).GetAwaiter().GetResult();
+            _project.Json.FromString(result);
+            return result;
+        }
+
+
 
 
 
         public string GetMail(string email)
         {
-            string encodedLogin = Uri.EscapeDataString(_login);
-            string encodedPass = Uri.EscapeDataString(_pass);
 
-            string url = $"https://api.firstmail.ltd/v1/mail/one?username={encodedLogin}&password={encodedPass}";
+            string url = $"https://api.firstmail.ltd/v1/mail/one?username={_login}&password={_pass}";
 
             string[] headers = new string[]
             {
                 $"accept: application/json",
-                "accept-encoding: gzip, deflate, br",
-                $"accept-language: {_project.Profile.AcceptLanguage}",
-                "sec-ch-ua-mobile: ?0",
-                "sec-ch-ua-platform: \"Windows\"",
-                "sec-fetch-dest: document",
-                "sec-fetch-mode: navigate",
-                "sec-fetch-site: none",
-                "sec-fetch-user: ?1",
-                "upgrade-insecure-requests: 1",
                 $"X-API-KEY: {_key}"
             };
 
@@ -66,8 +102,7 @@ namespace z3nCore
             _project.Json.FromString(result);
             return result;
 
-        }
-
+        }    
         public string GetOTP(string email)
         {
 
@@ -75,54 +110,29 @@ namespace z3nCore
             _project.Json.FromString(json);
             string deliveredTo = _project.Json.to[0];
             string text = _project.Json.text;
+            string subject = _project.Json.subject;
             string html = _project.Json.html;
 
 
             if (!deliveredTo.Contains(email)) throw new Exception($"Fmail: Email {email} not found in last message");
             else
             {
-                Match match = Regex.Match(text, @"\b\d{6}\b");
-                if (match.Success) return match.Value;
+                
+                Match match = Regex.Match(subject, @"\b\d{6}\b");
+                if (match.Success) 
+                    return match.Value;
+
+                match = Regex.Match(text, @"\b\d{6}\b");
+                if (match.Success)
+                    return match.Value;
+
                 match = Regex.Match(html, @"\b\d{6}\b");
-                if (match.Success) return match.Value;
+                if (match.Success) 
+                    return match.Value;
                 else throw new Exception("Fmail: OTP not found in message with correct email");
             }
 
         }
-
-        //public string GetLink(string email)
-        //{
-        //    string json = GetMail(email);
-        //    _project.Json.FromString(json);
-        //    string deliveredTo = _project.Json.to[0];
-        //    string text = _project.Json.text;
-
-        //    if (!deliveredTo.Contains(email)) 
-        //        throw new Exception($"Fmail: Email {email} not found in last message");
-        //    else
-        //    {
-
-        //        int httpIndex = text.IndexOf("http://");
-        //        int httpsIndex = text.IndexOf("https://");
-        //        int startIndex = httpIndex != -1 && (httpsIndex == -1 || httpIndex < httpsIndex) ? httpIndex : httpsIndex;
-
-        //        if (startIndex == -1) return "";
-
-        //        string potentialLink = text.Substring(startIndex);
-        //        int endIndex = potentialLink.IndexOfAny(new[] { ' ', '\n', '\r', '\t', '"' });
-        //        if (endIndex != -1)
-        //        {
-        //            potentialLink = potentialLink.Substring(0, endIndex);
-        //        }
-
-        //        if (Uri.TryCreate(potentialLink, UriKind.Absolute, out _))
-        //        {
-        //            return potentialLink;
-        //        }
-        //        throw new Exception($"No Link found in message {text}");
-        //    }
-
-        //}
         public string GetLink(string email)
         {
             string json = GetMail(email);
