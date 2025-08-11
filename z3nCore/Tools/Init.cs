@@ -100,7 +100,7 @@ namespace z3nCore
                 }
             }
         }
-        public void SetBrowser(bool strictProxy = true, string cookies = null)
+        public void SetBrowser(bool strictProxy = true, string cookies = null, bool log = false)
         {
             _project.Variables["instancePort"].Value = _instance.Port.ToString();
             _logger.Send($"init browser in port: {_instance.Port}");
@@ -108,7 +108,7 @@ namespace z3nCore
             string webGlData = _project.SqlGet("webgl", "_instance");
             SetDisplay(webGlData);
 
-            bool goodProxy = new NetHttp(_project, true).ProxySet(_instance);
+            bool goodProxy = new NetHttp(_project, log).ProxySet(_instance);
             if (strictProxy && !goodProxy) throw new Exception($"!E bad proxy");
 
             string cookiePath = $"{_project.Variables["profiles_folder"].Value}accounts\\cookies\\{_project.Variables["acc0"].Value}.json";

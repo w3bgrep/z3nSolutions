@@ -15,22 +15,21 @@ namespace z3nCore
     public class OKX
     {
         private readonly IZennoPosterProjectModel _project;
-        private readonly string[] _apiKeys;
+        private readonly Logger _logger;
+        //private readonly string[] _apiKeys;
         private readonly Sql _sql;
 
         private readonly bool _logShow;
-        private readonly string _apiKey;
-        private readonly string _secretKey;
-        private readonly string _passphrase;
+        private protected string _apiKey;
+        private protected string _secretKey;
+        private protected string _passphrase;
+
         public OKX(IZennoPosterProjectModel project, bool log = false)
         {
             _project = project;
             _sql = new Sql(_project);
-            _logShow = log;
-            _apiKeys = OkxKeys();
-            _apiKey = _apiKeys[0];
-            _secretKey = _apiKeys[1];
-            _passphrase = _apiKeys[2];
+            _logger = new Logger(project, log: log, classEmoji: "OKX");
+            LoadKeys();
         }
         public void CexLog(string toSend = "", [CallerMemberName] string callerName = "", bool log = false)
         {
@@ -40,23 +39,25 @@ namespace z3nCore
             if (callingMethod == null || callingMethod.DeclaringType == null || callingMethod.DeclaringType.FullName.Contains("Zenno")) callerName = "null";
             _project.L0g($"[ 💸  {callerName}] {toSend} ");
         }
-        public string[] OkxKeys()
-        {
-            string table = (_project.Variables["DBmode"].Value == "PostgreSQL" ? $"accounts." : null) + "settings";
-            _sql.DbQ($"SELECT value FROM {table} WHERE var = 'okx_apikey';");
 
-            var key = _sql.DbQ($"SELECT value FROM {table} WHERE var = 'okx_apikey';");
-            var secret = _sql.DbQ($"SELECT value FROM {table} WHERE var = 'okx_secret';");
-            var passphrase = _sql.DbQ($"SELECT value FROM {table} WHERE var = 'okx_passphrase';");
-            string[] result = new string[] { key, secret, passphrase };
-            return result;
+        private void LoadKeys()
+        {
+            var creds = _project.SqlGet("apikey, apisecret, passphrase", "_api", where: "id = 'okx'").Split('|');
+
+
+            _apiKey = creds[0];
+            _secretKey = creds[1];
+            _passphrase = creds[2];
+
+
         }
+
         private string MapNetwork(string chain, bool log)
         {
-            CexLog("Mapping network: " + chain, log: log);
-            //if (log) Loggers.l0g(_project, "Mapping network: " + chain);
-            chain = chain.ToLower();
-            switch (chain)
+
+            _logger.Send("Mapping network: " + chain);
+            string chainTo = chain.ToLower();
+            switch (chainTo)
             {
                 case "arbitrum": return "Arbitrum One";
                 case "ethereum": return "ERC20";
@@ -68,9 +69,10 @@ namespace z3nCore
                 case "trc20": return "TRC20";
                 case "zksync": return "zkSync Era";
                 case "aptos": return "Aptos";
+                case "linea": return "Linea";
                 default:
-                    CexLog("Unsupported network: " + chain, log: log);
-                    throw new ArgumentException("Unsupported network: " + chain);
+                    _logger.Send($"Unrecognized network: {chain} returne as it is" + chain);
+                    return chain;
             }
         }
         private string CalculateHmacSha256ToBaseSignature(string message, string key)

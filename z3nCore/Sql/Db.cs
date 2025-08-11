@@ -31,16 +31,37 @@ namespace z3nCore
                 {
                     string columnName = part.Substring(0, equalsIndex).Trim();
                     string valuePart = part.Substring(equalsIndex).Trim();
+                    ValidateName(columnName, "column name");
+
                     result.Add($"\"{columnName}\" {valuePart}");
                 }
                 else
                 {
+                    ValidateName(part, "column name");
                     result.Add(part);
                 }
             }
             return string.Join(", ", result);
         }
 
+        private static readonly Regex ValidNamePattern = new Regex(@"^[a-zA-Z_][a-zA-Z0-9_]*$", RegexOptions.Compiled);
+        private static string ValidateName(string name, string paramName)
+        {
+            if (string.IsNullOrEmpty(name))
+                throw new ArgumentException($"{paramName} cannot be null or empty");
+
+            if (!ValidNamePattern.IsMatch(name))
+                throw new ArgumentException($"Invalid {paramName}: {name}. Only alphanumeric characters and underscores are allowed.");
+
+            return name;
+        }
+        private static bool IsValidRange(string range)
+        {
+            if (string.IsNullOrEmpty(range)) return false;
+
+            // Проверяем что range содержит только числа, запятые, тире и пробелы
+            return Regex.IsMatch(range, @"^[\d\s,\-]+$");
+        }
 
         public static string DbGet(this IZennoPosterProjectModel project, string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "id", string acc = null, string where = "")
         {
@@ -125,7 +146,7 @@ namespace z3nCore
             _logger.Send($"final list [{string.Join("|", _project.Lists["accs"])}]");
 
         }
-        public static string Ref(this IZennoPosterProjectModel project, string refCode = null, bool log = false)
+        public static string Ref(this IZennoPosterProjectModel project, string refCode = null, bool log = false, string limit = null)
         {
             if (string.IsNullOrEmpty(refCode)) 
                 refCode = project.Variables["cfgRefCode"].Value;
@@ -133,25 +154,53 @@ namespace z3nCore
                 refCode = project.SqlGet("refcode", where: "TRIM(refcode) != '' ORDER BY RANDOM() LIMIT 1;");
             return refCode;
         }
+        public static string Invite(this IZennoPosterProjectModel project,  object limit = null, bool log = false)
+        {
+            string refCode = project.Variables["cfgRefCode"].Value;
+
+            if (string.IsNullOrEmpty(refCode))
+            {
+                string parsedLimit = limit is string s ? s : limit?.ToString();
+                string whereClause = "TRIM(refcode) != ''";
+
+                if (int.TryParse(parsedLimit, out int limitValue) && limitValue > 0)
+                {
+                    whereClause += $" AND id <= {limitValue}";
+                }
+                else
+                {
+                    throw new ArgumentException("Invalid limit value. Must be a positive integer.");
+                }
+
+                whereClause += " ORDER BY RANDOM() LIMIT 1";
+                refCode = project.SqlGet("refcode", where: whereClause);
+            }
+
+            return refCode;
+        }
 
         public static void DbSettings(this IZennoPosterProjectModel project, bool set = true, bool log = false)
         {
             var dbConfig = new Dictionary<string, string>();
             var resp = project.DbQ($"SELECT {Quote("id")}, {Quote("value")} FROM {Quote("_settings")}", log);
-            //var resp = project.DbQ($"SELECT id, value FROM _settings", log);
             foreach (string varData in resp.Split('\n'))
             {
-                string varName = varData.Split('|')[0];
-                string varValue = varData.Split('|')[1].Trim();
-                dbConfig.Add(varName, varValue);
+                if (string.IsNullOrEmpty(varData)) continue;
 
-                if (set)
+                var parts = varData.Split('|');
+                if (parts.Length >= 2)
                 {
-                    try { project.Var(varName, varValue); }
-                    catch (Exception e) { e.Throw(project, throwEx: false); }
+                    string varName = parts[0];
+                    string varValue = string.Join("|", parts.Skip(1)).Trim(); 
+
+                    dbConfig.Add(varName, varValue);
+                    if (set)
+                    {
+                        try { project.Var(varName, varValue); }
+                        catch (Exception e) { e.Throw(project, throwEx: false); }
+                    }
                 }
             }
-            //return dbConfig;
 
         }
 
@@ -178,6 +227,10 @@ namespace z3nCore
                 if (!string.IsNullOrWhiteSpace(trimmedTaskId))
                 {
                     string range = defaultRange ?? project.Variables["range"].Value;
+
+                    if (!IsValidRange(range))
+                        throw new ArgumentException("Invalid range format");
+
                     string doFail = defaultDoFail ?? project.Variables["doFail"].Value;
                     string failCondition = (doFail != "True" ? "AND status NOT LIKE '%fail%'" : "");
                     string query = $@"SELECT {Quote("id")} FROM {Quote(tableName)} WHERE {Quote("id")} in ({range}) {failCondition} AND {Quote("status")} NOT LIKE '%skip%' AND ({Quote(trimmedTaskId)} < '{nowIso}' OR {Quote(trimmedTaskId)} = '')";
@@ -192,6 +245,8 @@ namespace z3nCore
 
         public static void MigrateTable(this IZennoPosterProjectModel project, string source, string dest)
         {
+            ValidateName(source, "source table");
+            ValidateName(dest, "destination table");
             project.SendInfoToLog($"{source} -> {dest}", true);
             project.SqlTableCopy(source, dest);
             try { project.DbQ($"ALTER TABLE {Quote(dest)} RENAME COLUMN {Quote("acc0")} to {Quote("id")}"); } catch { }
@@ -218,9 +273,10 @@ namespace z3nCore
             }
 
             var resp = project.SqlGet(chainType, "_wallets");
-            if (!string.IsNullOrEmpty(project.Var("cfgPin")))
-                return SAFU.Decode(project, resp);
-            else return resp;
+            string decoded = !string.IsNullOrEmpty(project.Var("cfgPin")) ? SAFU.Decode(project, resp) : resp;
+            //if (!string.IsNullOrEmpty(project.Var("cfgPin")))
+            //return SAFU.Decode(project, resp);
+            return decoded;
 
         }
         public static string SqlGet(this IZennoPosterProjectModel project, string toGet, string tableName = null, bool log = false, bool throwOnEx = false, string key = "id", object id = null, string where = "")
@@ -554,7 +610,8 @@ namespace z3nCore
 
                 foreach (string social in demanded)
                 {
-                    string tableName = ($"_{social.Trim().ToLower()}");
+                    string safeSocial = ValidateName(social.Trim().ToLower(), "social name");
+                    string tableName = ($"__{safeSocial}");
                     var notOK = project.SqlGet($"id", tableName, where: "status NOT LIKE '%ok%'", log: log)
 
                         .Split('\n')
@@ -623,6 +680,11 @@ namespace z3nCore
                     : new dSql(sqLitePath, null))
                     
                 {
+
+                    if (Regex.IsMatch(query, @"^\s*(DROP|DELETE)\b", RegexOptions.IgnoreCase) && !query.Contains("WHERE"))
+                        throw new InvalidOperationException("Unsafe query detected: DROP/DELETE without WHERE");
+
+
                     if (Regex.IsMatch(query.TrimStart(), @"^\s*SELECT\b", RegexOptions.IgnoreCase))
                         result = db.DbReadAsync(query).GetAwaiter().GetResult();
                     else
