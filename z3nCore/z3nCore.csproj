@@ -1,0 +1,221 @@
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{45E4B8D5-3627-429D-BCA3-2872F0132E6E}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>z3nCore</RootNamespace>
+    <AssemblyName>z3nCore</AssemblyName>
+    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="CapMonsterCloud, Version=0.0.26.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files\ZennoLab\RU\ZennoPoster Pro V7\7.8.8.0\Progs\CapMonsterCloud.dll</HintPath>
+    </Reference>
+    <Reference Include="Global, Version=9.6.4.1297, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files\ZennoLab\RU\ZennoPoster Pro V7\7.8.8.0\Progs\Global.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Management" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml" />
+    <Reference Include="ZennoLab.CommandCenter, Version=9.6.4.1297, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files\ZennoLab\RU\ZennoPoster Pro V7\7.8.8.0\Progs\ZennoLab.CommandCenter.dll</HintPath>
+    </Reference>
+    <Reference Include="ZennoLab.Emulation, Version=9.6.4.1297, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files\ZennoLab\RU\ZennoPoster Pro V7\7.8.8.0\Progs\ZennoLab.Emulation.dll</HintPath>
+    </Reference>
+    <Reference Include="ZennoLab.InterfacesLibrary, Version=4.1.3.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files\ZennoLab\RU\ZennoPoster Pro V7\7.8.8.0\Progs\ZennoLab.InterfacesLibrary.dll</HintPath>
+    </Reference>
+    <Reference Include="ZennoLab.Macros, Version=9.6.4.1297, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files\ZennoLab\RU\ZennoPoster Pro V7\7.8.8.0\Progs\ZennoLab.Macros.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Browser\Cookies.cs" />
+    <Compile Include="Browser\Captcha.cs" />
+    <Compile Include="CexApi\OKX.cs" />
+    <Compile Include="Extensions\Exceptions.cs" />
+    <Compile Include="Extensions\Utils.cs" />
+    <Compile Include="Properties\VersionInfo.cs" />
+    <Compile Include="Protocols\AI.cs" />
+    <Compile Include="Protocols\ChainOperaAI.cs" />
+    <Compile Include="Protocols\Guild.cs" />
+    <Compile Include="Sql\dSql.cs" />
+    <Compile Include="Tools\Debug.cs" />
+    <Compile Include="W3b\Rpc.cs" />
+    <Compile Include="W3b\W3bLegacy.cs" />
+    <Compile Include="W3b\W3bTools.cs" />
+    <Compile Include="Socials\GitHub.cs" />
+    <Compile Include="Sql\Db.cs" />
+    <Compile Include="Tools\Accountant.cs" />
+    <Compile Include="Protocols\FirstMail.cs" />
+    <Compile Include="Protocols\HanaGarden.cs" />
+    <Compile Include="Tools\Init.cs" />
+    <Compile Include="Requests\NetHttp.cs" />
+    <Compile Include="Browser\BrowserScan.cs" />
+    <Compile Include="CexApi\Refuel.cs" />
+    <Compile Include="Browser\ChromeExt.cs" />
+    <Compile Include="Browser\Traffic.cs" />
+    <Compile Include="W3b\CommonTx.cs" />
+    <Compile Include="Tools\Logger.cs" />
+    <Compile Include="Extensions\Files.cs" />
+    <Compile Include="Protocols\GazZip.cs" />
+    <Compile Include="Protocols\Relay.cs" />
+    <Compile Include="Tools\Rnd.cs" />
+    <Compile Include="Sql\DBuilder.cs" />
+    <Compile Include="Tools\F0rms.cs" />
+    <Compile Include="Protocols\DMail.cs" />
+    <Compile Include="Protocols\Galxe.cs" />
+    <Compile Include="Sql\TableSvc.cs" />
+    <Compile Include="Protocols\Stargate.cs" />
+    <Compile Include="Socials\Telegram.cs" />
+    <Compile Include="Protocols\Unlock.cs" />
+    <Compile Include="Socials\TikTok.cs" />
+    <Compile Include="Wallets\KeplrWallet.cs" />
+    <Compile Include="Wallets\Rabby.cs" />
+    <Compile Include="Wallets\Backpack.cs" />
+    <Compile Include="CexApi\BinanceApi.cs" />
+    <Compile Include="W3b\Blockchain.cs" />
+    <Compile Include="Wallets\MetaMask.cs" />
+    <Compile Include="Wallets\Razor.cs" />
+    <Compile Include="Socials\Google.cs" />
+    <Compile Include="Tools\Converter.cs" />
+    <Compile Include="Tools\Cryptography.cs" />
+    <Compile Include="Sql\DataImporter.cs" />
+    <Compile Include="Socials\Discord.cs" />
+    <Compile Include="Extensions\InstanceExtensions.cs" />
+    <Compile Include="Tools\ISAFU.cs" />
+    <Compile Include="CexApi\OKXApi.cs" />
+    <Compile Include="Tools\OTP.cs" />
+    <Compile Include="Sql\PostgreSQL.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Sql\Sql.cs" />
+    <Compile Include="Sql\SQLite.cs" />
+    <Compile Include="Extensions\HtmlExtensions.cs" />
+    <Compile Include="Extensions\StringExtentions.cs" />
+    <Compile Include="Requests\Requests.cs" />
+    <Compile Include="Tools\Time.cs" />
+    <Compile Include="Extensions\ProjectExtensions.cs" />
+    <Compile Include="Wallets\Wlt.cs" />
+    <Compile Include="Socials\X.cs" />
+    <Compile Include="Wallets\Zerion.cs" />
+    <Compile Include="Wallets\ZerionWallet.cs" />
+    <Compile Include="W3b\W3b.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Target Name="ValidateZennoPosterDllPath" BeforeTargets="BeforeBuild">
+    <Error Text="Environment variable ZennoPosterDllPath must be set to ZennoPoster installation folder, try to launch ProjectMaker or ZennoPoster" Condition="'$(ZennoPosterDllPath)' == ''" />
+  </Target>
+  <ItemGroup>
+    <PackageReference Include="Dapper">
+      <Version>2.1.66</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces">
+      <Version>9.0.7</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Data.Sqlite">
+      <Version>3.1.32</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies">
+      <IncludeAssets>build</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+      <Version>1.0.3</Version>
+    </PackageReference>
+    <PackageReference Include="Nethereum.ABI">
+      <Version>4.29.0</Version>
+    </PackageReference>
+    <PackageReference Include="Nethereum.Contracts">
+      <Version>4.29.0</Version>
+    </PackageReference>
+    <PackageReference Include="Nethereum.HdWallet">
+      <Version>4.29.0</Version>
+    </PackageReference>
+    <PackageReference Include="Nethereum.Signer">
+      <Version>4.29.0</Version>
+    </PackageReference>
+    <PackageReference Include="Npgsql">
+      <Version>4.1.14</Version>
+    </PackageReference>
+    <PackageReference Include="Otp.NET">
+      <Version>1.4.0</Version>
+    </PackageReference>
+    <PackageReference Include="System.Text.Encodings.Web">
+      <Version>9.0.7</Version>
+    </PackageReference>
+    <PackageReference Include="ZXing.Net">
+      <Version>0.16.10</Version>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include=".NETFramework,Version=v4.6.2">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4.6.2 %28x86 and x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Connected Services\" />
+  </ItemGroup>
+  <ItemGroup />
+</Project>
